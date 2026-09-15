@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/equipo_detalle_screen.dart';
+import 'package:app_finnegans/presentation/equipos_screen.dart';
 import 'package:app_finnegans/presentation/metricas_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/empleados_screen.dart';
@@ -27,4 +29,12 @@ final appRouter = GoRouter(
         );
     },),
     GoRoute(path: '/metricas', pageBuilder: (context, state) => const NoTransitionPage(child: MetricasScreen(),),),
+    GoRoute(path: '/equipos', pageBuilder: (context, state) => const NoTransitionPage(child: EquiposScreen(),),),
+    GoRoute(path: '/equipos/:area', pageBuilder: (context, state) 
+    {
+      final area = Uri.decodeComponent(state.pathParameters['area']!);
+      return NoTransitionPage(
+        child: EquipoDetalleScreen(nombreArea: area),
+      );
+    },),
   ],);
