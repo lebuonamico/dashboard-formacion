@@ -81,6 +81,22 @@ class SideMenu extends StatelessWidget {
                   },
                 ),
                 _MenuItem(
+                  icon: Icons.people_outline,
+                  label: 'Empleados',
+                  isSelected: currentRoute.startsWith('/empleados'),
+                  onTap: () {
+                    context.push('/empleados'); // Navega a la pantalla de empleados
+                  },
+                ),
+                _MenuItem(
+                  icon: Icons.group_outlined,
+                  label: 'Equipos',
+                  isSelected: currentRoute.startsWith('/equipos'),
+                  onTap: () {
+                    context.push('/equipos'); // Navega a la pantalla de equipos
+                  },
+                ),
+                _MenuItem(
                   icon: Icons.school_outlined,
                   label: 'Cursos',
                   isSelected: currentRoute.startsWith('/cursos'),
@@ -94,14 +110,6 @@ class SideMenu extends StatelessWidget {
                   isSelected: currentRoute.startsWith('/cursadas'),
                   onTap: () {
                     context.push('/cursadas'); // Navega a la pantalla de cursadas
-                  },
-                ),
-                _MenuItem(
-                  icon: Icons.people_outline,
-                  label: 'Empleados',
-                  isSelected: currentRoute.startsWith('/empleados'),
-                  onTap: () {
-                    context.push('/empleados'); // Navega a la pantalla de empleados
                   },
                 ),
                 _MenuItem(
