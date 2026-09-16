@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 
-class EquiposScreen extends ConsumerWidget {
-  const EquiposScreen({super.key});
+class AreasScreen extends ConsumerWidget {
+  const AreasScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final equiposAsync = ref.watch(equiposResumenProvider);
+    final areasAsync = ref.watch(equiposResumenProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -31,7 +31,7 @@ class EquiposScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Equipos y Áreas Funcionales',
+                        'Áreas y Equipos Generales',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -66,7 +66,7 @@ class EquiposScreen extends ConsumerWidget {
                             onChanged: (val) =>
                                 ref.read(busquedaEquipoProvider.notifier).state = val,
                             decoration: const InputDecoration(
-                              hintText: 'Buscar equipo o área...',
+                              hintText: 'Buscar área o equipo general...',
                               prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
                               isDense: true,
                               border: OutlineInputBorder(
@@ -77,14 +77,14 @@ class EquiposScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // Grid de Equipos
+                        // Grid de Áreas
                         Expanded(
-                          child: equiposAsync.when(
+                          child: areasAsync.when(
                             loading: () => const Center(child: CircularProgressIndicator()),
                             error: (err, _) => Center(child: Text('Error: $err')),
-                            data: (equipos) {
-                              if (equipos.isEmpty) {
-                                return const Center(child: Text('No se encontraron equipos.'));
+                            data: (areas) {
+                              if (areas.isEmpty) {
+                                return const Center(child: Text('No se encontraron áreas.'));
                               }
 
                               return GridView.builder(
@@ -94,10 +94,10 @@ class EquiposScreen extends ConsumerWidget {
                                   mainAxisSpacing: 16,
                                   mainAxisExtent: 180,
                                 ),
-                                itemCount: equipos.length,
+                                itemCount: areas.length,
                                 itemBuilder: (context, index) {
-                                  final eq = equipos[index];
-                                  return _buildEquipoCard(context, eq);
+                                  final area = areas[index];
+                                  return _buildAreaCard(context, area);
                                 },
                               );
                             },
@@ -115,10 +115,10 @@ class EquiposScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEquipoCard(BuildContext context, ResumenEquipoViewModel eq) {
+  Widget _buildAreaCard(BuildContext context, ResumenEquipoViewModel eq) {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => context.push('/equipos/${Uri.encodeComponent(eq.nombreArea)}'),
+      onTap: () => context.push('/areas/${Uri.encodeComponent(eq.nombreArea)}'),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -154,6 +154,13 @@ class EquiposScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (eq.equiposGenerales.isNotEmpty)
+              Text(
+                '${eq.equiposGenerales.length} equipo${eq.equiposGenerales.length == 1 ? '' : 's'} general${eq.equiposGenerales.length == 1 ? '' : 'es'}',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              )
+            else
+              const Text('Sin equipo general asignado', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -191,7 +198,7 @@ class EquiposScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: const [
                 Text(
-                  'Ver detalle',
+                  'Ver área',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D53C3)),
                 ),
                 SizedBox(width: 4),

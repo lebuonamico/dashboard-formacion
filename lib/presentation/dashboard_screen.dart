@@ -437,12 +437,12 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 28),
 
-                        // Encabezado de la Sección de Equipos
+                        // Encabezado de la Sección de Áreas
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'Estado de Cumplimiento por Equipos',
+                              'Estado de Cumplimiento por Áreas',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -450,10 +450,10 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ),
                             TextButton.icon(
-                              onPressed: () => context.push('/equipos'),
+                              onPressed: () => context.push('/areas'),
                               icon: const Icon(Icons.arrow_forward, size: 16, color: Color(0xFF0D53C3)),
                               label: const Text(
-                                'Ver todos los equipos',
+                                'Ver todas las áreas',
                                 style: TextStyle(color: Color(0xFF0D53C3), fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -461,7 +461,7 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
 
-                        // Grilla de Semáforos por Equipo (3 por fila, clickables hacia /equipos/:area)
+                        // Grilla de Semáforos por Área
                         areasAsync.when(
                           loading: () => const Center(child: CircularProgressIndicator()),
                           error: (err, _) => Center(child: Text('Error: $err')),
@@ -474,7 +474,7 @@ class DashboardScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
-                                child: const Center(child: Text('No hay equipos registrados.')),
+                                  child: const Center(child: Text('No hay áreas registradas.')),
                               );
                             }
 
@@ -492,7 +492,7 @@ class DashboardScreen extends ConsumerWidget {
                                 final area = areas[index];
                                 return InkWell(
                                   borderRadius: BorderRadius.circular(8),
-                                  onTap: () => context.push('/equipos/${Uri.encodeComponent(area.area)}'),
+                                  onTap: () => context.push('/areas/${Uri.encodeComponent(area.area)}'),
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(

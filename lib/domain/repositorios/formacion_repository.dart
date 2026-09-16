@@ -6,4 +6,10 @@ abstract class FormacionRepository {
   Future<List<Empleado>> getEmpleados();
   Future<List<Curso>> getCursos();
   Future<List<Cursada>> getCursadas();
+  Future<void> replaceData({
+    required List<Empleado> empleados,
+    required List<Curso> cursos,
+    required List<Cursada> cursadas,
+  });
+  Future<void> resetToMock();
 }

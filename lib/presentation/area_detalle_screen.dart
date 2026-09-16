@@ -1,20 +1,18 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 
 // Filtro local de estado para los miembros del equipo
 final filtroEstadoMiembroProvider = StateProvider.autoDispose<String?>((ref) => null);
 
-class EquipoDetalleScreen extends ConsumerWidget {
+class AreaDetalleScreen extends ConsumerWidget {
   final String nombreArea;
 
-  const EquipoDetalleScreen({super.key, required this.nombreArea});
+  const AreaDetalleScreen({super.key, required this.nombreArea});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,7 +43,7 @@ class EquipoDetalleScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Equipo: $nombreArea',
+                        'Área: $nombreArea',
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -65,19 +63,6 @@ class EquipoDetalleScreen extends ConsumerWidget {
                       final res = detalle.resumen;
                       final miembros = detalle.miembros;
 
-                      // Cálculos para el Gráfico de Torta
-                      final enObjetivo = miembros.where((m) => m.porcentajeTotal >= 100.0).length;
-                      final enRiesgo = miembros.where((m) => m.porcentajeTotal >= 70.0 && m.porcentajeTotal < 100.0).length;
-                      final criticos = miembros.where((m) => m.porcentajeTotal < 70.0).length;
-
-                      // Desglose por categoría formativa
-                      final horasPorTipo = <TipoCurso, double>{};
-                      for (final m in miembros) {
-                        for (final t in TipoCurso.values) {
-                          horasPorTipo[t] = (horasPorTipo[t] ?? 0.0) + (m.horasCompletadas[t] ?? 0.0);
-                        }
-                      }
-
                       // Filtrado dinámico de la tabla
                       final miembrosVisibles = miembros.where((m) {
                         if (filtroEstado == 'cumplido') return m.porcentajeTotal >= 100.0;
@@ -89,121 +74,7 @@ class EquipoDetalleScreen extends ConsumerWidget {
                       return ListView(
                         padding: const EdgeInsets.all(24.0),
                         children: [
-                          // Fila de Tarjetas Superiores: Gráfico de Torta y Distribución Temática
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 1. Gráfico de Torta con Leyenda
-                              Expanded(
-                                flex: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Distribución del Cumplimiento',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          SizedBox(
-                                            width: 110,
-                                            height: 110,
-                                            child: CustomPaint(
-                                              painter: _PieChartPainter(
-                                                valores: [enObjetivo.toDouble(), enRiesgo.toDouble(), criticos.toDouble()],
-                                                colores: const [
-                                                  Color(0xFF16A34A),
-                                                  Color(0xFFD97706),
-                                                  Color(0xFFDC2626),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 20),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                _buildLegendItem('En objetivo (≥100%)', enObjetivo, const Color(0xFF16A34A)),
-                                                const SizedBox(height: 8),
-                                                _buildLegendItem('En riesgo (70-99%)', enRiesgo, const Color(0xFFD97706)),
-                                                const SizedBox(height: 8),
-                                                _buildLegendItem('Crítico (<70%)', criticos, const Color(0xFFDC2626)),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-
-                              // 2. Horas por Categoría Temática
-                              Expanded(
-                                flex: 5,
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Carga Realizada por Categoría Temática',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        children: TipoCurso.values.map((tipo) {
-                                          final hs = horasPorTipo[tipo] ?? 0.0;
-                                          return Expanded(
-                                            child: Container(
-                                              margin: const EdgeInsets.only(right: 8),
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFF8FAFC),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    tipo.label,
-                                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    '${hs.toStringAsFixed(0)} hs',
-                                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _buildAreaSummary(context, res, detalle.miembrosPorEquipo),
                           const SizedBox(height: 24),
 
                           // Barra de Filtros de la Tabla
@@ -229,7 +100,7 @@ class EquipoDetalleScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
 
-                          // Tabla de Nómina del Equipo
+                          // Tabla de Nómina del Área
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -244,7 +115,6 @@ class EquipoDetalleScreen extends ConsumerWidget {
                                 columns: const [
                                   DataColumn(label: Text('Legajo', style: TextStyle(fontWeight: FontWeight.bold))),
                                   DataColumn(label: Text('Colaborador', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text('Puesto', style: TextStyle(fontWeight: FontWeight.bold))),
                                   DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
                                   DataColumn(label: Text('Horas Realizadas / Plan', style: TextStyle(fontWeight: FontWeight.bold))),
                                   DataColumn(label: Text('Progreso', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -276,7 +146,6 @@ class EquipoDetalleScreen extends ConsumerWidget {
                                           ],
                                         ),
                                       ),
-                                      DataCell(Text(emp.puesto)),
                                       DataCell(Text(emp.seniority.label)),
                                       DataCell(Text('${m.totalHorasCompletadas.toStringAsFixed(0)} / ${m.totalHorasRequeridas.toStringAsFixed(0)} hs')),
                                       DataCell(
@@ -329,22 +198,101 @@ class EquipoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLegendItem(String label, int cantidad, Color color) {
-    return Row(
+  Widget _buildAreaSummary(
+    BuildContext context,
+    ResumenEquipoViewModel resumen,
+    Map<String, List<CumplimientoEmpleado>> miembrosPorEquipo,
+  ) {
+    final equipos = miembrosPorEquipo.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF334155))),
-        ),
         Text(
-          '$cantidad',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          'Detalles del Área',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
         ),
+        const SizedBox(height: 4),
+        Text(
+          '${resumen.cantidadIntegrantes} colaboradores · ${equipos.length} equipos generales',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        const SizedBox(height: 16),
+        if (equipos.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: const Text('No hay equipos generales asignados.', style: TextStyle(color: Color(0xFF64748B))),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 320,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              mainAxisExtent: 150,
+            ),
+            itemCount: equipos.length,
+            itemBuilder: (context, index) {
+              final entry = equipos[index];
+              final cumplidos = entry.value.where((item) => item.cumpleObjetivo).length;
+              final porcentaje = entry.value.isEmpty ? 0.0 : (cumplidos / entry.value.length) * 100;
+              final color = porcentaje >= 80
+                  ? const Color(0xFF16A34A)
+                  : porcentaje >= 50
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFFDC2626);
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => context.push('/areas/${Uri.encodeComponent(nombreArea)}/equipos/${Uri.encodeComponent(entry.key)}'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.groups_outlined, color: Color(0xFF0D53C3), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(entry.key, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                          ),
+                          const Icon(Icons.arrow_forward, size: 16, color: Color(0xFF64748B)),
+                        ],
+                      ),
+                      Text('${entry.value.length} integrantes', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('$cumplidos en objetivo', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          Text('${porcentaje.toStringAsFixed(0)}%', style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+                        ],
+                      ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(value: porcentaje / 100, minHeight: 6, color: color, backgroundColor: const Color(0xFFF1F5F9)),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }
@@ -375,47 +323,3 @@ class EquipoDetalleScreen extends ConsumerWidget {
   }
 }
 
-// Pintor del Gráfico Circular de Torta (Pie Chart)
-class _PieChartPainter extends CustomPainter {
-  final List<double> valores;
-  final List<Color> colores;
-
-  _PieChartPainter({required this.valores, required this.colores});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final total = valores.fold<double>(0.0, (acc, v) => acc + v);
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2;
-
-    if (total == 0) {
-      final paintVacio = Paint()..color = const Color(0xFFE2E8F0);
-      canvas.drawCircle(center, radius, paintVacio);
-      return;
-    }
-
-    double startAngle = -math.pi / 2;
-    for (int i = 0; i < valores.length; i++) {
-      final sweepAngle = (valores[i] / total) * 2 * math.pi;
-      final paint = Paint()
-        ..color = colores[i]
-        ..style = PaintingStyle.fill;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        true,
-        paint,
-      );
-      startAngle += sweepAngle;
-    }
-
-    // Efecto Donut opcional interno (centro blanco limpio)
-    final innerPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.45, innerPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PieChartPainter oldDelegate) => true;
-}
