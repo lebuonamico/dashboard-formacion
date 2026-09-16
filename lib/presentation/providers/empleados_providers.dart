@@ -28,7 +28,9 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
           emp.apellido.toLowerCase().contains(query) ||
           emp.legajo.toLowerCase().contains(query) ||
           emp.area.toLowerCase().contains(query) ||
-          emp.puesto.toLowerCase().contains(query);
+          emp.equipo.toLowerCase().contains(query) ||
+          emp.gerente.toLowerCase().contains(query) ||
+          emp.mail.toLowerCase().contains(query);
 
       final matchesSeniority =
           seniorityFiltro == null || emp.seniority == seniorityFiltro;
