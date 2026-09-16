@@ -1,5 +1,6 @@
-import 'package:app_finnegans/presentation/equipo_detalle_screen.dart';
-import 'package:app_finnegans/presentation/equipos_screen.dart';
+import 'package:app_finnegans/presentation/area_detalle_screen.dart';
+import 'package:app_finnegans/presentation/areas_screen.dart';
+import 'package:app_finnegans/presentation/equipo.dart';
 import 'package:app_finnegans/presentation/metricas_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/empleados_screen.dart';
@@ -29,12 +30,17 @@ final appRouter = GoRouter(
         );
     },),
     GoRoute(path: '/metricas', pageBuilder: (context, state) => const NoTransitionPage(child: MetricasScreen(),),),
-    GoRoute(path: '/equipos', pageBuilder: (context, state) => const NoTransitionPage(child: EquiposScreen(),),),
-    GoRoute(path: '/equipos/:area', pageBuilder: (context, state) 
+    GoRoute(path: '/areas', pageBuilder: (context, state) => const NoTransitionPage(child: AreasScreen(),),),
+    GoRoute(path: '/areas/:area', pageBuilder: (context, state) 
     {
-      final area = Uri.decodeComponent(state.pathParameters['area']!);
+      final area = state.pathParameters['area']!;
       return NoTransitionPage(
-        child: EquipoDetalleScreen(nombreArea: area),
+        child: AreaDetalleScreen(nombreArea: area),
       );
+    },),
+    GoRoute(path: '/areas/:area/equipos/:equipo', pageBuilder: (context, state) {
+      final area = state.pathParameters['area']!;
+      final equipo = state.pathParameters['equipo']!;
+      return NoTransitionPage(child: EquipoScreen(area: area, equipo: equipo));
     },),
   ],);

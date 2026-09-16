@@ -105,7 +105,7 @@ class EmpleadosScreen extends ConsumerWidget {
               onChanged: (val) =>
                   ref.read(busquedaEmpleadoProvider.notifier).state = val,
               decoration: const InputDecoration(
-                hintText: 'Buscar por nombre, legajo, puesto o área...',
+                hintText: 'Buscar por nombre, legajo, área, equipo o gerente...',
                 prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
                 isDense: true,
                 border: OutlineInputBorder(
@@ -165,8 +165,9 @@ class EmpleadosScreen extends ConsumerWidget {
             columns: const [
               DataColumn(label: Text('Legajo', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Empleado', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Puesto', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Área', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Equipo', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Gerente', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Contacto', style: TextStyle(fontWeight: FontWeight.bold))),
             ],
@@ -195,8 +196,9 @@ class EmpleadosScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  DataCell(Text(emp.puesto)),
                   DataCell(Text(emp.area)),
+                  DataCell(Text(_mostrarDato(emp.equipo))),
+                  DataCell(Text(_mostrarDato(emp.gerente))),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -223,4 +225,7 @@ class EmpleadosScreen extends ConsumerWidget {
       ),
     );
   }
+
+  String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
+
 }

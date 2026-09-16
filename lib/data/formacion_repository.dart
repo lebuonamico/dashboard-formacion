@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/cursada.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/repositorios/formacion_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockFormacionRepository implements FormacionRepository {
   @override
@@ -15,7 +18,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-001',
         nombre: 'Sofía',
         apellido: 'Martínez',
-        puesto: 'Dev Frontend',
         seniority: Seniority.trainee,
         area: 'Desarrollo',
         mail: 'sofia.martinez@empresa.com',
@@ -24,7 +26,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-002',
         nombre: 'Lucas',
         apellido: 'Gómez',
-        puesto: 'Dev Backend',
         seniority: Seniority.junior3,
         area: 'Desarrollo',
         mail: 'lucas.gomez@empresa.com',
@@ -33,7 +34,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-003',
         nombre: 'Valeria',
         apellido: 'Ríos',
-        puesto: 'Tech Lead',
         seniority: Seniority.semisenior2,
         area: 'Arquitectura',
         mail: 'valeria.rios@empresa.com',
@@ -42,7 +42,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-004',
         nombre: 'Martín',
         apellido: 'Castro',
-        puesto: 'Staff Engineer',
         seniority: Seniority.senior2,
         area: 'Desarrollo',
         mail: 'martin.castro@empresa.com',
@@ -51,7 +50,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-005',
         nombre: 'Carolina',
         apellido: 'Herrera',
-        puesto: 'Engineering Manager',
         seniority: Seniority.manager,
         area: 'Management',
         mail: 'carolina.herrera@empresa.com',
@@ -60,7 +58,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-006',
         nombre: 'Diego',
         apellido: 'Fernández',
-        puesto: 'DevOps Engineer',
         seniority: Seniority.senior1,
         area: 'Infraestructura',
         mail: 'diego.fernandez@empresa.com',
@@ -69,7 +66,6 @@ class MockFormacionRepository implements FormacionRepository {
         legajo: 'EMP-007',
         nombre: 'Sebastian',
         apellido: 'Gonzalez',
-        puesto: 'QA Engineer',
         seniority: Seniority.senior2,
         area: 'Calidad',
         mail: 'sebastian.gonzalez@empresa.com',
@@ -160,5 +156,92 @@ class MockFormacionRepository implements FormacionRepository {
       // EMP-005 (Manager): Necesita 8h Libres (Cumple 100%)
       Cursada(id: 'CSD-10', cursoId: 'CUR-06', empleadoLegajo: 'EMP-005', fecha: DateTime(2026, 8, 28)),
     ];
+  }
+
+  @override
+  Future<void> replaceData({
+    required List<Empleado> empleados,
+    required List<Curso> cursos,
+    required List<Cursada> cursadas,
+  }) async {}
+
+  @override
+  Future<void> resetToMock() async {}
+}
+
+class LocalFormacionRepository extends MockFormacionRepository {
+  static const _empleadosKey = 'formacion_empleados';
+  static const _cursosKey = 'formacion_cursos';
+  static const _cursadasKey = 'formacion_cursadas';
+
+  Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
+
+  @override
+  Future<List<Empleado>> getEmpleados() async {
+    final preferences = await _storage;
+    final raw = preferences.getString(_empleadosKey);
+    if (raw == null) return super.getEmpleados();
+
+    return _decodeList(raw, Empleado.fromJson);
+  }
+
+  @override
+  Future<List<Curso>> getCursos() async {
+    final preferences = await _storage;
+    final raw = preferences.getString(_cursosKey);
+    if (raw == null) return super.getCursos();
+
+    return _decodeList(raw, Curso.fromJson);
+  }
+
+  @override
+  Future<List<Cursada>> getCursadas() async {
+    final preferences = await _storage;
+    final raw = preferences.getString(_cursadasKey);
+    if (raw == null) return super.getCursadas();
+
+    return _decodeList(raw, Cursada.fromJson);
+  }
+
+  @override
+  Future<void> replaceData({
+    required List<Empleado> empleados,
+    required List<Curso> cursos,
+    required List<Cursada> cursadas,
+  }) async {
+    final preferences = await _storage;
+    await preferences.setString(
+      _empleadosKey,
+      jsonEncode(empleados.map((empleado) => empleado.toJson()).toList()),
+    );
+    await preferences.setString(
+      _cursosKey,
+      jsonEncode(cursos.map((curso) => curso.toJson()).toList()),
+    );
+    await preferences.setString(
+      _cursadasKey,
+      jsonEncode(cursadas.map((cursada) => cursada.toJson()).toList()),
+    );
+  }
+
+  @override
+  Future<void> resetToMock() async {
+    final preferences = await _storage;
+    await preferences.remove(_empleadosKey);
+    await preferences.remove(_cursosKey);
+    await preferences.remove(_cursadasKey);
+  }
+
+  List<T> _decodeList<T>(String raw, T Function(Map<String, dynamic>) fromJson) {
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .map((item) => fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList();
+    } on FormatException {
+      return [];
+    } on TypeError {
+      return [];
+    }
   }
 }

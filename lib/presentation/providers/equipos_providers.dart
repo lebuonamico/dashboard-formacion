@@ -14,6 +14,7 @@ class ResumenEquipoViewModel {
   final double horasTotalesRequeridas;
   final double porcentajeCumplimiento;
   final EstadoSemaforo semaforo;
+  final List<String> equiposGenerales;
 
   ResumenEquipoViewModel({
     required this.nombreArea,
@@ -23,6 +24,7 @@ class ResumenEquipoViewModel {
     required this.horasTotalesRequeridas,
     required this.porcentajeCumplimiento,
     required this.semaforo,
+    required this.equiposGenerales,
   });
 }
 
@@ -30,10 +32,24 @@ class DetalleEquipoViewModel {
   final String nombreArea;
   final ResumenEquipoViewModel resumen;
   final List<CumplimientoEmpleado> miembros;
+  final Map<String, List<CumplimientoEmpleado>> miembrosPorEquipo;
 
   DetalleEquipoViewModel({
     required this.nombreArea,
     required this.resumen,
+    required this.miembros,
+    required this.miembrosPorEquipo,
+  });
+}
+
+class DetalleEquipoGeneralViewModel {
+  final String nombreArea;
+  final String nombreEquipo;
+  final List<CumplimientoEmpleado> miembros;
+
+  DetalleEquipoGeneralViewModel({
+    required this.nombreArea,
+    required this.nombreEquipo,
     required this.miembros,
   });
 }
@@ -65,6 +81,12 @@ final equiposResumenProvider =
     final porcentaje = horasRequeridas == 0
         ? 100.0
         : (horasRealizadas / horasRequeridas) * 100;
+    final equiposGenerales = miembros
+        .map((miembro) => miembro.empleado.equipo.trim())
+        .where((equipo) => equipo.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
 
     lista.add(
       ResumenEquipoViewModel(
@@ -75,12 +97,14 @@ final equiposResumenProvider =
         horasTotalesRequeridas: horasRequeridas,
         porcentajeCumplimiento: porcentaje,
         semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
+        equiposGenerales: equiposGenerales,
       ),
     );
   });
 
   return lista
-      .where((eq) => eq.nombreArea.toLowerCase().contains(query))
+        .where((area) => area.nombreArea.toLowerCase().contains(query) ||
+          area.equiposGenerales.any((equipo) => equipo.toLowerCase().contains(query)))
       .toList();
 });
 
@@ -88,9 +112,9 @@ final equiposResumenProvider =
 final detalleEquipoProvider =
     FutureProvider.family<DetalleEquipoViewModel, String>((ref, nombreArea) async {
   final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
-  final equipos = await ref.watch(equiposResumenProvider.future);
+  final areas = await ref.watch(equiposResumenProvider.future);
 
-  final resumen = equipos.firstWhere(
+  final resumen = areas.firstWhere(
     (e) => e.nombreArea.toLowerCase() == nombreArea.toLowerCase(),
     orElse: () => throw Exception('Equipo no encontrado'),
   );
@@ -98,10 +122,37 @@ final detalleEquipoProvider =
   final miembros = cumplimientos
       .where((c) => c.empleado.area.toLowerCase() == nombreArea.toLowerCase())
       .toList();
+  final miembrosPorEquipo = <String, List<CumplimientoEmpleado>>{};
+  for (final miembro in miembros) {
+    final equipo = miembro.empleado.equipo.trim().isEmpty
+        ? 'Sin equipo asignado'
+        : miembro.empleado.equipo.trim();
+    miembrosPorEquipo.putIfAbsent(equipo, () => []).add(miembro);
+  }
 
   return DetalleEquipoViewModel(
     nombreArea: resumen.nombreArea,
     resumen: resumen,
+    miembros: miembros,
+    miembrosPorEquipo: miembrosPorEquipo,
+  );
+});
+
+final detalleEquipoGeneralProvider =
+    FutureProvider.family<DetalleEquipoGeneralViewModel, ({String area, String equipo})>((ref, params) async {
+  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+  final miembros = cumplimientos.where((cumplimiento) {
+    return cumplimiento.empleado.area.toLowerCase() == params.area.toLowerCase() &&
+        cumplimiento.empleado.equipo.toLowerCase() == params.equipo.toLowerCase();
+  }).toList();
+
+  if (miembros.isEmpty) {
+    throw Exception('Equipo general no encontrado');
+  }
+
+  return DetalleEquipoGeneralViewModel(
+    nombreArea: params.area,
+    nombreEquipo: params.equipo,
     miembros: miembros,
   );
 });

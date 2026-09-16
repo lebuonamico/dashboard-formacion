@@ -10,4 +10,18 @@ class Cursada {
     required this.empleadoLegajo,
     required this.fecha,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'cursoId': cursoId,
+        'empleadoLegajo': empleadoLegajo,
+        'fecha': fecha.toIso8601String(),
+      };
+
+  factory Cursada.fromJson(Map<String, dynamic> json) => Cursada(
+        id: json['id']?.toString() ?? '',
+        cursoId: json['cursoId']?.toString() ?? '',
+        empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
+        fecha: DateTime.tryParse(json['fecha']?.toString() ?? '') ?? DateTime.now(),
+      );
 }

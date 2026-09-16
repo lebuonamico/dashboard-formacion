@@ -4,7 +4,7 @@ import 'package:app_finnegans/data/formacion_repository.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
 final formacionRepositoryProvider = Provider<FormacionRepository>((ref) {
-  return MockFormacionRepository();
+  return LocalFormacionRepository();
 });
 
 final cumplimientoServiceProvider = Provider<CumplimientoService>((ref) {

@@ -89,11 +89,11 @@ class SideMenu extends StatelessWidget {
                   },
                 ),
                 _MenuItem(
-                  icon: Icons.group_outlined,
-                  label: 'Equipos',
-                  isSelected: currentRoute.startsWith('/equipos'),
+                  icon: Icons.account_tree_outlined,
+                  label: 'Áreas',
+                  isSelected: currentRoute.startsWith('/areas'),
                   onTap: () {
-                    context.push('/equipos'); // Navega a la pantalla de equipos
+                    context.push('/areas'); // Navega a la pantalla de áreas
                   },
                 ),
                 _MenuItem(
@@ -175,7 +175,7 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final defaultColor = isSelected ? const Color(0xFF0D53C3) : const Color(0xFF64748B);
-    final bgColor = isSelected ? const Color(0xFF0D53C3).withOpacity(0.08) : Colors.transparent;
+    final bgColor = isSelected ? const Color(0xFF0D53C3).withValues(alpha: 0.08) : Colors.transparent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),

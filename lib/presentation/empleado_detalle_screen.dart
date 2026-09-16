@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/modelos/curso.dart';
 
 class EmpleadoDetalleScreen extends ConsumerWidget {
   final String legajo;
@@ -125,7 +128,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderEmpleado(emp, cump) {
+  Widget _buildHeaderEmpleado(Empleado emp, CumplimientoEmpleado cump) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -170,14 +173,18 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  '${emp.puesto} · Área de ${emp.area} · Legajo: ${emp.legajo}',
-                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
-                ),
+                Text('Área de ${emp.area} · Legajo: ${emp.legajo}',
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
                 const SizedBox(height: 4),
-                Text(
-                  emp.mail,
-                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                Text(emp.mail, style: const TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _DatoEmpleado(label: 'Equipo', value: _mostrarDato(emp.equipo)),
+                    _DatoEmpleado(label: 'Gerente', value: _mostrarDato(emp.gerente)),
+                  ],
                 ),
               ],
             ),
@@ -216,7 +223,9 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGridCategorias(cump) {
+  String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
+
+  Widget _buildGridCategorias(CumplimientoEmpleado cump) {
     return Row(
       children: TipoCurso.values.map((tipo) {
         final completadas = cump.horasCompletadas[tipo] ?? 0.0;
@@ -309,7 +318,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaDictados(List dictados) {
+  Widget _buildTablaDictados(List<Curso> dictados) {
     if (dictados.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -344,6 +353,34 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             DataCell(Text('${c.cargaHorariaHs.toStringAsFixed(0)} hs', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFC2410C)))),
           ]);
         }).toList(),
+      ),
+    );
+  }
+}
+
+class _DatoEmpleado extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DatoEmpleado({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
