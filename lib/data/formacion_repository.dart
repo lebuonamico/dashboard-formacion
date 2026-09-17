@@ -20,6 +20,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Martínez',
         seniority: Seniority.trainee,
         area: 'Desarrollo',
+        equipo: 'Core ERP Backend',
+        gerente: 'Lucas Gómez',
         mail: 'sofia.martinez@empresa.com',
       ),
       Empleado(
@@ -28,6 +30,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Gómez',
         seniority: Seniority.junior3,
         area: 'Desarrollo',
+        equipo: 'Core ERP Backend',
+        gerente: 'Lucas Gómez',
         mail: 'lucas.gomez@empresa.com',
       ),
       Empleado(
@@ -36,6 +40,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Ríos',
         seniority: Seniority.semisenior2,
         area: 'Arquitectura',
+        equipo: 'Frontend Arquitectura & UI',
+        gerente: 'Valeria Ríos',
         mail: 'valeria.rios@empresa.com',
       ),
       Empleado(
@@ -44,6 +50,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Castro',
         seniority: Seniority.senior2,
         area: 'Desarrollo',
+        equipo: 'Core ERP Backend',
+        gerente: 'Lucas Gómez',
         mail: 'martin.castro@empresa.com',
       ),
       Empleado(
@@ -52,6 +60,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Herrera',
         seniority: Seniority.manager,
         area: 'Management',
+        equipo: 'Formación y Liderazgo',
+        gerente: 'Carolina Herrera',
         mail: 'carolina.herrera@empresa.com',
       ),
       Empleado(
@@ -60,6 +70,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Fernández',
         seniority: Seniority.senior1,
         area: 'Infraestructura',
+        equipo: 'Cloud Infrastructure',
+        gerente: 'Diego Fernández',
         mail: 'diego.fernandez@empresa.com',
       ),
       Empleado(
@@ -68,6 +80,8 @@ class MockFormacionRepository implements FormacionRepository {
         apellido: 'Gonzalez',
         seniority: Seniority.senior2,
         area: 'Calidad',
+        equipo: 'QA Automation',
+        gerente: 'Sebastian Gonzalez',
         mail: 'sebastian.gonzalez@empresa.com',
       ),
       // Agrega más empleados según sea necesario
