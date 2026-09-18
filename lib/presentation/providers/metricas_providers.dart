@@ -128,10 +128,11 @@ final mesCorteProyeccionProvider = Provider<int>((ref) => 9);
 // --- PROVIDERS DE MÉTRICAS CALCULADAS ---
 
 // 1. KPIs Generales
-final kpisGeneralesMetricasProvider =
-    FutureProvider<KpisGeneralesViewModel>((ref) async {
+final kpisGeneralesMetricasProvider = FutureProvider<KpisGeneralesViewModel>((
+  ref,
+) async {
   final empleados = await ref.watch(empleadosProvider.future);
-  final cursadas = await ref.watch(cursadasProvider.future);
+  final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
   final mesCorte = ref.watch(mesCorteProyeccionProvider);
@@ -148,19 +149,25 @@ final kpisGeneralesMetricasProvider =
     );
   }
 
-  final legajosConAsistencia = cursadas.map((c) => c.empleadoLegajo).toSet();
+  final legajosConAsistencia = cargasDeHoras
+      .map((carga) => carga.empleadoLegajo)
+      .toSet();
   final totalAlcanzados = legajosConAsistencia.length;
   final porcentajeAlcanzados = (totalAlcanzados / totalNomina) * 100;
 
-  final sumaHorasRealizadas =
-      cumplimientos.fold<double>(0.0, (acc, c) => acc + c.totalHorasCompletadas);
+  final sumaHorasRealizadas = cumplimientos.fold<double>(
+    0.0,
+    (acc, c) => acc + c.totalHorasCompletadas,
+  );
   final promedioActualPorPersona = sumaHorasRealizadas / totalNomina;
-  
+
   final mesesTranscurridos = mesCorte.clamp(1, 12);
   final proyectadoAnual = (promedioActualPorPersona / mesesTranscurridos) * 12;
 
   final horasDictadas = cursos.fold<double>(
-      0.0, (acc, cur) => acc + cur.cargaHorariaHs);
+    0.0,
+    (acc, cur) => acc + cur.cargaHorariaHs,
+  );
 
   return KpisGeneralesViewModel(
     porcentajeFinnencersAlcanzados: porcentajeAlcanzados,
@@ -175,66 +182,75 @@ final kpisGeneralesMetricasProvider =
 // 2. Cumplimiento, Desvíos y Semáforo por Seniority
 final cumplimientoPorSeniorityProvider =
     FutureProvider<List<SeniorityMetricaViewModel>>((ref) async {
-  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+      final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
 
-  final agrupadoPorSeniority = <Seniority, List<dynamic>>{};
-  for (final item in cumplimientos) {
-    agrupadoPorSeniority.putIfAbsent(item.empleado.seniority, () => []).add(item);
-  }
-
-  final resultado = <SeniorityMetricaViewModel>[];
-
-  for (final seniority in Seniority.values) {
-    final listaItems = agrupadoPorSeniority[seniority] ?? [];
-    if (listaItems.isEmpty) continue;
-
-    double totalRequeridas = 0;
-    double totalRealizadas = 0;
-    final horasReqPorTipo = <TipoCurso, double>{};
-    final horasRealPorTipo = <TipoCurso, double>{};
-
-    for (final item in listaItems) {
-      totalRequeridas += item.totalHorasRequeridas;
-      totalRealizadas += item.totalHorasCompletadas;
-
-      for (final tipo in TipoCurso.values) {
-        horasReqPorTipo[tipo] = (horasReqPorTipo[tipo] ?? 0) + (item.horasRequeridas[tipo] ?? 0);
-        horasRealPorTipo[tipo] = (horasRealPorTipo[tipo] ?? 0) + (item.horasCompletadas[tipo] ?? 0);
+      final agrupadoPorSeniority = <Seniority, List<dynamic>>{};
+      for (final item in cumplimientos) {
+        agrupadoPorSeniority
+            .putIfAbsent(item.empleado.seniority, () => [])
+            .add(item);
       }
-    }
 
-    final desvios = TipoCurso.values.map((tipo) {
-      final req = horasReqPorTipo[tipo] ?? 0.0;
-      final real = horasRealPorTipo[tipo] ?? 0.0;
-      return DesvioCategoriaViewModel(
-        tipo: tipo,
-        horasRequeridas: req,
-        horasRealizadas: real,
-        desvio: real - req,
-      );
-    }).toList();
+      final resultado = <SeniorityMetricaViewModel>[];
 
-    final porcentaje = totalRequeridas == 0 ? 100.0 : (totalRealizadas / totalRequeridas) * 100;
+      for (final seniority in Seniority.values) {
+        final listaItems = agrupadoPorSeniority[seniority] ?? [];
+        if (listaItems.isEmpty) continue;
 
-    resultado.add(
-      SeniorityMetricaViewModel(
-        seniority: seniority,
-        cantidadEmpleados: listaItems.length,
-        totalHorasRequeridas: totalRequeridas,
-        totalHorasRealizadas: totalRealizadas,
-        porcentajeCumplimiento: porcentaje,
-        semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
-        desviosPorCategoria: desvios,
-      ),
-    );
-  }
+        double totalRequeridas = 0;
+        double totalRealizadas = 0;
+        final horasReqPorTipo = <TipoCurso, double>{};
+        final horasRealPorTipo = <TipoCurso, double>{};
 
-  return resultado;
-});
+        for (final item in listaItems) {
+          totalRequeridas += item.totalHorasRequeridas;
+          totalRealizadas += item.totalHorasCompletadas;
+
+          for (final tipo in TipoCurso.values) {
+            horasReqPorTipo[tipo] =
+                (horasReqPorTipo[tipo] ?? 0) +
+                (item.horasRequeridas[tipo] ?? 0);
+            horasRealPorTipo[tipo] =
+                (horasRealPorTipo[tipo] ?? 0) +
+                (item.horasCompletadas[tipo] ?? 0);
+          }
+        }
+
+        final desvios = TipoCurso.values.map((tipo) {
+          final req = horasReqPorTipo[tipo] ?? 0.0;
+          final real = horasRealPorTipo[tipo] ?? 0.0;
+          return DesvioCategoriaViewModel(
+            tipo: tipo,
+            horasRequeridas: req,
+            horasRealizadas: real,
+            desvio: real - req,
+          );
+        }).toList();
+
+        final porcentaje = totalRequeridas == 0
+            ? 100.0
+            : (totalRealizadas / totalRequeridas) * 100;
+
+        resultado.add(
+          SeniorityMetricaViewModel(
+            seniority: seniority,
+            cantidadEmpleados: listaItems.length,
+            totalHorasRequeridas: totalRequeridas,
+            totalHorasRealizadas: totalRealizadas,
+            porcentajeCumplimiento: porcentaje,
+            semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
+            desviosPorCategoria: desvios,
+          ),
+        );
+      }
+
+      return resultado;
+    });
 
 // 3. Semáforos de Cumplimiento por Área
-final semaforoPorAreaProvider =
-    FutureProvider<List<SemaforoAreaViewModel>>((ref) async {
+final semaforoPorAreaProvider = FutureProvider<List<SemaforoAreaViewModel>>((
+  ref,
+) async {
   final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
 
   final agrupadoPorArea = <String, List<dynamic>>{};
@@ -245,13 +261,18 @@ final semaforoPorAreaProvider =
   final resultado = <SemaforoAreaViewModel>[];
 
   agrupadoPorArea.forEach((area, listaItems) {
-    final horasCompletadas =
-        listaItems.fold<double>(0.0, (acc, item) => acc + item.totalHorasCompletadas);
-    final horasRequeridas =
-        listaItems.fold<double>(0.0, (acc, item) => acc + item.totalHorasRequeridas);
+    final horasCompletadas = listaItems.fold<double>(
+      0.0,
+      (acc, item) => acc + item.totalHorasCompletadas,
+    );
+    final horasRequeridas = listaItems.fold<double>(
+      0.0,
+      (acc, item) => acc + item.totalHorasRequeridas,
+    );
 
-    final porcentaje =
-        horasRequeridas == 0 ? 100.0 : (horasCompletadas / horasRequeridas) * 100;
+    final porcentaje = horasRequeridas == 0
+        ? 100.0
+        : (horasCompletadas / horasRequeridas) * 100;
 
     resultado.add(
       SemaforoAreaViewModel(
@@ -265,46 +286,54 @@ final semaforoPorAreaProvider =
     );
   });
 
-  resultado.sort((a, b) => b.porcentajeCumplimiento.compareTo(a.porcentajeCumplimiento));
+  resultado.sort(
+    (a, b) => b.porcentajeCumplimiento.compareTo(a.porcentajeCumplimiento),
+  );
   return resultado;
 });
 
 // 4. Métricas de Instructores con Modelos completos de Curso
 final metricasInstructoresProvider =
     FutureProvider<List<InstructorMetricaViewModel>>((ref) async {
-  final empleados = await ref.watch(empleadosProvider.future);
-  final cursos = await ref.watch(cursosProvider.future);
+      final empleados = await ref.watch(empleadosProvider.future);
+      final cursos = await ref.watch(cursosProvider.future);
 
-  final empMap = {for (var e in empleados) e.legajo: e};
+      final empMap = {for (var e in empleados) e.legajo: e};
 
-  final cursosPorInstructor = <String, List<Curso>>{};
-  for (final curso in cursos) {
-    cursosPorInstructor.putIfAbsent(curso.instructorLegajo, () => []).add(curso);
-  }
+      final cursosPorInstructor = <String, List<Curso>>{};
+      for (final curso in cursos) {
+        cursosPorInstructor
+            .putIfAbsent(curso.instructorLegajo, () => [])
+            .add(curso);
+      }
 
-  final resultado = <InstructorMetricaViewModel>[];
+      final resultado = <InstructorMetricaViewModel>[];
 
-  cursosPorInstructor.forEach((legajo, listaCursos) {
-    final emp = empMap[legajo];
-    if (emp == null) return;
+      cursosPorInstructor.forEach((legajo, listaCursos) {
+        final emp = empMap[legajo];
+        if (emp == null) return;
 
-    final idsCursosDistintos = listaCursos.map((c) => c.id).toSet();
-    final totalHoras =
-        listaCursos.fold<double>(0.0, (acc, c) => acc + c.cargaHorariaHs);
+        final idsCursosDistintos = listaCursos.map((c) => c.id).toSet();
+        final totalHoras = listaCursos.fold<double>(
+          0.0,
+          (acc, c) => acc + c.cargaHorariaHs,
+        );
 
-    resultado.add(
-      InstructorMetricaViewModel(
-        legajo: emp.legajo,
-        nombreCompleto: '${emp.nombre} ${emp.apellido}',
-        area: emp.area,
-        seniority: emp.seniority,
-        variedadCursosDistintos: idsCursosDistintos.length,
-        totalHorasDictadas: totalHoras,
-        cursosDictados: List<Curso>.from(listaCursos),
-      ),
-    );
-  });
+        resultado.add(
+          InstructorMetricaViewModel(
+            legajo: emp.legajo,
+            nombreCompleto: '${emp.nombre} ${emp.apellido}',
+            area: emp.area,
+            seniority: emp.seniority,
+            variedadCursosDistintos: idsCursosDistintos.length,
+            totalHorasDictadas: totalHoras,
+            cursosDictados: List<Curso>.from(listaCursos),
+          ),
+        );
+      });
 
-  resultado.sort((a, b) => b.totalHorasDictadas.compareTo(a.totalHorasDictadas));
-  return resultado;
-});
+      resultado.sort(
+        (a, b) => b.totalHorasDictadas.compareTo(a.totalHorasDictadas),
+      );
+      return resultado;
+    });
