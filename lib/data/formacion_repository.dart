@@ -223,7 +223,7 @@ class LocalFormacionRepository extends MockFormacionRepository {
       jsonEncode(cursadas.map((cursada) => cursada.toJson()).toList()),
     );
   }
-
+  //comentario
   @override
   Future<void> resetToMock() async {
     final preferences = await _storage;
