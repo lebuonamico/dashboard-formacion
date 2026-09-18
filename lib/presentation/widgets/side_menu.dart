@@ -7,16 +7,13 @@ class SideMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final currentRoute = GoRouterState.of(context).uri.toString();
 
     return Container(
       width: 260,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          right: BorderSide(color: Color(0xFFE2E8F0)),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +74,9 @@ class SideMenu extends StatelessWidget {
                   label: 'Inicio',
                   isSelected: currentRoute.startsWith('/dashboard'),
                   onTap: () {
-                    context.push('/dashboard'); // Navega a la pantalla de dashboard
+                    context.push(
+                      '/dashboard',
+                    ); // Navega a la pantalla de dashboard
                   },
                 ),
                 _MenuItem(
@@ -85,7 +84,9 @@ class SideMenu extends StatelessWidget {
                   label: 'Empleados',
                   isSelected: currentRoute.startsWith('/empleados'),
                   onTap: () {
-                    context.push('/empleados'); // Navega a la pantalla de empleados
+                    context.push(
+                      '/empleados',
+                    ); // Navega a la pantalla de empleados
                   },
                 ),
                 _MenuItem(
@@ -106,10 +107,12 @@ class SideMenu extends StatelessWidget {
                 ),
                 _MenuItem(
                   icon: Icons.assignment_outlined,
-                  label: 'Cursadas',
+                  label: 'Carga de horas CRM',
                   isSelected: currentRoute.startsWith('/cursadas'),
                   onTap: () {
-                    context.push('/cursadas'); // Navega a la pantalla de cursadas
+                    context.push(
+                      '/cursadas',
+                    ); // Navega a la pantalla de cursadas
                   },
                 ),
                 _MenuItem(
@@ -117,7 +120,9 @@ class SideMenu extends StatelessWidget {
                   label: 'Métricas',
                   isSelected: currentRoute.startsWith('/metricas'),
                   onTap: () {
-                    context.push('/metricas'); // Navega a la pantalla de métricas
+                    context.push(
+                      '/metricas',
+                    ); // Navega a la pantalla de métricas
                   },
                 ),
                 _MenuItem(
@@ -125,10 +130,11 @@ class SideMenu extends StatelessWidget {
                   label: 'Configuración',
                   isSelected: currentRoute.startsWith('/configuracion'),
                   onTap: () {
-                    context.push('/configuracion'); // Navega a la pantalla de configuración
+                    context.push(
+                      '/configuracion',
+                    ); // Navega a la pantalla de configuración
                   },
                 ),
-                
               ],
             ),
           ),
@@ -174,8 +180,12 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultColor = isSelected ? const Color(0xFF0D53C3) : const Color(0xFF64748B);
-    final bgColor = isSelected ? const Color(0xFF0D53C3).withValues(alpha: 0.08) : Colors.transparent;
+    final defaultColor = isSelected
+        ? const Color(0xFF0D53C3)
+        : const Color(0xFF64748B);
+    final bgColor = isSelected
+        ? const Color(0xFF0D53C3).withValues(alpha: 0.08)
+        : Colors.transparent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -187,17 +197,17 @@ class _MenuItem extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         onTap: onTap,
         dense: true,
-        leading: Icon(
-          icon,
-          size: 20,
-          color: iconColor ?? defaultColor,
-        ),
+        leading: Icon(icon, size: 20, color: iconColor ?? defaultColor),
         title: Text(
           label,
           style: TextStyle(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: textColor ?? (isSelected ? const Color(0xFF0D53C3) : const Color(0xFF334155)),
+            color:
+                textColor ??
+                (isSelected
+                    ? const Color(0xFF0D53C3)
+                    : const Color(0xFF334155)),
           ),
         ),
       ),

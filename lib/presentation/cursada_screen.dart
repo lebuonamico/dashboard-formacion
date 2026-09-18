@@ -35,7 +35,7 @@ class CursadasScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Registro de Cursadas y Asistencias',
+                        'Carga de horas CRM',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -45,7 +45,10 @@ class CursadasScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -62,14 +65,17 @@ class CursadasScreen extends ConsumerWidget {
                         const SizedBox(height: 20),
                         Expanded(
                           child: cursadasAsync.when(
-                            loading: () =>
-                                const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                             error: (err, _) =>
                                 Center(child: Text('Error: $err')),
                             data: (lista) {
                               if (lista.isEmpty) {
                                 return const Center(
-                                  child: Text('No hay registros de asistencia coincidentes.'),
+                                  child: Text(
+                                    'No hay cargas de horas coincidentes.',
+                                  ),
                                 );
                               }
                               return _buildTablaAsistencias(lista);
@@ -106,7 +112,11 @@ class CursadasScreen extends ConsumerWidget {
                   ref.read(busquedaCursadaProvider.notifier).state = val,
               decoration: const InputDecoration(
                 hintText: 'Buscar por colaborador, curso o legajo...',
-                prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
                 isDense: true,
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFFCBD5E1)),
@@ -131,10 +141,7 @@ class CursadasScreen extends ConsumerWidget {
                     child: Text('Todos los cursos'),
                   ),
                   ...cursos.map(
-                    (c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.nombre),
-                    ),
+                    (c) => DropdownMenuItem(value: c.id, child: Text(c.nombre)),
                   ),
                 ],
                 onChanged: (val) =>
@@ -162,12 +169,42 @@ class CursadasScreen extends ConsumerWidget {
             horizontalMargin: 20,
             columnSpacing: 24,
             columns: const [
-              DataColumn(label: Text('ID Registro', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Colaborador Asistente', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Curso Tomado', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Carga Computada', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(
+                label: Text(
+                  'ID Registro',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Fecha',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Colaborador',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Seniority',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Curso',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Horas CRM',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
             rows: lista.map((vm) {
               final csd = vm.cursada;
@@ -179,7 +216,12 @@ class CursadasScreen extends ConsumerWidget {
 
               return DataRow(
                 cells: [
-                  DataCell(Text(csd.id, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  DataCell(
+                    Text(
+                      csd.id,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   DataCell(Text(fechaFormato)),
                   DataCell(
                     Row(
@@ -189,25 +231,40 @@ class CursadasScreen extends ConsumerWidget {
                           backgroundColor: const Color(0xFFE2E8F0),
                           child: Text(
                             emp != null ? emp.nombre.substring(0, 1) : '?',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(emp != null ? '${emp.nombre} ${emp.apellido} (${csd.empleadoLegajo})' : csd.empleadoLegajo),
+                        Text(
+                          emp != null
+                              ? '${emp.nombre} ${emp.apellido} (${csd.empleadoLegajo})'
+                              : csd.empleadoLegajo,
+                        ),
                       ],
                     ),
                   ),
                   DataCell(Text(emp?.seniority.label ?? '-')),
-                  DataCell(Text(cur?.nombre ?? csd.cursoId, style: const TextStyle(fontWeight: FontWeight.w500))),
+                  DataCell(
+                    Text(
+                      cur?.nombre ?? csd.cursoId,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFECFDF5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${cur?.cargaHorariaHs.toStringAsFixed(0) ?? 0} hs',
+                        '${csd.horasTotales.toStringAsFixed(2)} hs${csd.esDictada ? ' (dictadas)' : ' (tomadas)'}',
                         style: const TextStyle(
                           color: Color(0xFF047857),
                           fontWeight: FontWeight.bold,

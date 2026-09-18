@@ -43,7 +43,10 @@ class CursosScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -60,14 +63,17 @@ class CursosScreen extends ConsumerWidget {
                         const SizedBox(height: 20),
                         Expanded(
                           child: cursosAsync.when(
-                            loading: () =>
-                                const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                             error: (err, _) =>
                                 Center(child: Text('Error: $err')),
                             data: (cursosList) {
                               if (cursosList.isEmpty) {
                                 return const Center(
-                                  child: Text('No se encontraron cursos con los filtros aplicados.'),
+                                  child: Text(
+                                    'No se encontraron cursos con los filtros aplicados.',
+                                  ),
                                 );
                               }
                               return _buildTablaCursos(cursosList);
@@ -103,8 +109,12 @@ class CursosScreen extends ConsumerWidget {
               onChanged: (val) =>
                   ref.read(busquedaCursoProvider.notifier).state = val,
               decoration: const InputDecoration(
-                hintText: 'Buscar por nombre, área o instructor...',
-                prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                hintText: 'Buscar por nombre o ID...',
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
                 isDense: true,
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFFCBD5E1)),
@@ -129,10 +139,7 @@ class CursosScreen extends ConsumerWidget {
                     child: Text('Todos los tipos'),
                   ),
                   ...TipoCurso.values.map(
-                    (t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(t.label),
-                    ),
+                    (t) => DropdownMenuItem(value: t, child: Text(t.label)),
                   ),
                 ],
                 onChanged: (val) =>
@@ -160,34 +167,55 @@ class CursosScreen extends ConsumerWidget {
             horizontalMargin: 20,
             columnSpacing: 24,
             columns: const [
-              DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Nombre del Curso', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Tipo', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Área Temática', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Instructor', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Carga Horaria', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(
+                label: Text(
+                  'ID',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Nombre del Curso',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Tipo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Carga Horaria',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
             rows: cursosList.map((vm) {
               final c = vm.curso;
               return DataRow(
                 cells: [
-                  DataCell(Text(c.id, style: const TextStyle(fontWeight: FontWeight.w600))),
-                  DataCell(Text(c.nombre, style: const TextStyle(fontWeight: FontWeight.w500))),
-                  DataCell(_buildTipoChip(c.tipo)),
-                  DataCell(Text(c.areaCurso)),
                   DataCell(
-                    Row(
-                      children: [
-                        const Icon(Icons.person_outline, size: 16, color: Color(0xFF64748B)),
-                        const SizedBox(width: 6),
-                        Text(vm.nombreInstructor),
-                      ],
+                    Text(
+                      c.id,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                   DataCell(
                     Text(
+                      c.nombre,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  DataCell(_buildTipoChip(c.tipo)),
+                  DataCell(
+                    Text(
                       '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ),
                 ],
@@ -230,7 +258,11 @@ class CursosScreen extends ConsumerWidget {
       ),
       child: Text(
         tipo.label,
-        style: TextStyle(color: text, fontSize: 12, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          color: text,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
