@@ -45,7 +45,10 @@ class EmpleadosScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -62,8 +65,9 @@ class EmpleadosScreen extends ConsumerWidget {
                         const SizedBox(height: 20),
                         Expanded(
                           child: empleadosFiltrados.when(
-                            loading: () =>
-                                const Center(child: CircularProgressIndicator()),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                             error: (err, _) =>
                                 Center(child: Text('Error: $err')),
                             data: (empleados) {
@@ -105,8 +109,13 @@ class EmpleadosScreen extends ConsumerWidget {
               onChanged: (val) =>
                   ref.read(busquedaEmpleadoProvider.notifier).state = val,
               decoration: const InputDecoration(
-                hintText: 'Buscar por nombre, legajo, área, equipo o gerente...',
-                prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                hintText:
+                    'Buscar por nombre, legajo, área, equipo o gerente...',
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
                 isDense: true,
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFFCBD5E1)),
@@ -131,10 +140,7 @@ class EmpleadosScreen extends ConsumerWidget {
                     child: Text('Todos los seniorities'),
                   ),
                   ...Seniority.values.map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label),
-                    ),
+                    (s) => DropdownMenuItem(value: s, child: Text(s.label)),
                   ),
                 ],
                 onChanged: (val) =>
@@ -163,19 +169,54 @@ class EmpleadosScreen extends ConsumerWidget {
             horizontalMargin: 20,
             columnSpacing: 24,
             columns: const [
-              DataColumn(label: Text('Legajo', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Empleado', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Área', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Equipo', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Gerente', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Contacto', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(
+                label: Text(
+                  'Legajo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Empleado',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Área',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Equipo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Seniority',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Contacto',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
             rows: empleados.map((emp) {
               return DataRow(
-                onSelectChanged: (_) => context.push('/empleados/${emp.legajo}'),
+                onSelectChanged: (_) =>
+                    context.push('/empleados/${emp.legajo}'),
                 cells: [
-                  DataCell(Text(emp.legajo, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  DataCell(
+                    Text(
+                      emp.legajo,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   DataCell(
                     Row(
                       children: [
@@ -198,10 +239,12 @@ class EmpleadosScreen extends ConsumerWidget {
                   ),
                   DataCell(Text(emp.area)),
                   DataCell(Text(_mostrarDato(emp.equipo))),
-                  DataCell(Text(_mostrarDato(emp.gerente))),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(4),
@@ -216,7 +259,12 @@ class EmpleadosScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  DataCell(Text(emp.mail, style: const TextStyle(color: Color(0xFF64748B)))),
+                  DataCell(
+                    Text(
+                      emp.mail,
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ),
                 ],
               );
             }).toList(),
@@ -227,5 +275,4 @@ class EmpleadosScreen extends ConsumerWidget {
   }
 
   String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
-
 }

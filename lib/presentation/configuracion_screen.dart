@@ -1,15 +1,16 @@
 import 'dart:convert';
 
 import 'package:csv/csv.dart';
-import 'package:excel/excel.dart' hide Border;
+import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_finnegans/data/formacion_repository.dart';
+import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
-import 'package:app_finnegans/domain/modelos/cursada.dart';
+import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/seniority.dart';
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
@@ -20,49 +21,13 @@ class ConfiguracionScreen extends ConsumerStatefulWidget {
   const ConfiguracionScreen({super.key});
 
   @override
-  ConsumerState<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
+  ConsumerState<ConfiguracionScreen> createState() =>
+      _ConfiguracionScreenState();
 }
 
 class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
-  static const _trimestreKey = 'config_trimestre';
-  static const _horasKey = 'config_horas_base';
-  static const _usarMockKey = 'config_usar_mock';
-
-  String _trimestre = 'Q3';
-  double _horasBase = 8;
-  bool _usarMock = true;
-  bool _cargando = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarConfiguracion();
-  }
-
-  Future<void> _cargarConfiguracion() async {
-    final preferences = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _trimestre = preferences.getString(_trimestreKey) ?? 'Q3';
-      _horasBase = preferences.getDouble(_horasKey) ?? 8;
-      _usarMock = preferences.getBool(_usarMockKey) ?? true;
-      _cargando = false;
-    });
-  }
-
-  Future<void> _guardarConfiguracion() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_trimestreKey, _trimestre);
-    await preferences.setDouble(_horasKey, _horasBase);
-    await preferences.setBool(_usarMockKey, _usarMock);
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_cargando) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
@@ -77,7 +42,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -93,7 +60,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -106,9 +76,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                     children: [
                       _buildSeccionImportacion(context),
                       const SizedBox(height: 24),
-                      _buildSeccionPlan(),
+                      _buildSeccionCursos(context),
                       const SizedBox(height: 24),
-                      _buildSeccionEntorno(),
+                      _buildSeccionCargaDeHoras(context),
                     ],
                   ),
                 ),
@@ -122,8 +92,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Widget _buildSeccionImportacion(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga e Integración de Datos',
-      subtitulo: 'Seleccioná el método para ingresar o sincronizar los registros',
+      titulo: 'Carga de Nómina de Empleados',
+      subtitulo:
+          'Importá un archivo Excel o CSV con los datos de los empleados',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -133,131 +104,90 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.table_chart_outlined, color: Color(0xFF1D4ED8)),
+            child: const Icon(
+              Icons.table_chart_outlined,
+              color: Color(0xFF1D4ED8),
+            ),
           ),
-          title: const Text('Importar desde Excel / CSV', style: TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: const Text('Subí planillas Excel o CSV con empleados, cursos y cursadas'),
+          title: const Text(
+            'Importar nómina desde Excel / CSV',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text(
+            'Cargá la nómina de empleados para actualizar el sistema',
+          ),
           trailing: OutlinedButton.icon(
             onPressed: _importarArchivo,
             icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Subir Archivo'),
+            label: const Text('Cargar Nómina'),
           ),
         ),
-        const Divider(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSeccionCursos(BuildContext context) {
+    return _ConfigCard(
+      titulo: 'Carga de Cursos',
+      subtitulo:
+          'Importá el catálogo de cursos desde Moodle u otro archivo Excel / CSV',
+      children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
+              color: const Color(0xFFF0FDF4),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.link, color: Color(0xFF047857)),
+            child: const Icon(Icons.school_outlined, color: Color(0xFF15803D)),
           ),
-          title: const Text('Vincular Google Sheets', style: TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: const Text('Sincronización automática con la hoja de cálculo de Formación'),
-          trailing: FilledButton(
-            onPressed: () {},
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D53C3)),
-            child: const Text('Conectar'),
+          title: const Text(
+            'Importar cursos desde Excel / CSV',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text(
+            'El área y el instructor se completan posteriormente desde las cursadas',
+          ),
+          trailing: OutlinedButton.icon(
+            onPressed: _importarCursosArchivo,
+            icon: const Icon(Icons.upload_file, size: 18),
+            label: const Text('Cargar Cursos'),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSeccionPlan() {
+  Widget _buildSeccionCargaDeHoras(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Parámetros del Plan de Formación',
-      subtitulo: 'Ajustá las bases de cálculo del período actual',
+      titulo: 'Carga de horas CRM',
+      subtitulo: 'Importá las horas tomadas y dictadas desde el reporte de CRM',
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _trimestre,
-                decoration: const InputDecoration(
-                  labelText: 'Trimestre Activo',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'Q1', child: Text('Q1 (Ene - Mar)')),
-                  DropdownMenuItem(value: 'Q2', child: Text('Q2 (Abr - Jun)')),
-                  DropdownMenuItem(value: 'Q3', child: Text('Q3 (Jul - Sep)')),
-                  DropdownMenuItem(value: 'Q4', child: Text('Q4 (Oct - Dic)')),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _trimestre = value);
-                  _guardarConfiguracion();
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                initialValue: _horasBase.toStringAsFixed(0),
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Carga Base Requerida (Horas)',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                  suffixText: 'hs',
-                ),
-                onChanged: (value) {
-                  final horas = double.tryParse(value.replaceAll(',', '.'));
-                  if (horas == null || horas < 0) return;
-                  _horasBase = horas;
-                  _guardarConfiguracion();
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSeccionEntorno() {
-    return _ConfigCard(
-      titulo: 'Estado de la Base de Datos',
-      subtitulo: 'Control de persistencia y datos de desarrollo',
-      children: [
-        SwitchListTile(
+        ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Utilizar Datos Simulados (Mock Repository)', style: TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: const Text('Desactivá esta opción cuando conectes la API o SQLite'),
-          value: _usarMock,
-          activeThumbColor: const Color(0xFF0D53C3),
-          onChanged: (value) {
-            setState(() => _usarMock = value);
-            _guardarConfiguracion();
-          },
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
-              onPressed: _restablecerDatos,
-              icon: const Icon(Icons.refresh, color: Color(0xFFDC2626)),
-              label: const Text('Restablecer Datos Mock', style: TextStyle(color: Color(0xFFDC2626))),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(6),
             ),
-          ],
+            child: const Icon(Icons.schedule, color: Color(0xFFC2410C)),
+          ),
+          title: const Text(
+            'Importar carga de horas desde Excel / CSV',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text(
+            'Solo se consideran registros del proyecto 01 - Capacitación',
+          ),
+          trailing: OutlinedButton.icon(
+            onPressed: _importarCargaDeHoras,
+            icon: const Icon(Icons.upload_file, size: 18),
+            label: const Text('Cargar Horas'),
+          ),
         ),
       ],
-    );
-  }
-
-  Future<void> _restablecerDatos() async {
-    await ref.read(formacionRepositoryProvider).resetToMock();
-    ref.invalidate(empleadosProvider);
-    ref.invalidate(cursosProvider);
-    ref.invalidate(cursadasProvider);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Se restablecieron los datos simulados.')),
     );
   }
 
@@ -275,39 +205,65 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ? _leerExcel(result.files.single.bytes!)
           : {
               'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                  .convert(utf8.decode(result.files.single.bytes!).replaceFirst('\ufeff', '')),
+                  .convert(
+                    utf8
+                        .decode(result.files.single.bytes!)
+                        .replaceFirst('\ufeff', ''),
+                  ),
             };
-      final repository = ref.read(formacionRepositoryProvider);
-      if (repository is! LocalFormacionRepository) {
+      final empleadosRepository = ref.read(empleadosRepositoryProvider);
+      final cursosRepository = ref.read(cursosRepositoryProvider);
+      final cargaDeHorasRepository = ref.read(
+        cargaDeHorasCRMRepositoryProvider,
+      );
+      if (empleadosRepository is! LocalEmpleadosRepository ||
+          cursosRepository is! LocalCursosRepository ||
+          cargaDeHorasRepository is! LocalCargaDeHorasCRMRepository) {
         throw const FormatException('El repositorio local no está disponible.');
       }
 
-      final empleados = await repository.getEmpleados();
-      final cursos = await repository.getCursos();
-      final cursadas = await repository.getCursadas();
+      final empleados = await empleadosRepository.getEmpleados();
+      final cursos = await cursosRepository.getCursos();
+      final cargasDeHoras = await cargaDeHorasRepository.getCargasDeHoras();
       var empleadosImportados = [...empleados];
       var cursosImportados = [...cursos];
-      var cursadasImportadas = [...cursadas];
+      var cargasDeHorasImportadas = [...cargasDeHoras];
       var empleadosReemplazados = false;
       var cursosReemplazados = false;
-      var cursadasReemplazadas = false;
 
       var registrosImportados = 0;
       for (final rows in rowsPorHoja.values) {
         if (rows.length < 2) continue;
         final headerIndex = _buscarFilaEncabezados(rows);
         if (headerIndex == -1) continue;
-        final headers = rows[headerIndex].map((header) => _normalize(header.toString())).toList();
-        final seniorityIndex = _buscarColumnaSeniority(headers);
-        final records = rows.skip(headerIndex + 1).where((row) => row.any((cell) => cell.toString().trim().isNotEmpty));
+        final headers = rows[headerIndex]
+            .map((header) => _normalize(header.toString()))
+            .toList();
+        final seniorityIndex = _buscarColumnaSeniority(
+          headers,
+          rows,
+          headerIndex,
+        );
+        final records = rows
+            .skip(headerIndex + 1)
+            .where(
+              (row) => row.any((cell) => cell.toString().trim().isNotEmpty),
+            );
 
         for (final row in records) {
           final normalizedData = <String, String>{};
-          for (var index = 0; index < headers.length && index < row.length; index++) {
+          for (
+            var index = 0;
+            index < headers.length && index < row.length;
+            index++
+          ) {
             normalizedData[headers[index]] = row[index].toString().trim();
           }
-            if ((headers.contains('legajo') || headers.contains('nlegajo') || headers.contains('idempleado')) &&
-              (headers.contains('nombre') || headers.contains('nombreyapellido'))) {
+          if ((headers.contains('legajo') ||
+                  headers.contains('nlegajo') ||
+                  headers.contains('idempleado')) &&
+              (headers.contains('nombre') ||
+                  headers.contains('nombreyapellido'))) {
             if (!empleadosReemplazados) {
               empleadosImportados = [];
               empleadosReemplazados = true;
@@ -343,54 +299,86 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 if (_esColumnaSeniority(header)) header: 'seniority',
             });
             if (seniorityIndex != -1 && seniorityIndex < row.length) {
-              empleadoData['seniority'] = row[seniorityIndex].toString().trim();
+              empleadoData['seniority'] = Seniority.fromString(
+                row[seniorityIndex].toString().trim(),
+              ).name;
             }
             final empleado = Empleado.fromJson(empleadoData);
-            empleadosImportados = _reemplazarPorId(empleadosImportados, empleado, (item) => item.legajo);
-          } else if (headers.contains('cursoid') && headers.contains('empleadolegajo')) {
-            if (!cursadasReemplazadas) {
-              cursadasImportadas = [];
-              cursadasReemplazadas = true;
-            }
-            final cursada = Cursada.fromJson(_toCanonicalKeys(normalizedData, {
+            empleadosImportados = _reemplazarPorId(
+              empleadosImportados,
+              empleado,
+              (item) => item.legajo,
+            );
+          } else if (headers.contains('cursoid') &&
+              headers.contains('empleadolegajo')) {
+            final cargaData = _toCanonicalKeys(normalizedData, {
               'cursoid': 'cursoId',
               'empleadolegajo': 'empleadoLegajo',
-            }));
-            cursadasImportadas = _reemplazarPorId(cursadasImportadas, cursada, (item) => item.id);
-          } else if (headers.contains('id') && headers.contains('nombre') && headers.contains('tipo')) {
+              'horastotales': 'horasTotales',
+            });
+            final carga = CargaDeHorasCRM.fromJson({
+              ...cargaData,
+              'tipo': TipoCargaDeHoras.tomada.name,
+            });
+            if (carga.id.isNotEmpty) {
+              cargasDeHorasImportadas = _reemplazarPorId(
+                cargasDeHorasImportadas,
+                carga,
+                (item) => item.id,
+              );
+            }
+          } else if (headers.contains('id') &&
+              headers.contains('nombre') &&
+              headers.contains('tipo')) {
             if (!cursosReemplazados) {
               cursosImportados = [];
               cursosReemplazados = true;
             }
-            final curso = Curso.fromJson(_toCanonicalKeys(normalizedData, {
-              'areacurso': 'areaCurso',
-              'instructorlegajo': 'instructorLegajo',
-              'cargahorariahs': 'cargaHorariaHs',
-            }));
-            cursosImportados = _reemplazarPorId(cursosImportados, curso, (item) => item.id);
+            final curso = Curso.fromJson(
+              _toCanonicalKeys(normalizedData, {
+                'areacurso': 'areaCurso',
+                'instructorlegajo': 'instructorLegajo',
+                'cargahorariahs': 'cargaHorariaHs',
+              }),
+            );
+            cursosImportados = _reemplazarPorId(
+              cursosImportados,
+              curso,
+              (item) => item.id,
+            );
           } else {
-            throw FormatException('Encabezados no reconocidos en una hoja del archivo.');
+            throw FormatException(
+              'Encabezados no reconocidos en una hoja del archivo.',
+            );
           }
           registrosImportados++;
         }
       }
-      if (registrosImportados == 0) throw const FormatException('El archivo no tiene registros.');
+      if (registrosImportados == 0) {
+        throw const FormatException('El archivo no tiene registros.');
+      }
 
-      await repository.replaceData(
-        empleados: empleadosImportados,
-        cursos: cursosImportados,
-        cursadas: cursadasImportadas,
-      );
+      await Future.wait([
+        empleadosRepository.replaceEmpleados(empleadosImportados),
+        cursosRepository.replaceCursos(cursosImportados),
+        cargaDeHorasRepository.replaceCargasDeHoras(cargasDeHorasImportadas),
+      ]);
       ref.invalidate(empleadosProvider);
       ref.invalidate(cursosProvider);
-      ref.invalidate(cursadasProvider);
+      ref.invalidate(cargasDeHorasCRMProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se importaron $registrosImportados registros desde ${result.files.single.name}.')),
+        SnackBar(
+          content: Text(
+            'Se importaron $registrosImportados registros desde ${result.files.single.name}.',
+          ),
+        ),
       );
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     } on Object {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -399,17 +387,277 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     }
   }
 
+  Future<void> _importarCursosArchivo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'csv'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+
+    try {
+      final extension = result.files.single.extension?.toLowerCase();
+      final rowsPorHoja = extension == 'xlsx'
+          ? _leerExcel(result.files.single.bytes!)
+          : {
+              'CSV': const CsvToListConverter(shouldParseNumbers: false)
+                  .convert(
+                    utf8
+                        .decode(result.files.single.bytes!)
+                        .replaceFirst('\ufeff', ''),
+                  ),
+            };
+      final repository = ref.read(cursosRepositoryProvider);
+      if (repository is! LocalCursosRepository) {
+        throw const FormatException('El repositorio local no está disponible.');
+      }
+
+      final cursosImportados = <Curso>[];
+      for (final rows in rowsPorHoja.values) {
+        if (rows.length < 2) continue;
+        final headerIndex = _buscarFilaCursos(rows);
+        if (headerIndex == -1) continue;
+        final headers = rows[headerIndex]
+            .map((header) => _normalize(header.toString()))
+            .toList();
+        final idIndex = _buscarColumna(headers, const [
+          'id',
+          'cursoid',
+          'courseid',
+          'iddelcurso',
+          'idcurso',
+          'shortname',
+          'courseshortname',
+          'codigo',
+        ]);
+        final nombreIndex = _buscarColumna(headers, const [
+          'nombre',
+          'nombrecurso',
+          'course',
+          'coursename',
+          'fullname',
+          'coursefullname',
+          'nombrecompleto',
+          'titulo',
+        ]);
+        if (idIndex == -1 || nombreIndex == -1) continue;
+
+        for (final row in rows.skip(headerIndex + 1)) {
+          if (idIndex >= row.length || nombreIndex >= row.length) continue;
+          final id = row[idIndex].toString().trim();
+          final nombre = row[nombreIndex].toString().trim();
+          if (id.isEmpty || nombre.isEmpty) continue;
+          final tipoIndex = _buscarColumna(headers, const [
+            'tipo',
+            'tipocurso',
+            'category',
+            'categoria',
+          ]);
+          final horasIndex = _buscarColumna(headers, const [
+            'cargahorariahs',
+            'cargahoraria',
+            'horas',
+            'hours',
+          ]);
+          cursosImportados.add(
+            Curso(
+              id: id,
+              nombre: nombre,
+              tipo: tipoIndex != -1 && tipoIndex < row.length
+                  ? _tipoCursoDesdeTexto(row[tipoIndex].toString())
+                  : TipoCurso.libresExploracion,
+              areaCurso: '',
+              instructorLegajo: '',
+              cargaHorariaHs: horasIndex != -1 && horasIndex < row.length
+                  ? double.tryParse(
+                          row[horasIndex].toString().replaceAll(',', '.'),
+                        ) ??
+                        0
+                  : 0,
+            ),
+          );
+        }
+      }
+
+      if (cursosImportados.isEmpty) {
+        throw const FormatException(
+          'No se encontraron cursos. Verificá las columnas de ID y nombre.',
+        );
+      }
+      await repository.replaceCursos(cursosImportados);
+      ref.invalidate(cursosProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Se cargaron ${cursosImportados.length} cursos desde ${result.files.single.name}.',
+          ),
+        ),
+      );
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo leer el archivo de cursos.')),
+      );
+    }
+  }
+
+  Future<void> _importarCargaDeHoras() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'csv'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+
+    try {
+      final extension = result.files.single.extension?.toLowerCase();
+      final rowsPorHoja = extension == 'xlsx'
+          ? _leerExcel(result.files.single.bytes!)
+          : {
+              'CSV': const CsvToListConverter(shouldParseNumbers: false)
+                  .convert(
+                    utf8
+                        .decode(result.files.single.bytes!)
+                        .replaceFirst('\ufeff', ''),
+                  ),
+            };
+      final repository = ref.read(cargaDeHorasCRMRepositoryProvider);
+      if (repository is! LocalCargaDeHorasCRMRepository) {
+        throw const FormatException('El repositorio local no está disponible.');
+      }
+
+      final cargasImportadas = <CargaDeHorasCRM>[];
+      for (final rows in rowsPorHoja.values) {
+        if (rows.length < 2) continue;
+        final headerIndex = _buscarFilaCargaDeHoras(rows);
+        if (headerIndex == -1) continue;
+        final headers = rows[headerIndex]
+            .map((header) => _normalize(header.toString()))
+            .toList();
+        final idIndex = _buscarColumnaCRM(headers, 'id');
+        final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
+        final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
+        final descripcionIndex = _buscarColumnaCRM(headers, 'caso');
+        final proyectoIndex = _buscarColumnaProyectoItem(headers);
+        final horasIndex = _buscarColumnaCRM(headers, 'horas');
+        if ([
+          idIndex,
+          legajoIndex,
+          fechaIndex,
+          descripcionIndex,
+          proyectoIndex,
+          horasIndex,
+        ].any((index) => index == -1)) {
+          continue;
+        }
+
+        for (final row in rows.skip(headerIndex + 1)) {
+          if ([
+            idIndex,
+            legajoIndex,
+            fechaIndex,
+            descripcionIndex,
+            proyectoIndex,
+            horasIndex,
+          ].any((index) => index >= row.length)) {
+            continue;
+          }
+          final proyecto = _normalize(row[proyectoIndex].toString());
+          if (proyecto != '01capacitacion') {
+            continue;
+          }
+
+          final descripcion = row[descripcionIndex].toString().trim();
+          final tipo = _tipoCargaDesdeDescripcion(descripcion);
+          final cursoId = _cursoIdDesdeDescripcion(descripcion);
+          if (tipo == null || cursoId.isEmpty) continue;
+
+          final horas =
+              double.tryParse(
+                row[horasIndex].toString().replaceAll(',', '.'),
+              ) ??
+              0;
+          if (horas <= 0) continue;
+          final id = row[idIndex].toString().trim();
+          final legajo = row[legajoIndex].toString().trim();
+          if (id.isEmpty || legajo.isEmpty) continue;
+
+          cargasImportadas.add(
+            CargaDeHorasCRM(
+              id: id,
+              cursoId: cursoId,
+              empleadoLegajo: legajo,
+              fecha: _fechaDesdeCelda(row[fechaIndex].toString()),
+              horasTotales: horas,
+              tipo: tipo,
+            ),
+          );
+        }
+      }
+
+      if (cargasImportadas.isEmpty) {
+        throw const FormatException(
+          'No se encontraron cargas válidas del proyecto 01 - Capacitación.',
+        );
+      }
+      await repository.replaceCargasDeHoras(cargasImportadas);
+      ref.invalidate(cargasDeHorasCRMProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Se cargaron ${cargasImportadas.length} registros desde ${result.files.single.name}.',
+          ),
+        ),
+      );
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo leer el archivo de horas.')),
+      );
+    }
+  }
+
   Map<String, List<List<dynamic>>> _leerExcel(List<int> bytes) {
-    final workbook = Excel.decodeBytes(bytes);
+    final workbook = excel.Excel.decodeBytes(bytes);
     return {
       for (final entry in workbook.tables.entries)
         entry.key: entry.value.rows
-            .map((row) => row.map((cell) => cell?.value ?? '').toList())
+            .map((row) => row.map((cell) => _valorCelda(cell?.value)).toList())
             .toList(),
     };
   }
 
-  List<T> _reemplazarPorId<T>(List<T> actuales, T nuevo, String Function(T) id) {
+  String _valorCelda(excel.CellValue? value) {
+    if (value == null) return '';
+    if (value is excel.TextCellValue) return _textoSpan(value.value);
+    if (value is excel.IntCellValue) return value.value.toString();
+    if (value is excel.DoubleCellValue) return value.value.toString();
+    if (value is excel.BoolCellValue) return value.value.toString();
+    return value.toString();
+  }
+
+  String _textoSpan(excel.TextSpan span) {
+    return (span.text ?? '') +
+        (span.children ?? const <excel.TextSpan>[]).map(_textoSpan).join();
+  }
+
+  List<T> _reemplazarPorId<T>(
+    List<T> actuales,
+    T nuevo,
+    String Function(T) id,
+  ) {
     final index = actuales.indexWhere((item) => id(item) == id(nuevo));
     if (index == -1) return [...actuales, nuevo];
     final resultado = [...actuales]..[index] = nuevo;
@@ -418,8 +666,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   int _buscarFilaEncabezados(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
-      final headers = rows[index].map((cell) => _normalize(cell.toString())).toSet();
-      if ((headers.contains('legajo') || headers.contains('nlegajo') || headers.contains('idempleado')) &&
+      final headers = rows[index]
+          .map((cell) => _normalize(cell.toString()))
+          .toSet();
+      if ((headers.contains('legajo') ||
+              headers.contains('nlegajo') ||
+              headers.contains('idempleado')) &&
           (headers.contains('nombre') || headers.contains('nombreyapellido'))) {
         return index;
       }
@@ -427,20 +679,194 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  bool _esColumnaSeniority(String header) {
-    return header.contains('senior') ||
-        header.contains('nivel') ||
-        header.contains('categoria') ||
-        header.contains('grado') ||
-        header.contains('jerarquia');
-  }
-
-  int _buscarColumnaSeniority(List<String> headers) {
-    for (var index = 0; index < headers.length; index++) {
-      final header = headers[index];
-      if (_esColumnaSeniority(header)) return index;
+  int _buscarFilaCursos(List<List<dynamic>> rows) {
+    for (var index = 0; index < rows.length && index < 15; index++) {
+      final headers = rows[index]
+          .map((cell) => _normalize(cell.toString()))
+          .toSet();
+      final tieneId = headers.any(
+        const {
+          'id',
+          'cursoid',
+          'courseid',
+          'iddelcurso',
+          'idcurso',
+          'shortname',
+          'courseshortname',
+          'codigo',
+        }.contains,
+      );
+      final tieneNombre = headers.any(
+        const {
+          'nombre',
+          'nombrecurso',
+          'course',
+          'coursename',
+          'fullname',
+          'coursefullname',
+          'nombrecompleto',
+          'titulo',
+        }.contains,
+      );
+      if (tieneId && tieneNombre) return index;
     }
     return -1;
+  }
+
+  int _buscarFilaCargaDeHoras(List<List<dynamic>> rows) {
+    for (var index = 0; index < rows.length && index < 15; index++) {
+      final headers = rows[index]
+          .map((cell) => _normalize(cell.toString()))
+          .toSet();
+      if (_buscarColumnaCRM(headers.toList(), 'id') != -1 &&
+          _buscarColumnaCRM(headers.toList(), 'legajo') != -1 &&
+          _buscarColumnaCRM(headers.toList(), 'proyecto') != -1 &&
+          _buscarColumnaCRM(headers.toList(), 'horas') != -1) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  int _buscarColumnaCRM(List<String> headers, String campo) {
+    for (var index = 0; index < headers.length; index++) {
+      final header = headers[index];
+      final coincide = switch (campo) {
+        'id' => header.contains('transaccion') && header.contains('id'),
+        'legajo' => header.contains('legajo'),
+        'fecha' => header == 'fecha' || header.contains('fecha'),
+        'caso' =>
+          header == 'caso' ||
+              header.contains('descripcion') ||
+              header.contains('detalle') ||
+              header.contains('concepto'),
+        'proyecto' =>
+          header.contains('proyecto') &&
+              (header.contains('item') || header == 'proyecto'),
+        'horas' => header.contains('hora') && header.contains('total'),
+        _ => false,
+      };
+      if (coincide) return index;
+    }
+    return -1;
+  }
+
+  int _buscarColumnaProyectoItem(List<String> headers) {
+    final exactIndex = headers.indexOf('proyectoitem');
+    if (exactIndex != -1) return exactIndex;
+    return _buscarColumnaCRM(headers, 'proyecto');
+  }
+
+  TipoCargaDeHoras? _tipoCargaDesdeDescripcion(String value) {
+    final normalized = _normalize(value);
+    if (normalized.startsWith('choras')) return TipoCargaDeHoras.tomada;
+    if (normalized.startsWith('casosdeconsultoria')) {
+      return TipoCargaDeHoras.dictada;
+    }
+    return null;
+  }
+
+  String _cursoIdDesdeDescripcion(String value) {
+    final match = RegExp(
+      r'-\s*([a-z0-9][a-z0-9_-]*)\s*$',
+      caseSensitive: false,
+    ).firstMatch(value.trim());
+    return match?.group(1) ?? '';
+  }
+
+  DateTime _fechaDesdeCelda(String value) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+
+  int _buscarColumna(List<String> headers, List<String> posibles) {
+    for (final posible in posibles) {
+      final index = headers.indexOf(posible);
+      if (index != -1) return index;
+    }
+    return -1;
+  }
+
+  TipoCurso _tipoCursoDesdeTexto(String value) {
+    final normalized = _normalize(value);
+    for (final tipo in TipoCurso.values) {
+      if (_normalize(tipo.name) == normalized ||
+          _normalize(tipo.label) == normalized) {
+        return tipo;
+      }
+    }
+    if (normalized.contains('negocio') || normalized.contains('business')) {
+      return TipoCurso.habilidadesDeNegocio;
+    }
+    if (normalized.contains('blanda') || normalized.contains('soft')) {
+      return TipoCurso.habilidadesBlandas;
+    }
+    if (normalized.contains('dictad') || normalized.contains('impart')) {
+      return TipoCurso.dictadoCapacitaciones;
+    }
+    return TipoCurso.libresExploracion;
+  }
+
+  bool _esColumnaSeniority(String header) {
+    return header == 'seniority' ||
+        header.contains('seniority') ||
+        header == 'senioridad' ||
+        header == 'nivel' ||
+        header == 'nivelseniority' ||
+        header == 'niveldeseniority' ||
+        header == 'niveljerarquico' ||
+        header == 'categoria' ||
+        header == 'grado';
+  }
+
+  int _buscarColumnaSeniority(
+    List<String> headers,
+    List<List<dynamic>> rows,
+    int headerIndex,
+  ) {
+    const encabezadosEspecificos = {
+      'seniority',
+      'nivelseniority',
+      'niveldeseniority',
+      'senioridad',
+      'niveljerarquico',
+    };
+    final indiceEspecifico = headers.indexWhere(
+      encabezadosEspecificos.contains,
+    );
+    if (indiceEspecifico != -1) return indiceEspecifico;
+
+    for (var index = 0; index < headers.length; index++) {
+      final header = headers[index];
+      if (_esColumnaSeniority(header)) {
+        return index;
+      }
+    }
+
+    var mejorIndice = -1;
+    var mayorCantidadCoincidencias = 0;
+    for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+      final cantidadCoincidencias = rows
+          .skip(headerIndex + 1)
+          .take(50)
+          .where((row) => columnIndex < row.length)
+          .map((row) => row[columnIndex].toString())
+          .where(_pareceValorSeniority)
+          .length;
+      if (cantidadCoincidencias > mayorCantidadCoincidencias) {
+        mayorCantidadCoincidencias = cantidadCoincidencias;
+        mejorIndice = columnIndex;
+      }
+    }
+    if (mayorCantidadCoincidencias > 0) return mejorIndice;
+
+    return -1;
+  }
+
+  bool _pareceValorSeniority(String value) {
+    final normalized = _normalize(value);
+    return RegExp(
+      r'^(?:senior|senor|sr|ssr|ss|junior|jr|j[123]|trainee|manager|gerente)',
+    ).hasMatch(normalized);
   }
 
   String _normalize(String value) => value
@@ -458,7 +884,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     Map<String, String> aliases,
   ) {
     return {
-      for (final entry in data.entries) aliases[entry.key] ?? entry.key: entry.value,
+      for (final entry in data.entries)
+        aliases[entry.key] ?? entry.key: entry.value,
     };
   }
 }
@@ -488,7 +915,11 @@ class _ConfigCard extends StatelessWidget {
         children: [
           Text(
             titulo,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
