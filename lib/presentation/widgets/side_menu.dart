@@ -78,17 +78,7 @@ class SideMenu extends StatelessWidget {
                       '/dashboard',
                     ); // Navega a la pantalla de dashboard
                   },
-                ),
-                _MenuItem(
-                  icon: Icons.people_outline,
-                  label: 'Empleados',
-                  isSelected: currentRoute.startsWith('/empleados'),
-                  onTap: () {
-                    context.push(
-                      '/empleados',
-                    ); // Navega a la pantalla de empleados
-                  },
-                ),
+                 ),
                 _MenuItem(
                   icon: Icons.account_tree_outlined,
                   label: 'Áreas',
@@ -97,6 +87,23 @@ class SideMenu extends StatelessWidget {
                     context.push('/areas'); // Navega a la pantalla de áreas
                   },
                 ),
+                _MenuItem(
+                  icon: Icons.group_work,
+                  label: 'Equipos',
+                  isSelected: currentRoute.startsWith('/equipos'),
+                  onTap: () {
+                    context.push('/equipos'); // Navega a la pantalla de equipos
+                  },
+                ),
+                _MenuItem(
+                  icon: Icons.people_outline,
+                  label: 'Empleados',
+                  isSelected: currentRoute.startsWith('/empleados'),
+                  onTap: () {
+                    context.push('/empleados'); // Navega a la pantalla de empleados
+                  },
+                ),
+                
                 _MenuItem(
                   icon: Icons.school_outlined,
                   label: 'Cursos',
