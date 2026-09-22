@@ -5,16 +5,17 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 
-final cumplimientoGlobalProvider =
-    FutureProvider<List<CumplimientoEmpleado>>((ref) async {
+final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
+  ref,
+) async {
   final empleados = await ref.watch(empleadosProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
-  final cursadas = await ref.watch(cursadasProvider.future);
+  final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final service = ref.read(cumplimientoServiceProvider);
 
   return service.calcularCumplimientoGlobal(
     empleados: empleados,
     cursos: cursos,
-    cursadas: cursadas,
+    cargasDeHoras: cargasDeHoras,
   );
 });

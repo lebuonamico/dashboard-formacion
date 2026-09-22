@@ -10,7 +10,7 @@ import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
-  final repo = ref.watch(formacionRepositoryProvider);
+  final repo = ref.watch(empleadosRepositoryProvider);
   return repo.getEmpleados();
 });
 
@@ -24,7 +24,8 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
 
   return empleadosAsync.whenData((empleados) {
     return empleados.where((emp) {
-      final matchesQuery = emp.nombre.toLowerCase().contains(query) ||
+      final matchesQuery =
+          emp.nombre.toLowerCase().contains(query) ||
           emp.apellido.toLowerCase().contains(query) ||
           emp.legajo.toLowerCase().contains(query) ||
           emp.area.toLowerCase().contains(query) ||
@@ -55,27 +56,32 @@ class DetalleEmpleadoViewModel {
 }
 
 final detalleEmpleadoProvider =
-    FutureProvider.family<DetalleEmpleadoViewModel?, String>((ref, legajo) async {
-  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
-  final cursadasCompletasAsync = ref.watch(cursadasCompletasProvider);
-  final cursosAsync = await ref.watch(cursosProvider.future);
+    FutureProvider.family<DetalleEmpleadoViewModel?, String>((
+      ref,
+      legajo,
+    ) async {
+      final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+      final cursadasCompletasAsync = ref.watch(cursadasCompletasProvider);
+      final cursosAsync = await ref.watch(cursosProvider.future);
 
-  final itemCumplimiento = cumplimientos.firstWhere(
-    (c) => c.empleado.legajo == legajo,
-    orElse: () => throw Exception('Empleado no encontrado'),
-  );
+      final itemCumplimiento = cumplimientos.firstWhere(
+        (c) => c.empleado.legajo == legajo,
+        orElse: () => throw Exception('Empleado no encontrado'),
+      );
 
-  final todasLasCursadas = cursadasCompletasAsync.value ?? [];
-  final cursadasDelEmpleado =
-      todasLasCursadas.where((c) => c.cursada.empleadoLegajo == legajo).toList();
+      final todasLasCursadas = cursadasCompletasAsync.value ?? [];
+      final cursadasDelEmpleado = todasLasCursadas
+          .where((c) => c.cursada.empleadoLegajo == legajo)
+          .toList();
 
-  final dictados =
-      cursosAsync.where((cur) => cur.instructorLegajo == legajo).toList();
+      final dictados = cursosAsync
+          .where((cur) => cur.instructorLegajo == legajo)
+          .toList();
 
-  return DetalleEmpleadoViewModel(
-    empleado: itemCumplimiento.empleado,
-    cumplimiento: itemCumplimiento,
-    historialCursadas: cursadasDelEmpleado,
-    cursosDictados: dictados,
-  );
-});
+      return DetalleEmpleadoViewModel(
+        empleado: itemCumplimiento.empleado,
+        cumplimiento: itemCumplimiento,
+        historialCursadas: cursadasDelEmpleado,
+        cursosDictados: dictados,
+      );
+    });
