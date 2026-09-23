@@ -156,10 +156,31 @@ class _ProgressSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
-              style: const TextStyle(fontSize: 12, color: equiposMuted),
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: equiposMuted),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Tooltip(
+                    message:
+                        'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: equiposMuted.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               '${equipo.porcentajeCumplimiento.toStringAsFixed(0)}%',
               style: TextStyle(
@@ -204,6 +225,17 @@ class _CardFooter extends StatelessWidget {
             color: equiposInk,
           ),
         ),
+        const SizedBox(width: 8),
+        Text(
+          _formatDesvio(equipo.desvioHoras),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: equipo.desvioHoras >= 0
+                ? const Color(0xFF16A34A)
+                : const Color(0xFFDC2626),
+          ),
+        ),
         const Spacer(),
         const Text(
           'Ver detalle',
@@ -217,6 +249,14 @@ class _CardFooter extends StatelessWidget {
         const Icon(Icons.arrow_forward_rounded, size: 15, color: equiposBrand),
       ],
     );
+  }
+
+  String _formatDesvio(double desvioHoras) {
+    if (desvioHoras >= 0) {
+      return '+${desvioHoras.toStringAsFixed(1)} hs';
+    }
+
+    return '-${desvioHoras.abs().toStringAsFixed(1)} hs';
   }
 }
 

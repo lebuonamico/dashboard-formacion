@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 //import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 //import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
+import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
+import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
+import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -69,6 +74,11 @@ class EquipoGlobalViewModel {
   final int integrantesEnObjetivo;
   final double horasRealizadas;
   final double horasObjetivo;
+  final double desvioHoras;
+  final double horasNegocio;
+  final double horasBlandas;
+  final double horasLibres;
+  final double horasDictado;
   final double promedioPorColaborador;
   final double porcentajeCumplimiento;
   final EstadoSemaforo semaforo;
@@ -82,6 +92,11 @@ class EquipoGlobalViewModel {
     required this.integrantesEnObjetivo,
     required this.horasRealizadas,
     required this.horasObjetivo,
+    required this.desvioHoras,
+    required this.horasNegocio,
+    required this.horasBlandas,
+    required this.horasLibres,
+    required this.horasDictado,
     required this.promedioPorColaborador,
     required this.porcentajeCumplimiento,
     required this.semaforo,
@@ -93,17 +108,77 @@ class EquipoGlobalViewModel {
 final busquedaEquipoProvider = StateProvider<String>((ref) => '');
 // Leandro: El ? permite null: en estos filtros significa "todas las áreas / estados".
 final filtroAreaEquipoProvider = StateProvider<String?>((ref) => null);
-final filtroEstadoEquipoProvider = StateProvider<EstadoSemaforo?>((ref) => null);
+final filtroEstadoEquipoProvider = StateProvider<EstadoSemaforo?>(
+  (ref) => null,
+);
+
+enum AlcancePeriodoEquipos {
+  mensual('Mensual'),
+  anual('Anual');
+
+  final String label;
+  const AlcancePeriodoEquipos(this.label);
+}
+
+final alcancePeriodoEquipoProvider = StateProvider<AlcancePeriodoEquipos>(
+  (ref) => AlcancePeriodoEquipos.mensual,
+);
+final filtroMesEquipoProvider = StateProvider<int>(
+  (ref) => DateTime.now().month,
+);
+final filtroAnioEquipoProvider = StateProvider<int>(
+  (ref) => DateTime.now().year,
+);
+
+final aniosEquipoDisponiblesProvider = FutureProvider<List<int>>((ref) async {
+  final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
+  final anios = cargasDeHoras.map((carga) => carga.fecha.year).toSet()
+    ..add(DateTime.now().year);
+  final lista = anios.toList()..sort((a, b) => b.compareTo(a));
+
+  return lista;
+});
+
+/// Leandro: Cumplimiento usado sólo por Equipos. Filtra las cargas CRM por período antes
+/// Leandro: de calcular horas y objetivos, así todo el dashboard comparte el mismo corte.
+final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
+  ref,
+) async {
+  final empleados = await ref.watch(empleadosProvider.future);
+  final cursos = await ref.watch(cursosProvider.future);
+  final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
+  final alcance = ref.watch(alcancePeriodoEquipoProvider);
+  final mes = ref.watch(filtroMesEquipoProvider);
+  final anio = ref.watch(filtroAnioEquipoProvider);
+  final service = ref.read(cumplimientoServiceProvider);
+
+  final cargasFiltradas = cargasDeHoras.where((carga) {
+    final coincideAnio = carga.fecha.year == anio;
+    if (alcance == AlcancePeriodoEquipos.anual) return coincideAnio;
+
+    return coincideAnio && carga.fecha.month == mes;
+  }).toList();
+
+  final cumplimientos = service.calcularCumplimientoGlobal(
+    empleados: empleados,
+    cursos: cursos,
+    cargasDeHoras: cargasFiltradas,
+  );
+
+  if (alcance == AlcancePeriodoEquipos.mensual) return cumplimientos;
+
+  return cumplimientos.map(_convertirObjetivoMensualAAnual).toList();
+});
+
 /// Leandro: Prepara TODOS los equipos a partir del cumplimiento de cada persona.
 /// Leandro: FutureProvider permite esperar datos y expone carga, error o resultado.
 /// Leandro: No depende de los filtros: cambiar una búsqueda conserva esta lista completa.
 final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
   ref,
 ) async {
-  // Leandro: cumplimientoGlobalProvider reúne empleados, cursos y cursadas y usa el
-  // Leandro: servicio de cumplimiento. await espera su resultado sin bloquear la interfaz.
-  // Leandro: watch también declara que este provider depende de esos datos.
-  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+  // Leandro: cumplimientoEquiposProvider reúne empleados, cursos y cargas CRM y aplica
+  // Leandro: el período seleccionado antes de calcular el cumplimiento de cada persona.
+  final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
 
   // Leandro: Map funciona como un diccionario: cada clave identifica área + equipo
   // Leandro: y su valor es la lista de personas con sus resultados de cumplimiento.
@@ -154,6 +229,30 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
         : (horasRealizadas / horasObjetivo) * 100;
 
     final cantidadIntegrantes = miembros.length;
+    final horasNegocio = _sumarHorasCategoria(
+      miembros,
+      TipoCurso.habilidadesDeNegocio,
+    );
+    final horasBlandas = _sumarHorasCategoria(
+      miembros,
+      TipoCurso.habilidadesBlandas,
+    );
+    final horasLibres = _sumarHorasCategoria(
+      miembros,
+      TipoCurso.libresExploracion,
+    );
+    final horasDictado = _sumarHorasCategoria(
+      miembros,
+      TipoCurso.dictadoCapacitaciones,
+    );
+    final integrantesEnObjetivo = miembros
+        .where((miembro) => miembro.cumpleObjetivo)
+        .length;
+    final semaforoEquipo = _calcularSemaforoEquipo(
+      porcentajeCumplimiento: porcentajeCumplimiento,
+      cantidadIntegrantes: cantidadIntegrantes,
+      integrantesEnObjetivo: integrantesEnObjetivo,
+    );
 
     // Leandro: Se crea un objeto por equipo. where(...).length cuenta a las personas
     // Leandro: que cumplen su objetivo individual, según el servicio de cumplimiento.
@@ -166,60 +265,77 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
             ? 'Sin líder asignado'
             : primerMiembro.gerente,
         cantidadIntegrantes: cantidadIntegrantes,
-        integrantesEnObjetivo: miembros
-            .where((miembro) => miembro.cumpleObjetivo)
-            .length,
+        integrantesEnObjetivo: integrantesEnObjetivo,
         horasRealizadas: horasRealizadas,
         horasObjetivo: horasObjetivo,
+        desvioHoras: horasRealizadas - horasObjetivo,
+        horasNegocio: horasNegocio,
+        horasBlandas: horasBlandas,
+        horasLibres: horasLibres,
+        horasDictado: horasDictado,
         promedioPorColaborador: cantidadIntegrantes == 0
             ? 0
             : horasRealizadas / cantidadIntegrantes,
         porcentajeCumplimiento: porcentajeCumplimiento,
-        // Leandro: Reutilizamos la regla de semáforo existente en metricas_providers.dart.
-        semaforo: EstadoSemaforo.desdePorcentaje(porcentajeCumplimiento),
+        // Leandro: El semáforo de equipos combina avance de horas y cumplimiento
+        // Leandro: individual por categorías para evitar marcar verde sólo por sumar horas.
+        semaforo: semaforoEquipo,
       ),
     );
   });
 
-  // Leandro: La lista completa se entrega ordenada por nombre.
-  equipos.sort((a, b) => a.nombre.compareTo(b.nombre));
+  // Leandro: La lista completa prioriza lo accionable: críticos, riesgo y objetivo.
+  // Leandro: Dentro de cada estado ordenamos por menor cumplimiento y luego por nombre.
+  equipos.sort((a, b) {
+    final estado = _ordenEstado(a.semaforo).compareTo(_ordenEstado(b.semaforo));
+    if (estado != 0) return estado;
+
+    final cumplimiento = a.porcentajeCumplimiento.compareTo(
+      b.porcentajeCumplimiento,
+    );
+    if (cumplimiento != 0) return cumplimiento;
+
+    return a.nombre.compareTo(b.nombre);
+  });
 
   return equipos;
 });
 
 /// Leandro: Combina la lista completa con búsqueda, área y estado.
 /// Leandro: Al cambiar un filtro, deriva un resultado nuevo de los equipos ya cargados.
-final equiposGlobalFiltradosProvider =
-    Provider<AsyncValue<List<EquipoGlobalViewModel>>>((ref) {
-      // Leandro: Cada watch declara una dependencia: sus cambios recalculan este resultado.
-      final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
-      final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
-      final equiposAsync = ref.watch(equiposGlobalProvider);
-      // Leandro: Normalizamos el texto para ignorar mayúsculas y espacios en los extremos.
-      final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
+final equiposGlobalFiltradosProvider = Provider<AsyncValue<List<EquipoGlobalViewModel>>>((
+  ref,
+) {
+  // Leandro: Cada watch declara una dependencia: sus cambios recalculan este resultado.
+  final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
+  final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
+  final equiposAsync = ref.watch(equiposGlobalProvider);
+  // Leandro: Normalizamos el texto para ignorar mayúsculas y espacios en los extremos.
+  final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
 
-      // Leandro: whenData transforma sólo el resultado; conserva carga y error si los hay.
-      return equiposAsync.whenData((equipos) {
-        // Leandro: where elige coincidencias sin modificar ni borrar la lista original.
-        return equipos.where((equipo) {
-          // Leandro: || significa "o": basta coincidir en nombre, área o líder.
-          // Leandro: Una búsqueda vacía permite que pase cualquier equipo.
-          final coincideBusqueda = query.isEmpty ||
-              equipo.nombre.toLowerCase().contains(query) ||
-              equipo.area.toLowerCase().contains(query) ||
-              equipo.lider.toLowerCase().contains(query);
+  // Leandro: whenData transforma sólo el resultado; conserva carga y error si los hay.
+  return equiposAsync.whenData((equipos) {
+    // Leandro: where elige coincidencias sin modificar ni borrar la lista original.
+    return equipos.where((equipo) {
+      // Leandro: || significa "o": basta coincidir en nombre, área o líder.
+      // Leandro: Una búsqueda vacía permite que pase cualquier equipo.
+      final coincideBusqueda =
+          query.isEmpty ||
+          equipo.nombre.toLowerCase().contains(query) ||
+          equipo.area.toLowerCase().contains(query) ||
+          equipo.lider.toLowerCase().contains(query);
 
-          final coincideArea =
-              areaSeleccionada == null || equipo.area == areaSeleccionada;
-          final coincideEstado =
-              estadoSeleccionado == null || equipo.semaforo == estadoSeleccionado;
+      final coincideArea =
+          areaSeleccionada == null || equipo.area == areaSeleccionada;
+      final coincideEstado =
+          estadoSeleccionado == null || equipo.semaforo == estadoSeleccionado;
 
-          // Leandro: && significa "y": deben cumplirse los tres filtros a la vez.
-          // Leandro: toList materializa las coincidencias como una nueva lista.
-          return coincideBusqueda && coincideArea && coincideEstado;
-        }).toList();
-      });
-    });
+      // Leandro: && significa "y": deben cumplirse los tres filtros a la vez.
+      // Leandro: toList materializa las coincidencias como una nueva lista.
+      return coincideBusqueda && coincideArea && coincideEstado;
+    }).toList();
+  });
+});
 
 // Leandro: Identificador derivado de los nombres. La navegación actual de EquipoCard
 // Leandro: utiliza área y equipo en la ruta, no este id.
@@ -235,6 +351,63 @@ String _normalizarId(String valor) {
       .toLowerCase()
       .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
       .replaceAll(RegExp(r'^-+|-+$'), '');
+}
+
+int _ordenEstado(EstadoSemaforo estado) {
+  switch (estado) {
+    case EstadoSemaforo.rojo:
+      return 0;
+    case EstadoSemaforo.amarillo:
+      return 1;
+    case EstadoSemaforo.verde:
+      return 2;
+  }
+}
+
+double _sumarHorasCategoria(
+  List<CumplimientoEmpleado> miembros,
+  TipoCurso tipo,
+) {
+  return miembros.fold<double>(
+    0,
+    (total, miembro) => total + (miembro.horasCompletadas[tipo] ?? 0),
+  );
+}
+
+CumplimientoEmpleado _convertirObjetivoMensualAAnual(
+  CumplimientoEmpleado cumplimiento,
+) {
+  final horasRequeridasAnuales = cumplimiento.horasRequeridas.map(
+    (tipo, horas) => MapEntry(tipo, horas * 12),
+  );
+
+  return CumplimientoEmpleado(
+    empleado: cumplimiento.empleado,
+    horasCompletadas: cumplimiento.horasCompletadas,
+    horasRequeridas: horasRequeridasAnuales,
+  );
+}
+
+// Leandro: Regla propuesta para Equipos. Mantiene el porcentaje de horas como medida de
+// Leandro: avance, pero exige que todos los integrantes cumplan su plan por categoría para
+// Leandro: marcar el equipo en objetivo. Los umbrales siguen pendientes de validación.
+EstadoSemaforo _calcularSemaforoEquipo({
+  required double porcentajeCumplimiento,
+  required int cantidadIntegrantes,
+  required int integrantesEnObjetivo,
+}) {
+  final todosEnObjetivo =
+      cantidadIntegrantes > 0 && integrantesEnObjetivo == cantidadIntegrantes;
+
+  if (porcentajeCumplimiento >= 100.0 && todosEnObjetivo) {
+    return EstadoSemaforo.verde;
+  }
+
+  if (porcentajeCumplimiento >= 70.0 || integrantesEnObjetivo > 0) {
+    return EstadoSemaforo.amarillo;
+  }
+
+  return EstadoSemaforo.rojo;
 }
 
 // Leandro: A partir de aquí están los providers compartidos de Áreas y del detalle.

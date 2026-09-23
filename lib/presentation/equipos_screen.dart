@@ -1,7 +1,9 @@
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/widgets/equipos/equipos_category_distribution.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_filters.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/equipos/equipos_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_results.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
@@ -100,6 +102,7 @@ class _DashboardContent extends ConsumerWidget {
       0,
       (total, equipo) => total + equipo.horasObjetivo,
     );
+    final desvioHoras = horasRealizadas - horasObjetivo;
     // Leandro: Calculamos el porcentaje con las horas totales, no promediando porcentajes.
     // Leandro: La convención actual devuelve 100 si no hay horas objetivo; evita dividir por 0.
     final cumplimientoGlobal = horasObjetivo == 0
@@ -108,9 +111,38 @@ class _DashboardContent extends ConsumerWidget {
     final equiposEnObjetivo = _countByStatus(EstadoSemaforo.verde);
     final equiposEnRiesgo = _countByStatus(EstadoSemaforo.amarillo);
     final equiposCriticos = _countByStatus(EstadoSemaforo.rojo);
+    final horasNegocio = equipos.fold<double>(
+      0,
+      (total, equipo) => total + equipo.horasNegocio,
+    );
+    final horasBlandas = equipos.fold<double>(
+      0,
+      (total, equipo) => total + equipo.horasBlandas,
+    );
+    final horasLibres = equipos.fold<double>(
+      0,
+      (total, equipo) => total + equipo.horasLibres,
+    );
+    final horasDictado = equipos.fold<double>(
+      0,
+      (total, equipo) => total + equipo.horasDictado,
+    );
     // Leandro: map extrae las áreas; toSet quita repetidas; toList vuelve a crear una lista.
     // Leandro: ..sort() ordena esa misma lista para las opciones del desplegable.
     final areas = equipos.map((equipo) => equipo.area).toSet().toList()..sort();
+    final busqueda = ref.watch(busquedaEquipoProvider);
+    final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
+    final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
+    final alcanceSeleccionado = ref.watch(alcancePeriodoEquipoProvider);
+    final mesSeleccionado = ref.watch(filtroMesEquipoProvider);
+    final anioSeleccionado = ref.watch(filtroAnioEquipoProvider);
+    final aniosDisponibles = ref
+        .watch(aniosEquipoDisponiblesProvider)
+        .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
+    final hayFiltrosActivos =
+        busqueda.trim().isNotEmpty ||
+        areaSeleccionada != null ||
+        estadoSeleccionado != null;
 
     // Leandro: ListView permite desplazar todo el contenido verticalmente.
     // Leandro: Sus children aparecen en el mismo orden en que los escribimos aquí.
@@ -130,6 +162,25 @@ class _DashboardContent extends ConsumerWidget {
           'Seguimiento del avance de ${equipos.length} equipos de formación.',
           style: const TextStyle(fontSize: 14, color: equiposMuted),
         ),
+        const SizedBox(height: 18),
+        EquiposPeriodControls(
+          alcance: alcanceSeleccionado,
+          selectedMonth: mesSeleccionado,
+          selectedYear: anioSeleccionado,
+          availableYears: aniosDisponibles,
+          onScopeChanged: (value) {
+            if (value == null) return;
+            ref.read(alcancePeriodoEquipoProvider.notifier).state = value;
+          },
+          onMonthChanged: (value) {
+            if (value == null) return;
+            ref.read(filtroMesEquipoProvider.notifier).state = value;
+          },
+          onYearChanged: (value) {
+            if (value == null) return;
+            ref.read(filtroAnioEquipoProvider.notifier).state = value;
+          },
+        ),
         const SizedBox(height: 22),
         // Leandro: Pasamos los totales como parámetros; la sección se ocupa de mostrarlos.
         EquiposKpiSection(
@@ -137,23 +188,35 @@ class _DashboardContent extends ConsumerWidget {
           totalColaboradores: totalColaboradores,
           horasRealizadas: horasRealizadas,
           horasObjetivo: horasObjetivo,
+          desvioHoras: desvioHoras,
           cumplimientoGlobal: cumplimientoGlobal,
         ),
         const SizedBox(height: 16),
-        // Leandro: Estos conteos son de equipos, no de colaboradores individuales.
-        EquiposStatusSummary(
-          total: equipos.length,
-          enObjetivo: equiposEnObjetivo,
-          enRiesgo: equiposEnRiesgo,
-          criticos: equiposCriticos,
+        // Leandro: Las dos tortas comparan lecturas generales del mismo periodo.
+        // Leandro: En escritorio van en la misma fila; en pantallas chicas se apilan.
+        _DashboardChartsRow(
+          statusChart: EquiposStatusSummary(
+            total: equipos.length,
+            enObjetivo: equiposEnObjetivo,
+            enRiesgo: equiposEnRiesgo,
+            criticos: equiposCriticos,
+          ),
+          categoryChart: EquiposCategoryDistribution(
+            horasNegocio: horasNegocio,
+            horasBlandas: horasBlandas,
+            horasLibres: horasLibres,
+            horasDictado: horasDictado,
+          ),
         ),
         const SizedBox(height: 24),
         // Leandro: El widget de filtros recibe valores y funciones (callbacks).
         // Leandro: Los controles llaman a estas funciones cuando el usuario los modifica.
         EquiposFilters(
           areas: areas,
-          selectedArea: ref.watch(filtroAreaEquipoProvider),
-          selectedStatus: ref.watch(filtroEstadoEquipoProvider),
+          searchText: busqueda,
+          selectedArea: areaSeleccionada,
+          selectedStatus: estadoSeleccionado,
+          hasActiveFilters: hayFiltrosActivos,
           onSearch: (value) {
             // Leandro: read accede sin suscribirse; notifier permite cambiar el estado.
             // Leandro: Guardar el texto hace que el provider de filtrados se recalcule.
@@ -164,6 +227,11 @@ class _DashboardContent extends ConsumerWidget {
           },
           onStatus: (value) {
             ref.read(filtroEstadoEquipoProvider.notifier).state = value;
+          },
+          onClear: () {
+            ref.read(busquedaEquipoProvider.notifier).state = '';
+            ref.read(filtroAreaEquipoProvider.notifier).state = null;
+            ref.read(filtroEstadoEquipoProvider.notifier).state = null;
           },
         ),
         const SizedBox(height: 24),
@@ -186,6 +254,38 @@ class _DashboardContent extends ConsumerWidget {
   int _countByStatus(EstadoSemaforo status) {
     // Leandro: where conserva los equipos del estado indicado; length cuenta cuántos son.
     return equipos.where((equipo) => equipo.semaforo == status).length;
+  }
+}
+
+class _DashboardChartsRow extends StatelessWidget {
+  final Widget statusChart;
+  final Widget categoryChart;
+
+  const _DashboardChartsRow({
+    required this.statusChart,
+    required this.categoryChart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 1180) {
+          return Column(
+            children: [statusChart, const SizedBox(height: 16), categoryChart],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: statusChart),
+            const SizedBox(width: 16),
+            Expanded(child: categoryChart),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -232,9 +332,21 @@ class _EmptyDataState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        'No hay equipos para mostrar.',
-        style: TextStyle(color: equiposMuted),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.groups_outlined, size: 34, color: equiposMuted),
+          SizedBox(height: 10),
+          Text(
+            'No hay equipos para mostrar.',
+            style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Revisá que existan empleados con equipo asignado, cursos y cargas CRM.',
+            style: TextStyle(color: equiposMuted),
+          ),
+        ],
       ),
     );
   }
