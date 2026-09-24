@@ -1,5 +1,6 @@
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -152,19 +153,19 @@ class _ComplianceChartCard extends StatelessWidget {
       onAction: () => context.push('/empleados'),
       child: Row(
         children: [
-          _DonutChart(
+          DonutChart(
             segments: [
-              _DonutSegment(
-                summary.meetsTarget.toDouble(),
-                const Color(0xFF009B61),
+              DonutChartSegment(
+                value: summary.meetsTarget.toDouble(),
+                color: const Color(0xFF009B61),
               ),
-              _DonutSegment(
-                summary.attention.toDouble(),
-                const Color(0xFFF59E0B),
+              DonutChartSegment(
+                value: summary.attention.toDouble(),
+                color: const Color(0xFFF59E0B),
               ),
-              _DonutSegment(
-                summary.doesNotMeet.toDouble(),
-                const Color(0xFFF43F5E),
+              DonutChartSegment(
+                value: summary.doesNotMeet.toDouble(),
+                color: const Color(0xFFF43F5E),
               ),
             ],
             centerText:
@@ -218,12 +219,12 @@ class _CategoryChartCard extends StatelessWidget {
       onAction: () => context.push('/cursos'),
       child: Row(
         children: [
-          _DonutChart(
+          DonutChart(
             segments: [
               for (var index = 0; index < TipoCurso.values.length; index++)
-                _DonutSegment(
-                  summary.hours[TipoCurso.values[index]] ?? 0,
-                  colors[index],
+                DonutChartSegment(
+                  value: summary.hours[TipoCurso.values[index]] ?? 0,
+                  color: colors[index],
                 ),
             ],
             centerText: '${summary.averageHours.toStringAsFixed(1)} h',
@@ -446,104 +447,4 @@ class _LegendList extends StatelessWidget {
       ],
     );
   }
-}
-
-class _DonutSegment {
-  final double value;
-  final Color color;
-
-  const _DonutSegment(this.value, this.color);
-}
-
-class _DonutChart extends StatelessWidget {
-  final List<_DonutSegment> segments;
-  final String centerText;
-  final String centerSubtitle;
-
-  const _DonutChart({
-    required this.segments,
-    required this.centerText,
-    required this.centerSubtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 132,
-      height: 132,
-      child: CustomPaint(
-        painter: _DonutPainter(segments),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                centerText,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              Text(
-                centerSubtitle,
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DonutPainter extends CustomPainter {
-  final List<_DonutSegment> segments;
-
-  const _DonutPainter(this.segments);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2 - 8;
-    final strokeWidth = 16.0;
-    final total = segments.fold<double>(
-      0,
-      (sum, segment) => sum + segment.value,
-    );
-    final backgroundPaint = Paint()
-      ..color = const Color(0xFFE8EEF8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-
-    canvas.drawCircle(center, radius, backgroundPaint);
-    if (total == 0) return;
-
-    var startAngle = -3.141592653589793 / 2;
-    for (final segment in segments) {
-      if (segment.value == 0) continue;
-      final sweepAngle = (segment.value / total) * 2 * 3.141592653589793;
-      final paint = Paint()
-        ..color = segment.color
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.butt
-        ..strokeWidth = strokeWidth;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        false,
-        paint,
-      );
-      startAngle += sweepAngle;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DonutPainter oldDelegate) =>
-      oldDelegate.segments != segments;
 }
