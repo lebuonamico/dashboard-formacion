@@ -78,7 +78,7 @@ class SideMenu extends StatelessWidget {
                       '/dashboard',
                     ); // Navega a la pantalla de dashboard
                   },
-                 ),
+                ),
                 _MenuItem(
                   icon: Icons.account_tree_outlined,
                   label: 'Áreas',
@@ -100,10 +100,12 @@ class SideMenu extends StatelessWidget {
                   label: 'Empleados',
                   isSelected: currentRoute.startsWith('/empleados'),
                   onTap: () {
-                    context.push('/empleados'); // Navega a la pantalla de empleados
+                    context.push(
+                      '/empleados',
+                    ); // Navega a la pantalla de empleados
                   },
                 ),
-                
+
                 _MenuItem(
                   icon: Icons.school_outlined,
                   label: 'Cursos',
@@ -194,27 +196,27 @@ class _MenuItem extends StatelessWidget {
         ? const Color(0xFF0D53C3).withValues(alpha: 0.08)
         : Colors.transparent;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        onTap: onTap,
-        dense: true,
-        leading: Icon(icon, size: 20, color: iconColor ?? defaultColor),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color:
-                textColor ??
-                (isSelected
-                    ? const Color(0xFF0D53C3)
-                    : const Color(0xFF334155)),
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          onTap: onTap,
+          dense: true,
+          leading: Icon(icon, size: 20, color: iconColor ?? defaultColor),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color:
+                  textColor ??
+                  (isSelected
+                      ? const Color(0xFF0D53C3)
+                      : const Color(0xFF334155)),
+            ),
           ),
         ),
       ),
