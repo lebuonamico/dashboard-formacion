@@ -1,13 +1,13 @@
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Muestra los cuatro indicadores (KPI) con los totales que recibe de la pantalla.
-/// Leandro: Esta sección formatea los valores; las sumas se hacen en _DashboardContent.
+/// Leandro: Muestra los KPI calculados por _DashboardContent en EquiposScreen.
 class EquiposKpiSection extends StatelessWidget {
   final int totalEquipos;
   final int totalColaboradores;
   final double horasRealizadas;
   final double horasObjetivo;
+  final double desvioHoras;
   final double cumplimientoGlobal;
 
   const EquiposKpiSection({
@@ -16,19 +16,20 @@ class EquiposKpiSection extends StatelessWidget {
     required this.totalColaboradores,
     required this.horasRealizadas,
     required this.horasObjetivo,
+    required this.desvioHoras,
     required this.cumplimientoGlobal,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Cada _KpiData describe una tarjeta: etiqueta, valor, detalle, icono y color.
-    // Leandro: toStringAsFixed(1) convierte las horas o el porcentaje a texto con un decimal.
     return _KpiGrid(
       items: [
         _KpiData(
           title: 'Equipos activos',
           value: '$totalEquipos',
           detail: 'en seguimiento',
+          help:
+              'Cantidad de equipos detectados al agrupar colaboradores por área y equipo general.',
           icon: Icons.groups_outlined,
           color: equiposBrand,
         ),
@@ -36,15 +37,21 @@ class EquiposKpiSection extends StatelessWidget {
           title: 'Colaboradores',
           value: '$totalColaboradores',
           detail: 'en todos los equipos',
+          help:
+              'Suma de integrantes de todos los equipos incluidos en el mes y año seleccionados.',
           icon: Icons.people_outline,
           color: const Color(0xFF0E7490),
         ),
         _KpiData(
           title: 'Horas realizadas',
           value: horasRealizadas.toStringAsFixed(1),
-          detail: 'de ${horasObjetivo.toStringAsFixed(1)} hs objetivo',
+          detail: _formatDesvio(desvioHoras),
+          help:
+              'Suma de horas cargadas en CRM para el mes/año seleccionado. El detalle compara realizadas contra objetivo.',
           icon: Icons.schedule_outlined,
-          color: const Color(0xFF6941C6),
+          color: desvioHoras >= 0
+              ? const Color(0xFF16A34A)
+              : const Color(0xFF6941C6),
         ),
         _KpiData(
           title: 'Cumplimiento global',
@@ -52,6 +59,8 @@ class EquiposKpiSection extends StatelessWidget {
           detail: cumplimientoGlobal >= 100
               ? 'objetivo alcanzado'
               : 'avance acumulado',
+          help:
+              'Horas realizadas totales dividido horas objetivo totales. No es un promedio simple de equipos.',
           icon: Icons.trending_up,
           color: cumplimientoGlobal >= 100
               ? const Color(0xFF16A34A)
@@ -60,14 +69,22 @@ class EquiposKpiSection extends StatelessWidget {
       ],
     );
   }
+
+  String _formatDesvio(double desvioHoras) {
+    if (desvioHoras >= 0) {
+      return '+${desvioHoras.toStringAsFixed(1)} hs sobre objetivo';
+    }
+
+    return 'faltan ${desvioHoras.abs().toStringAsFixed(1)} hs';
+  }
 }
 
-// Leandro: Objeto de presentación interno: reúne los datos que necesita una tarjeta KPI.
-// Leandro: El prefijo _ mantiene esta clase privada a la biblioteca de este archivo.
+// Leandro: Datos visuales que necesita cada tarjeta KPI.
 class _KpiData {
   final String title;
   final String value;
   final String detail;
+  final String help;
   final IconData icon;
   final Color color;
 
@@ -75,12 +92,13 @@ class _KpiData {
     required this.title,
     required this.value,
     required this.detail,
+    required this.help,
     required this.icon,
     required this.color,
   });
 }
 
-// Leandro: Distribuye los indicadores según el ancho que le deja su widget padre.
+// Leandro: Distribuye los KPI en 4, 2 o 1 columnas según el ancho disponible.
 class _KpiGrid extends StatelessWidget {
   final List<_KpiData> items;
 
@@ -90,8 +108,6 @@ class _KpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Leandro: Elegimos 4, 2 o 1 columnas. Restamos los espacios antes de dividir
-        // Leandro: el ancho para que todas las tarjetas de la fila midan lo mismo.
         final columns = constraints.maxWidth >= 1050
             ? 4
             : constraints.maxWidth >= 580
@@ -99,8 +115,6 @@ class _KpiGrid extends StatelessWidget {
             : 1;
         final cardWidth = (constraints.maxWidth - (columns - 1) * 14) / columns;
 
-        // Leandro: Wrap permite pasar a la fila siguiente; map crea un widget por indicador.
-        // Leandro: La altura común de 116 mantiene alineadas las tarjetas.
         return Wrap(
           spacing: 14,
           runSpacing: 14,
@@ -119,8 +133,7 @@ class _KpiGrid extends StatelessWidget {
   }
 }
 
-// Leandro: Dibuja un indicador: icono a la izquierda y título, valor y detalle a la derecha.
-// Leandro: Expanded deja al texto el espacio restante de la fila; ellipsis limita desbordes.
+// Leandro: Presentación de una tarjeta KPI individual.
 class _KpiCard extends StatelessWidget {
   final _KpiData data;
 
@@ -148,15 +161,29 @@ class _KpiCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  data.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: equiposMuted,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        data.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: equiposMuted,
+                        ),
+                      ),
+                    ),
+                    Tooltip(
+                      message: data.help,
+                      child: Icon(
+                        Icons.info_outline,
+                        size: 15,
+                        color: equiposMuted.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 5),
                 Text(
