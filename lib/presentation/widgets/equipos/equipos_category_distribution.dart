@@ -2,8 +2,8 @@ import 'package:app_finnegans/presentation/widgets/equipos/equipos_donut_chart.d
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Muestra cómo se reparten las horas realizadas entre las categorías.
-/// Leandro: Recibe totales ya calculados por la pantalla; este widget sólo presenta.
+/// Leandro: Donut que muestra las horas realizadas por categoría.
+/// Recibe los totales ya calculados por EquiposScreen.
 class EquiposCategoryDistribution extends StatelessWidget {
   final double horasNegocio;
   final double horasBlandas;

@@ -1,11 +1,10 @@
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/widgets/equipos/estado_equipo_style.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Leandro: Tarjeta de un equipo. Recibe su ViewModel desde la grilla y muestra sus datos.
-/// Leandro: Al tocarla, abre el detalle existente de equipo.dart usando el router.
+/// Leandro: Tarjeta llamada desde EquiposResults para mostrar un equipo calculado.
 class EquipoCard extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -13,8 +12,7 @@ class EquipoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: La barra espera un valor entre 0 y 1: 75 % se convierte en 0.75.
-    // Leandro: clamp limita sólo la barra al 100 %; el texto conserva el porcentaje real.
+    // Leandro: La barra se limita visualmente al 100 %, aunque el dato pueda superarlo.
     final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
 
     return Material(
@@ -22,9 +20,7 @@ class EquipoCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        // Leandro: InkWell detecta el toque en la tarjeta completa. push agrega el detalle
-        // Leandro: a la navegación, permitiendo volver. Uri.encodeComponent codifica los
-        // Leandro: nombres con espacios u otros caracteres para incluirlos en la dirección.
+        // Leandro: Al tocar la tarjeta navega al detalle usando área y equipo en la ruta.
         onTap: () => context.push(
           '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}',
         ),
@@ -35,7 +31,7 @@ class EquipoCard extends StatelessWidget {
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: equipo.semaforo.colorTexto,
+                  color: equipo.estado.colorTexto,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -50,8 +46,6 @@ class EquipoCard extends StatelessWidget {
                       _CardHeader(equipo: equipo),
                       const SizedBox(height: 13),
                       _LeaderRow(lider: equipo.lider),
-                      // Leandro: Spacer ocupa el hueco libre y alinea el progreso y el pie
-                      // Leandro: en tarjetas cuyos nombres tienen distinta cantidad de líneas.
                       const Spacer(),
                       _ProgressSection(equipo: equipo, progress: progress),
                       const SizedBox(height: 9),
@@ -68,8 +62,7 @@ class EquipoCard extends StatelessWidget {
   }
 }
 
-// Leandro: Nombre y área del equipo, junto al distintivo de estado.
-// Leandro: maxLines y ellipsis acotan nombres largos dentro de la tarjeta.
+// Leandro: Cabecera con nombre, área y estado del equipo.
 class _CardHeader extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -110,13 +103,13 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        _StatusBadge(status: equipo.semaforo),
+        _StatusBadge(status: equipo.estado),
       ],
     );
   }
 }
 
-// Leandro: Recibe sólo el nombre del líder porque es el único dato que necesita mostrar.
+// Leandro: Fila visual con el líder informado por Nómina.
 class _LeaderRow extends StatelessWidget {
   final String lider;
 
@@ -141,8 +134,7 @@ class _LeaderRow extends StatelessWidget {
   }
 }
 
-// Leandro: Muestra dos medidas distintas: personas que cumplen su objetivo y cumplimiento
-// Leandro: agregado de horas. El porcentaje y la barra representan esta segunda medida.
+// Leandro: Muestra cumplimiento individual y avance agregado de horas.
 class _ProgressSection extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
   final double progress;
@@ -186,7 +178,7 @@ class _ProgressSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: equipo.semaforo.colorTexto,
+                color: equipo.estado.colorTexto,
               ),
             ),
           ],
@@ -198,7 +190,7 @@ class _ProgressSection extends StatelessWidget {
             value: progress,
             minHeight: 7,
             backgroundColor: const Color(0xFFEAECF0),
-            color: equipo.semaforo.colorTexto,
+            color: equipo.estado.colorTexto,
           ),
         ),
       ],
@@ -206,8 +198,7 @@ class _ProgressSection extends StatelessWidget {
   }
 }
 
-// Leandro: Horas realizadas/objetivo y texto de navegación. El toque lo maneja el InkWell
-// Leandro: de la tarjeta completa; este texto no necesita un segundo onTap.
+// Leandro: Pie con horas realizadas/objetivo y acceso visual al detalle.
 class _CardFooter extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -260,10 +251,9 @@ class _CardFooter extends StatelessWidget {
   }
 }
 
-// Leandro: Usa etiqueta y colores del mismo EstadoSemaforo calculado en el provider.
-// Leandro: Acompañar el color con texto permite entender el estado sin depender del color.
+// Leandro: Traduce el EstadoEquipo calculado por el servicio a una insignia visual.
 class _StatusBadge extends StatelessWidget {
-  final EstadoSemaforo status;
+  final EstadoEquipo status;
 
   const _StatusBadge({required this.status});
 

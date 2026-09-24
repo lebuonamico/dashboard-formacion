@@ -3,8 +3,7 @@ import 'package:app_finnegans/presentation/widgets/equipos/equipo_card.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Presenta las coincidencias que la pantalla recibe del provider de filtrados.
-/// Leandro: equipos contiene los visibles; totalEquipos conserva el total sin filtrar.
+/// Leandro: Recibe los equipos filtrados y llama a EquipoCard por cada resultado.
 class EquiposResults extends StatelessWidget {
   final List<EquipoGlobalViewModel> equipos;
   final int totalEquipos;
@@ -40,7 +39,7 @@ class EquiposResults extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 13),
-        // Leandro: Cero coincidencias cambia sólo esta sección: los KPI siguen visibles.
+        // Leandro: Sin coincidencias cambia sólo esta sección; los KPI siguen visibles.
         if (equipos.isEmpty)
           const _EmptySearch()
         else
@@ -50,7 +49,7 @@ class EquiposResults extends StatelessWidget {
   }
 }
 
-// Leandro: Contador junto al título: representa la cantidad de equipos de la lista filtrada.
+// Leandro: Contador de equipos visibles después de aplicar filtros.
 class _CountBadge extends StatelessWidget {
   final int count;
 
@@ -76,7 +75,7 @@ class _CountBadge extends StatelessWidget {
   }
 }
 
-// Leandro: Convierte la lista de resultados en una grilla de tarjetas.
+// Leandro: Convierte la lista filtrada en una grilla de EquipoCard.
 class _TeamsGrid extends StatelessWidget {
   final List<EquipoGlobalViewModel> equipos;
 
@@ -85,12 +84,9 @@ class _TeamsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      // Leandro: La grilla toma la altura de su contenido; el ListView de la pantalla
-      // Leandro: maneja el desplazamiento para evitar dos zonas de scroll anidadas.
+      // Leandro: El desplazamiento lo maneja el ListView principal de EquiposScreen.
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      // Leandro: Flutter calcula las columnas a partir del ancho máximo de cada tarjeta.
-      // Leandro: mainAxisExtent fija una altura común y mantiene las filas alineadas.
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 410,
         crossAxisSpacing: 16,
@@ -98,13 +94,12 @@ class _TeamsGrid extends StatelessWidget {
         mainAxisExtent: 252,
       ),
       itemCount: equipos.length,
-      // Leandro: index es la posición en la lista: 0, 1, 2... Pasamos ese equipo a su card.
       itemBuilder: (context, index) => EquipoCard(equipo: equipos[index]),
     );
   }
 }
 
-// Leandro: Se muestra cuando no hay coincidencias; no implica que se hayan borrado datos.
+// Leandro: Se muestra cuando los filtros no encuentran coincidencias.
 class _EmptySearch extends StatelessWidget {
   const _EmptySearch();
 

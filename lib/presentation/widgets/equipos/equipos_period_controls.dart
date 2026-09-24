@@ -2,8 +2,7 @@ import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Selector de período global de la pantalla.
-/// Leandro: Está separado de los filtros del listado porque cambia todos los cálculos.
+/// Leandro: Selector global de período; sus cambios recalculan todo el dashboard.
 class EquiposPeriodControls extends StatelessWidget {
   final AlcancePeriodoEquipos alcance;
   final int selectedMonth;
@@ -26,8 +25,7 @@ class EquiposPeriodControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Aseguramos que el año seleccionado siempre exista en el combo,
-    // Leandro: aunque todavía no haya cargas CRM para ese año.
+    // Leandro: Incluye el año seleccionado aunque todavía no tenga cargas CRM.
     final yearOptions = {...availableYears, selectedYear}.toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -116,7 +114,6 @@ class _ScopeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: SegmentedButton deja claro si el análisis es mensual o anual.
     return SegmentedButton<AlcancePeriodoEquipos>(
       segments: AlcancePeriodoEquipos.values
           .map(
@@ -161,7 +158,7 @@ class _MonthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: En modo anual el mes queda deshabilitado porque el corte es todo el año.
+    // Leandro: En modo anual deshabilita el mes porque el corte abarca todo el año.
     return DropdownButtonFormField<int>(
       initialValue: selectedMonth,
       isExpanded: true,

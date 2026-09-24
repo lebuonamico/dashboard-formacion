@@ -2,9 +2,7 @@ import 'package:app_finnegans/presentation/widgets/equipos/equipos_donut_chart.d
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Resumen de estados de TODOS los equipos, incluso cuando hay filtros activos.
-/// Leandro: Recibe los conteos calculados por la pantalla; el semáforo de cada equipo
-/// Leandro: ya fue determinado por el provider.
+/// Leandro: Donut de estados. Recibe los conteos de todos los equipos desde EquiposScreen.
 class EquiposStatusSummary extends StatelessWidget {
   final int total;
   final int enObjetivo;
@@ -21,7 +19,7 @@ class EquiposStatusSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Para este resumen, requieren atención los equipos en riesgo y los críticos.
+    // Leandro: Requieren atención los equipos en riesgo y los críticos.
     final requierenAtencion = enRiesgo + criticos;
 
     return Container(
@@ -61,7 +59,6 @@ class EquiposStatusSummary extends StatelessWidget {
             ],
           );
 
-          // Leandro: En anchos reducidos, el título se coloca encima de los estados.
           if (constraints.maxWidth < 760) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +84,7 @@ class EquiposStatusSummary extends StatelessWidget {
   }
 }
 
-// Leandro: Mensaje general: adapta el texto cuando hay cero, uno o varios equipos a atender.
+// Leandro: Mensaje que resume cuántos equipos requieren atención.
 class _StatusHeading extends StatelessWidget {
   final int requierenAtencion;
 

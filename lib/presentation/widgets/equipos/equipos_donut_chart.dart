@@ -2,8 +2,7 @@ import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Un segmento del donut: etiqueta, valor, color y ayuda para tooltip.
-/// Leandro: backgroundColor permite que la leyenda respete el estilo del dashboard inicial.
+/// Leandro: Datos visuales de un segmento del donut y su leyenda.
 class EquiposDonutSlice {
   final String label;
   final double value;
@@ -20,8 +19,7 @@ class EquiposDonutSlice {
   });
 }
 
-/// Leandro: Combina el donut compartido con una leyenda propia de Equipos.
-/// Leandro: El gráfico central viene de shared/donut_chart.dart para no duplicar diseño.
+/// Leandro: Llama al DonutChart compartido y agrega la leyenda propia de Equipos.
 class EquiposDonutChart extends StatelessWidget {
   final List<EquiposDonutSlice> slices;
   final String centerValue;
@@ -38,7 +36,6 @@ class EquiposDonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: total se usa para calcular proporciones; si es cero se dibuja sólo el aro base.
     final total = slices.fold<double>(0, (sum, slice) => sum + slice.value);
 
     return Row(
@@ -88,7 +85,6 @@ class _DonutLegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: La leyenda muestra valor absoluto y porcentaje de cada segmento.
     final percentage = total == 0 ? 0 : (slice.value / total * 100).round();
 
     return Container(

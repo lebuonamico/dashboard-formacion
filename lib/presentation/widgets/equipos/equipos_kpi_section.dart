@@ -1,8 +1,7 @@
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Muestra los cuatro indicadores (KPI) con los totales que recibe de la pantalla.
-/// Leandro: Esta sección formatea los valores; las sumas se hacen en _DashboardContent.
+/// Leandro: Muestra los KPI calculados por _DashboardContent en EquiposScreen.
 class EquiposKpiSection extends StatelessWidget {
   final int totalEquipos;
   final int totalColaboradores;
@@ -23,8 +22,6 @@ class EquiposKpiSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Cada _KpiData describe una tarjeta: etiqueta, valor, detalle, icono y color.
-    // Leandro: toStringAsFixed(1) convierte las horas o el porcentaje a texto con un decimal.
     return _KpiGrid(
       items: [
         _KpiData(
@@ -82,8 +79,7 @@ class EquiposKpiSection extends StatelessWidget {
   }
 }
 
-// Leandro: Objeto de presentación interno: reúne los datos que necesita una tarjeta KPI.
-// Leandro: El prefijo _ mantiene esta clase privada a la biblioteca de este archivo.
+// Leandro: Datos visuales que necesita cada tarjeta KPI.
 class _KpiData {
   final String title;
   final String value;
@@ -102,7 +98,7 @@ class _KpiData {
   });
 }
 
-// Leandro: Distribuye los indicadores según el ancho que le deja su widget padre.
+// Leandro: Distribuye los KPI en 4, 2 o 1 columnas según el ancho disponible.
 class _KpiGrid extends StatelessWidget {
   final List<_KpiData> items;
 
@@ -112,8 +108,6 @@ class _KpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Leandro: Elegimos 4, 2 o 1 columnas. Restamos los espacios antes de dividir
-        // Leandro: el ancho para que todas las tarjetas de la fila midan lo mismo.
         final columns = constraints.maxWidth >= 1050
             ? 4
             : constraints.maxWidth >= 580
@@ -121,8 +115,6 @@ class _KpiGrid extends StatelessWidget {
             : 1;
         final cardWidth = (constraints.maxWidth - (columns - 1) * 14) / columns;
 
-        // Leandro: Wrap permite pasar a la fila siguiente; map crea un widget por indicador.
-        // Leandro: La altura común de 116 mantiene alineadas las tarjetas.
         return Wrap(
           spacing: 14,
           runSpacing: 14,
@@ -141,8 +133,7 @@ class _KpiGrid extends StatelessWidget {
   }
 }
 
-// Leandro: Dibuja un indicador: icono a la izquierda y título, valor y detalle a la derecha.
-// Leandro: Expanded deja al texto el espacio restante de la fila; ellipsis limita desbordes.
+// Leandro: Presentación de una tarjeta KPI individual.
 class _KpiCard extends StatelessWidget {
   final _KpiData data;
 

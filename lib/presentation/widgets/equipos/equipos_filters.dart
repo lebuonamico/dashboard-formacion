@@ -1,21 +1,18 @@
-import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Controles de búsqueda, área y estado del dashboard.
-/// Leandro: Recibe las selecciones de la pantalla y le avisa cuando el usuario las cambia.
-/// Leandro: La lógica que decide qué equipos coinciden está en el provider de filtrados.
+/// Leandro: Controles de búsqueda, área y estado.
+/// Sus callbacks actualizan Riverpod; el filtrado real ocurre en equipos_providers.dart.
 class EquiposFilters extends StatefulWidget {
   final List<String> areas;
   final String searchText;
   final String? selectedArea;
-  final EstadoSemaforo? selectedStatus;
+  final EstadoEquipo? selectedStatus;
   final bool hasActiveFilters;
-  // Leandro: ValueChanged<String> es una función que recibe un texto y no devuelve datos.
-  // Leandro: Estos callbacks los define EquiposScreen para actualizar el estado en Riverpod.
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onArea;
-  final ValueChanged<EstadoSemaforo?> onStatus;
+  final ValueChanged<EstadoEquipo?> onStatus;
   final VoidCallback onClear;
 
   const EquiposFilters({
@@ -65,8 +62,7 @@ class _EquiposFiltersState extends State<EquiposFilters> {
       decoration: equiposPanelDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Leandro: Al escribir, TextField entrega el texto a onSearch. El recorrido es:
-          // Leandro: control -> callback de la pantalla -> provider -> nuevos resultados.
+          // Leandro: Al escribir inicia el flujo control -> pantalla -> provider -> resultados.
           final searchField = TextField(
             controller: _searchController,
             onChanged: widget.onSearch,
@@ -75,8 +71,6 @@ class _EquiposFiltersState extends State<EquiposFilters> {
               Icons.search,
             ),
           );
-          // Leandro: String? admite null. La opción "Todas las áreas" envía null,
-          // Leandro: que el provider interpreta como ausencia de filtro por área.
           final areaField = DropdownButtonFormField<String?>(
             initialValue: widget.selectedArea,
             isExpanded: true,
@@ -89,7 +83,6 @@ class _EquiposFiltersState extends State<EquiposFilters> {
                 value: null,
                 child: Text('Todas las áreas'),
               ),
-              // Leandro: map crea una opción por área; ... las incorpora a esta lista.
               ...widget.areas.map(
                 (area) => DropdownMenuItem<String?>(
                   value: area,
@@ -99,9 +92,8 @@ class _EquiposFiltersState extends State<EquiposFilters> {
             ],
             onChanged: widget.onArea,
           );
-          // Leandro: El estado usa valores del enum, no textos: así se puede comparar
-          // Leandro: directamente con equipo.semaforo. null equivale a "Todos los estados".
-          final statusField = DropdownButtonFormField<EstadoSemaforo?>(
+          // Leandro: null representa "Todos los estados" en el provider.
+          final statusField = DropdownButtonFormField<EstadoEquipo?>(
             initialValue: widget.selectedStatus,
             isExpanded: true,
             decoration: _inputDecoration(
@@ -109,20 +101,20 @@ class _EquiposFiltersState extends State<EquiposFilters> {
               Icons.traffic_outlined,
             ),
             items: const [
-              DropdownMenuItem<EstadoSemaforo?>(
+              DropdownMenuItem<EstadoEquipo?>(
                 value: null,
                 child: Text('Todos los estados'),
               ),
-              DropdownMenuItem<EstadoSemaforo?>(
-                value: EstadoSemaforo.verde,
+              DropdownMenuItem<EstadoEquipo?>(
+                value: EstadoEquipo.enObjetivo,
                 child: Text('En objetivo'),
               ),
-              DropdownMenuItem<EstadoSemaforo?>(
-                value: EstadoSemaforo.amarillo,
+              DropdownMenuItem<EstadoEquipo?>(
+                value: EstadoEquipo.enRiesgo,
                 child: Text('En riesgo'),
               ),
-              DropdownMenuItem<EstadoSemaforo?>(
-                value: EstadoSemaforo.rojo,
+              DropdownMenuItem<EstadoEquipo?>(
+                value: EstadoEquipo.critico,
                 child: Text('Crítico'),
               ),
             ],
@@ -147,8 +139,7 @@ class _EquiposFiltersState extends State<EquiposFilters> {
             ),
           );
 
-          // Leandro: LayoutBuilder informa el ancho disponible dentro de este panel.
-          // Leandro: Con poco espacio apilamos los controles; con más, van en una fila.
+          // Leandro: En pantallas angostas apila los controles; en escritorio usa una fila.
           if (constraints.maxWidth < 800) {
             return Column(
               children: [
@@ -179,8 +170,7 @@ class _EquiposFiltersState extends State<EquiposFilters> {
     );
   }
 
-  // Leandro: Decoración compartida por los tres controles para mantenerlos consistentes.
-  // Leandro: Cambia su aspecto (bordes, iconos y fondo), no las reglas de filtrado.
+  // Leandro: Estilo visual compartido por los tres controles.
   InputDecoration _inputDecoration(String hint, IconData icon) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
