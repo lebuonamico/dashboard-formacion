@@ -4,13 +4,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class DashboardAreasSection extends ConsumerWidget {
+class DashboardAreasSection extends ConsumerStatefulWidget {
   final AsyncValue<List<SemaforoAreaViewModel>> areasAsync;
 
   const DashboardAreasSection({super.key, required this.areasAsync});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardAreasSection> createState() =>
+      _DashboardAreasSectionState();
+}
+
+class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
+  late final TextEditingController _searchController;
+  String? _selectedArea;
+  EstadoSemaforo? _selectedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final equiposAsync = ref.watch(equiposGlobalProvider);
 
     return Column(
@@ -41,11 +63,27 @@ class DashboardAreasSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        areasAsync.when(
+        widget.areasAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Text('Error: $error'),
           data: (areas) {
             if (areas.isEmpty) return const _EmptyAreasState();
+
+            final areasDisponibles =
+                areas.map((area) => area.area).toSet().toList()..sort();
+            final selectedArea = areasDisponibles.contains(_selectedArea)
+                ? _selectedArea
+                : null;
+            final query = _searchController.text.trim().toLowerCase();
+            final areasFiltradas = areas.where((area) {
+              final matchesSearch =
+                  query.isEmpty || area.area.toLowerCase().contains(query);
+              final matchesArea =
+                  selectedArea == null || area.area == selectedArea;
+              final matchesStatus =
+                  _selectedStatus == null || area.semaforo == _selectedStatus;
+              return matchesSearch && matchesArea && matchesStatus;
+            }).toList();
 
             return equiposAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -60,39 +98,185 @@ class DashboardAreasSection extends ConsumerWidget {
                   );
                 }
 
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 900
-                        ? 3
-                        : constraints.maxWidth >= 600
-                        ? 2
-                        : 1;
+                return Column(
+                  children: [
+                    _buildFilterBar(areasDisponibles, selectedArea),
+                    const SizedBox(height: 16),
+                    if (areasFiltradas.isEmpty)
+                      const _EmptyFilteredAreasState()
+                    else
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns = constraints.maxWidth >= 900
+                              ? 3
+                              : constraints.maxWidth >= 600
+                              ? 2
+                              : 1;
 
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        mainAxisExtent: 230,
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  mainAxisExtent: 230,
+                                ),
+                            itemCount: areasFiltradas.length,
+                            itemBuilder: (context, index) {
+                              final area = areasFiltradas[index];
+                              return DashboardAreaCard(
+                                area: area,
+                                cantidadEquipos: equiposPorArea[area.area] ?? 0,
+                              );
+                            },
+                          );
+                        },
                       ),
-                      itemCount: areas.length,
-                      itemBuilder: (context, index) {
-                        final area = areas[index];
-                        return DashboardAreaCard(
-                          area: area,
-                          cantidadEquipos: equiposPorArea[area.area] ?? 0,
-                        );
-                      },
-                    );
-                  },
+                  ],
                 );
               },
             );
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildFilterBar(List<String> areas, String? selectedArea) {
+    final hasActiveFilters =
+        _searchController.text.trim().isNotEmpty ||
+        selectedArea != null ||
+        _selectedStatus != null;
+
+    final searchField = TextField(
+      controller: _searchController,
+      onChanged: (_) => setState(() {}),
+      decoration: _inputDecoration('Buscar por área', Icons.search),
+    );
+    final areaField = DropdownButtonFormField<String?>(
+      initialValue: selectedArea,
+      isExpanded: true,
+      decoration: _inputDecoration('Todas las áreas', Icons.apartment_outlined),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('Todas las áreas'),
+        ),
+        ...areas.map(
+          (area) => DropdownMenuItem<String?>(
+            value: area,
+            child: Text(area, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: (value) => setState(() => _selectedArea = value),
+    );
+    final statusField = DropdownButtonFormField<EstadoSemaforo?>(
+      initialValue: _selectedStatus,
+      isExpanded: true,
+      decoration: _inputDecoration('Todos los estados', Icons.traffic_outlined),
+      items: const [
+        DropdownMenuItem<EstadoSemaforo?>(
+          value: null,
+          child: Text('Todos los estados'),
+        ),
+        DropdownMenuItem<EstadoSemaforo?>(
+          value: EstadoSemaforo.verde,
+          child: Text('En objetivo'),
+        ),
+        DropdownMenuItem<EstadoSemaforo?>(
+          value: EstadoSemaforo.amarillo,
+          child: Text('En riesgo'),
+        ),
+        DropdownMenuItem<EstadoSemaforo?>(
+          value: EstadoSemaforo.rojo,
+          child: Text('Crítico'),
+        ),
+      ],
+      onChanged: (value) => setState(() => _selectedStatus = value),
+    );
+    final clearButton = OutlinedButton.icon(
+      onPressed: hasActiveFilters
+          ? () {
+              _searchController.clear();
+              setState(() {
+                _selectedArea = null;
+                _selectedStatus = null;
+              });
+            }
+          : null,
+      icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+      label: const Text('Limpiar'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF0D53C3),
+        disabledForegroundColor: const Color(0xFF94A3B8),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 800) {
+            return Column(
+              children: [
+                searchField,
+                const SizedBox(height: 12),
+                areaField,
+                const SizedBox(height: 12),
+                statusField,
+                const SizedBox(height: 12),
+                Align(alignment: Alignment.centerLeft, child: clearButton),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: searchField),
+              const SizedBox(width: 12),
+              SizedBox(width: 230, child: areaField),
+              const SizedBox(width: 12),
+              SizedBox(width: 250, child: statusField),
+              const SizedBox(width: 12),
+              clearButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(6),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+    );
+
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+      prefixIcon: Icon(icon, size: 19, color: Color(0xFF64748B)),
+      prefixIconConstraints: const BoxConstraints(minWidth: 42),
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFF0D53C3), width: 1.5),
+      ),
     );
   }
 }
@@ -329,6 +513,26 @@ class _EmptyAreasState extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: const Center(child: Text('No hay áreas registradas.')),
+    );
+  }
+}
+
+class _EmptyFilteredAreasState extends StatelessWidget {
+  const _EmptyFilteredAreasState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Center(
+        child: Text('No hay áreas que coincidan con los filtros.'),
+      ),
     );
   }
 }

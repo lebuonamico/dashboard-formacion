@@ -1,16 +1,19 @@
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_segmented_control.dart';
 import 'package:flutter/material.dart';
 
 /// Leandro: Selector global de período; sus cambios recalculan todo el dashboard.
 class EquiposPeriodControls extends StatelessWidget {
-  final AlcancePeriodoEquipos alcance;
+  final AlcancePeriodo alcance;
   final int selectedMonth;
   final int selectedYear;
   final List<int> availableYears;
-  final ValueChanged<AlcancePeriodoEquipos?> onScopeChanged;
+  final bool soloRegistrosCargados;
+  final ValueChanged<AlcancePeriodo> onScopeChanged;
   final ValueChanged<int?> onMonthChanged;
   final ValueChanged<int?> onYearChanged;
+  final ValueChanged<bool> onLoadedRecordsChanged;
 
   const EquiposPeriodControls({
     super.key,
@@ -18,9 +21,11 @@ class EquiposPeriodControls extends StatelessWidget {
     required this.selectedMonth,
     required this.selectedYear,
     required this.availableYears,
+    required this.soloRegistrosCargados,
     required this.onScopeChanged,
     required this.onMonthChanged,
     required this.onYearChanged,
+    required this.onLoadedRecordsChanged,
   });
 
   @override
@@ -35,19 +40,40 @@ class EquiposPeriodControls extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final title = _PeriodTitle();
-          final scopeControl = _ScopeControl(
-            alcance: alcance,
-            onScopeChanged: onScopeChanged,
+          final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
+            selected: alcance,
+            options: AlcancePeriodo.values,
+            labelBuilder: (scope) => scope.label,
+            onChanged: onScopeChanged,
+            selectedColor: equiposBrand,
+            unselectedColor: Colors.white,
+            selectedForegroundColor: Colors.white,
+            unselectedForegroundColor: equiposInk,
           );
           final monthField = _MonthField(
             selectedMonth: selectedMonth,
-            enabled: alcance == AlcancePeriodoEquipos.mensual,
+            enabled: alcance == AlcancePeriodo.mensual,
             onChanged: onMonthChanged,
           );
           final yearField = _YearField(
             selectedYear: selectedYear,
             yearOptions: yearOptions,
             onChanged: onYearChanged,
+          );
+          final loadedRecordsControl = FilterChip(
+            selected: soloRegistrosCargados,
+            label: const Text('Sólo registros cargados'),
+            onSelected: alcance == AlcancePeriodo.anual
+                ? onLoadedRecordsChanged
+                : null,
+            avatar: const Icon(Icons.fact_check_outlined, size: 17),
+            selectedColor: equiposBrand.withValues(alpha: 0.12),
+            checkmarkColor: equiposBrand,
+            labelStyle: TextStyle(
+              color: alcance == AlcancePeriodo.anual
+                  ? equiposInk
+                  : equiposMuted.withValues(alpha: 0.6),
+            ),
           );
 
           if (constraints.maxWidth < 820) {
@@ -61,6 +87,8 @@ class EquiposPeriodControls extends StatelessWidget {
                 monthField,
                 const SizedBox(height: 12),
                 yearField,
+                const SizedBox(height: 12),
+                loadedRecordsControl,
               ],
             );
           }
@@ -74,6 +102,8 @@ class EquiposPeriodControls extends StatelessWidget {
               SizedBox(width: 170, child: monthField),
               const SizedBox(width: 12),
               SizedBox(width: 135, child: yearField),
+              const SizedBox(width: 12),
+              loadedRecordsControl,
             ],
           );
         },
@@ -102,45 +132,6 @@ class _PeriodTitle extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ScopeControl extends StatelessWidget {
-  final AlcancePeriodoEquipos alcance;
-  final ValueChanged<AlcancePeriodoEquipos?> onScopeChanged;
-
-  const _ScopeControl({required this.alcance, required this.onScopeChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentedButton<AlcancePeriodoEquipos>(
-      segments: AlcancePeriodoEquipos.values
-          .map(
-            (scope) => ButtonSegment<AlcancePeriodoEquipos>(
-              value: scope,
-              label: Text(scope.label),
-            ),
-          )
-          .toList(),
-      selected: {alcance},
-      showSelectedIcon: false,
-      onSelectionChanged: (selection) {
-        onScopeChanged(selection.first);
-      },
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? Colors.white
-              : equiposInk;
-        }),
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? equiposBrand
-              : Colors.white;
-        }),
-      ),
     );
   }
 }

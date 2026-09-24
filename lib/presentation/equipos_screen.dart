@@ -113,9 +113,12 @@ class _DashboardContent extends ConsumerWidget {
     final busqueda = ref.watch(busquedaEquipoProvider);
     final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
     final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
-    final alcanceSeleccionado = ref.watch(alcancePeriodoEquipoProvider);
-    final mesSeleccionado = ref.watch(filtroMesEquipoProvider);
-    final anioSeleccionado = ref.watch(filtroAnioEquipoProvider);
+    final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
+    final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
+    final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
+    final soloRegistrosCargados = ref.watch(
+      soloRegistrosCargadosPeriodoProvider,
+    );
     final aniosDisponibles = ref
         .watch(aniosEquipoDisponiblesProvider)
         .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
@@ -146,17 +149,21 @@ class _DashboardContent extends ConsumerWidget {
           selectedMonth: mesSeleccionado,
           selectedYear: anioSeleccionado,
           availableYears: aniosDisponibles,
+          soloRegistrosCargados: soloRegistrosCargados,
           onScopeChanged: (value) {
-            if (value == null) return;
-            ref.read(alcancePeriodoEquipoProvider.notifier).state = value;
+            ref.read(alcancePeriodoProvider.notifier).state = value;
           },
           onMonthChanged: (value) {
             if (value == null) return;
-            ref.read(filtroMesEquipoProvider.notifier).state = value;
+            ref.read(filtroMesPeriodoProvider.notifier).state = value;
           },
           onYearChanged: (value) {
             if (value == null) return;
-            ref.read(filtroAnioEquipoProvider.notifier).state = value;
+            ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+          },
+          onLoadedRecordsChanged: (value) {
+            ref.read(soloRegistrosCargadosPeriodoProvider.notifier).state =
+                value;
           },
         ),
         const SizedBox(height: 22),
