@@ -251,7 +251,7 @@ final cumplimientoPorSeniorityProvider =
 final semaforoPorAreaProvider = FutureProvider<List<SemaforoAreaViewModel>>((
   ref,
 ) async {
-  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+  final cumplimientos = await ref.watch(cumplimientoDashboardProvider.future);
 
   final agrupadoPorArea = <String, List<dynamic>>{};
   for (final item in cumplimientos) {
