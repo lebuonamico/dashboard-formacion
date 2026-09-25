@@ -11,10 +11,12 @@ import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 export 'package:app_finnegans/domain/modelos/equipo_global.dart';
 export 'package:app_finnegans/domain/modelos/estado_equipo.dart';
+export 'package:app_finnegans/presentation/providers/periodo_providers.dart';
 
 // Leandro: La primera sección contiene el flujo del dashboard de Equipos.
 // Al final permanecen los providers anteriores que usan Áreas y el detalle.
@@ -77,24 +79,6 @@ final equiposServiceProvider = Provider<EquiposService>((ref) {
   return EquiposService();
 });
 
-enum AlcancePeriodoEquipos {
-  mensual('Mensual'),
-  anual('Anual');
-
-  final String label;
-  const AlcancePeriodoEquipos(this.label);
-}
-
-final alcancePeriodoEquipoProvider = StateProvider<AlcancePeriodoEquipos>(
-  (ref) => AlcancePeriodoEquipos.mensual,
-);
-final filtroMesEquipoProvider = StateProvider<int>(
-  (ref) => DateTime.now().month,
-);
-final filtroAnioEquipoProvider = StateProvider<int>(
-  (ref) => DateTime.now().year,
-);
-
 final aniosEquipoDisponiblesProvider = FutureProvider<List<int>>((ref) async {
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final anios = cargasDeHoras.map((carga) => carga.fecha.year).toSet()
@@ -112,18 +96,21 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final empleados = await ref.watch(empleadosProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
-  final alcance = ref.watch(alcancePeriodoEquipoProvider);
-  final mes = ref.watch(filtroMesEquipoProvider);
-  final anio = ref.watch(filtroAnioEquipoProvider);
+  final alcance = ref.watch(alcancePeriodoProvider);
+  final mes = ref.watch(filtroMesPeriodoProvider);
+  final anio = ref.watch(filtroAnioPeriodoProvider);
+  final soloRegistrosCargados = ref.watch(soloRegistrosCargadosPeriodoProvider);
   final cumplimientoService = ref.read(cumplimientoServiceProvider);
   final equiposService = ref.read(equiposServiceProvider);
 
-  final cargasFiltradas = equiposService.filtrarCargasPorPeriodo(
-    cargas: cargasDeHoras,
-    anio: anio,
-    mes: mes,
-    esAnual: alcance == AlcancePeriodoEquipos.anual,
-  );
+  final cargasFiltradas = soloRegistrosCargados
+      ? cargasDeHoras
+      : equiposService.filtrarCargasPorPeriodo(
+          cargas: cargasDeHoras,
+          anio: anio,
+          mes: mes,
+          esAnual: alcance == AlcancePeriodo.anual,
+        );
 
   final cumplimientos = cumplimientoService.calcularCumplimientoGlobal(
     empleados: empleados,
@@ -131,7 +118,9 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     cargasDeHoras: cargasFiltradas,
   );
 
-  if (alcance == AlcancePeriodoEquipos.mensual) return cumplimientos;
+  if (alcance == AlcancePeriodo.mensual || soloRegistrosCargados) {
+    return cumplimientos;
+  }
 
   return equiposService.convertirObjetivoMensualAAnual(cumplimientos);
 });
