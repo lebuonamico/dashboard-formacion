@@ -125,6 +125,13 @@ class SideMenu extends StatelessWidget {
                   },
                 ),
                 _MenuItem(
+                  icon: Icons.verified_outlined,
+                  label: 'Certificaciones LMS',
+                  isSelected: currentRoute.startsWith('/certificaciones'),
+                  onTap: () => context.push('/certificaciones'),
+                ),
+                /*
+                _MenuItem(
                   icon: Icons.analytics_outlined,
                   label: 'Métricas',
                   isSelected: currentRoute.startsWith('/metricas'),
@@ -134,6 +141,7 @@ class SideMenu extends StatelessWidget {
                     ); // Navega a la pantalla de métricas
                   },
                 ),
+                */
                 _MenuItem(
                   icon: Icons.settings_outlined,
                   label: 'Configuración',

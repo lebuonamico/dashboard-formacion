@@ -24,16 +24,19 @@ class EquiposService {
 
   // Leandro: Para la vista anual conserva las horas cargadas y multiplica el objetivo por 12.
   List<CumplimientoEmpleado> convertirObjetivoMensualAAnual(
-    List<CumplimientoEmpleado> cumplimientos,
-  ) {
+    List<CumplimientoEmpleado> cumplimientos, {
+    int mesesConRegistros = 12,
+  }) {
+    final meses = mesesConRegistros.clamp(1, 12);
     return cumplimientos.map((cumplimiento) {
       final horasRequeridasAnuales = cumplimiento.horasRequeridas.map(
-        (tipo, horas) => MapEntry(tipo, horas * 12),
+        (tipo, horas) => MapEntry(tipo, horas * meses),
       );
 
       return CumplimientoEmpleado(
         empleado: cumplimiento.empleado,
-        horasCompletadas: cumplimiento.horasCompletadas,
+        horasValidas: cumplimiento.horasValidas,
+        horasDeclaradas: cumplimiento.horasDeclaradas,
         horasRequeridas: horasRequeridasAnuales,
       );
     }).toList();

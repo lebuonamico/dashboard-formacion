@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
+import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
@@ -7,53 +8,98 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
 void main() {
-  test('calcula horas tomadas y dictadas desde el CRM', () {
+  test('calcula cumplimiento con horas LMS y conserva CRM como declaradas', () {
     final empleado = Empleado(
       legajo: 'EMP-001',
       nombre: 'Ana',
       apellido: 'Pérez',
-      seniority: Seniority.senior1,
+      seniority: Seniority.trainee,
       area: 'Tecnología',
       mail: 'ana@example.com',
     );
-    final curso = Curso(
-      id: '42',
-      nombre: 'Curso CRM',
-      tipo: TipoCurso.habilidadesBlandas,
-      areaCurso: '',
-      instructorLegajo: '',
-      cargaHorariaHs: 99,
-    );
+    final cursos = [
+      Curso(
+        id: '42',
+        nombre: 'Curso de Negocio',
+        tipo: TipoCurso.habilidadesDeNegocio,
+        areaCurso: '',
+        instructorLegajo: '',
+        cargaHorariaHs: 99,
+      ),
+      Curso(
+        id: '43',
+        nombre: 'Curso Libre',
+        tipo: TipoCurso.libresExploracion,
+        areaCurso: '',
+        instructorLegajo: '',
+        cargaHorariaHs: 99,
+      ),
+      Curso(
+        id: '44',
+        nombre: 'Comunicación Asertiva',
+        tipo: TipoCurso.habilidadesBlandas,
+        areaCurso: '',
+        instructorLegajo: '',
+        cargaHorariaHs: 99,
+      ),
+    ];
     final resultado = CumplimientoService().calcularCumplimientoGlobal(
       empleados: [empleado],
-      cursos: [curso],
+      cursos: cursos,
       cargasDeHoras: [
         CargaDeHorasCRM(
           id: '1',
-          cursoId: '42',
+          cursoNombre: 'Curso de Negocio',
           empleadoLegajo: 'EMP-001',
           fecha: DateTime(2026, 9, 1),
-          horasTotales: 2.5,
+          horasTotales: 38,
           tipo: TipoCargaDeHoras.tomada,
         ),
         CargaDeHorasCRM(
           id: '2',
-          cursoId: '42',
+          cursoNombre: 'Curso de Negocio',
           empleadoLegajo: 'EMP-001',
           fecha: DateTime(2026, 9, 2),
-          horasTotales: 1.5,
+          horasTotales: 1,
           tipo: TipoCargaDeHoras.dictada,
+        ),
+      ],
+      certificacionesMoodle: [
+        const CertificacionMoodle(
+          legajo: 'EMP-001',
+          cursoNombre: ' Curso de Negocio ',
+          finalizoCurso: true,
+          cargaEstimada: 4,
+        ),
+        const CertificacionMoodle(
+          legajo: 'EMP-001',
+          cursoNombre: 'Curso Libre',
+          finalizoCurso: true,
+          cargaEstimada: 20,
+        ),
+        const CertificacionMoodle(
+          legajo: 'EMP-001',
+          cursoNombre: 'Comunicacion Asertiva',
+          finalizoCurso: false,
+          cargaEstimada: 4,
         ),
       ],
     );
 
+    expect(resultado.single.horasValidas[TipoCurso.habilidadesDeNegocio], 4);
+    expect(resultado.single.horasValidas[TipoCurso.libresExploracion], 20);
+    expect(resultado.single.horasValidas[TipoCurso.habilidadesBlandas], 0);
+    expect(resultado.single.totalHorasRequeridas, 8);
+    expect(resultado.single.totalHorasValidas, 4);
+    expect(resultado.single.porcentajeTotal, 50);
+    expect(resultado.single.cumpleObjetivo, isFalse);
     expect(
-      resultado.single.horasCompletadas[TipoCurso.habilidadesBlandas],
-      2.5,
+      resultado.single.horasDeclaradas[TipoCurso.habilidadesDeNegocio],
+      38,
     );
     expect(
-      resultado.single.horasCompletadas[TipoCurso.dictadoCapacitaciones],
-      1.5,
+      resultado.single.horasDeclaradas[TipoCurso.dictadoCapacitaciones],
+      1,
     );
   });
 }

@@ -2,7 +2,7 @@ enum TipoCargaDeHoras { tomada, dictada }
 
 class CargaDeHorasCRM {
   final String id;
-  final String cursoId;
+  final String cursoNombre;
   final String empleadoLegajo;
   final DateTime fecha;
   final double horasTotales;
@@ -10,7 +10,7 @@ class CargaDeHorasCRM {
 
   const CargaDeHorasCRM({
     required this.id,
-    required this.cursoId,
+    required this.cursoNombre,
     required this.empleadoLegajo,
     required this.fecha,
     required this.horasTotales,
@@ -21,7 +21,7 @@ class CargaDeHorasCRM {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'cursoId': cursoId,
+    'cursoNombre': cursoNombre,
     'empleadoLegajo': empleadoLegajo,
     'fecha': fecha.toIso8601String(),
     'horasTotales': horasTotales,
@@ -32,7 +32,7 @@ class CargaDeHorasCRM {
     Map<String, dynamic> json,
   ) => CargaDeHorasCRM(
     id: json['id']?.toString() ?? '',
-    cursoId: json['cursoId']?.toString() ?? '',
+    cursoNombre: json['cursoNombre']?.toString() ?? '',
     empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
     fecha: DateTime.tryParse(json['fecha']?.toString() ?? '') ?? DateTime.now(),
     horasTotales: double.tryParse(json['horasTotales']?.toString() ?? '') ?? 0,

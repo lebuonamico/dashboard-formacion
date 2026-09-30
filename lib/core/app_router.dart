@@ -9,8 +9,10 @@ import 'package:app_finnegans/presentation/login_screen.dart';
 import 'package:app_finnegans/presentation/cursos_screen.dart';
 import 'package:app_finnegans/presentation/configuracion_screen.dart';
 import 'package:app_finnegans/presentation/cursada_screen.dart';
+import 'package:app_finnegans/presentation/certificacion_screen.dart';
 import 'package:app_finnegans/presentation/empleado_detalle_screen.dart';
 import 'package:app_finnegans/presentation/equipos_screen.dart';
+
 final appRouter = GoRouter(
   initialLocation: '/',
 
@@ -42,12 +44,18 @@ final appRouter = GoRouter(
           const NoTransitionPage(child: CursadasScreen()),
     ),
     GoRoute(
+      path: '/certificaciones',
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: CertificacionScreen()),
+    ),
+    GoRoute(
       path: '/empleados/:legajo',
       pageBuilder: (context, state) {
         final legajo = state.pathParameters['legajo']!;
         return NoTransitionPage(child: EmpleadoDetalleScreen(legajo: legajo));
       },
     ),
+
     GoRoute(
       path: '/metricas',
       pageBuilder: (context, state) =>
