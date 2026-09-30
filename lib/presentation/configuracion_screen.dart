@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:csv/csv.dart';
@@ -8,14 +9,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
+import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/data/moodle_cursos_api.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
   const ConfiguracionScreen({super.key});
@@ -26,6 +31,37 @@ class ConfiguracionScreen extends ConsumerStatefulWidget {
 }
 
 class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
+  static const _modoMoodleKey = 'configuracion_cursos_moodle';
+
+  bool _usaMoodle = false;
+  bool _modoCargado = false;
+  bool _sincronizandoCursos = false;
+  List<Curso> _cursosMoodle = [];
+  String? _errorCursosMoodle;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarModoCursos();
+  }
+
+  Future<void> _cargarModoCursos() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _usaMoodle = preferences.getBool(_modoMoodleKey) ?? false;
+      _modoCargado = true;
+    });
+    if (_usaMoodle) _sincronizarCursosMoodle();
+  }
+
+  Future<void> _cambiarModoCursos(bool usaMoodle) async {
+    setState(() => _usaMoodle = usaMoodle);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_modoMoodleKey, usaMoodle);
+    if (usaMoodle) await _sincronizarCursosMoodle();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,6 +115,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       _buildSeccionCursos(context),
                       const SizedBox(height: 24),
                       _buildSeccionCargaDeHoras(context),
+                      const SizedBox(height: 24),
+                      _buildSeccionCargaLms(context),
                     ],
                   ),
                 ),
@@ -129,34 +167,154 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   Widget _buildSeccionCursos(BuildContext context) {
     return _ConfigCard(
       titulo: 'Carga de Cursos',
-      subtitulo:
-          'Importá el catálogo de cursos desde Moodle u otro archivo Excel / CSV',
+      subtitulo: 'Elegí cómo actualizar el catálogo de cursos',
       children: [
-        ListTile(
+        SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(Icons.school_outlined, color: Color(0xFF15803D)),
-          ),
           title: const Text(
-            'Importar cursos desde Excel / CSV',
+            'Usar Moodle API',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: const Text(
-            'El área y el instructor se completan posteriormente desde las cursadas',
+          subtitle: Text(
+            _usaMoodle
+                ? 'Fuente activa: Moodle'
+                : 'Fuente activa: archivo Excel / CSV',
           ),
-          trailing: OutlinedButton.icon(
-            onPressed: _importarCursosArchivo,
-            icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Cargar Cursos'),
-          ),
+          value: _usaMoodle,
+          onChanged: _modoCargado ? _cambiarModoCursos : null,
         ),
+        if (_usaMoodle) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _sincronizandoCursos
+                      ? 'Consultando Moodle...'
+                      : '${_cursosMoodle.length} cursos disponibles',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Actualizar cursos',
+                onPressed: _sincronizandoCursos
+                    ? null
+                    : _sincronizarCursosMoodle,
+                icon: _sincronizandoCursos
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync),
+              ),
+            ],
+          ),
+          if (_errorCursosMoodle != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _errorCursosMoodle!,
+                style: const TextStyle(color: Color(0xFFB91C1C)),
+              ),
+            ),
+          if (_cursosMoodle.isNotEmpty)
+            SizedBox(
+              height: 320,
+              child: ListView.separated(
+                itemCount: _cursosMoodle.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final curso = _cursosMoodle[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(curso.nombre),
+                    subtitle: Text('ID ${curso.id}'),
+                  );
+                },
+              ),
+            )
+          else if (!_sincronizandoCursos && _errorCursosMoodle == null)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('No hay cursos cargados.'),
+            ),
+        ] else
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(
+                Icons.school_outlined,
+                color: Color(0xFF15803D),
+              ),
+            ),
+            title: const Text(
+              'Importar cursos desde Excel / CSV',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'El área y el instructor se completan posteriormente desde las cursadas',
+            ),
+            trailing: OutlinedButton.icon(
+              onPressed: _importarCursosArchivo,
+              icon: const Icon(Icons.upload_file, size: 18),
+              label: const Text('Cargar Cursos'),
+            ),
+          ),
       ],
     );
+  }
+
+  Future<void> _sincronizarCursosMoodle() async {
+    if (_sincronizandoCursos) return;
+    setState(() {
+      _sincronizandoCursos = true;
+      _errorCursosMoodle = null;
+    });
+    try {
+      final repository = ref.read(cursosRepositoryProvider);
+      if (repository is! LocalCursosRepository) {
+        throw const FormatException('El repositorio local no está disponible.');
+      }
+      final cursos = await MoodleCursosApi().getCursos();
+      if (cursos.isEmpty) {
+        throw const FormatException('Moodle no devolvió cursos para importar.');
+      }
+      await repository.replaceCursos(cursos);
+      ref.invalidate(cursosProvider);
+      if (!mounted) return;
+      setState(() => _cursosMoodle = cursos);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Se sincronizaron ${cursos.length} cursos.')),
+      );
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorCursosMoodle = error.message);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on TimeoutException {
+      if (!mounted) return;
+      const message = 'La consulta a Moodle agotó el tiempo.';
+      setState(() => _errorCursosMoodle = message);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(message)));
+    } on Object {
+      if (!mounted) return;
+      const message =
+          'No se pudo conectar con Moodle. Revisá la disponibilidad y CORS.';
+      setState(() => _errorCursosMoodle = message);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _sincronizandoCursos = false);
+    }
   }
 
   Widget _buildSeccionCargaDeHoras(BuildContext context) {
@@ -189,6 +347,204 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildSeccionCargaLms(BuildContext context) {
+    return _ConfigCard(
+      titulo: 'Carga de horas LMS',
+      subtitulo:
+          'Importá finalizaciones y cargas estimadas exportadas desde Moodle',
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.verified_outlined,
+              color: Color(0xFF15803D),
+            ),
+          ),
+          title: const Text(
+            'Importar horas LMS desde Excel',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text(
+            'Legajo, nombre del curso, finalización y carga estimada',
+          ),
+          trailing: OutlinedButton.icon(
+            onPressed: _importarCertificacionesMoodle,
+            icon: const Icon(Icons.upload_file, size: 18),
+            label: const Text('Cargar Excel'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _importarCertificacionesMoodle() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+
+    try {
+      final rowsPorHoja = _leerExcel(result.files.single.bytes!);
+      final certificaciones = <CertificacionMoodle>[];
+      for (final rows in rowsPorHoja.values) {
+        if (rows.length < 2) continue;
+        final headerIndex = _buscarFilaCertificacionesMoodle(rows);
+        if (headerIndex == -1) continue;
+        final headers = rows[headerIndex]
+            .map((header) => _normalize(header.toString()))
+            .toList();
+        final legajoIndex = _buscarColumna(headers, const [
+          'idempleadolegajo',
+          'idempleado',
+          'nlegajo',
+          'legajo',
+        ]);
+        final cursoIndex = _buscarColumna(headers, const [
+          'nombredelcurso',
+          'nombrecurso',
+          'coursename',
+          'coursefullname',
+          'fullname',
+          'curso',
+        ]);
+        final finalizoIndex = _buscarColumna(headers, const [
+          'finalizoelcurso',
+          'finalizocurso',
+          'completado',
+          'completed',
+        ]);
+        final cargaIndex = _buscarColumna(headers, const [
+          'cargaestimadamoodle',
+          'cargaestimada',
+          'horasestimadas',
+          'estimatedload',
+          'estimatedhours',
+        ]);
+        for (final row in rows.skip(headerIndex + 1)) {
+          if ([
+            legajoIndex,
+            cursoIndex,
+            finalizoIndex,
+            cargaIndex,
+          ].any((index) => index < 0 || index >= row.length)) {
+            continue;
+          }
+          final legajo = row[legajoIndex].toString().trim();
+          final cursoNombre = row[cursoIndex].toString().trim();
+          final finalizo = _booleanoMoodle(row[finalizoIndex].toString());
+          final carga = double.tryParse(
+            row[cargaIndex].toString().trim().replaceAll(',', '.'),
+          );
+          if (legajo.isEmpty ||
+              cursoNombre.isEmpty ||
+              finalizo == null ||
+              carga == null ||
+              carga < 0) {
+            continue;
+          }
+          certificaciones.add(
+            CertificacionMoodle(
+              legajo: legajo,
+              cursoNombre: cursoNombre,
+              finalizoCurso: finalizo,
+              cargaEstimada: carga,
+            ),
+          );
+        }
+      }
+
+      if (certificaciones.isEmpty) {
+        throw const FormatException(
+          'No se encontraron filas LMS válidas en el Excel.',
+        );
+      }
+      await ref
+          .read(certificacionesMoodleRepositoryProvider)
+          .replaceCertificaciones(certificaciones);
+      ref.invalidate(certificacionesMoodleProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Se importaron ${certificaciones.length} horas LMS.'),
+        ),
+      );
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo leer el Excel de Moodle.')),
+      );
+    }
+  }
+
+  int _buscarFilaCertificacionesMoodle(List<List<dynamic>> rows) {
+    for (var index = 0; index < rows.length && index < 15; index++) {
+      final headers = rows[index]
+          .map((cell) => _normalize(cell.toString()))
+          .toList();
+      if (_buscarColumna(headers, const [
+                'idempleadolegajo',
+                'idempleado',
+                'nlegajo',
+                'legajo',
+              ]) !=
+              -1 &&
+          _buscarColumna(headers, const [
+                'nombredelcurso',
+                'nombrecurso',
+                'coursename',
+                'coursefullname',
+                'fullname',
+                'curso',
+              ]) !=
+              -1 &&
+          _buscarColumna(headers, const [
+                'finalizoelcurso',
+                'finalizocurso',
+                'completado',
+                'completed',
+              ]) !=
+              -1 &&
+          _buscarColumna(headers, const [
+                'cargaestimadamoodle',
+                'cargaestimada',
+                'horasestimadas',
+                'estimatedload',
+                'estimatedhours',
+              ]) !=
+              -1) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  bool? _booleanoMoodle(String value) {
+    return switch (_normalize(value)) {
+      'true' || 'verdadero' || 'si' || 's' || '1' || 'yes' || 'y' => true,
+      'false' ||
+      'falso' ||
+      'no' ||
+      'n' ||
+      '0' ||
+      'incompleto' ||
+      'pendiente' => false,
+      _ => null,
+    };
   }
 
   Future<void> _importarArchivo() async {
@@ -309,10 +665,14 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               empleado,
               (item) => item.legajo,
             );
-          } else if (headers.contains('cursoid') &&
+          } else if ((headers.contains('cursonombre') ||
+                  headers.contains('nombrecurso') ||
+                  headers.contains('curso')) &&
               headers.contains('empleadolegajo')) {
             final cargaData = _toCanonicalKeys(normalizedData, {
-              'cursoid': 'cursoId',
+              'cursonombre': 'cursoNombre',
+              'nombrecurso': 'cursoNombre',
+              'curso': 'cursoNombre',
               'empleadolegajo': 'empleadoLegajo',
               'horastotales': 'horasTotales',
             });
@@ -531,12 +891,19 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       if (repository is! LocalCargaDeHorasCRMRepository) {
         throw const FormatException('El repositorio local no está disponible.');
       }
+      final cursosDisponibles = await ref
+          .read(cursosRepositoryProvider)
+          .getCursos();
 
       final cargasImportadas = <CargaDeHorasCRM>[];
+      var encabezadoReconocido = false;
+      var filasConChoras = 0;
+      var filasConCursoReconocido = 0;
       for (final rows in rowsPorHoja.values) {
         if (rows.length < 2) continue;
         final headerIndex = _buscarFilaCargaDeHoras(rows);
         if (headerIndex == -1) continue;
+        encabezadoReconocido = true;
         final headers = rows[headerIndex]
             .map((header) => _normalize(header.toString()))
             .toList();
@@ -544,14 +911,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
         final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
         final descripcionIndex = _buscarColumnaCRM(headers, 'caso');
-        final proyectoIndex = _buscarColumnaProyectoItem(headers);
         final horasIndex = _buscarColumnaCRM(headers, 'horas');
         if ([
           idIndex,
           legajoIndex,
           fechaIndex,
           descripcionIndex,
-          proyectoIndex,
           horasIndex,
         ].any((index) => index == -1)) {
           continue;
@@ -563,20 +928,20 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             legajoIndex,
             fechaIndex,
             descripcionIndex,
-            proyectoIndex,
             horasIndex,
           ].any((index) => index >= row.length)) {
             continue;
           }
-          final proyecto = _normalize(row[proyectoIndex].toString());
-          if (proyecto != '01capacitacion') {
-            continue;
-          }
-
           final descripcion = row[descripcionIndex].toString().trim();
           final tipo = _tipoCargaDesdeDescripcion(descripcion);
-          final cursoId = _cursoIdDesdeDescripcion(descripcion);
-          if (tipo == null || cursoId.isEmpty) continue;
+          if (tipo == null) continue;
+          filasConChoras++;
+          final textoFila = row.map((celda) => celda.toString()).join(' ');
+          final curso =
+              _cursoDesdeDescripcion(descripcion, cursosDisponibles) ??
+              _cursoDesdeDescripcion(textoFila, cursosDisponibles);
+          if (curso == null) continue;
+          filasConCursoReconocido++;
 
           final horas =
               double.tryParse(
@@ -591,7 +956,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           cargasImportadas.add(
             CargaDeHorasCRM(
               id: id,
-              cursoId: cursoId,
+              cursoNombre: curso.nombre,
               empleadoLegajo: legajo,
               fecha: _fechaDesdeCelda(row[fechaIndex].toString()),
               horasTotales: horas,
@@ -602,8 +967,23 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       }
 
       if (cargasImportadas.isEmpty) {
+        if (!encabezadoReconocido) {
+          throw const FormatException(
+            'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, caso y horas total.',
+          );
+        }
+        if (filasConChoras == 0) {
+          throw const FormatException(
+            'No se encontraron filas cuyo campo caso contenga Choras.',
+          );
+        }
+        if (filasConCursoReconocido == 0) {
+          throw const FormatException(
+            'Se encontraron casos Choras, pero ningún nombre de curso coincide con el catálogo. Verificá que el curso aparezca en alguna columna de la fila y esté cargado en Cursos.',
+          );
+        }
         throw const FormatException(
-          'No se encontraron cargas válidas del proyecto 01 - Capacitación.',
+          'Se encontraron casos Choras y cursos, pero las filas no tienen legajo, fecha u horas válidas.',
         );
       }
       await repository.replaceCargasDeHoras(cargasImportadas);
@@ -720,7 +1100,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           .toSet();
       if (_buscarColumnaCRM(headers.toList(), 'id') != -1 &&
           _buscarColumnaCRM(headers.toList(), 'legajo') != -1 &&
-          _buscarColumnaCRM(headers.toList(), 'proyecto') != -1 &&
+          _buscarColumnaCRM(headers.toList(), 'caso') != -1 &&
           _buscarColumnaCRM(headers.toList(), 'horas') != -1) {
         return index;
       }
@@ -751,27 +1131,25 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  int _buscarColumnaProyectoItem(List<String> headers) {
-    final exactIndex = headers.indexOf('proyectoitem');
-    if (exactIndex != -1) return exactIndex;
-    return _buscarColumnaCRM(headers, 'proyecto');
-  }
-
   TipoCargaDeHoras? _tipoCargaDesdeDescripcion(String value) {
     final normalized = _normalize(value);
-    if (normalized.startsWith('choras')) return TipoCargaDeHoras.tomada;
-    if (normalized.startsWith('casosdeconsultoria')) {
-      return TipoCargaDeHoras.dictada;
-    }
+    if (normalized.contains('choras')) return TipoCargaDeHoras.tomada;
     return null;
   }
 
-  String _cursoIdDesdeDescripcion(String value) {
-    final match = RegExp(
-      r'-\s*([a-z0-9][a-z0-9_-]*)\s*$',
-      caseSensitive: false,
-    ).firstMatch(value.trim());
-    return match?.group(1) ?? '';
+  Curso? _cursoDesdeDescripcion(String descripcion, List<Curso> cursos) {
+    final descripcionNormalizada = _normalize(descripcion);
+    Curso? coincidencia;
+    var longitudNombre = 0;
+    for (final curso in cursos) {
+      final nombreNormalizado = _normalize(curso.nombre);
+      if (nombreNormalizado.length > longitudNombre &&
+          descripcionNormalizada.contains(nombreNormalizado)) {
+        coincidencia = curso;
+        longitudNombre = nombreNormalizado.length;
+      }
+    }
+    return coincidencia;
   }
 
   DateTime _fechaDesdeCelda(String value) {

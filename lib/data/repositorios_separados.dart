@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:app_finnegans/data/formacion_repository.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
+import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
+import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,7 +49,7 @@ class MockCargaDeHorasCRMRepository implements CargaDeHorasCRMRepository {
         .map(
           (cursada) => CargaDeHorasCRM(
             id: cursada.id,
-            cursoId: cursada.cursoId,
+            cursoNombre: cursosMap[cursada.cursoId]?.nombre ?? '',
             empleadoLegajo: cursada.empleadoLegajo,
             fecha: cursada.fecha,
             horasTotales: cursosMap[cursada.cursoId]?.cargaHorariaHs ?? 0,
@@ -124,9 +126,33 @@ class LocalCargaDeHorasCRMRepository extends MockCargaDeHorasCRMRepository {
   @override
   Future<List<CargaDeHorasCRM>> getCargasDeHoras() async {
     final raw = (await _storage).getString(_key);
-    return raw == null
-        ? super.getCargasDeHoras()
-        : _decodeList(raw, CargaDeHorasCRM.fromJson);
+    if (raw == null) return super.getCargasDeHoras();
+
+    final cargas = _decodeList(raw, CargaDeHorasCRM.fromJson);
+    if (cargas.isEmpty ||
+        cargas.every((carga) => carga.cursoNombre.isNotEmpty)) {
+      return cargas;
+    }
+
+    try {
+      final registros = jsonDecode(raw) as List<dynamic>;
+      final cursos = await LocalCursosRepository().getCursos();
+      final cursosPorId = {for (final curso in cursos) curso.id: curso};
+      final cargasMigradas = registros.map((registro) {
+        final data = Map<String, dynamic>.from(registro as Map);
+        if ((data['cursoNombre']?.toString().trim() ?? '').isEmpty) {
+          final cursoId = data['cursoId']?.toString();
+          data['cursoNombre'] = cursosPorId[cursoId]?.nombre ?? '';
+        }
+        return CargaDeHorasCRM.fromJson(data);
+      }).toList();
+      await replaceCargasDeHoras(cargasMigradas);
+      return cargasMigradas;
+    } on FormatException {
+      return cargas;
+    } on TypeError {
+      return cargas;
+    }
   }
 
   @override
@@ -140,6 +166,42 @@ class LocalCargaDeHorasCRMRepository extends MockCargaDeHorasCRMRepository {
   @override
   Future<void> resetToMock() async {
     await (await _storage).remove(_key);
+  }
+}
+
+class MockCertificacionesMoodleRepository
+    implements CertificacionesMoodleRepository {
+  @override
+  Future<List<CertificacionMoodle>> getCertificaciones() async => [];
+
+  @override
+  Future<void> replaceCertificaciones(
+    List<CertificacionMoodle> certificaciones,
+  ) async {}
+}
+
+class LocalCertificacionesMoodleRepository
+    extends MockCertificacionesMoodleRepository {
+  static const _key = 'formacion_certificaciones_moodle';
+
+  Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
+
+  @override
+  Future<List<CertificacionMoodle>> getCertificaciones() async {
+    final raw = (await _storage).getString(_key);
+    return raw == null
+        ? super.getCertificaciones()
+        : _decodeList(raw, CertificacionMoodle.fromJson);
+  }
+
+  @override
+  Future<void> replaceCertificaciones(
+    List<CertificacionMoodle> certificaciones,
+  ) async {
+    await (await _storage).setString(
+      _key,
+      jsonEncode(certificaciones.map((item) => item.toJson()).toList()),
+    );
   }
 }
 

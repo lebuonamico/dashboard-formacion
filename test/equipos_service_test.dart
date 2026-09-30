@@ -115,7 +115,7 @@ void main() {
 CargaDeHorasCRM _carga(String id, DateTime fecha) {
   return CargaDeHorasCRM(
     id: id,
-    cursoId: 'curso-1',
+    cursoNombre: 'Curso 1',
     empleadoLegajo: '1',
     fecha: fecha,
     horasTotales: 2,
@@ -141,10 +141,11 @@ CumplimientoEmpleado _cumplimiento({
       equipo: 'Backend',
       gerente: 'Líder Backend',
     ),
-    horasCompletadas: {
+    horasValidas: {
       TipoCurso.habilidadesDeNegocio: horasNegocio,
       TipoCurso.habilidadesBlandas: horasBlandas,
     },
+    horasDeclaradas: const {},
     horasRequeridas: {
       TipoCurso.habilidadesDeNegocio: objetivoNegocio,
       TipoCurso.habilidadesBlandas: objetivoBlandas,

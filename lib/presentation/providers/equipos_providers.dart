@@ -8,6 +8,7 @@ import 'package:app_finnegans/domain/servicios/equipos_service.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
+import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
@@ -96,6 +97,9 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final empleados = await ref.watch(empleadosProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
+  final certificaciones = await ref.watch(
+    certificacionesMoodleProvider.future,
+  );
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
@@ -116,6 +120,7 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     empleados: empleados,
     cursos: cursos,
     cargasDeHoras: cargasFiltradas,
+    certificacionesMoodle: certificaciones,
   );
 
   if (alcance == AlcancePeriodo.mensual || soloRegistrosCargados) {

@@ -3,10 +3,12 @@ import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
+import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
@@ -46,12 +48,14 @@ class DetalleEmpleadoViewModel {
   final CumplimientoEmpleado cumplimiento;
   final List<CursadaViewModel> historialCursadas;
   final List<Curso> cursosDictados;
+  final Set<String> cursosFinalizados;
 
   DetalleEmpleadoViewModel({
     required this.empleado,
     required this.cumplimiento,
     required this.historialCursadas,
     required this.cursosDictados,
+    required this.cursosFinalizados,
   });
 }
 
@@ -63,6 +67,9 @@ final detalleEmpleadoProvider =
       final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
       final cursadasCompletasAsync = ref.watch(cursadasCompletasProvider);
       final cursosAsync = await ref.watch(cursosProvider.future);
+      final certificaciones = await ref.watch(
+        certificacionesMoodleProvider.future,
+      );
 
       final itemCumplimiento = cumplimientos.firstWhere(
         (c) => c.empleado.legajo == legajo,
@@ -77,11 +84,19 @@ final detalleEmpleadoProvider =
       final dictados = cursosAsync
           .where((cur) => cur.instructorLegajo == legajo)
           .toList();
+      final cursosFinalizados = certificaciones
+          .where((item) => item.legajo == legajo && item.finalizoCurso)
+          .map(
+            (item) =>
+                CumplimientoService.normalizarNombreCurso(item.cursoNombre),
+          )
+          .toSet();
 
       return DetalleEmpleadoViewModel(
         empleado: itemCumplimiento.empleado,
         cumplimiento: itemCumplimiento,
         historialCursadas: cursadasDelEmpleado,
         cursosDictados: dictados,
+        cursosFinalizados: cursosFinalizados,
       );
     });
