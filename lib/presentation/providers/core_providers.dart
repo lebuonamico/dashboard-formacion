@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
+import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
@@ -18,6 +19,11 @@ final cargaDeHorasCRMRepositoryProvider = Provider<CargaDeHorasCRMRepository>((
 ) {
   return LocalCargaDeHorasCRMRepository();
 });
+
+final certificacionesMoodleRepositoryProvider =
+    Provider<CertificacionesMoodleRepository>((ref) {
+      return LocalCertificacionesMoodleRepository();
+    });
 
 final cumplimientoServiceProvider = Provider<CumplimientoService>((ref) {
   return CumplimientoService();
