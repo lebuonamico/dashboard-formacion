@@ -8,6 +8,7 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
+import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
 class EmpleadoDetalleScreen extends ConsumerWidget {
   final String legajo;
@@ -104,7 +105,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _buildTablaCursadas(detalle.historialCursadas),
+                          _buildTablaCursadas(
+                            detalle.historialCursadas,
+                            detalle.cursosFinalizados,
+                          ),
                           const SizedBox(height: 24),
 
                           // Cursos Dictados (si aplica al seniority)
@@ -357,7 +361,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaCursadas(List<CursadaViewModel> cursadas) {
+  Widget _buildTablaCursadas(
+    List<CursadaViewModel> cursadas,
+    Set<String> cursosFinalizados,
+  ) {
     if (cursadas.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -370,56 +377,158 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
       );
     }
 
+    final grupos = <String, List<CursadaViewModel>>{};
+    for (final cursada in cursadas) {
+      final cursoId = cursada.curso?.id.trim() ?? '';
+      final nombreCurso = cursada.curso?.nombre ?? cursada.cursada.cursoNombre;
+      final clave = cursoId.isNotEmpty
+          ? 'id:$cursoId'
+          : 'nombre:${nombreCurso.trim().toLowerCase()}';
+      grupos.putIfAbsent(clave, () => []).add(cursada);
+    }
+
+    final cursosAgrupados = grupos.entries.toList()
+      ..sort((a, b) => _nombreCurso(a.value).compareTo(_nombreCurso(b.value)));
+
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: DataTable(
-        headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-        columns: const [
-          DataColumn(
-            label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          DataColumn(
-            label: Text('Curso', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          DataColumn(
-            label: Text('Tipo', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          DataColumn(
-            label: Text(
-              'Horas Computadas',
-              style: TextStyle(fontWeight: FontWeight.bold),
+      child: Column(
+        children: cursosAgrupados.map((grupo) {
+          final registros = grupo.value
+            ..sort((a, b) => b.cursada.fecha.compareTo(a.cursada.fecha));
+          final primeraCursada = registros.first;
+          final nombreCurso = _nombreCurso(registros);
+          final cursoFinalizado = cursosFinalizados.contains(
+            CumplimientoService.normalizarNombreCurso(nombreCurso),
+          );
+          final horasDeclaradas = registros.fold<double>(
+            0,
+            (total, item) => total + item.cursada.horasTotales,
+          );
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-          ),
-        ],
-        rows: cursadas.map((c) {
-          final fecha =
-              '${c.cursada.fecha.day.toString().padLeft(2, '0')}/${c.cursada.fecha.month.toString().padLeft(2, '0')}/${c.cursada.fecha.year}';
-          return DataRow(
-            cells: [
-              DataCell(Text(fecha)),
-              DataCell(
-                Text(
-                  c.curso?.nombre ?? c.cursada.cursoNombre,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: ExpansionTile(
+                key: PageStorageKey<String>('curso-${grupo.key}'),
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                childrenPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.menu_book_outlined,
+                  color: Color(0xFF64748B),
+                  size: 20,
                 ),
-              ),
-              DataCell(Text(c.curso?.tipo.label ?? '-')),
-              DataCell(
-                Text(
-                  '${c.curso?.cargaHorariaHs.toStringAsFixed(0) ?? 0} hs',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombreCurso,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                    if (cursoFinalizado) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Finalizado',
+                          style: TextStyle(
+                            color: Color(0xFF15803D),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
+                subtitle: Text(
+                  '${primeraCursada.curso?.tipo.label ?? 'Tipo sin especificar'} · '
+                  '${registros.length} ${registros.length == 1 ? 'registro' : 'registros'} · '
+                  '${_formatearHoras(horasDeclaradas)} hs declaradas',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                children: [
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                  ...registros.map((registro) {
+                    final fecha = registro.cursada.fecha;
+                    final fechaTexto =
+                        '${fecha.day.toString().padLeft(2, '0')}/'
+                        '${fecha.month.toString().padLeft(2, '0')}/'
+                        '${fecha.year}';
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.event_outlined,
+                            size: 16,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              fechaTexto,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${_formatearHoras(registro.cursada.horasTotales)} hs',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ),
-            ],
+            ),
           );
         }).toList(),
       ),
     );
   }
+
+  String _nombreCurso(List<CursadaViewModel> cursadas) {
+    final primera = cursadas.first;
+    return primera.curso?.nombre ?? primera.cursada.cursoNombre;
+  }
+
+  String _formatearHoras(double horas) => horas == horas.roundToDouble()
+      ? horas.toStringAsFixed(0)
+      : horas.toStringAsFixed(1);
 
   Widget _buildTablaDictados(List<Curso> dictados) {
     if (dictados.isEmpty) {

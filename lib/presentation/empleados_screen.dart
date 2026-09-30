@@ -1,9 +1,12 @@
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
+import 'package:app_finnegans/presentation/widgets/shared/progreso_horas_por_categoria.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 
 class EmpleadosScreen extends ConsumerWidget {
@@ -12,6 +15,7 @@ class EmpleadosScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final empleadosFiltrados = ref.watch(empleadosFiltradosProvider);
+    final cumplimientos = ref.watch(cumplimientoGlobalProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -76,7 +80,27 @@ class EmpleadosScreen extends ConsumerWidget {
                                   child: Text('No se encontraron empleados.'),
                                 );
                               }
-                              return _buildTablaDirectorio(context, empleados);
+                              return cumplimientos.when(
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (_, _) => _buildTablaDirectorio(
+                                  context,
+                                  empleados,
+                                  const {},
+                                ),
+                                data: (items) {
+                                  final porLegajo = {
+                                    for (final item in items)
+                                      item.empleado.legajo: item,
+                                  };
+                                  return _buildTablaDirectorio(
+                                    context,
+                                    empleados,
+                                    porLegajo,
+                                  );
+                                },
+                              );
                             },
                           ),
                         ),
@@ -153,7 +177,11 @@ class EmpleadosScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaDirectorio(BuildContext context, List<Empleado> empleados) {
+  Widget _buildTablaDirectorio(
+    BuildContext context,
+    List<Empleado> empleados,
+    Map<String, CumplimientoEmpleado> cumplimientoPorLegajo,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -163,111 +191,139 @@ class EmpleadosScreen extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SingleChildScrollView(
-          child: DataTable(
-            showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-            horizontalMargin: 20,
-            columnSpacing: 24,
-            columns: const [
-              DataColumn(
-                label: Text(
-                  'Legajo',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Empleado',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Área',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Equipo',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Seniority',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Contacto',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-            rows: empleados.map((emp) {
-              return DataRow(
-                onSelectChanged: (_) =>
-                    context.push('/empleados/${emp.legajo}'),
-                cells: [
-                  DataCell(
-                    Text(
-                      emp.legajo,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              showCheckboxColumn: false,
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+              dataRowMinHeight: 64,
+              dataRowMaxHeight: 72,
+              horizontalMargin: 20,
+              columnSpacing: 24,
+              columns: const [
+                DataColumn(
+                  label: Text(
+                    'Legajo',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  DataCell(
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: const Color(0xFFE2E8F0),
-                          child: Text(
-                            emp.nombre.substring(0, 1),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Empleado',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Área',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Equipo',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Seniority',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Progreso por categoría',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              rows: empleados.map((emp) {
+                return DataRow(
+                  onSelectChanged: (_) =>
+                      context.push('/empleados/${emp.legajo}'),
+                  cells: [
+                    DataCell(
+                      Text(
+                        emp.legajo,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    DataCell(
+                      SizedBox(
+                        width: 190,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: const Color(0xFFE2E8F0),
+                              child: Text(
+                                emp.nombre.substring(0, 1),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${emp.nombre} ${emp.apellido}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    emp.mail,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    DataCell(Text(emp.area)),
+                    DataCell(Text(_mostrarDato(emp.equipo))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          emp.seniority.label,
+                          style: const TextStyle(
+                            color: Color(0xFF1D4ED8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text('${emp.nombre} ${emp.apellido}'),
-                      ],
-                    ),
-                  ),
-                  DataCell(Text(emp.area)),
-                  DataCell(Text(_mostrarDato(emp.equipo))),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        emp.seniority.label,
-                        style: const TextStyle(
-                          color: Color(0xFF1D4ED8),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
                       ),
                     ),
-                  ),
-                  DataCell(
-                    Text(
-                      emp.mail,
-                      style: const TextStyle(color: Color(0xFF64748B)),
+                    DataCell(
+                      ProgresoHorasPorCategoria(
+                        cumplimiento: cumplimientoPorLegajo[emp.legajo],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            }).toList(),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),

@@ -13,7 +13,7 @@ class CumplimientoService {
     required List<CertificacionMoodle> certificacionesMoodle,
   }) {
     final cursosMap = {
-      for (final curso in cursos) _normalizarNombreCurso(curso.nombre): curso,
+      for (final curso in cursos) normalizarNombreCurso(curso.nombre): curso,
     };
 
     return empleados.map((empleado) {
@@ -37,7 +37,7 @@ class CumplimientoService {
           continue;
         }
         final curso =
-            cursosMap[_normalizarNombreCurso(certificacion.cursoNombre)];
+            cursosMap[normalizarNombreCurso(certificacion.cursoNombre)];
         if (curso != null) {
           horasValidas[curso.tipo] =
               (horasValidas[curso.tipo] ?? 0) + certificacion.cargaEstimada;
@@ -49,7 +49,7 @@ class CumplimientoService {
         (carga) => carga.empleadoLegajo == empleado.legajo && !carga.esDictada,
       );
       for (final carga in cargasTomadas) {
-        final curso = cursosMap[_normalizarNombreCurso(carga.cursoNombre)];
+        final curso = cursosMap[normalizarNombreCurso(carga.cursoNombre)];
         if (curso != null) {
           horasDeclaradas[curso.tipo] =
               (horasDeclaradas[curso.tipo] ?? 0) + carga.horasTotales;
@@ -78,7 +78,7 @@ class CumplimientoService {
     }).toList();
   }
 
-  String _normalizarNombreCurso(String nombre) => nombre
+  static String normalizarNombreCurso(String nombre) => nombre
       .trim()
       .toLowerCase()
       .replaceAll('á', 'a')
