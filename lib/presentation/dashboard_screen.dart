@@ -1,5 +1,6 @@
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_header.dart';
@@ -7,7 +8,6 @@ import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_hours.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
-import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_area_compliance_panel.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_period_controls.dart';
 import 'package:flutter/material.dart';
@@ -83,6 +83,10 @@ class DashboardScreen extends ConsumerWidget {
                           cargasAsync: cargasAsync,
                           areasAsync: areasAsync,
                           equiposAsync: equiposAsync,
+                          alcance: alcance,
+                          mesSeleccionado: mes,
+                          anioSeleccionado: anio,
+                          soloRegistrosCargados: soloRegistrosCargados,
                         ),
                         const SizedBox(height: 28),
                         DashboardCategoryHours(
@@ -93,8 +97,8 @@ class DashboardScreen extends ConsumerWidget {
                           cumplimientosAsync: cumplimientoAsync,
                         ),
                         const SizedBox(height: 28),
-                        DashboardAreaCompliancePanel(areasAsync: areasAsync),
-                        const SizedBox(height: 28),
+                        // DashboardAreaCompliancePanel(areasAsync: areasAsync),
+                        // const SizedBox(height: 28),
                         DashboardMonthlyHours(cargasAsync: cargasAsync),
                         const SizedBox(height: 28),
                         DashboardAreasSection(areasAsync: areasAsync),

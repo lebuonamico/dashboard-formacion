@@ -5,6 +5,7 @@ import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
+import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
 
 final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
@@ -14,9 +15,7 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
-  final soloRegistrosCargados = ref.watch(
-    soloRegistrosCargadosPeriodoProvider,
-  );
+  final soloRegistrosCargados = ref.watch(soloRegistrosCargadosPeriodoProvider);
 
   if (soloRegistrosCargados) return cargas;
 
@@ -31,11 +30,15 @@ final cumplimientoDashboardProvider =
       final empleados = await ref.watch(empleadosProvider.future);
       final cursos = await ref.watch(cursosProvider.future);
       final cargas = await ref.watch(cargasDashboardProvider.future);
+      final certificaciones = await ref.watch(
+        certificacionesMoodleProvider.future,
+      );
       final service = ref.read(cumplimientoServiceProvider);
       final cumplimientos = service.calcularCumplimientoGlobal(
         empleados: empleados,
         cursos: cursos,
         cargasDeHoras: cargas,
+        certificacionesMoodle: certificaciones,
       );
 
       return cumplimientos;
@@ -47,11 +50,13 @@ final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final empleados = await ref.watch(empleadosProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
+  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
   final service = ref.read(cumplimientoServiceProvider);
 
   return service.calcularCumplimientoGlobal(
     empleados: empleados,
     cursos: cursos,
     cargasDeHoras: cargasDeHoras,
+    certificacionesMoodle: certificaciones,
   );
 });

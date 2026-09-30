@@ -249,7 +249,7 @@ class CursadasScreen extends ConsumerWidget {
                   DataCell(Text(emp?.seniority.label ?? '-')),
                   DataCell(
                     Text(
-                      cur?.nombre ?? csd.cursoId,
+                      cur?.nombre ?? csd.cursoNombre,
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ),

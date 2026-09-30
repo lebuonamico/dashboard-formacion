@@ -54,14 +54,17 @@ final cargasDeHorasCompletasProvider =
 
       final cargas = cargasAsync.value ?? [];
       final empMap = {for (var e in (empleadosAsync.value ?? [])) e.legajo: e};
-      final cursoMap = {for (var c in (cursosAsync.value ?? [])) c.id: c};
+      final cursoMap = {
+        for (final curso in (cursosAsync.value ?? []))
+          curso.nombre.trim().toLowerCase(): curso,
+      };
 
       final viewModels = cargas
           .map((carga) {
             return CargaDeHorasCRMViewModel(
               carga: carga,
               empleado: empMap[carga.empleadoLegajo],
-              curso: cursoMap[carga.cursoId],
+              curso: cursoMap[carga.cursoNombre.trim().toLowerCase()],
             );
           })
           .where((vm) {
@@ -77,7 +80,7 @@ final cargasDeHorasCompletasProvider =
                 legajo.toLowerCase().contains(query);
 
             final matchesCurso =
-                cursoFiltro == null || vm.carga.cursoId == cursoFiltro;
+                cursoFiltro == null || vm.curso?.id == cursoFiltro;
 
             return matchesQuery && matchesCurso;
           })

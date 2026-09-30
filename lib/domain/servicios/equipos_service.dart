@@ -35,7 +35,8 @@ class EquiposService {
 
       return CumplimientoEmpleado(
         empleado: cumplimiento.empleado,
-        horasCompletadas: cumplimiento.horasCompletadas,
+        horasValidas: cumplimiento.horasValidas,
+        horasDeclaradas: cumplimiento.horasDeclaradas,
         horasRequeridas: horasRequeridasAnuales,
       );
     }).toList();

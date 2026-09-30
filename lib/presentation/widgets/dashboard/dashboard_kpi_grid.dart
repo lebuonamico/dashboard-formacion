@@ -2,6 +2,7 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,10 @@ class DashboardKpiGrid extends StatelessWidget {
   final AsyncValue<List<CargaDeHorasCRM>> cargasAsync;
   final AsyncValue<List<SemaforoAreaViewModel>> areasAsync;
   final AsyncValue<List<EquipoGlobalViewModel>> equiposAsync;
+  final AlcancePeriodo alcance;
+  final int mesSeleccionado;
+  final int anioSeleccionado;
+  final bool soloRegistrosCargados;
 
   const DashboardKpiGrid({
     super.key,
@@ -17,6 +22,10 @@ class DashboardKpiGrid extends StatelessWidget {
     required this.cargasAsync,
     required this.areasAsync,
     required this.equiposAsync,
+    required this.alcance,
+    required this.mesSeleccionado,
+    required this.anioSeleccionado,
+    required this.soloRegistrosCargados,
   });
 
   @override
@@ -47,6 +56,12 @@ class DashboardKpiGrid extends StatelessWidget {
       0,
       (total, item) => total + item.totalHorasCompletadas,
     );
+    final horasValidadasLms = cumplimientos.fold<double>(
+      0,
+      (total, item) =>
+          total +
+          item.horasValidas.values.fold(0.0, (sum, horas) => sum + horas),
+    );
     final promedioHoras = totalHoras / totalEmpleados;
     final promedioCumplimiento =
         cumplimientos
@@ -58,21 +73,31 @@ class DashboardKpiGrid extends StatelessWidget {
         .map((carga) => carga.empleadoLegajo)
         .toSet()
         .length;
-    final latestDate = cargas.isEmpty
-        ? null
-        : cargas
-              .map((carga) => carga.fecha)
-              .reduce((latest, date) => date.isAfter(latest) ? date : latest);
-    final horasUltimoMes = latestDate == null
-        ? 0.0
-        : cargas
-              .where(
-                (carga) =>
-                    carga.fecha.year == latestDate.year &&
-                    carga.fecha.month == latestDate.month,
-              )
-              .fold<double>(0, (total, carga) => total + carga.horasTotales);
-    final metaUltimoMes = totalEmpleados * 8.0;
+    final horasDeclaradasPeriodo = cargas.fold<double>(
+      0,
+      (total, carga) => total + carga.horasTotales,
+    );
+    final metaPeriodo =
+        totalEmpleados * 8.0 * (alcance == AlcancePeriodo.anual ? 12 : 1);
+    const nombresMeses = [
+      'ENERO',
+      'FEBRERO',
+      'MARZO',
+      'ABRIL',
+      'MAYO',
+      'JUNIO',
+      'JULIO',
+      'AGOSTO',
+      'SEPTIEMBRE',
+      'OCTUBRE',
+      'NOVIEMBRE',
+      'DICIEMBRE',
+    ];
+    final periodoLabel = soloRegistrosCargados
+        ? 'TODOS LOS REGISTROS'
+        : alcance == AlcancePeriodo.anual
+        ? 'AÑO $anioSeleccionado'
+        : '${nombresMeses[mesSeleccionado - 1]} $anioSeleccionado';
 
     final cards = [
       DashboardKpiCard(
@@ -86,19 +111,6 @@ class DashboardKpiGrid extends StatelessWidget {
         color: const Color(0xFF2563EB),
       ),
       DashboardKpiCard(
-        title: 'HORAS CARGADAS ÚLTIMO MES',
-        value: '${horasUltimoMes.toStringAsFixed(1)} h',
-        suffix: '/ Meta: ${metaUltimoMes.toStringAsFixed(0)} h',
-        progress: metaUltimoMes == 0
-            ? 0
-            : (horasUltimoMes / metaUltimoMes).clamp(0.0, 1.0),
-        progressLabel: 'Meta: 8 h por colaborador',
-        footer:
-            '${(metaUltimoMes - horasUltimoMes).clamp(0, double.infinity).toStringAsFixed(1)} h restantes',
-        icon: Icons.schedule_outlined,
-        color: const Color(0xFF2563EB),
-      ),
-      DashboardKpiCard(
         title: 'COLABORADORES CAPACITÁNDOSE',
         value: '$empleadosTomaronCurso',
         suffix: ' de $totalEmpleados',
@@ -108,6 +120,26 @@ class DashboardKpiGrid extends StatelessWidget {
         footer: '${totalEmpleados - empleadosTomaronCurso} sin cursos tomados',
         icon: Icons.school_outlined,
         color: const Color(0xFF009B61),
+      ),
+      DashboardKpiCard(
+        title: 'HORAS DECLARADAS CRM · $periodoLabel',
+        value: '${horasDeclaradasPeriodo.toStringAsFixed(1)} h',
+        suffix: 'declaradas',
+        progress: soloRegistrosCargados || metaPeriodo == 0
+            ? 0
+            : (horasDeclaradasPeriodo / metaPeriodo).clamp(0.0, 1.0),
+        progressLabel: soloRegistrosCargados
+            ? 'Todos los registros importados'
+            : alcance == AlcancePeriodo.anual
+            ? 'Meta anual: 96 h por colaborador'
+            : 'Meta mensual: 8 h por colaborador',
+        footer: soloRegistrosCargados
+            ? 'Sin filtro temporal'
+            : '${(metaPeriodo - horasDeclaradasPeriodo).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
+        secondaryText:
+            '${horasValidadasLms.toStringAsFixed(1)} h validadas LMS (acumuladas)',
+        icon: Icons.schedule_outlined,
+        color: const Color(0xFF2563EB),
       ),
       DashboardKpiCard(
         title: 'PROYECCIÓN ANUAL',
@@ -137,7 +169,7 @@ class DashboardKpiGrid extends StatelessWidget {
             crossAxisCount: columns,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            mainAxisExtent: 148,
+            mainAxisExtent: 156,
           ),
           itemCount: cards.length,
           itemBuilder: (context, index) => cards[index],
@@ -154,6 +186,7 @@ class DashboardKpiCard extends StatelessWidget {
   final double progress;
   final String progressLabel;
   final String footer;
+  final String? secondaryText;
   final IconData icon;
   final Color color;
 
@@ -165,6 +198,7 @@ class DashboardKpiCard extends StatelessWidget {
     required this.progress,
     required this.progressLabel,
     required this.footer,
+    this.secondaryText,
     required this.icon,
     required this.color,
   });
@@ -206,6 +240,19 @@ class DashboardKpiCard extends StatelessWidget {
               Icon(icon, size: 18, color: color),
             ],
           ),
+          if (secondaryText != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              secondaryText!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF15803D),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
