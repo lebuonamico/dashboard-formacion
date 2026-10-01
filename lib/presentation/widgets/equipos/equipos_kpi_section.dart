@@ -29,7 +29,7 @@ class EquiposKpiSection extends StatelessWidget {
           value: '$totalEquipos',
           detail: 'en seguimiento',
           help:
-              'Cantidad de equipos detectados al agrupar colaboradores por área y equipo general.',
+              'Equipos con al menos una carga CRM o una finalización LMS en el período seleccionado.',
           icon: Icons.groups_outlined,
           color: equiposBrand,
         ),
@@ -38,7 +38,7 @@ class EquiposKpiSection extends StatelessWidget {
           value: '$totalColaboradores',
           detail: 'en todos los equipos',
           help:
-              'Suma de integrantes de todos los equipos incluidos en el mes y año seleccionados.',
+              'Integrantes de la nómina actual pertenecientes a los equipos activos del período.',
           icon: Icons.people_outline,
           color: const Color(0xFF0E7490),
         ),
@@ -47,7 +47,7 @@ class EquiposKpiSection extends StatelessWidget {
           value: horasRealizadas.toStringAsFixed(1),
           detail: _formatDesvio(desvioHoras),
           help:
-              'Suma de horas cargadas en CRM para el mes/año seleccionado. El detalle compara realizadas contra objetivo.',
+              'Suma de horas validadas por cursos LMS finalizados en el período. El detalle las compara contra el objetivo.',
           icon: Icons.schedule_outlined,
           color: desvioHoras >= 0
               ? const Color(0xFF16A34A)

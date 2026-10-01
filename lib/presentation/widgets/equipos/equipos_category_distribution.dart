@@ -74,7 +74,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
                 help:
                     'Horas de formación libre o exploratoria realizadas por los integrantes.',
                 value: horasLibres,
-                color: const Color(0xFF4F46E5),
+                color: const Color(0xFFDB2777),
               ),
               EquiposDonutSlice(
                 label: 'Dictado',

@@ -71,8 +71,14 @@ class _EquiposFiltersState extends State<EquiposFilters> {
               Icons.search,
             ),
           );
+          // Leandro: Un cambio de período puede dejar fuera al área seleccionada.
+          final areaSeleccionadaValida =
+              widget.areas.contains(widget.selectedArea)
+              ? widget.selectedArea
+              : null;
           final areaField = DropdownButtonFormField<String?>(
-            initialValue: widget.selectedArea,
+            key: ValueKey(areaSeleccionadaValida),
+            initialValue: areaSeleccionadaValida,
             isExpanded: true,
             decoration: _inputDecoration(
               'Todas las áreas',

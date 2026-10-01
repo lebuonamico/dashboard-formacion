@@ -38,3 +38,37 @@ class EquipoGlobalViewModel {
     required this.estado,
   });
 }
+
+/// Totales del período que consume la pantalla de Equipos.
+class ResumenEquiposPeriodo {
+  final List<EquipoGlobalViewModel> equipos;
+  final int colaboradores;
+  final double horasRealizadas;
+  final double horasObjetivo;
+  final double horasNegocio;
+  final double horasBlandas;
+  final double horasLibres;
+  final double horasDictado;
+  final int enObjetivo;
+  final int enRiesgo;
+  final int criticos;
+
+  const ResumenEquiposPeriodo({
+    required this.equipos,
+    required this.colaboradores,
+    required this.horasRealizadas,
+    required this.horasObjetivo,
+    required this.horasNegocio,
+    required this.horasBlandas,
+    required this.horasLibres,
+    required this.horasDictado,
+    required this.enObjetivo,
+    required this.enRiesgo,
+    required this.criticos,
+  });
+
+  int get totalEquipos => equipos.length;
+  double get desvioHoras => horasRealizadas - horasObjetivo;
+  double get cumplimientoGlobal =>
+      horasObjetivo == 0 ? 0 : horasRealizadas / horasObjetivo * 100;
+}

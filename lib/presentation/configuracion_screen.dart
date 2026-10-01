@@ -430,6 +430,18 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'estimatedload',
           'estimatedhours',
         ]);
+        final fechaFinalizacionIndex = _buscarColumna(headers, const [
+          'fechadefinalizacion',
+          'fechafinalizacion',
+          'completiondate',
+          'datecompleted',
+          'timecompleted',
+        ]);
+        if (fechaFinalizacionIndex == -1) {
+          throw const FormatException(
+            'Falta la columna Fecha de finalización en el Excel de Moodle.',
+          );
+        }
         for (final row in rows.skip(headerIndex + 1)) {
           if ([
             legajoIndex,
@@ -445,6 +457,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           final carga = double.tryParse(
             row[cargaIndex].toString().trim().replaceAll(',', '.'),
           );
+          final fechaFinalizacion = fechaFinalizacionIndex < row.length
+              ? _fechaMoodle(row[fechaFinalizacionIndex].toString())
+              : null;
           if (legajo.isEmpty ||
               cursoNombre.isEmpty ||
               finalizo == null ||
@@ -452,12 +467,18 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               carga < 0) {
             continue;
           }
+          if (finalizo && fechaFinalizacion == null) {
+            throw FormatException(
+              'Falta una fecha de finalización válida para el legajo $legajo y el curso $cursoNombre.',
+            );
+          }
           certificaciones.add(
             CertificacionMoodle(
               legajo: legajo,
               cursoNombre: cursoNombre,
               finalizoCurso: finalizo,
               cargaEstimada: carga,
+              fechaFinalizacion: finalizo ? fechaFinalizacion : null,
             ),
           );
         }
@@ -545,6 +566,32 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       'pendiente' => false,
       _ => null,
     };
+  }
+
+  DateTime? _fechaMoodle(String value) {
+    final texto = value.trim();
+    if (texto.isEmpty) return null;
+
+    final iso = DateTime.tryParse(texto);
+    if (iso != null) return DateTime(iso.year, iso.month, iso.day);
+
+    final partes = RegExp(
+      r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$',
+    ).firstMatch(texto);
+    if (partes != null) {
+      final dia = int.parse(partes.group(1)!);
+      final mes = int.parse(partes.group(2)!);
+      final anio = int.parse(partes.group(3)!);
+      final fecha = DateTime(anio, mes, dia);
+      if (fecha.year == anio && fecha.month == mes && fecha.day == dia) {
+        return fecha;
+      }
+      return null;
+    }
+
+    final serial = double.tryParse(texto.replaceAll(',', '.'));
+    if (serial == null || serial < 1) return null;
+    return DateTime(1899, 12, 30).add(Duration(days: serial.floor()));
   }
 
   Future<void> _importarArchivo() async {
