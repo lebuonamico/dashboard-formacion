@@ -208,26 +208,35 @@ class _CardFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
-          '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} hs',
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: equiposInk,
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} hs',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: equiposInk,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatDesvio(equipo.desvioHoras),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: equipo.desvioHoras >= 0
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          _formatDesvio(equipo.desvioHoras),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: equipo.desvioHoras >= 0
-                ? const Color(0xFF16A34A)
-                : const Color(0xFFDC2626),
-          ),
-        ),
-        const Spacer(),
+        const SizedBox(width: 12),
         const Text(
           'Ver detalle',
           style: TextStyle(

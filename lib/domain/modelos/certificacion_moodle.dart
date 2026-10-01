@@ -3,12 +3,14 @@ class CertificacionMoodle {
   final String cursoNombre;
   final bool finalizoCurso;
   final double cargaEstimada;
+  final DateTime? fechaFinalizacion;
 
   const CertificacionMoodle({
     required this.legajo,
     required this.cursoNombre,
     required this.finalizoCurso,
     required this.cargaEstimada,
+    this.fechaFinalizacion,
   });
 
   Map<String, dynamic> toJson() => {
@@ -16,6 +18,7 @@ class CertificacionMoodle {
     'cursoNombre': cursoNombre,
     'finalizoCurso': finalizoCurso,
     'cargaEstimada': cargaEstimada,
+    'fechaFinalizacion': fechaFinalizacion?.toIso8601String(),
   };
 
   factory CertificacionMoodle.fromJson(Map<String, dynamic> json) {
@@ -26,6 +29,9 @@ class CertificacionMoodle {
       finalizoCurso: finalizo == true || finalizo?.toString() == 'true',
       cargaEstimada:
           double.tryParse(json['cargaEstimada']?.toString() ?? '') ?? 0,
+      fechaFinalizacion: DateTime.tryParse(
+        json['fechaFinalizacion']?.toString() ?? '',
+      ),
     );
   }
 }

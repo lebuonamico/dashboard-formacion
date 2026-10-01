@@ -1,4 +1,5 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
+import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/estado_equipo.dart';
@@ -35,6 +36,58 @@ void main() {
       expect(anioCompleto.map((carga) => carga.id), ['enero', 'febrero']);
     });
 
+    test('ubica cada finalización LMS según su fecha de finalización', () {
+      final certificaciones = [
+        CertificacionMoodle(
+          legajo: '1',
+          cursoNombre: 'Programación en Angular',
+          finalizoCurso: true,
+          cargaEstimada: 8,
+          fechaFinalizacion: DateTime(2026, 8, 10),
+        ),
+        CertificacionMoodle(
+          legajo: '2',
+          cursoNombre: 'Golang',
+          finalizoCurso: true,
+          cargaEstimada: 4,
+          fechaFinalizacion: DateTime(2026, 7, 10),
+        ),
+      ];
+
+      final julio = service.filtrarCertificacionesPorPeriodo(
+        certificaciones: certificaciones,
+        anio: 2026,
+        mes: 7,
+        esAnual: false,
+      );
+      final agosto = service.filtrarCertificacionesPorPeriodo(
+        certificaciones: certificaciones,
+        anio: 2026,
+        mes: 8,
+        esAnual: false,
+      );
+
+      expect(julio, [certificaciones.last]);
+      expect(agosto, [certificaciones.first]);
+    });
+
+    test('cuenta los meses con registros sin duplicarlos', () {
+      final cargas = [
+        _carga('julio-1', DateTime(2026, 7, 10)),
+        _carga('julio-2', DateTime(2026, 7, 20)),
+        _carga('agosto', DateTime(2026, 8, 10)),
+      ];
+
+      expect(
+        service.contarMesesConRegistros(
+          cargas: cargas,
+          certificaciones: const [],
+          anio: 2026,
+        ),
+        2,
+      );
+    });
+
     test(
       'convierte los objetivos mensuales a anuales sin alterar las horas',
       () {
@@ -55,6 +108,23 @@ void main() {
         expect(anual.horasRequeridas[TipoCurso.habilidadesBlandas], 48);
       },
     );
+
+    test('ajusta el objetivo anual a los meses con registros', () {
+      final cumplimiento = _cumplimiento(
+        legajo: '1',
+        horasNegocio: 4,
+        horasBlandas: 2,
+        objetivoNegocio: 4,
+        objetivoBlandas: 4,
+      );
+
+      final acumulado = service.convertirObjetivoMensualAAnual([
+        cumplimiento,
+      ], mesesConRegistros: 3).single;
+
+      expect(acumulado.horasRequeridas[TipoCurso.habilidadesDeNegocio], 12);
+      expect(acumulado.horasRequeridas[TipoCurso.habilidadesBlandas], 12);
+    });
 
     test('agrupa por equipo y calcula los indicadores de la tarjeta', () {
       final equipos = service.calcularEquiposGlobales([
