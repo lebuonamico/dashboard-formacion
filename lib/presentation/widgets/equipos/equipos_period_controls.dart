@@ -124,7 +124,7 @@ class _PeriodTitle extends StatelessWidget {
         const SizedBox(width: 6),
         Tooltip(
           message:
-              'Este período recalcula todos los indicadores de abajo. Las horas salen de CRM; equipos y colaboradores salen de la nómina cargada.',
+              'El período recalcula toda la pantalla. Un equipo está activo si registra actividad CRM o una finalización LMS; se evalúa a toda su nómina.',
           child: Icon(
             Icons.info_outline,
             size: 16,

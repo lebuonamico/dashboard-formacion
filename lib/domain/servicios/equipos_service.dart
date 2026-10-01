@@ -1,6 +1,8 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
+import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/equipo_global.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/estado_equipo.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
@@ -22,7 +24,67 @@ class EquiposService {
     }).toList();
   }
 
-  // Leandro: Para la vista anual conserva las horas cargadas y multiplica el objetivo por 12.
+  // Leandro: Cada finalización LMS pertenece al mes indicado por el propio Excel.
+  List<CertificacionMoodle> filtrarCertificacionesPorPeriodo({
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    required int mes,
+    required bool esAnual,
+  }) {
+    return certificaciones.where((certificacion) {
+      final fecha = certificacion.fechaFinalizacion;
+      if (!certificacion.finalizoCurso || fecha == null || fecha.year != anio) {
+        return false;
+      }
+      return esAnual || fecha.month == mes;
+    }).toList();
+  }
+
+  // Leandro: Activo significa que el equipo tuvo al menos un registro en el período.
+  // Se conserva toda su nómina para que una persona con cero horas también impacte.
+  List<Empleado> filtrarEmpleadosDeEquiposActivos({
+    required List<Empleado> empleados,
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+  }) {
+    final legajosConActividad = <String>{
+      ...cargas.map((carga) => carga.empleadoLegajo.trim()),
+      ...certificaciones.map((certificacion) => certificacion.legajo.trim()),
+    }..remove('');
+
+    final equiposActivos = empleados
+        .where((empleado) => legajosConActividad.contains(empleado.legajo))
+        .map(_claveEquipo)
+        .toSet();
+
+    return empleados
+        .where((empleado) => equiposActivos.contains(_claveEquipo(empleado)))
+        .toList();
+  }
+
+  // Leandro: Para la vista anual cuenta los meses con actividad CRM o LMS.
+  int contarMesesConRegistros({
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+  }) {
+    final meses = cargas
+        .where((carga) => carga.fecha.year == anio)
+        .map((carga) => carga.fecha.month)
+        .toSet();
+    meses.addAll(
+      certificaciones
+          .where(
+            (certificacion) =>
+                certificacion.finalizoCurso &&
+                certificacion.fechaFinalizacion?.year == anio,
+          )
+          .map((certificacion) => certificacion.fechaFinalizacion!.month),
+    );
+    return meses.length;
+  }
+
+  // Leandro: Para la vista anual conserva las horas y multiplica el objetivo por los meses.
   List<CumplimientoEmpleado> convertirObjetivoMensualAAnual(
     List<CumplimientoEmpleado> cumplimientos, {
     int mesesConRegistros = 12,
@@ -64,6 +126,58 @@ class EquiposService {
 
     equipos.sort(_compararEquiposPorPrioridad);
     return equipos;
+  }
+
+  // Leandro: Un único resumen alimenta KPI, donuts y tarjetas del mismo período.
+  ResumenEquiposPeriodo calcularResumenPeriodo(
+    List<CumplimientoEmpleado> cumplimientos,
+  ) {
+    final equipos = calcularEquiposGlobales(cumplimientos);
+    var colaboradores = 0;
+    var horasRealizadas = 0.0;
+    var horasObjetivo = 0.0;
+    var horasNegocio = 0.0;
+    var horasBlandas = 0.0;
+    var horasLibres = 0.0;
+    var horasDictado = 0.0;
+    var enObjetivo = 0;
+    var enRiesgo = 0;
+    var criticos = 0;
+
+    for (final equipo in equipos) {
+      colaboradores += equipo.cantidadIntegrantes;
+      horasRealizadas += equipo.horasRealizadas;
+      horasObjetivo += equipo.horasObjetivo;
+      horasNegocio += equipo.horasNegocio;
+      horasBlandas += equipo.horasBlandas;
+      horasLibres += equipo.horasLibres;
+      horasDictado += equipo.horasDictado;
+      switch (equipo.estado) {
+        case EstadoEquipo.enObjetivo:
+          enObjetivo++;
+          break;
+        case EstadoEquipo.enRiesgo:
+          enRiesgo++;
+          break;
+        case EstadoEquipo.critico:
+          criticos++;
+          break;
+      }
+    }
+
+    return ResumenEquiposPeriodo(
+      equipos: equipos,
+      colaboradores: colaboradores,
+      horasRealizadas: horasRealizadas,
+      horasObjetivo: horasObjetivo,
+      horasNegocio: horasNegocio,
+      horasBlandas: horasBlandas,
+      horasLibres: horasLibres,
+      horasDictado: horasDictado,
+      enObjetivo: enObjetivo,
+      enRiesgo: enRiesgo,
+      criticos: criticos,
+    );
   }
 
   EquipoGlobalViewModel _crearResumenEquipo(
@@ -180,6 +294,10 @@ class EquiposService {
       0,
       (total, miembro) => total + (miembro.horasCompletadas[tipo] ?? 0),
     );
+  }
+
+  String _claveEquipo(Empleado empleado) {
+    return '${empleado.area.trim()}::${_nombreEquipoNormalizado(empleado.equipo)}';
   }
 
   String _nombreEquipoNormalizado(String equipo) {

@@ -17,8 +17,8 @@ class EquiposScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Leandro: La lista completa alimenta los indicadores; la filtrada, las tarjetas.
-    final equiposAsync = ref.watch(equiposGlobalProvider);
+    // Leandro: El resumen completo alimenta indicadores y donuts; el filtro, las tarjetas.
+    final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
     final equiposFiltradosAsync = ref.watch(equiposGlobalFiltradosProvider);
 
     return Scaffold(
@@ -32,19 +32,14 @@ class EquiposScreen extends ConsumerWidget {
                 const _TopBar(),
                 Expanded(
                   // Leandro: Según el provider, muestra carga, error o el dashboard.
-                  child: equiposAsync.when(
+                  child: resumenAsync.when(
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: equiposBrand),
                     ),
                     error: (error, _) => _ErrorState(message: '$error'),
-                    data: (equipos) {
-                      // Leandro: Sin equipos cargados se muestra el estado vacío general.
-                      if (equipos.isEmpty) {
-                        return const _EmptyDataState();
-                      }
-
+                    data: (resumen) {
                       return _DashboardContent(
-                        equipos: equipos,
+                        resumen: resumen,
                         equiposFiltradosAsync: equiposFiltradosAsync,
                       );
                     },
@@ -59,55 +54,19 @@ class EquiposScreen extends ConsumerWidget {
   }
 }
 
-// Leandro: Coordina los widgets del dashboard y calcula sus totales generales.
+// Leandro: Coordina los widgets; los cálculos ya llegan resueltos por el servicio.
 class _DashboardContent extends ConsumerWidget {
-  final List<EquipoGlobalViewModel> equipos;
+  final ResumenEquiposPeriodo resumen;
   final AsyncValue<List<EquipoGlobalViewModel>> equiposFiltradosAsync;
 
   const _DashboardContent({
-    required this.equipos,
+    required this.resumen,
     required this.equiposFiltradosAsync,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Leandro: Siempre usamos la lista completa para que los KPI no cambien al filtrar.
-    final totalColaboradores = equipos.fold<int>(
-      0,
-      (total, equipo) => total + equipo.cantidadIntegrantes,
-    );
-    final horasRealizadas = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasRealizadas,
-    );
-    final horasObjetivo = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasObjetivo,
-    );
-    final desvioHoras = horasRealizadas - horasObjetivo;
-    // Leandro: El cumplimiento global surge de horas totales, no del promedio de porcentajes.
-    final cumplimientoGlobal = horasObjetivo == 0
-        ? 100.0
-        : horasRealizadas / horasObjetivo * 100;
-    final equiposEnObjetivo = _countByStatus(EstadoEquipo.enObjetivo);
-    final equiposEnRiesgo = _countByStatus(EstadoEquipo.enRiesgo);
-    final equiposCriticos = _countByStatus(EstadoEquipo.critico);
-    final horasNegocio = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasNegocio,
-    );
-    final horasBlandas = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasBlandas,
-    );
-    final horasLibres = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasLibres,
-    );
-    final horasDictado = equipos.fold<double>(
-      0,
-      (total, equipo) => total + equipo.horasDictado,
-    );
+    final equipos = resumen.equipos;
     // Leandro: Estas áreas únicas alimentan el selector del widget EquiposFilters.
     final areas = equipos.map((equipo) => equipo.area).toSet().toList()..sort();
     final busqueda = ref.watch(busquedaEquipoProvider);
@@ -152,87 +111,96 @@ class _DashboardContent extends ConsumerWidget {
           soloRegistrosCargados: soloRegistrosCargados,
           onScopeChanged: (value) {
             ref.read(alcancePeriodoProvider.notifier).state = value;
+            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
           onMonthChanged: (value) {
             if (value == null) return;
             ref.read(filtroMesPeriodoProvider.notifier).state = value;
+            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
           onYearChanged: (value) {
             if (value == null) return;
             ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
           onLoadedRecordsChanged: (value) {
             ref.read(soloRegistrosCargadosPeriodoProvider.notifier).state =
                 value;
+            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
         ),
         const SizedBox(height: 22),
-        // Leandro: EquiposKpiSection muestra los cuatro indicadores generales.
-        EquiposKpiSection(
-          totalEquipos: equipos.length,
-          totalColaboradores: totalColaboradores,
-          horasRealizadas: horasRealizadas,
-          horasObjetivo: horasObjetivo,
-          desvioHoras: desvioHoras,
-          cumplimientoGlobal: cumplimientoGlobal,
-        ),
-        const SizedBox(height: 16),
-        // Leandro: _DashboardChartsRow muestra los dos donuts del período seleccionado.
-        _DashboardChartsRow(
-          statusChart: EquiposStatusSummary(
-            total: equipos.length,
-            enObjetivo: equiposEnObjetivo,
-            enRiesgo: equiposEnRiesgo,
-            criticos: equiposCriticos,
+        if (equipos.isEmpty)
+          const _EmptyDataState()
+        else ...[
+          // Leandro: EquiposKpiSection muestra los cuatro indicadores generales.
+          EquiposKpiSection(
+            totalEquipos: resumen.totalEquipos,
+            totalColaboradores: resumen.colaboradores,
+            horasRealizadas: resumen.horasRealizadas,
+            horasObjetivo: resumen.horasObjetivo,
+            desvioHoras: resumen.desvioHoras,
+            cumplimientoGlobal: resumen.cumplimientoGlobal,
           ),
-          categoryChart: EquiposCategoryDistribution(
-            horasNegocio: horasNegocio,
-            horasBlandas: horasBlandas,
-            horasLibres: horasLibres,
-            horasDictado: horasDictado,
+          const SizedBox(height: 16),
+          // Leandro: _DashboardChartsRow muestra los dos donuts del período seleccionado.
+          _DashboardChartsRow(
+            statusChart: EquiposStatusSummary(
+              total: resumen.totalEquipos,
+              enObjetivo: resumen.enObjetivo,
+              enRiesgo: resumen.enRiesgo,
+              criticos: resumen.criticos,
+            ),
+            categoryChart: EquiposCategoryDistribution(
+              horasNegocio: resumen.horasNegocio,
+              horasBlandas: resumen.horasBlandas,
+              horasLibres: resumen.horasLibres,
+              horasDictado: resumen.horasDictado,
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        // Leandro: EquiposFilters actualiza los providers de búsqueda, área y estado.
-        EquiposFilters(
-          areas: areas,
-          searchText: busqueda,
-          selectedArea: areaSeleccionada,
-          selectedStatus: estadoSeleccionado,
-          hasActiveFilters: hayFiltrosActivos,
-          onSearch: (value) {
-            ref.read(busquedaEquipoProvider.notifier).state = value;
-          },
-          onArea: (value) {
-            ref.read(filtroAreaEquipoProvider.notifier).state = value;
-          },
-          onStatus: (value) {
-            ref.read(filtroEstadoEquipoProvider.notifier).state = value;
-          },
-          onClear: () {
-            ref.read(busquedaEquipoProvider.notifier).state = '';
-            ref.read(filtroAreaEquipoProvider.notifier).state = null;
-            ref.read(filtroEstadoEquipoProvider.notifier).state = null;
-          },
-        ),
-        const SizedBox(height: 24),
-        // Leandro: EquiposResults recibe sólo las tarjetas que cumplen los filtros.
-        equiposFiltradosAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: equiposBrand),
+          const SizedBox(height: 24),
+          // Leandro: EquiposFilters actualiza los providers de búsqueda, área y estado.
+          EquiposFilters(
+            areas: areas,
+            searchText: busqueda,
+            selectedArea: areaSeleccionada,
+            selectedStatus: estadoSeleccionado,
+            hasActiveFilters: hayFiltrosActivos,
+            onSearch: (value) {
+              ref.read(busquedaEquipoProvider.notifier).state = value;
+            },
+            onArea: (value) {
+              ref.read(filtroAreaEquipoProvider.notifier).state = value;
+            },
+            onStatus: (value) {
+              ref.read(filtroEstadoEquipoProvider.notifier).state = value;
+            },
+            onClear: () {
+              ref.read(busquedaEquipoProvider.notifier).state = '';
+              ref.read(filtroAreaEquipoProvider.notifier).state = null;
+              ref.read(filtroEstadoEquipoProvider.notifier).state = null;
+            },
           ),
-          error: (error, _) => _ErrorState(message: '$error'),
-          data: (equiposFiltrados) => EquiposResults(
-            equipos: equiposFiltrados,
-            totalEquipos: equipos.length,
+          const SizedBox(height: 24),
+          // Leandro: EquiposResults recibe sólo las tarjetas que cumplen los filtros.
+          equiposFiltradosAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: equiposBrand),
+            ),
+            error: (error, _) => _ErrorState(message: '$error'),
+            data: (equiposFiltrados) => EquiposResults(
+              key: ValueKey(
+                '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
+                '$soloRegistrosCargados-$busqueda-$areaSeleccionada-'
+                '$estadoSeleccionado',
+              ),
+              equipos: equiposFiltrados,
+              totalEquipos: resumen.totalEquipos,
+            ),
           ),
-        ),
+        ],
       ],
     );
-  }
-
-  int _countByStatus(EstadoEquipo status) {
-    return equipos.where((equipo) => equipo.estado == status).length;
   }
 }
 
@@ -309,19 +277,22 @@ class _EmptyDataState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 72, horizontal: 24),
+      decoration: equiposPanelDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: const [
           Icon(Icons.groups_outlined, size: 34, color: equiposMuted),
           SizedBox(height: 10),
           Text(
-            'No hay equipos para mostrar.',
+            'No hay equipos activos en este período.',
             style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
           ),
           SizedBox(height: 4),
           Text(
-            'Revisá que existan empleados con equipo asignado, cursos y cargas CRM.',
+            'Probá otro mes o verificá que existan cargas CRM o finalizaciones LMS.',
             style: TextStyle(color: equiposMuted),
           ),
         ],
