@@ -30,33 +30,51 @@ class CumplimientoService {
         TipoCurso.dictadoCapacitaciones: 0.0,
       };
 
-      // Moodle validates course hours only after the course is completed.
-      for (final certificacion in certificacionesMoodle) {
-        if (certificacion.legajo != empleado.legajo ||
-            !certificacion.finalizoCurso) {
-          continue;
-        }
-        final curso =
-            cursosMap[normalizarNombreCurso(certificacion.cursoNombre)];
-        if (curso != null) {
-          horasValidas[curso.tipo] =
-              (horasValidas[curso.tipo] ?? 0) + certificacion.cargaEstimada;
-        }
-      }
-
-      // CRM hours remain declared hours and do not contribute to compliance.
       final cargasTomadas = cargasDeHoras.where(
         (carga) => carga.empleadoLegajo == empleado.legajo && !carga.esDictada,
       );
+      final horasCrmPorCurso = <String, double>{};
       for (final carga in cargasTomadas) {
-        final curso = cursosMap[normalizarNombreCurso(carga.cursoNombre)];
+        final cursoNormalizado = normalizarNombreCurso(carga.cursoNombre);
+        final curso = cursosMap[cursoNormalizado];
         if (curso != null) {
           horasDeclaradas[curso.tipo] =
               (horasDeclaradas[curso.tipo] ?? 0) + carga.horasTotales;
+          horasCrmPorCurso.update(
+            cursoNormalizado,
+            (horas) => horas + carga.horasTotales,
+            ifAbsent: () => carga.horasTotales,
+          );
         }
       }
 
-      // 2. Horas como instructor (Dictado de capacitaciones)
+      // LMS confirma la finalización; CRM aporta las horas y Cursos fija el máximo.
+      final cursosValidados = <String>{};
+      for (final certificacion in certificacionesMoodle) {
+        final cursoNormalizado = normalizarNombreCurso(
+          certificacion.cursoNombre,
+        );
+        if (certificacion.legajo != empleado.legajo ||
+            !certificacion.finalizoCurso ||
+            !cursosValidados.add(cursoNormalizado)) {
+          continue;
+        }
+
+        final curso = cursosMap[cursoNormalizado];
+        if (curso == null) continue;
+
+        final horasRegistradas = horasCrmPorCurso[cursoNormalizado] ?? 0;
+        final cargaMaxima = curso.cargaHorariaHs < 0
+            ? 0.0
+            : curso.cargaHorariaHs;
+        final horasAcreditadas = horasRegistradas
+            .clamp(0.0, cargaMaxima)
+            .toDouble();
+        horasValidas[curso.tipo] =
+            (horasValidas[curso.tipo] ?? 0) + horasAcreditadas;
+      }
+
+      // Las horas dictadas se obtienen directamente del CRM.
       final cargasDictadas = cargasDeHoras.where(
         (carga) => carga.empleadoLegajo == empleado.legajo && carga.esDictada,
       );
@@ -66,7 +84,7 @@ class CumplimientoService {
             carga.horasTotales;
       }
 
-      // 3. Requerimientos por Seniority
+      // Requerimientos mensuales según el seniority del empleado.
       final horasRequeridas = empleado.seniority.planFormacion;
 
       return CumplimientoEmpleado(
