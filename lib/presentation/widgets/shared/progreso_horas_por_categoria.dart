@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 
 class ProgresoHorasPorCategoria extends StatelessWidget {
   final CumplimientoEmpleado? cumplimiento;
+  final bool mostrarSoloHorasAplicables;
 
-  const ProgresoHorasPorCategoria({super.key, required this.cumplimiento});
+  const ProgresoHorasPorCategoria({
+    super.key,
+    required this.cumplimiento,
+    this.mostrarSoloHorasAplicables = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +35,10 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
   }
 
   Widget _buildFicha(TipoCurso tipo) {
-    final horasRealizadas = cumplimiento!.horasCompletadas[tipo] ?? 0.0;
+    final horasRegistradas = cumplimiento!.horasCompletadas[tipo] ?? 0.0;
+    final horasRealizadas = mostrarSoloHorasAplicables
+        ? cumplimiento!.horasAplicablesAlObjetivo(tipo)
+        : horasRegistradas;
     final horasRequeridas = cumplimiento!.horasRequeridas[tipo] ?? 0.0;
     final requerida = horasRequeridas > 0;
     final cumple = requerida && horasRealizadas >= horasRequeridas;
@@ -48,7 +56,9 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
     return Tooltip(
       message: requerida
           ? '${tipo.label}: ${_formatearHoras(horasRealizadas)} de ${_formatearHoras(horasRequeridas)} horas'
-          : '${tipo.label}: no requerida',
+          : horasRegistradas > 0
+          ? '${tipo.label}: no requerida; ${_formatearHoras(horasRegistradas)} h registradas no suman al cumplimiento'
+          : '${tipo.label}: no requerida; no suma al cumplimiento',
       child: Container(
         width: 125,
         height: 22,

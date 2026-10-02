@@ -48,7 +48,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'Perfil del Colaborador',
+                        'Perfil del colaborador',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -84,7 +84,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
                           // Desglose de cumplimiento por categoría
                           const Text(
-                            'Desglose del Plan de Formación (Q3)',
+                            'Desglose del plan de formación (Q3)',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -97,7 +97,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
                           // Historial de Cursos Tomados
                           const Text(
-                            'Cursos Tomados (Asistencias)',
+                            'Cursos tomados (asistencias)',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -117,7 +117,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                                   0 ||
                               detalle.cursosDictados.isNotEmpty) ...[
                             const Text(
-                              'Cursos Dictados como Instructor',
+                              'Cursos dictados como instructor',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -256,7 +256,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  cump.cumpleObjetivo ? 'Objetivo Cumplido' : 'En Progreso',
+                  cump.cumpleObjetivo ? 'Objetivo cumplido' : 'En progreso',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -562,19 +562,19 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           ),
           DataColumn(
             label: Text(
-              'Curso Impartido',
+              'Curso impartido',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
-              'Área Temática',
+              'Área temática',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
-              'Horas Sumadas al Plan',
+              'Horas sumadas al plan',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
