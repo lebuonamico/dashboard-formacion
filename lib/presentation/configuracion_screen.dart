@@ -6,7 +6,6 @@ import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
@@ -277,9 +276,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     });
     try {
       final repository = ref.read(cursosRepositoryProvider);
-      if (repository is! LocalCursosRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
       final cursos = await MoodleCursosApi().getCursos();
       if (cursos.isEmpty) {
         throw const FormatException('Moodle no devolvió cursos para importar.');
@@ -447,23 +443,26 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             legajoIndex,
             cursoIndex,
             finalizoIndex,
-            cargaIndex,
           ].any((index) => index < 0 || index >= row.length)) {
             continue;
           }
           final legajo = row[legajoIndex].toString().trim();
           final cursoNombre = row[cursoIndex].toString().trim();
           final finalizo = _booleanoMoodle(row[finalizoIndex].toString());
-          final carga = double.tryParse(
-            row[cargaIndex].toString().trim().replaceAll(',', '.'),
-          );
+          // La carga estimada es opcional: si el Excel no la trae, se toma del
+          // curso al leer (cursos.carga_horaria), que es donde vive el dato.
+          final carga = cargaIndex != -1 && cargaIndex < row.length
+              ? double.tryParse(
+                      row[cargaIndex].toString().trim().replaceAll(',', '.'),
+                    ) ??
+                    0
+              : 0.0;
           final fechaFinalizacion = fechaFinalizacionIndex < row.length
               ? _fechaMoodle(row[fechaFinalizacionIndex].toString())
               : null;
           if (legajo.isEmpty ||
               cursoNombre.isEmpty ||
               finalizo == null ||
-              carga == null ||
               carga < 0) {
             continue;
           }
@@ -539,15 +538,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 'completado',
                 'completed',
               ]) !=
-              -1 &&
-          _buscarColumna(headers, const [
-                'cargaestimadamoodle',
-                'cargaestimada',
-                'horasestimadas',
-                'estimatedload',
-                'estimatedhours',
-              ]) !=
               -1) {
+        // No se exige la columna de carga estimada: el Excel de finalizaciones
+        // ya no la trae (la carga sale del curso). La fecha de finalización se
+        // valida aparte, con un mensaje propio.
         return index;
       }
     }
@@ -619,12 +613,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       final cargaDeHorasRepository = ref.read(
         cargaDeHorasCRMRepositoryProvider,
       );
-      if (empleadosRepository is! LocalEmpleadosRepository ||
-          cursosRepository is! LocalCursosRepository ||
-          cargaDeHorasRepository is! LocalCargaDeHorasCRMRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
-
       final empleados = await empleadosRepository.getEmpleados();
       final cursos = await cursosRepository.getCursos();
       final cargasDeHoras = await cargaDeHorasRepository.getCargasDeHoras();
@@ -765,11 +753,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         throw const FormatException('El archivo no tiene registros.');
       }
 
-      await Future.wait([
-        empleadosRepository.replaceEmpleados(empleadosImportados),
-        cursosRepository.replaceCursos(cursosImportados),
-        cargaDeHorasRepository.replaceCargasDeHoras(cargasDeHorasImportadas),
-      ]);
+      // En orden y no en paralelo: horas_capacitacion tiene claves foráneas a
+      // empleados y a cursos, así que esas dos tablas tienen que estar
+      // guardadas antes. Si se mandan a la vez, las horas se descartan porque
+      // todavía no existe el legajo o el curso al que apuntan.
+      await empleadosRepository.replaceEmpleados(empleadosImportados);
+      await cursosRepository.replaceCursos(cursosImportados);
+      await cargaDeHorasRepository.replaceCargasDeHoras(cargasDeHorasImportadas);
       ref.invalidate(empleadosProvider);
       ref.invalidate(cursosProvider);
       ref.invalidate(cargasDeHorasCRMProvider);
@@ -815,9 +805,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   ),
             };
       final repository = ref.read(cursosRepositoryProvider);
-      if (repository is! LocalCursosRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
 
       final cursosImportados = <Curso>[];
       for (final rows in rowsPorHoja.values) {
@@ -847,12 +834,15 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'nombrecompleto',
           'titulo',
         ]);
-        if (idIndex == -1 || nombreIndex == -1) continue;
+        if (nombreIndex == -1) continue;
 
         for (final row in rows.skip(headerIndex + 1)) {
-          if (idIndex >= row.length || nombreIndex >= row.length) continue;
-          final id = row[idIndex].toString().trim();
+          if (nombreIndex >= row.length) continue;
           final nombre = row[nombreIndex].toString().trim();
+          // Si el Excel no trae columna de ID (como el de Moodle), el nombre funciona como ID.
+          final id = idIndex != -1 && idIndex < row.length
+              ? row[idIndex].toString().trim()
+              : nombre;
           if (id.isEmpty || nombre.isEmpty) continue;
           final tipoIndex = _buscarColumna(headers, const [
             'tipo',
@@ -935,9 +925,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   ),
             };
       final repository = ref.read(cargaDeHorasCRMRepositoryProvider);
-      if (repository is! LocalCargaDeHorasCRMRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
       final cursosDisponibles = await ref
           .read(cursosRepositoryProvider)
           .getCursos();
@@ -1135,7 +1122,19 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'titulo',
         }.contains,
       );
-      if (tieneId && tieneNombre) return index;
+      final tieneTipoOHoras = headers.any(
+        const {
+          'tipo',
+          'tipocurso',
+          'category',
+          'categoria',
+          'cargahorariahs',
+          'cargahoraria',
+          'horas',
+          'hours',
+        }.contains,
+      );
+      if (tieneNombre && (tieneId || tieneTipoOHoras)) return index;
     }
     return -1;
   }
