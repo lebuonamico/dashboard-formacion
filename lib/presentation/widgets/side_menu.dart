@@ -7,7 +7,18 @@ class SideMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentRoute = GoRouterState.of(context).uri.toString();
+    final uri = GoRouterState.of(context).uri;
+    final currentPath = uri.path;
+    final requestedOrigin = uri.queryParameters['origen'];
+    const validOrigins = {'dashboard', 'areas', 'equipos'};
+    final origin = validOrigins.contains(requestedOrigin)
+        ? requestedOrigin
+        : null;
+
+    bool isSelected(String section, String path) {
+      if (origin != null) return origin == section;
+      return currentPath.startsWith(path);
+    }
 
     return Container(
       width: 260,
@@ -72,7 +83,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.dashboard_outlined,
                   label: 'Inicio',
-                  isSelected: currentRoute.startsWith('/dashboard'),
+                  isSelected: isSelected('dashboard', '/dashboard'),
                   onTap: () {
                     context.push(
                       '/dashboard',
@@ -82,7 +93,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.account_tree_outlined,
                   label: 'Áreas',
-                  isSelected: currentRoute.startsWith('/areas'),
+                  isSelected: isSelected('areas', '/areas'),
                   onTap: () {
                     context.push('/areas'); // Navega a la pantalla de áreas
                   },
@@ -90,7 +101,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.group_work,
                   label: 'Equipos',
-                  isSelected: currentRoute.startsWith('/equipos'),
+                  isSelected: isSelected('equipos', '/equipos'),
                   onTap: () {
                     context.push('/equipos'); // Navega a la pantalla de equipos
                   },
@@ -98,7 +109,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.people_outline,
                   label: 'Empleados',
-                  isSelected: currentRoute.startsWith('/empleados'),
+                  isSelected: isSelected('empleados', '/empleados'),
                   onTap: () {
                     context.push(
                       '/empleados',
@@ -109,7 +120,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.school_outlined,
                   label: 'Cursos',
-                  isSelected: currentRoute.startsWith('/cursos'),
+                  isSelected: isSelected('cursos', '/cursos'),
                   onTap: () {
                     context.push('/cursos'); // Navega a la pantalla de cursos
                   },
@@ -117,7 +128,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.assignment_outlined,
                   label: 'Carga de horas CRM',
-                  isSelected: currentRoute.startsWith('/cursadas'),
+                  isSelected: isSelected('cursadas', '/cursadas'),
                   onTap: () {
                     context.push(
                       '/cursadas',
@@ -127,7 +138,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.verified_outlined,
                   label: 'Certificaciones LMS',
-                  isSelected: currentRoute.startsWith('/certificaciones'),
+                  isSelected: isSelected('certificaciones', '/certificaciones'),
                   onTap: () => context.push('/certificaciones'),
                 ),
                 /*
@@ -145,7 +156,7 @@ class SideMenu extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.settings_outlined,
                   label: 'Configuración',
-                  isSelected: currentRoute.startsWith('/configuracion'),
+                  isSelected: isSelected('configuracion', '/configuracion'),
                   onTap: () {
                     context.push(
                       '/configuracion',

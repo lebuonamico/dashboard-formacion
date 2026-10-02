@@ -33,7 +33,7 @@ class CursosScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Catálogo de Cursos y Formaciones',
+                        'Catálogo de cursos y formaciones',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -175,7 +175,7 @@ class CursosScreen extends ConsumerWidget {
               ),
               DataColumn(
                 label: Text(
-                  'Nombre del Curso',
+                  'Nombre del curso',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -187,7 +187,7 @@ class CursosScreen extends ConsumerWidget {
               ),
               DataColumn(
                 label: Text(
-                  'Carga Horaria',
+                  'Carga horaria',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

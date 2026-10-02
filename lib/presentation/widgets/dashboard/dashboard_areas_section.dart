@@ -43,7 +43,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
           children: [
             const Expanded(
               child: Text(
-                'Estado de Cumplimiento por Áreas',
+                'Estado de cumplimiento por áreas',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -52,7 +52,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
               ),
             ),
             TextButton.icon(
-              onPressed: () => context.push('/areas'),
+              onPressed: () => context.push('/areas?origen=dashboard'),
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver todas las áreas'),
               style: TextButton.styleFrom(
@@ -300,7 +300,9 @@ class DashboardAreaCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => context.push('/areas/${Uri.encodeComponent(area.area)}'),
+        onTap: () => context.push(
+          '/areas/${Uri.encodeComponent(area.area)}?origen=dashboard',
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,

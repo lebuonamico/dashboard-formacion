@@ -47,7 +47,7 @@ class EquiposKpiSection extends StatelessWidget {
           value: horasRealizadas.toStringAsFixed(1),
           detail: _formatDesvio(desvioHoras),
           help:
-              'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima definida para cada curso.',
+              'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',
           icon: Icons.schedule_outlined,
           color: desvioHoras >= 0
               ? const Color(0xFF16A34A)

@@ -86,7 +86,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Configuración del Sistema',
+                        'Configuración del sistema',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -130,7 +130,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Widget _buildSeccionImportacion(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de Nómina de Empleados',
+      titulo: 'Carga de nómina de empleados',
       subtitulo:
           'Importá un archivo Excel o CSV con los datos de los empleados',
       children: [
@@ -157,7 +157,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           trailing: OutlinedButton.icon(
             onPressed: _importarArchivo,
             icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Cargar Nómina'),
+            label: const Text('Cargar nómina'),
           ),
         ),
       ],
@@ -166,13 +166,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Widget _buildSeccionCursos(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de Cursos',
+      titulo: 'Carga de cursos',
       subtitulo: 'Elegí cómo actualizar el catálogo de cursos',
       children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text(
-            'Usar Moodle API',
+            'Usar API de Moodle',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
@@ -262,7 +262,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             trailing: OutlinedButton.icon(
               onPressed: _importarCursosArchivo,
               icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Cargar Cursos'),
+              label: const Text('Cargar cursos'),
             ),
           ),
       ],
@@ -342,7 +342,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           trailing: OutlinedButton.icon(
             onPressed: _importarCargaDeHoras,
             icon: const Icon(Icons.upload_file, size: 18),
-            label: const Text('Cargar Horas'),
+            label: const Text('Cargar horas'),
           ),
         ),
       ],
@@ -1012,7 +1012,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         }
         if (filasConCursoReconocido == 0) {
           throw const FormatException(
-            'Se encontraron casos Choras, pero ningún nombre de curso coincide con el catálogo. Verificá que el curso aparezca en alguna columna de la fila y esté cargado en Cursos.',
+            'Se encontraron casos Choras, pero ningún nombre de curso coincide con el catálogo. Verificá que el curso aparezca en alguna columna de la fila y esté cargado en cursos.',
           );
         }
         throw const FormatException(

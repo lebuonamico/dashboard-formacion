@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+
 //import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class MetricasScreen extends ConsumerWidget {
@@ -36,7 +37,7 @@ class MetricasScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Tablero de Métricas & KPIs de Formación',
+                        'Tablero de métricas y KPI de formación',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -46,7 +47,10 @@ class MetricasScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -59,7 +63,8 @@ class MetricasScreen extends ConsumerWidget {
                     children: [
                       // 1. Tarjetas de KPIs Generales
                       kpisAsync.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (err, _) => Center(child: Text('Error: $err')),
                         data: (kpis) => _buildKpiRow(kpis),
                       ),
@@ -67,12 +72,17 @@ class MetricasScreen extends ConsumerWidget {
 
                       // 2. Semáforos por Equipo / Área
                       const Text(
-                        'Semáforo de Cumplimiento por Equipo',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        'Semáforo de cumplimiento por equipo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       areaAsync.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (err, _) => Center(child: Text('Error: $err')),
                         data: (areas) => _buildSemaforoAreasGrid(areas),
                       ),
@@ -80,27 +90,39 @@ class MetricasScreen extends ConsumerWidget {
 
                       // 3. Matriz de Cumplimiento y Desvíos por Seniority
                       const Text(
-                        'Cumplimiento y Desvíos por Seniority y Categoría',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        'Cumplimiento y desvíos por seniority y categoría',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       seniorityAsync.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (seniorities) => _buildTablaDesviosSeniority(seniorities),
+                        data: (seniorities) =>
+                            _buildTablaDesviosSeniority(seniorities),
                       ),
                       const SizedBox(height: 24),
 
                       // 4. Formación Impartida: Variedad y Horas de Dictado
                       const Text(
-                        'Seguimiento de Formadores (Variedad y Dictado)',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        'Seguimiento de formadores (variedad y dictado)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       instructoresAsync.when(
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (instructores) => _buildTablaInstructores(context, instructores),
+                        data: (instructores) =>
+                            _buildTablaInstructores(context, instructores),
                       ),
                     ],
                   ),
@@ -118,9 +140,10 @@ class MetricasScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: _KpiMetricCard(
-            title: '% Finnencers Alcanzados',
+            title: '% de Finnencers alcanzados',
             value: '${kpis.porcentajeFinnencersAlcanzados.toStringAsFixed(1)}%',
-            subtitle: '${kpis.totalFinnencersAlcanzados} de ${kpis.totalNomina} nómina',
+            subtitle:
+                '${kpis.totalFinnencersAlcanzados} de ${kpis.totalNomina} nómina',
             icon: Icons.groups_outlined,
             iconColor: const Color(0xFF0D53C3),
           ),
@@ -128,11 +151,13 @@ class MetricasScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _KpiMetricCard(
-            title: 'Proyectado Anual Nómina',
+            title: 'Proyección anual de la nómina',
             value: '${kpis.proyectadoAnualPromedio.toStringAsFixed(0)} hs/año',
-            subtitle: 'Objetivo meta: ${kpis.horasRequeridasAnuales.toStringAsFixed(0)} hs/persona',
+            subtitle:
+                'Objetivo meta: ${kpis.horasRequeridasAnuales.toStringAsFixed(0)} hs/persona',
             icon: Icons.trending_up,
-            iconColor: kpis.proyectadoAnualPromedio >= kpis.horasRequeridasAnuales
+            iconColor:
+                kpis.proyectadoAnualPromedio >= kpis.horasRequeridasAnuales
                 ? const Color(0xFF16A34A)
                 : const Color(0xFFD97706),
           ),
@@ -140,7 +165,7 @@ class MetricasScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _KpiMetricCard(
-            title: 'Horas de Dictado Acumuladas',
+            title: 'Horas de dictado acumuladas',
             value: '${kpis.totalHorasDictadas.toStringAsFixed(0)} hs',
             subtitle: 'Capacitaciones internas impartidas',
             icon: Icons.record_voice_over_outlined,
@@ -176,7 +201,11 @@ class MetricasScreen extends ConsumerWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: area.semaforo.colorFondo,
-                child: Icon(Icons.circle, color: area.semaforo.colorTexto, size: 16),
+                child: Icon(
+                  Icons.circle,
+                  color: area.semaforo.colorTexto,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -186,14 +215,21 @@ class MetricasScreen extends ConsumerWidget {
                   children: [
                     Text(
                       area.area,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF0F172A),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${area.horasCompletadas.toStringAsFixed(0)} / ${area.horasRequeridas.toStringAsFixed(0)} hs (${area.porcentajeCumplimiento.toStringAsFixed(0)}%)',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -214,7 +250,9 @@ class MetricasScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaDesviosSeniority(List<SeniorityMetricaViewModel> seniorities) {
+  Widget _buildTablaDesviosSeniority(
+    List<SeniorityMetricaViewModel> seniorities,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -227,30 +265,78 @@ class MetricasScreen extends ConsumerWidget {
           child: DataTable(
             headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
             columns: const [
-              DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Nómina', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Horas Realizadas / Plan', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Cumplimiento', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Desvíos por Categoría', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(
+                label: Text(
+                  'Seniority',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Nómina',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Horas realizadas / plan',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Cumplimiento',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Estado',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Desvíos por categoría',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
             rows: seniorities.map((item) {
               return DataRow(
                 cells: [
-                  DataCell(Text(item.seniority.label, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  DataCell(
+                    Text(
+                      item.seniority.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   DataCell(Text('${item.cantidadEmpleados} pers.')),
-                  DataCell(Text('${item.totalHorasRealizadas.toStringAsFixed(0)} / ${item.totalHorasRequeridas.toStringAsFixed(0)} hs')),
-                  DataCell(Text('${item.porcentajeCumplimiento.toStringAsFixed(1)}%')),
+                  DataCell(
+                    Text(
+                      '${item.totalHorasRealizadas.toStringAsFixed(0)} / ${item.totalHorasRequeridas.toStringAsFixed(0)} hs',
+                    ),
+                  ),
+                  DataCell(
+                    Text('${item.porcentajeCumplimiento.toStringAsFixed(1)}%'),
+                  ),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: item.semaforo.colorFondo,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         item.semaforo.label,
-                        style: TextStyle(color: item.semaforo.colorTexto, fontWeight: FontWeight.w600, fontSize: 12),
+                        style: TextStyle(
+                          color: item.semaforo.colorTexto,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -261,9 +347,14 @@ class MetricasScreen extends ConsumerWidget {
                         final esNegativo = desvio < 0;
                         return Container(
                           margin: const EdgeInsets.only(right: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: esNegativo ? const Color(0xFFFEE2E2) : const Color(0xFFF1F5F9),
+                            color: esNegativo
+                                ? const Color(0xFFFEE2E2)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -271,7 +362,9 @@ class MetricasScreen extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: esNegativo ? const Color(0xFFDC2626) : const Color(0xFF334155),
+                              color: esNegativo
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF334155),
                             ),
                           ),
                         );
@@ -287,7 +380,10 @@ class MetricasScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaInstructores(BuildContext context, List<InstructorMetricaViewModel> instructores) {
+  Widget _buildTablaInstructores(
+    BuildContext context,
+    List<InstructorMetricaViewModel> instructores,
+  ) {
     if (instructores.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -296,7 +392,9 @@ class MetricasScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        child: const Center(child: Text('No hay formadores registrados con horas impartidas.')),
+        child: const Center(
+          child: Text('No hay formadores registrados con horas impartidas.'),
+        ),
       );
     }
 
@@ -313,16 +411,47 @@ class MetricasScreen extends ConsumerWidget {
             showCheckboxColumn: false,
             headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
             columns: const [
-              DataColumn(label: Text('Instructor', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Área / Equipo', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Seniority', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Variedad (Cursos Distintos)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Horas Impartidas', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Acción', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(
+                label: Text(
+                  'Instructor',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Área / equipo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Seniority',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Variedad (cursos distintos)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Horas impartidas',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Acción',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
             rows: instructores.map((inst) {
               return DataRow(
-                onSelectChanged: (_) => _mostrarDetalleCursosDictados(context, inst),
+                onSelectChanged: (_) =>
+                    _mostrarDetalleCursosDictados(context, inst),
                 cells: [
                   DataCell(
                     Row(
@@ -332,11 +461,17 @@ class MetricasScreen extends ConsumerWidget {
                           backgroundColor: const Color(0xFFE2E8F0),
                           child: Text(
                             inst.nombreCompleto.substring(0, 1),
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(inst.nombreCompleto, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          inst.nombreCompleto,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   ),
@@ -344,28 +479,43 @@ class MetricasScreen extends ConsumerWidget {
                   DataCell(Text(inst.seniority.label)),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '${inst.variedadCursosDistintos} temas distintos',
-                        style: const TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.w600, fontSize: 12),
+                        style: const TextStyle(
+                          color: Color(0xFF1D4ED8),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
                   DataCell(
                     Text(
                       '${inst.totalHorasDictadas.toStringAsFixed(0)} hs',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ),
                   DataCell(
                     IconButton(
-                      icon: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF0D53C3)),
+                      icon: const Icon(
+                        Icons.visibility_outlined,
+                        size: 18,
+                        color: Color(0xFF0D53C3),
+                      ),
                       tooltip: 'Ver detalle de cursos',
-                      onPressed: () => _mostrarDetalleCursosDictados(context, inst),
+                      onPressed: () =>
+                          _mostrarDetalleCursosDictados(context, inst),
                     ),
                   ),
                 ],
@@ -377,12 +527,17 @@ class MetricasScreen extends ConsumerWidget {
     );
   }
 
-  void _mostrarDetalleCursosDictados(BuildContext context, InstructorMetricaViewModel inst) {
+  void _mostrarDetalleCursosDictados(
+    BuildContext context,
+    InstructorMetricaViewModel inst,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 650, maxHeight: 500),
             child: Padding(
@@ -398,12 +553,19 @@ class MetricasScreen extends ConsumerWidget {
                         children: [
                           Text(
                             inst.nombreCompleto,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${inst.area} · ${inst.seniority.label} (Legajo: ${inst.legajo})',
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                         ],
                       ),
@@ -420,7 +582,10 @@ class MetricasScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Total impartido: ${inst.totalHorasDictadas.toStringAsFixed(0)} hs',
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -453,18 +618,27 @@ class MetricasScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       c.nombre,
-                                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0F172A),
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       '${c.tipo.label} · Área: ${c.areaCurso}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFF7ED),
                                   borderRadius: BorderRadius.circular(4),
@@ -535,12 +709,29 @@ class _KpiMetricCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ],
             ),
           ),

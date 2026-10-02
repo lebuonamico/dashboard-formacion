@@ -253,7 +253,7 @@ class _TopBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Dashboard Global de Equipos',
+            'Dashboard global de equipos',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,

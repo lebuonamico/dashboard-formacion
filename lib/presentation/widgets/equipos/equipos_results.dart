@@ -1,6 +1,7 @@
 import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipo_card.dart';
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/paginacion_resultados.dart';
 import 'package:flutter/material.dart';
 
 const _maxCardWidth = 410.0;
@@ -98,12 +99,14 @@ class _EquiposResultsState extends State<EquiposResults> {
               const _EmptySearch()
             else ...[
               if (cantidadPaginas > 1) ...[
-                _PaginationControls(
+                PaginacionResultados(
                   paginaActual: paginaSegura,
                   cantidadPaginas: cantidadPaginas,
                   desde: desde + 1,
                   hasta: hasta,
                   totalResultados: widget.equipos.length,
+                  etiquetaResultados: 'equipos',
+                  icono: Icons.view_module_outlined,
                   onPrevious: paginaSegura == 0
                       ? null
                       : () => setState(() => _paginaActual = paginaSegura - 1),
@@ -118,91 +121,6 @@ class _EquiposResultsState extends State<EquiposResults> {
           ],
         );
       },
-    );
-  }
-}
-
-class _PaginationControls extends StatelessWidget {
-  final int paginaActual;
-  final int cantidadPaginas;
-  final int desde;
-  final int hasta;
-  final int totalResultados;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-
-  const _PaginationControls({
-    required this.paginaActual,
-    required this.cantidadPaginas,
-    required this.desde,
-    required this.hasta,
-    required this.totalResultados,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        border: Border.all(color: equiposBorder),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 10,
-        spacing: 20,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.view_module_outlined,
-                size: 20,
-                color: equiposBrand,
-              ),
-              const SizedBox(width: 9),
-              Text(
-                'Mostrando $desde-$hasta de $totalResultados equipos',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: equiposInk,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton.filledTonal(
-                onPressed: onPrevious,
-                icon: const Icon(Icons.chevron_left),
-                tooltip: 'Página anterior',
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Página ${paginaActual + 1} de $cantidadPaginas',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: equiposInk,
-                ),
-              ),
-              const SizedBox(width: 12),
-              IconButton.filledTonal(
-                onPressed: onNext,
-                icon: const Icon(Icons.chevron_right),
-                tooltip: 'Página siguiente',
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

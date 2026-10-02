@@ -59,7 +59,7 @@ class _AreaComplianceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cumplimiento por Área',
+                      'Cumplimiento por área',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -111,7 +111,7 @@ class _AreaComplianceCard extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: () => context.push('/areas'),
+                onPressed: () => context.push('/areas?origen=dashboard'),
                 icon: const Icon(Icons.arrow_forward, size: 13),
                 label: const Text('Ver áreas'),
                 style: TextButton.styleFrom(

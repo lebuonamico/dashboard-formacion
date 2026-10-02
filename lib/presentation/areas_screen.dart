@@ -10,6 +10,13 @@ class AreasScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final areasAsync = ref.watch(equiposResumenProvider);
+    final requestedOrigin = GoRouterState.of(
+      context,
+    ).uri.queryParameters['origen'];
+    const validOrigins = {'dashboard', 'areas', 'equipos'};
+    final origin = validOrigins.contains(requestedOrigin)
+        ? requestedOrigin
+        : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -25,13 +32,15 @@ class AreasScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Áreas y Equipos Generales',
+                        'Áreas y equipos generales',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -41,7 +50,10 @@ class AreasScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text('U', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'U',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -64,13 +76,22 @@ class AreasScreen extends ConsumerWidget {
                           ),
                           child: TextField(
                             onChanged: (val) =>
-                                ref.read(busquedaEquipoProvider.notifier).state = val,
+                                ref
+                                        .read(busquedaEquipoProvider.notifier)
+                                        .state =
+                                    val,
                             decoration: const InputDecoration(
                               hintText: 'Buscar área o equipo general...',
-                              prefixIcon: Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 20,
+                                color: Color(0xFF64748B),
+                              ),
                               isDense: true,
                               border: OutlineInputBorder(
-                                borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+                                borderSide: BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
                               ),
                             ),
                           ),
@@ -80,24 +101,30 @@ class AreasScreen extends ConsumerWidget {
                         // Grid de Áreas
                         Expanded(
                           child: areasAsync.when(
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (err, _) => Center(child: Text('Error: $err')),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (err, _) =>
+                                Center(child: Text('Error: $err')),
                             data: (areas) {
                               if (areas.isEmpty) {
-                                return const Center(child: Text('No se encontraron áreas.'));
+                                return const Center(
+                                  child: Text('No se encontraron áreas.'),
+                                );
                               }
 
                               return GridView.builder(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  mainAxisExtent: 180,
-                                ),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      mainAxisExtent: 180,
+                                    ),
                                 itemCount: areas.length,
                                 itemBuilder: (context, index) {
                                   final area = areas[index];
-                                  return _buildAreaCard(context, area);
+                                  return _buildAreaCard(context, area, origin);
                                 },
                               );
                             },
@@ -115,10 +142,17 @@ class AreasScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAreaCard(BuildContext context, ResumenEquipoViewModel eq) {
+  Widget _buildAreaCard(
+    BuildContext context,
+    ResumenEquipoViewModel eq,
+    String? origin,
+  ) {
+    final destination = '/areas/${Uri.encodeComponent(eq.nombreArea)}';
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => context.push('/areas/${Uri.encodeComponent(eq.nombreArea)}'),
+      onTap: () => context.push(
+        origin == null ? destination : '$destination?origen=$origin',
+      ),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -136,20 +170,31 @@ class AreasScreen extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     eq.nombreArea,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: eq.semaforo.colorFondo,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     eq.semaforo.label,
-                    style: TextStyle(color: eq.semaforo.colorTexto, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: eq.semaforo.colorTexto,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -160,13 +205,19 @@ class AreasScreen extends ConsumerWidget {
                 style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
               )
             else
-              const Text('Sin equipo general asignado', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const Text(
+                'Sin equipo general asignado',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '${eq.integrantesCumplen} de ${eq.cantidadIntegrantes} colaboradores en objetivo',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -174,11 +225,19 @@ class AreasScreen extends ConsumerWidget {
                   children: [
                     Text(
                       '${eq.horasTotalesRealizadas.toStringAsFixed(0)} / ${eq.horasTotalesRequeridas.toStringAsFixed(0)} hs',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                     Text(
                       '${eq.porcentajeCumplimiento.toStringAsFixed(0)}%',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: eq.semaforo.colorTexto),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: eq.semaforo.colorTexto,
+                      ),
                     ),
                   ],
                 ),
@@ -199,7 +258,11 @@ class AreasScreen extends ConsumerWidget {
               children: const [
                 Text(
                   'Ver área',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D53C3)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0D53C3),
+                  ),
                 ),
                 SizedBox(width: 4),
                 Icon(Icons.arrow_forward, size: 14, color: Color(0xFF0D53C3)),
