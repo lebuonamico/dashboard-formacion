@@ -351,9 +351,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Widget _buildSeccionCargaLms(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de horas LMS',
-      subtitulo:
-          'Importá finalizaciones y cargas estimadas exportadas desde Moodle',
+      titulo: 'Certificaciones LMS',
+      subtitulo: 'Importá el estado y la fecha de finalización desde Moodle',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -369,11 +368,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             ),
           ),
           title: const Text(
-            'Importar horas LMS desde Excel',
+            'Importar certificaciones LMS desde Excel',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: const Text(
-            'Legajo, nombre del curso, finalización y carga estimada',
+            'ID empleado, nombre del curso, finalización y fecha',
           ),
           trailing: OutlinedButton.icon(
             onPressed: _importarCertificacionesMoodle,
@@ -423,13 +422,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'completado',
           'completed',
         ]);
-        final cargaIndex = _buscarColumna(headers, const [
-          'cargaestimadamoodle',
-          'cargaestimada',
-          'horasestimadas',
-          'estimatedload',
-          'estimatedhours',
-        ]);
         final fechaFinalizacionIndex = _buscarColumna(headers, const [
           'fechadefinalizacion',
           'fechafinalizacion',
@@ -447,24 +439,17 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             legajoIndex,
             cursoIndex,
             finalizoIndex,
-            cargaIndex,
+            fechaFinalizacionIndex,
           ].any((index) => index < 0 || index >= row.length)) {
             continue;
           }
           final legajo = row[legajoIndex].toString().trim();
           final cursoNombre = row[cursoIndex].toString().trim();
           final finalizo = _booleanoMoodle(row[finalizoIndex].toString());
-          final carga = double.tryParse(
-            row[cargaIndex].toString().trim().replaceAll(',', '.'),
+          final fechaFinalizacion = _fechaMoodle(
+            row[fechaFinalizacionIndex].toString(),
           );
-          final fechaFinalizacion = fechaFinalizacionIndex < row.length
-              ? _fechaMoodle(row[fechaFinalizacionIndex].toString())
-              : null;
-          if (legajo.isEmpty ||
-              cursoNombre.isEmpty ||
-              finalizo == null ||
-              carga == null ||
-              carga < 0) {
+          if (legajo.isEmpty || cursoNombre.isEmpty || finalizo == null) {
             continue;
           }
           if (finalizo && fechaFinalizacion == null) {
@@ -477,7 +462,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               legajo: legajo,
               cursoNombre: cursoNombre,
               finalizoCurso: finalizo,
-              cargaEstimada: carga,
               fechaFinalizacion: finalizo ? fechaFinalizacion : null,
             ),
           );
@@ -496,7 +480,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Se importaron ${certificaciones.length} horas LMS.'),
+          content: Text(
+            'Se importaron ${certificaciones.length} certificaciones LMS.',
+          ),
         ),
       );
     } on FormatException catch (error) {
@@ -541,11 +527,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               ]) !=
               -1 &&
           _buscarColumna(headers, const [
-                'cargaestimadamoodle',
-                'cargaestimada',
-                'horasestimadas',
-                'estimatedload',
-                'estimatedhours',
+                'fechadefinalizacion',
+                'fechafinalizacion',
+                'completiondate',
+                'datecompleted',
+                'timecompleted',
               ]) !=
               -1) {
         return index;

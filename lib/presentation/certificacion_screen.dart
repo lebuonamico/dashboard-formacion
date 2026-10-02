@@ -73,7 +73,7 @@ class CertificacionScreen extends ConsumerWidget {
                             ),
                             error: (error, _) => Center(
                               child: Text(
-                                'No se pudieron cargar las horas LMS: $error',
+                                'No se pudieron cargar las certificaciones LMS: $error',
                               ),
                             ),
                             data: (items) {
@@ -122,7 +122,9 @@ class CertificacionScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       subtitle: Text(
-                                        'Legajo: ${item.legajo} · Carga estimada: ${item.cargaEstimada} h',
+                                        item.fechaFinalizacion == null
+                                            ? 'Legajo: ${item.legajo} · Sin fecha de finalización'
+                                            : 'Legajo: ${item.legajo} · Fecha: ${_formatFecha(item.fechaFinalizacion!)}',
                                       ),
                                       trailing: Text(
                                         item.finalizoCurso
@@ -150,5 +152,11 @@ class CertificacionScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _formatFecha(DateTime fecha) {
+    final dia = fecha.day.toString().padLeft(2, '0');
+    final mes = fecha.month.toString().padLeft(2, '0');
+    return '$dia/$mes/${fecha.year}';
   }
 }
