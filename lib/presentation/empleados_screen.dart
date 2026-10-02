@@ -39,7 +39,7 @@ class EmpleadosScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Directorio de Empleados',
+                        'Directorio de empleados',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,

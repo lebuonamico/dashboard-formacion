@@ -61,11 +61,13 @@ class DetalleEquipoViewModel {
 class DetalleEquipoGeneralViewModel {
   final String nombreArea;
   final String nombreEquipo;
+  final EquipoGlobalViewModel resumen;
   final List<CumplimientoEmpleado> miembros;
 
   DetalleEquipoGeneralViewModel({
     required this.nombreArea,
     required this.nombreEquipo,
+    required this.resumen,
     required this.miembros,
   });
 }
@@ -303,21 +305,37 @@ final detalleEquipoGeneralProvider =
       DetalleEquipoGeneralViewModel,
       ({String area, String equipo})
     >((ref, params) async {
-      final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
-      final miembros = cumplimientos.where((cumplimiento) {
-        return cumplimiento.empleado.area.toLowerCase() ==
-                params.area.toLowerCase() &&
-            cumplimiento.empleado.equipo.toLowerCase() ==
-                params.equipo.toLowerCase();
-      }).toList();
+      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
+      final resumenPeriodo = await ref.watch(
+        resumenEquiposPeriodoProvider.future,
+      );
+      String normalizar(String valor) => valor.trim().toLowerCase();
+      final areaBuscada = normalizar(params.area);
+      final equipoBuscado = normalizar(params.equipo);
+      final miembros =
+          cumplimientos.where((cumplimiento) {
+            return normalizar(cumplimiento.empleado.area) == areaBuscada &&
+                normalizar(cumplimiento.empleado.equipo) == equipoBuscado;
+          }).toList()..sort(
+            (a, b) =>
+                a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
+          );
 
       if (miembros.isEmpty) {
         throw Exception('Equipo general no encontrado');
       }
 
+      final resumen = resumenPeriodo.equipos.firstWhere(
+        (equipo) =>
+            normalizar(equipo.area) == areaBuscada &&
+            normalizar(equipo.nombre) == equipoBuscado,
+        orElse: () => throw Exception('Resumen del equipo no encontrado'),
+      );
+
       return DetalleEquipoGeneralViewModel(
-        nombreArea: params.area,
-        nombreEquipo: params.equipo,
+        nombreArea: resumen.area,
+        nombreEquipo: resumen.nombre,
+        resumen: resumen,
         miembros: miembros,
       );
     });

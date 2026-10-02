@@ -18,7 +18,10 @@ class LoginScreen extends StatelessWidget {
               Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(maxWidth: 440),
-                padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 36,
+                  vertical: 40,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -95,7 +98,9 @@ class LoginScreen extends StatelessWidget {
                     // Botón Google Sign-In
                     OutlinedButton(
                       onPressed: () {
-                        context.go('/dashboard'); // Navega a la pantalla de dashboard
+                        context.go(
+                          '/dashboard',
+                        ); // Navega a la pantalla de dashboard
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
@@ -126,7 +131,12 @@ class LoginScreen extends StatelessWidget {
                     // Separador ENTERPRISE ACCESS
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1)),
+                        const Expanded(
+                          child: Divider(
+                            color: Color(0xFFF1F5F9),
+                            thickness: 1,
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
@@ -139,7 +149,12 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1)),
+                        const Expanded(
+                          child: Divider(
+                            color: Color(0xFFF1F5F9),
+                            thickness: 1,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -174,9 +189,9 @@ class LoginScreen extends StatelessWidget {
                 children: [
                   _footerLink('Soporte', () {}),
                   _footerDivider(),
-                  _footerLink('Política de Privacidad', () {}),
+                  _footerLink('Política de privacidad', () {}),
                   _footerDivider(),
-                  _footerLink('Términos de Servicio', () {}),
+                  _footerLink('Términos de servicio', () {}),
                 ],
               ),
             ],

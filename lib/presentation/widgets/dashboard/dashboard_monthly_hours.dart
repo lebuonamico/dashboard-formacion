@@ -102,7 +102,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Evolución de Horas Mensuales',
+                      'Evolución de horas mensuales',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,

@@ -22,7 +22,7 @@ class EquipoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         // Leandro: Al tocar la tarjeta navega al detalle usando área y equipo en la ruta.
         onTap: () => context.push(
-          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}',
+          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}?origen=equipos',
         ),
         child: Container(
           decoration: equiposPanelDecoration(withShadow: true),

@@ -2,7 +2,7 @@ import 'package:app_finnegans/presentation/widgets/equipos/equipos_donut_chart.d
 import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Donut que muestra las horas realizadas por categoría.
+/// Leandro: Donut que muestra las horas aplicables al objetivo por categoría.
 /// Recibe los totales ya calculados por EquiposScreen.
 class EquiposCategoryDistribution extends StatelessWidget {
   final double horasNegocio;
@@ -40,7 +40,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
               const SizedBox(width: 6),
               Tooltip(
                 message:
-                    'Horas realizadas del período, agrupadas por tipo de capacitación.',
+                    'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
                 child: Icon(
                   Icons.info_outline,
                   size: 16,

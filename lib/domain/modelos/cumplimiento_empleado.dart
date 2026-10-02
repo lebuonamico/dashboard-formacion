@@ -16,10 +16,18 @@ class CumplimientoEmpleado {
 
   Map<TipoCurso, double> get horasCompletadas => horasValidas;
 
+  /// Horas que pueden aplicarse al objetivo de una categoría.
+  /// Una categoría no requerida puede tener actividad, pero no suma cumplimiento.
+  double horasAplicablesAlObjetivo(TipoCurso tipo) {
+    final requeridas = horasRequeridas[tipo] ?? 0.0;
+    if (requeridas <= 0) return 0.0;
+
+    return (horasValidas[tipo] ?? 0.0).clamp(0.0, requeridas).toDouble();
+  }
+
   double get totalHorasValidas => horasRequeridas.entries.fold(
     0.0,
-    (total, requisito) =>
-        total + (horasValidas[requisito.key] ?? 0).clamp(0.0, requisito.value),
+    (total, requisito) => total + horasAplicablesAlObjetivo(requisito.key),
   );
 
   double get totalHorasCompletadas => totalHorasValidas;

@@ -145,7 +145,7 @@ class _ComplianceChartCard extends StatelessWidget {
     ];
 
     return _SummaryCard(
-      title: 'Estado de Cumplimiento',
+      title: 'Estado de cumplimiento',
       subtitle: 'Distribución semáforo de las ${summary.total} personas',
       trailing: 'Meta: 8 h',
       footer: '${summary.meetsTarget} personas alcanzaron el 100% de la meta',
@@ -211,7 +211,7 @@ class _CategoryChartCard extends StatelessWidget {
     }
 
     return _SummaryCard(
-      title: 'Distribución por Categorías',
+      title: 'Distribución por categorías',
       subtitle: 'Uso de las horas promedio registradas',
       trailing: '4 Pilares',
       footer: 'Capacitaciones distribuidas entre los 4 pilares',

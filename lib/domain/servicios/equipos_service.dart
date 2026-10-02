@@ -292,7 +292,8 @@ class EquiposService {
   ) {
     return miembros.fold<double>(
       0,
-      (total, miembro) => total + (miembro.horasCompletadas[tipo] ?? 0),
+      // Leandro: Equipos muestra las horas que aplican al plan de cada seniority.
+      (total, miembro) => total + miembro.horasAplicablesAlObjetivo(tipo),
     );
   }
 
