@@ -1,0 +1,5 @@
+{
+  "USE_SUPABASE": false,
+  "SUPABASE_URL": "",
+  "SUPABASE_ANON_KEY": ""
+}

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -6,7 +7,11 @@ import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/data/repositorios_separados.dart';
+import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
+import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
+import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
+import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
+import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
@@ -277,15 +282,20 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     });
     try {
       final repository = ref.read(cursosRepositoryProvider);
-      if (repository is! LocalCursosRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
       final cursos = await MoodleCursosApi().getCursos();
       if (cursos.isEmpty) {
         throw const FormatException('Moodle no devolvió cursos para importar.');
       }
-      await repository.replaceCursos(cursos);
+      await ref
+          .read(importacionServiceProvider)
+          .persistir(
+            tipoArchivo: 'cursos_lms',
+            nombreArchivo: 'Sincronización Moodle',
+            registrosProcesados: cursos.length,
+            guardar: () => repository.upsertCursos(cursos),
+          );
       ref.invalidate(cursosProvider);
+      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       setState(() => _cursosMoodle = cursos);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -449,6 +459,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           final fechaFinalizacion = _fechaMoodle(
             row[fechaFinalizacionIndex].toString(),
           );
+          if (row[fechaFinalizacionIndex].toString().trim().isNotEmpty &&
+              fechaFinalizacion == null) {
+            throw FormatException(
+              'Fecha de finalización inválida para el legajo $legajo: ${row[fechaFinalizacionIndex]}.',
+            );
+          }
           if (legajo.isEmpty || cursoNombre.isEmpty || finalizo == null) {
             continue;
           }
@@ -474,8 +490,15 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         );
       }
       await ref
-          .read(certificacionesMoodleRepositoryProvider)
-          .replaceCertificaciones(certificaciones);
+          .read(importacionServiceProvider)
+          .persistir(
+            tipoArchivo: 'finalizaciones',
+            nombreArchivo: result.files.single.name,
+            registrosProcesados: certificaciones.length,
+            guardar: () => ref
+                .read(certificacionesMoodleRepositoryProvider)
+                .upsertCertificaciones(certificaciones),
+          );
       ref.invalidate(certificacionesMoodleProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -554,31 +577,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     };
   }
 
-  DateTime? _fechaMoodle(String value) {
-    final texto = value.trim();
-    if (texto.isEmpty) return null;
-
-    final iso = DateTime.tryParse(texto);
-    if (iso != null) return DateTime(iso.year, iso.month, iso.day);
-
-    final partes = RegExp(
-      r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$',
-    ).firstMatch(texto);
-    if (partes != null) {
-      final dia = int.parse(partes.group(1)!);
-      final mes = int.parse(partes.group(2)!);
-      final anio = int.parse(partes.group(3)!);
-      final fecha = DateTime(anio, mes, dia);
-      if (fecha.year == anio && fecha.month == mes && fecha.day == dia) {
-        return fecha;
-      }
-      return null;
-    }
-
-    final serial = double.tryParse(texto.replaceAll(',', '.'));
-    if (serial == null || serial < 1) return null;
-    return DateTime(1899, 12, 30).add(Duration(days: serial.floor()));
-  }
+  DateTime? _fechaMoodle(String value) => fechaImportacion(value);
 
   Future<void> _importarArchivo() async {
     final result = await FilePicker.platform.pickFiles(
@@ -605,20 +604,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       final cargaDeHorasRepository = ref.read(
         cargaDeHorasCRMRepositoryProvider,
       );
-      if (empleadosRepository is! LocalEmpleadosRepository ||
-          cursosRepository is! LocalCursosRepository ||
-          cargaDeHorasRepository is! LocalCargaDeHorasCRMRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
 
-      final empleados = await empleadosRepository.getEmpleados();
-      final cursos = await cursosRepository.getCursos();
-      final cargasDeHoras = await cargaDeHorasRepository.getCargasDeHoras();
-      var empleadosImportados = [...empleados];
-      var cursosImportados = [...cursos];
-      var cargasDeHorasImportadas = [...cargasDeHoras];
-      var empleadosReemplazados = false;
-      var cursosReemplazados = false;
+      var empleadosImportados = <Empleado>[];
+      var cursosImportados = <Curso>[];
+      var cargasDeHorasImportadas = <CargaDeHorasCRM>[];
 
       var registrosImportados = 0;
       for (final rows in rowsPorHoja.values) {
@@ -653,10 +642,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   headers.contains('idempleado')) &&
               (headers.contains('nombre') ||
                   headers.contains('nombreyapellido'))) {
-            if (!empleadosReemplazados) {
-              empleadosImportados = [];
-              empleadosReemplazados = true;
-            }
             final empleadoData = _toCanonicalKeys(normalizedData, {
               'nlegajo': 'legajo',
               'idempleado': 'legajo',
@@ -670,6 +655,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               'grado': 'seniority',
               'email': 'mail',
               'correo': 'mail',
+              'fechadeingreso': 'fechaIngreso',
+              'fechaingreso': 'fechaIngreso',
               'correoelectronico': 'mail',
               'gerencia': 'area',
               'sector': 'area',
@@ -691,6 +678,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               empleadoData['seniority'] = Seniority.fromString(
                 row[seniorityIndex].toString().trim(),
               ).name;
+            }
+            if (empleadoData['fechaIngreso']?.isEmpty ?? false) {
+              empleadoData.remove('fechaIngreso');
             }
             final empleado = Empleado.fromJson(empleadoData);
             empleadosImportados = _reemplazarPorId(
@@ -723,10 +713,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           } else if (headers.contains('id') &&
               headers.contains('nombre') &&
               headers.contains('tipo')) {
-            if (!cursosReemplazados) {
-              cursosImportados = [];
-              cursosReemplazados = true;
-            }
             final curso = Curso.fromJson(
               _toCanonicalKeys(normalizedData, {
                 'areacurso': 'areaCurso',
@@ -751,14 +737,24 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         throw const FormatException('El archivo no tiene registros.');
       }
 
-      await Future.wait([
-        empleadosRepository.replaceEmpleados(empleadosImportados),
-        cursosRepository.replaceCursos(cursosImportados),
-        cargaDeHorasRepository.replaceCargasDeHoras(cargasDeHorasImportadas),
-      ]);
+      await ref
+          .read(importacionServiceProvider)
+          .persistir(
+            tipoArchivo: 'nomina',
+            nombreArchivo: result.files.single.name,
+            registrosProcesados: registrosImportados,
+            guardar: () async {
+              await empleadosRepository.upsertEmpleados(empleadosImportados);
+              await cursosRepository.upsertCursos(cursosImportados);
+              await cargaDeHorasRepository.upsertCargasDeHoras(
+                cargasDeHorasImportadas,
+              );
+            },
+          );
       ref.invalidate(empleadosProvider);
       ref.invalidate(cursosProvider);
       ref.invalidate(cargasDeHorasCRMProvider);
+      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -801,9 +797,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   ),
             };
       final repository = ref.read(cursosRepositoryProvider);
-      if (repository is! LocalCursosRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
 
       final cursosImportados = <Curso>[];
       for (final rows in rowsPorHoja.values) {
@@ -877,8 +870,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'No se encontraron cursos. Verificá las columnas de ID y nombre.',
         );
       }
-      await repository.replaceCursos(cursosImportados);
+      await ref
+          .read(importacionServiceProvider)
+          .persistir(
+            tipoArchivo: 'cursos_lms',
+            nombreArchivo: result.files.single.name,
+            registrosProcesados: cursosImportados.length,
+            guardar: () => repository.upsertCursos(cursosImportados),
+          );
       ref.invalidate(cursosProvider);
+      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -921,17 +922,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   ),
             };
       final repository = ref.read(cargaDeHorasCRMRepositoryProvider);
-      if (repository is! LocalCargaDeHorasCRMRepository) {
-        throw const FormatException('El repositorio local no está disponible.');
-      }
-      final cursosDisponibles = await ref
-          .read(cursosRepositoryProvider)
-          .getCursos();
+      final cursosRepository = ref.read(cursosRepositoryProvider);
+      final cursosPorNombre = <String, Curso>{};
 
       final cargasImportadas = <CargaDeHorasCRM>[];
       var encabezadoReconocido = false;
-      var filasConChoras = 0;
-      var filasConCursoReconocido = 0;
+
       for (final rows in rowsPorHoja.values) {
         if (rows.length < 2) continue;
         final headerIndex = _buscarFilaCargaDeHoras(rows);
@@ -943,38 +939,44 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         final idIndex = _buscarColumnaCRM(headers, 'id');
         final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
         final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
-        final descripcionIndex = _buscarColumnaCRM(headers, 'caso');
+        final cursoIndex = headers.indexOf('curso');
         final horasIndex = _buscarColumnaCRM(headers, 'horas');
         if ([
           idIndex,
           legajoIndex,
           fechaIndex,
-          descripcionIndex,
+          cursoIndex,
           horasIndex,
         ].any((index) => index == -1)) {
           continue;
         }
 
         for (final row in rows.skip(headerIndex + 1)) {
+          if (row.every((cell) => cell.toString().trim().isEmpty)) continue;
           if ([
             idIndex,
             legajoIndex,
             fechaIndex,
-            descripcionIndex,
+            cursoIndex,
             horasIndex,
           ].any((index) => index >= row.length)) {
-            continue;
+            throw const FormatException(
+              'Fila CRM incompleta: faltan columnas obligatorias.',
+            );
           }
-          final descripcion = row[descripcionIndex].toString().trim();
-          final tipo = _tipoCargaDesdeDescripcion(descripcion);
-          if (tipo == null) continue;
-          filasConChoras++;
-          final textoFila = row.map((celda) => celda.toString()).join(' ');
-          final curso =
-              _cursoDesdeDescripcion(descripcion, cursosDisponibles) ??
-              _cursoDesdeDescripcion(textoFila, cursosDisponibles);
-          if (curso == null) continue;
-          filasConCursoReconocido++;
+          final nombreCurso = row[cursoIndex].toString().trim();
+          final curso = cursosPorNombre[normalizarNombreCurso(nombreCurso)] ??=
+              resolverCurso(
+                nombreCurso,
+                await cursosRepository.getCursos(nombre: nombreCurso),
+              );
+          final fecha = _fechaDesdeCelda(row[fechaIndex].toString());
+          String? fuente(String campo) {
+            final index = headers.indexOf(campo);
+            return index < 0 || index >= row.length
+                ? null
+                : row[index].toString().trim();
+          }
 
           final horas =
               double.tryParse(
@@ -990,10 +992,17 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             CargaDeHorasCRM(
               id: id,
               cursoNombre: curso.nombre,
+              cursoId: curso.id,
+              caso: fuente('caso'),
+              descripcionCurso: fuente('descripcioncurso'),
+              clasificacion: fuente('clasificacion'),
+              proyecto: fuente('proyecto'),
+              proyectoItem: fuente('proyectoitem'),
+              descripcion: fuente('descripcion'),
               empleadoLegajo: legajo,
-              fecha: _fechaDesdeCelda(row[fechaIndex].toString()),
+              fecha: fecha,
               horasTotales: horas,
-              tipo: tipo,
+              tipo: TipoCargaDeHoras.tomada,
             ),
           );
         }
@@ -1002,25 +1011,23 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       if (cargasImportadas.isEmpty) {
         if (!encabezadoReconocido) {
           throw const FormatException(
-            'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, caso y horas total.',
-          );
-        }
-        if (filasConChoras == 0) {
-          throw const FormatException(
-            'No se encontraron filas cuyo campo caso contenga Choras.',
-          );
-        }
-        if (filasConCursoReconocido == 0) {
-          throw const FormatException(
-            'Se encontraron casos Choras, pero ningún nombre de curso coincide con el catálogo. Verificá que el curso aparezca en alguna columna de la fila y esté cargado en cursos.',
+            'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, fecha, curso y horas total.',
           );
         }
         throw const FormatException(
-          'Se encontraron casos Choras y cursos, pero las filas no tienen legajo, fecha u horas válidas.',
+          'El archivo no tiene registros CRM válidos.',
         );
       }
-      await repository.replaceCargasDeHoras(cargasImportadas);
+      await ref
+          .read(importacionServiceProvider)
+          .persistir(
+            tipoArchivo: 'horas_crm',
+            nombreArchivo: result.files.single.name,
+            registrosProcesados: cargasImportadas.length,
+            guardar: () => repository.upsertCargasDeHoras(cargasImportadas),
+          );
       ref.invalidate(cargasDeHorasCRMProvider);
+      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1133,7 +1140,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           .toSet();
       if (_buscarColumnaCRM(headers.toList(), 'id') != -1 &&
           _buscarColumnaCRM(headers.toList(), 'legajo') != -1 &&
-          _buscarColumnaCRM(headers.toList(), 'caso') != -1 &&
+          headers.contains('curso') &&
+          _buscarColumnaCRM(headers.toList(), 'fecha') != -1 &&
           _buscarColumnaCRM(headers.toList(), 'horas') != -1) {
         return index;
       }
@@ -1164,30 +1172,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  TipoCargaDeHoras? _tipoCargaDesdeDescripcion(String value) {
-    final normalized = _normalize(value);
-    if (normalized.contains('choras')) return TipoCargaDeHoras.tomada;
-    return null;
-  }
-
-  Curso? _cursoDesdeDescripcion(String descripcion, List<Curso> cursos) {
-    final descripcionNormalizada = _normalize(descripcion);
-    Curso? coincidencia;
-    var longitudNombre = 0;
-    for (final curso in cursos) {
-      final nombreNormalizado = _normalize(curso.nombre);
-      if (nombreNormalizado.length > longitudNombre &&
-          descripcionNormalizada.contains(nombreNormalizado)) {
-        coincidencia = curso;
-        longitudNombre = nombreNormalizado.length;
-      }
-    }
-    return coincidencia;
-  }
-
-  DateTime _fechaDesdeCelda(String value) {
-    return DateTime.tryParse(value) ?? DateTime.now();
-  }
+  DateTime _fechaDesdeCelda(String value) => fechaObligatoria(value);
 
   int _buscarColumna(List<String> headers, List<String> posibles) {
     for (final posible in posibles) {
@@ -1219,6 +1204,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   bool _esColumnaSeniority(String header) {
     return header == 'seniority' ||
+        header == 'senority' ||
         header.contains('seniority') ||
         header == 'senioridad' ||
         header == 'nivel' ||
@@ -1236,6 +1222,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   ) {
     const encabezadosEspecificos = {
       'seniority',
+      'senority',
       'nivelseniority',
       'niveldeseniority',
       'senioridad',

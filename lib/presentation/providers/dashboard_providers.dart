@@ -1,28 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
+import 'package:app_finnegans/presentation/providers/core_providers.dart';
 
 final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   ref,
 ) async {
-  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
   final soloRegistrosCargados = ref.watch(soloRegistrosCargadosPeriodoProvider);
 
-  if (soloRegistrosCargados) return cargas;
-
-  return cargas.where((carga) {
-    if (carga.fecha.year != anio) return false;
-    return alcance == AlcancePeriodo.anual || carga.fecha.month == mes;
-  }).toList();
+  final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
+  if (soloRegistrosCargados) return repo.getCargasDeHoras();
+  final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
+  final hasta = alcance == AlcancePeriodo.anual
+      ? DateTime(anio + 1)
+      : DateTime(anio, mes + 1);
+  return repo.getCargasDeHoras(desde: desde, hasta: hasta);
 });
 
 final cumplimientoDashboardProvider =

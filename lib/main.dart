@@ -1,14 +1,15 @@
+import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Asegurate de importar tu widget principal / router
-import 'package:app_finnegans/core/app_router.dart'; 
+import 'package:app_finnegans/core/app_router.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.initialize();
   runApp(
     // Envolver aquí con ProviderScope:
-    const ProviderScope(
-      child: MyApp(),
-    ),
+    const ProviderScope(child: MyApp()),
   );
 }
 
