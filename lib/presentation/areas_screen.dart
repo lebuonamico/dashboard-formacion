@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
 class AreasScreen extends ConsumerWidget {
   const AreasScreen({super.key});

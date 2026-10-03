@@ -1,11 +1,12 @@
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_filters.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_kpi_section.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_period_controls.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_results.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_status_summary.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_filters.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,7 @@ class EquiposScreen extends ConsumerWidget {
           Expanded(
             child: Column(
               children: [
-                const _TopBar(),
+                const AppTopBar(title: 'Dashboard global de equipos'),
                 Expanded(
                   // Leandro: Según el provider, muestra carga, error o el dashboard.
                   child: resumenAsync.when(
@@ -232,41 +233,6 @@ class _DashboardChartsRow extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-// Leandro: Cabecera visual de la pantalla de Equipos.
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: equiposBorder)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Dashboard global de equipos',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: equiposInk,
-            ),
-          ),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: equiposBrand,
-            child: Text('U', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }

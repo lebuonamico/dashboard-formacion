@@ -1,4 +1,5 @@
-import 'package:app_finnegans/domain/modelos/estado_equipo.dart';
+import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/modelos/team_status.dart';
 
 /// Leandro: Resultado que EquiposService entrega al provider y luego a los widgets.
 class EquipoGlobalViewModel {
@@ -71,4 +72,12 @@ class ResumenEquiposPeriodo {
   double get desvioHoras => horasRealizadas - horasObjetivo;
   double get cumplimientoGlobal =>
       horasObjetivo == 0 ? 0 : horasRealizadas / horasObjetivo * 100;
+}
+
+/// Equipo seleccionado junto con los integrantes evaluados en el período.
+class DetalleEquipoGeneral {
+  final EquipoGlobalViewModel resumen;
+  final List<CumplimientoEmpleado> miembros;
+
+  const DetalleEquipoGeneral({required this.resumen, required this.miembros});
 }

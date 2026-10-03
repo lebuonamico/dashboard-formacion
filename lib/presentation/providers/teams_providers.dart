@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-//import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/domain/modelos/equipo_global.dart';
-import 'package:app_finnegans/domain/modelos/estado_equipo.dart';
-import 'package:app_finnegans/domain/servicios/equipos_service.dart';
-//import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/domain/modelos/team_overview.dart';
+import 'package:app_finnegans/domain/modelos/team_status.dart';
+import 'package:app_finnegans/domain/servicios/teams_service.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
@@ -12,12 +10,12 @@ import 'package:app_finnegans/presentation/providers/certificaciones_moodle_prov
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
+import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-export 'package:app_finnegans/domain/modelos/equipo_global.dart';
-export 'package:app_finnegans/domain/modelos/estado_equipo.dart';
-export 'package:app_finnegans/presentation/providers/periodo_providers.dart';
+export 'package:app_finnegans/domain/modelos/team_overview.dart';
+export 'package:app_finnegans/domain/modelos/team_status.dart';
+export 'package:app_finnegans/presentation/providers/period_providers.dart';
 
 // Leandro: La primera sección contiene el flujo del dashboard de Equipos.
 // Al final permanecen los providers anteriores que usan Áreas y el detalle.
@@ -55,20 +53,6 @@ class DetalleEquipoViewModel {
     required this.resumen,
     required this.miembros,
     required this.miembrosPorEquipo,
-  });
-}
-
-class DetalleEquipoGeneralViewModel {
-  final String nombreArea;
-  final String nombreEquipo;
-  final EquipoGlobalViewModel resumen;
-  final List<CumplimientoEmpleado> miembros;
-
-  DetalleEquipoGeneralViewModel({
-    required this.nombreArea,
-    required this.nombreEquipo,
-    required this.resumen,
-    required this.miembros,
   });
 }
 
@@ -301,41 +285,21 @@ final detalleEquipoProvider =
     });
 
 final detalleEquipoGeneralProvider =
-    FutureProvider.family<
-      DetalleEquipoGeneralViewModel,
-      ({String area, String equipo})
-    >((ref, params) async {
-      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
-      final resumenPeriodo = await ref.watch(
-        resumenEquiposPeriodoProvider.future,
-      );
-      String normalizar(String valor) => valor.trim().toLowerCase();
-      final areaBuscada = normalizar(params.area);
-      final equipoBuscado = normalizar(params.equipo);
-      final miembros =
-          cumplimientos.where((cumplimiento) {
-            return normalizar(cumplimiento.empleado.area) == areaBuscada &&
-                normalizar(cumplimiento.empleado.equipo) == equipoBuscado;
-          }).toList()..sort(
-            (a, b) =>
-                a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
-          );
+    FutureProvider.family<DetalleEquipoGeneral, ({String area, String equipo})>(
+      (ref, params) async {
+        final cumplimientos = await ref.watch(
+          cumplimientoEquiposProvider.future,
+        );
+        final equiposService = ref.read(equiposServiceProvider);
+        final detalle = equiposService.obtenerDetalleEquipo(
+          cumplimientos: cumplimientos,
+          area: params.area,
+          equipo: params.equipo,
+        );
+        if (detalle == null) {
+          throw Exception('Equipo general no encontrado');
+        }
 
-      if (miembros.isEmpty) {
-        throw Exception('Equipo general no encontrado');
-      }
-
-      final resumen = resumenPeriodo.equipos.firstWhere(
-        (equipo) =>
-            normalizar(equipo.area) == areaBuscada &&
-            normalizar(equipo.nombre) == equipoBuscado,
-        orElse: () => throw Exception('Resumen del equipo no encontrado'),
-      );
-
-      return DetalleEquipoGeneralViewModel(
-        nombreArea: resumen.area,
-        nombreEquipo: resumen.nombre,
-        resumen: resumen,
-        miembros: miembros,
-      );
-    });
+        return detalle;
+      },
+    );

@@ -1,7 +1,7 @@
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipo_card.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
-import 'package:app_finnegans/presentation/widgets/shared/paginacion_resultados.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_card.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 const _maxCardWidth = 410.0;

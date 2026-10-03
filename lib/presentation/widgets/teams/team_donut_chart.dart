@@ -1,4 +1,4 @@
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 
