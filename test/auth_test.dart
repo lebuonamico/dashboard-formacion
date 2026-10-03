@@ -93,6 +93,16 @@ SupabaseClient _client({
       if (request.url.path == '/auth/v1/logout') {
         return http.Response('', 204, request: request);
       }
+      if (request.url.path == '/rest/v1/usuarios_autorizados') {
+        return http.Response(
+          jsonEncode([
+            {'email': 'test@example.com', 'activo': true, 'rol': 'usuario'},
+          ]),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }
       throw StateError('Unexpected request: ${request.method} ${request.url}');
     }),
   );
@@ -109,6 +119,14 @@ AuthController _controller(SupabaseClient? client) {
 Future<void> _signIn(SupabaseClient client) => client.auth
     .signInWithPassword(email: 'test@example.com', password: 'test-password')
     .then((_) {});
+
+Future<void> _waitForAuthorization(AuthController auth) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    if (auth.isAuthorized && !auth.isValidatingAuthorization) return;
+    await Future<void>.delayed(Duration.zero);
+  }
+  fail('La sesión no completó la autorización: ${auth.error}');
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -161,6 +179,7 @@ void main() {
         final auth = _controller(client);
 
         expect(auth.hasValidSession, isTrue);
+        await _waitForAuthorization(auth);
         expect(auth.redirect('/'), '/dashboard');
         expect(auth.redirect('/login'), '/dashboard');
         for (final path in _privatePaths) {
@@ -206,7 +225,7 @@ void main() {
         auth.addListener(() => notifications++);
 
         await _signIn(client);
-        await Future<void>.delayed(Duration.zero);
+        await _waitForAuthorization(auth);
         expect(auth.hasValidSession, isTrue);
         expect(notifications, greaterThan(0));
         final signedInNotifications = notifications;
@@ -242,7 +261,7 @@ void main() {
         expect(notifications, greaterThan(0));
 
         await _signIn(client);
-        await Future<void>.delayed(Duration.zero);
+        await _waitForAuthorization(auth);
         expect(auth.error, isNull);
         expect(auth.hasValidSession, isTrue);
       },
@@ -403,7 +422,10 @@ void main() {
     expect(await parse('/empleados/10'), '/login');
     var refreshes = 0;
     router.routeInformationProvider.addListener(() => refreshes++);
-    await tester.runAsync(() => _signIn(client));
+    await tester.runAsync(() async {
+      await _signIn(client);
+      await auth.validateAuthorization();
+    });
     await tester.pump();
     expect(refreshes, greaterThan(0));
     expect(await parse('/login'), '/dashboard');

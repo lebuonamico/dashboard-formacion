@@ -100,7 +100,8 @@ class LoginScreen extends ConsumerWidget {
 
                     // Botón Google Sign-In
                     OutlinedButton(
-                      onPressed: auth.isSigningIn
+                      onPressed:
+                          auth.isSigningIn || auth.isValidatingAuthorization
                           ? null
                           : () async {
                               if (!auth.enabled) {
@@ -120,11 +121,19 @@ class LoginScreen extends ConsumerWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Aca va el icono de Google... a poner.
+                          if (auth.isSigningIn ||
+                              auth.isValidatingAuthorization)
+                            const SizedBox.square(
+                              key: Key('auth_loading'),
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           const SizedBox(width: 12),
-                          const Text(
-                            'Iniciar sesión con Google',
-                            style: TextStyle(
+                          Text(
+                            auth.isValidatingAuthorization
+                                ? 'Validando autorización...'
+                                : 'Iniciar sesión con Google',
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1E293B),
