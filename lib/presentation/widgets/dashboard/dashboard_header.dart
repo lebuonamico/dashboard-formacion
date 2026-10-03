@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 
 class DashboardHeader extends StatelessWidget {
   const DashboardHeader({super.key});
@@ -28,11 +29,7 @@ class DashboardHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFF0D53C3),
-            child: const Text('U', style: TextStyle(color: Colors.white)),
-          ),
+          const UserAvatar(),
         ],
       ),
     );
