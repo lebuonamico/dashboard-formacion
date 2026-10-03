@@ -1,8 +1,8 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
+import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

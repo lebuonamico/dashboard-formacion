@@ -6,7 +6,7 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
-import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
+import 'package:app_finnegans/presentation/providers/period_providers.dart';
 
 final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   ref,
