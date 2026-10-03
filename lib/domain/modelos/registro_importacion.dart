@@ -1,7 +1,6 @@
 enum EstadoImportacion { completada, fallida }
 
-/// Logical audit contract. Storage and reliable inserted/updated counts remain
-/// pending until the backend import/audit design is defined.
+/// Audit result; legacy repositories may leave persistence counts unknown.
 class RegistroImportacion {
   final String tipoArchivo;
   final String nombreArchivo;

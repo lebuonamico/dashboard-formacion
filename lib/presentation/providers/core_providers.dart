@@ -2,6 +2,7 @@ import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart'
 import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/data/supabase/supabase_mapping.dart';
+import 'package:app_finnegans/data/supabase/supabase_importaciones_repository.dart';
 import 'package:app_finnegans/data/supabase/supabase_repositories.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,9 +16,61 @@ import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
-// Override after the physical schema and conflict constraints have been agreed.
 final supabaseMappingsProvider = Provider<SupabaseMappings>(
-  (ref) => throw StateError('Falta configurar el mapeo del esquema Supabase.'),
+  (ref) => SupabaseMappings(
+    empleados: SupabaseTableMapping(
+      table: 'empleados',
+      conflictFields: ['legajo'],
+      columns: {
+        'legajo': 'legajo',
+        'mail': 'correo',
+        'nombre': 'nombre',
+        'apellido': 'apellido',
+        'seniority': 'seniority',
+        'area': 'sector',
+        'equipo': 'equipo_general',
+        'gerente': 'gerente',
+        'fechaIngreso': 'fecha_ingreso',
+      },
+    ),
+    cursos: SupabaseTableMapping(
+      table: 'cursos',
+      conflictFields: ['id'],
+      columns: {
+        'id': 'id_curso',
+        'nombre': 'nombre',
+        'tipo': 'tipo',
+        'cargaHorariaHs': 'carga_horaria',
+      },
+    ),
+    horas: SupabaseTableMapping(
+      table: 'horas_capacitacion',
+      conflictFields: ['id'],
+      columns: {
+        'id': 'transaccion_id',
+        'empleadoLegajo': 'legajo',
+        'cursoId': 'curso_id',
+        'fecha': 'fecha',
+        'caso': 'caso',
+        'descripcionCurso': 'descripcion_curso',
+        'clasificacion': 'clasificacion',
+        'proyecto': 'proyecto',
+        'proyectoItem': 'proyecto_item',
+        'horasTotales': 'horas_totales',
+        'descripcion': 'descripcion',
+      },
+    ),
+    finalizaciones: SupabaseTableMapping(
+      table: 'finalizaciones_cursos',
+      conflictFields: ['legajo', 'cursoId'],
+      columns: {
+        'legajo': 'legajo',
+        'cursoId': 'curso_id',
+        'finalizoCurso': 'finalizo',
+        'fechaFinalizacion': 'fecha_finalizacion',
+      },
+    ),
+  ),
 );
 
 final empleadosRepositoryProvider = Provider<EmpleadosRepository>((ref) {
@@ -65,9 +118,10 @@ final cumplimientoServiceProvider = Provider<CumplimientoService>((ref) {
   return CumplimientoService();
 });
 
-// No-op audit storage until the physical audit schema is designed.
 final importacionesRepositoryProvider = Provider<ImportacionesRepository?>(
-  (ref) => null,
+  (ref) => SupabaseConfig.enabled
+      ? SupabaseImportacionesRepository(ref.watch(supabaseClientProvider))
+      : null,
 );
 final importacionServiceProvider = Provider<ImportacionService>(
   (ref) =>

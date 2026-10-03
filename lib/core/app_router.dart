@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/area_detalle_screen.dart';
 import 'package:app_finnegans/presentation/areas_screen.dart';
 import 'package:app_finnegans/presentation/team_screen.dart';
@@ -13,11 +15,14 @@ import 'package:app_finnegans/presentation/certificacion_screen.dart';
 import 'package:app_finnegans/presentation/empleado_detalle_screen.dart';
 import 'package:app_finnegans/presentation/teams_screen.dart';
 
-final appRouter = GoRouter(
+GoRouter createAppRouter(AuthController auth) => GoRouter(
   initialLocation: '/',
+  refreshListenable: auth,
+  redirect: (context, state) => auth.redirect(state.uri.path),
 
   routes: [
     GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/dashboard',
       pageBuilder: (context, state) =>
@@ -90,3 +95,10 @@ final appRouter = GoRouter(
     ),
   ],
 );
+
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final auth = ref.watch(authControllerProvider.notifier);
+  final router = createAppRouter(auth);
+  ref.onDispose(router.dispose);
+  return router;
+});

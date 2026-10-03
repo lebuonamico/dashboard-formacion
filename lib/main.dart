@@ -13,15 +13,15 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'App Finnegans',
       debugShowCheckedModeBanner: false,
-      routerConfig: appRouter, // Tu configuración de go_router
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }

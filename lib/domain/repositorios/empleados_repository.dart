@@ -1,5 +1,6 @@
 import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 
 abstract class EmpleadosRepository {
   Future<List<Empleado>> getEmpleados({
@@ -12,6 +13,19 @@ abstract class EmpleadosRepository {
 }
 
 extension EmpleadosUpsert on EmpleadosRepository {
+  Future<ResultadoUpsert> upsertEmpleadosConResultado(
+    List<Empleado> items,
+  ) async {
+    if (items.isEmpty) return ResultadoUpsert.empty;
+    if (this is CountedUpsertRepository<Empleado>) {
+      return (this as CountedUpsertRepository<Empleado>).upsertConResultado(
+        items,
+      );
+    }
+    await upsertEmpleados(items);
+    return ResultadoUpsert(registrosProcesados: items.length);
+  }
+
   Future<void> upsertEmpleados(List<Empleado> items) async {
     if (items.isEmpty) return;
     if (this is UpsertRepository<Empleado>) {

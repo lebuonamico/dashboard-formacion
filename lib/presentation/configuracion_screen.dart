@@ -1,3 +1,4 @@
+import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -41,6 +42,28 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   bool _usaMoodle = false;
   bool _modoCargado = false;
   bool _sincronizandoCursos = false;
+  final _importacionesEnCurso = <String>{};
+
+  bool get _cursosOcupados =>
+      _sincronizandoCursos || _importacionesEnCurso.contains('cursos');
+
+  bool _iniciarImportacion(String tipo) {
+    if (_importacionesEnCurso.contains(tipo)) return false;
+    setState(() => _importacionesEnCurso.add(tipo));
+    return true;
+  }
+
+  void _terminarImportacion(String tipo) {
+    if (mounted) setState(() => _importacionesEnCurso.remove(tipo));
+  }
+
+  Widget _iconoImportacion(String tipo) => _importacionesEnCurso.contains(tipo)
+      ? SizedBox.square(
+          key: Key('loading_$tipo'),
+          dimension: 18,
+          child: const CircularProgressIndicator(strokeWidth: 2),
+        )
+      : const Icon(Icons.upload_file, size: 18);
   List<Curso> _cursosMoodle = [];
   String? _errorCursosMoodle;
 
@@ -160,8 +183,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             'Cargá la nómina de empleados para actualizar el sistema',
           ),
           trailing: OutlinedButton.icon(
-            onPressed: _importarArchivo,
-            icon: const Icon(Icons.upload_file, size: 18),
+            key: const Key('importar_nomina'),
+            onPressed: _importacionesEnCurso.contains('nomina')
+                ? null
+                : _importarArchivo,
+            icon: _iconoImportacion('nomina'),
             label: const Text('Cargar nómina'),
           ),
         ),
@@ -186,7 +212,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 : 'Fuente activa: archivo Excel / CSV',
           ),
           value: _usaMoodle,
-          onChanged: _modoCargado ? _cambiarModoCursos : null,
+          onChanged: _modoCargado && !_cursosOcupados
+              ? _cambiarModoCursos
+              : null,
         ),
         if (_usaMoodle) ...[
           const SizedBox(height: 12),
@@ -202,9 +230,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               ),
               IconButton(
                 tooltip: 'Actualizar cursos',
-                onPressed: _sincronizandoCursos
-                    ? null
-                    : _sincronizarCursosMoodle,
+                onPressed: _cursosOcupados ? null : _sincronizarCursosMoodle,
                 icon: _sincronizandoCursos
                     ? const SizedBox.square(
                         dimension: 18,
@@ -265,8 +291,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               'El área y el instructor se completan posteriormente desde las cursadas',
             ),
             trailing: OutlinedButton.icon(
-              onPressed: _importarCursosArchivo,
-              icon: const Icon(Icons.upload_file, size: 18),
+              key: const Key('importar_cursos'),
+              onPressed: _cursosOcupados ? null : _importarCursosArchivo,
+              icon: _iconoImportacion('cursos'),
               label: const Text('Cargar cursos'),
             ),
           ),
@@ -275,27 +302,42 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   }
 
   Future<void> _sincronizarCursosMoodle() async {
-    if (_sincronizandoCursos) return;
+    if (_cursosOcupados) return;
     setState(() {
       _sincronizandoCursos = true;
       _errorCursosMoodle = null;
     });
     try {
-      final repository = ref.read(cursosRepositoryProvider);
-      final cursos = await MoodleCursosApi().getCursos();
-      if (cursos.isEmpty) {
-        throw const FormatException('Moodle no devolvió cursos para importar.');
-      }
-      await ref
+      final container = ProviderScope.containerOf(context, listen: false);
+      var cursos = <Curso>[];
+      await container
           .read(importacionServiceProvider)
-          .persistir(
+          .ejecutar(
             tipoArchivo: 'cursos_lms',
             nombreArchivo: 'Sincronización Moodle',
-            registrosProcesados: cursos.length,
-            guardar: () => repository.upsertCursos(cursos),
+            procesar: () async {
+              final repository = container.read(cursosRepositoryProvider);
+              cursos = await MoodleCursosApi().getCursos();
+              if (cursos.isEmpty) {
+                throw const FormatException(
+                  'Moodle no devolvió cursos para importar.',
+                );
+              }
+              return repository.upsertCursosConResultado(cursos);
+            },
+            refrescar: () async {
+              container.invalidate(cursosProvider);
+              container.invalidate(cargasDeHorasCRMProvider);
+              container.invalidate(cargasDashboardProvider);
+              container.invalidate(certificacionesMoodleProvider);
+              await Future.wait([
+                container.read(cursosProvider.future),
+                container.read(cargasDeHorasCRMProvider.future),
+                container.read(cargasDashboardProvider.future),
+                container.read(certificacionesMoodleProvider.future),
+              ]);
+            },
           );
-      ref.invalidate(cursosProvider);
-      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       setState(() => _cursosMoodle = cursos);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -313,15 +355,14 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       setState(() => _errorCursosMoodle = message);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(message)));
-    } on Object {
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } on Object catch (error) {
       if (!mounted) return;
-      const message =
-          'No se pudo conectar con Moodle. Revisá la disponibilidad y CORS.';
+      final message = 'No se pudo completar la sincronización: $error';
       setState(() => _errorCursosMoodle = message);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(message)));
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _sincronizandoCursos = false);
     }
@@ -350,8 +391,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             'Solo se consideran registros del proyecto 01 - Capacitación',
           ),
           trailing: OutlinedButton.icon(
-            onPressed: _importarCargaDeHoras,
-            icon: const Icon(Icons.upload_file, size: 18),
+            key: const Key('importar_horas'),
+            onPressed: _importacionesEnCurso.contains('horas')
+                ? null
+                : _importarCargaDeHoras,
+            icon: _iconoImportacion('horas'),
             label: const Text('Cargar horas'),
           ),
         ),
@@ -385,8 +429,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             'ID empleado, nombre del curso, finalización y fecha',
           ),
           trailing: OutlinedButton.icon(
-            onPressed: _importarCertificacionesMoodle,
-            icon: const Icon(Icons.upload_file, size: 18),
+            key: const Key('importar_finalizaciones'),
+            onPressed: _importacionesEnCurso.contains('finalizaciones')
+                ? null
+                : _importarCertificacionesMoodle,
+            icon: _iconoImportacion('finalizaciones'),
             label: const Text('Cargar Excel'),
           ),
         ),
@@ -395,111 +442,127 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   }
 
   Future<void> _importarCertificacionesMoodle() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx'],
-      withData: true,
-    );
-    if (result == null || result.files.single.bytes == null) return;
-
+    if (!_iniciarImportacion('finalizaciones')) return;
     try {
-      final rowsPorHoja = _leerExcel(result.files.single.bytes!);
-      final certificaciones = <CertificacionMoodle>[];
-      for (final rows in rowsPorHoja.values) {
-        if (rows.length < 2) continue;
-        final headerIndex = _buscarFilaCertificacionesMoodle(rows);
-        if (headerIndex == -1) continue;
-        final headers = rows[headerIndex]
-            .map((header) => _normalize(header.toString()))
-            .toList();
-        final legajoIndex = _buscarColumna(headers, const [
-          'idempleadolegajo',
-          'idempleado',
-          'nlegajo',
-          'legajo',
-        ]);
-        final cursoIndex = _buscarColumna(headers, const [
-          'nombredelcurso',
-          'nombrecurso',
-          'coursename',
-          'coursefullname',
-          'fullname',
-          'curso',
-        ]);
-        final finalizoIndex = _buscarColumna(headers, const [
-          'finalizoelcurso',
-          'finalizocurso',
-          'completado',
-          'completed',
-        ]);
-        final fechaFinalizacionIndex = _buscarColumna(headers, const [
-          'fechadefinalizacion',
-          'fechafinalizacion',
-          'completiondate',
-          'datecompleted',
-          'timecompleted',
-        ]);
-        if (fechaFinalizacionIndex == -1) {
-          throw const FormatException(
-            'Falta la columna Fecha de finalización en el Excel de Moodle.',
-          );
-        }
-        for (final row in rows.skip(headerIndex + 1)) {
-          if ([
-            legajoIndex,
-            cursoIndex,
-            finalizoIndex,
-            fechaFinalizacionIndex,
-          ].any((index) => index < 0 || index >= row.length)) {
-            continue;
-          }
-          final legajo = row[legajoIndex].toString().trim();
-          final cursoNombre = row[cursoIndex].toString().trim();
-          final finalizo = _booleanoMoodle(row[finalizoIndex].toString());
-          final fechaFinalizacion = _fechaMoodle(
-            row[fechaFinalizacionIndex].toString(),
-          );
-          if (row[fechaFinalizacionIndex].toString().trim().isNotEmpty &&
-              fechaFinalizacion == null) {
-            throw FormatException(
-              'Fecha de finalización inválida para el legajo $legajo: ${row[fechaFinalizacionIndex]}.',
-            );
-          }
-          if (legajo.isEmpty || cursoNombre.isEmpty || finalizo == null) {
-            continue;
-          }
-          if (finalizo && fechaFinalizacion == null) {
-            throw FormatException(
-              'Falta una fecha de finalización válida para el legajo $legajo y el curso $cursoNombre.',
-            );
-          }
-          certificaciones.add(
-            CertificacionMoodle(
-              legajo: legajo,
-              cursoNombre: cursoNombre,
-              finalizoCurso: finalizo,
-              fechaFinalizacion: finalizo ? fechaFinalizacion : null,
-            ),
-          );
-        }
-      }
+      final container = ProviderScope.containerOf(context, listen: false);
+      await WidgetsBinding.instance.endOfFrame;
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        withData: true,
+      );
+      if (result == null || result.files.single.bytes == null) return;
 
-      if (certificaciones.isEmpty) {
-        throw const FormatException(
-          'No se encontraron filas LMS válidas en el Excel.',
-        );
-      }
-      await ref
+      final certificaciones = <CertificacionMoodle>[];
+      await container
           .read(importacionServiceProvider)
-          .persistir(
+          .ejecutar(
             tipoArchivo: 'finalizaciones',
             nombreArchivo: result.files.single.name,
-            registrosProcesados: certificaciones.length,
-            guardar: () => ref
-                .read(certificacionesMoodleRepositoryProvider)
-                .upsertCertificaciones(certificaciones),
+            procesar: () async {
+              final rowsPorHoja = _leerExcel(result.files.single.bytes!);
+              for (final rows in rowsPorHoja.values) {
+                if (rows.length < 2) continue;
+                final headerIndex = _buscarFilaCertificacionesMoodle(rows);
+                if (headerIndex == -1) continue;
+                final headers = rows[headerIndex]
+                    .map((header) => _normalize(header.toString()))
+                    .toList();
+                final legajoIndex = _buscarColumna(headers, const [
+                  'idempleadolegajo',
+                  'idempleado',
+                  'nlegajo',
+                  'legajo',
+                ]);
+                final cursoIndex = _buscarColumna(headers, const [
+                  'nombredelcurso',
+                  'nombrecurso',
+                  'coursename',
+                  'coursefullname',
+                  'fullname',
+                  'curso',
+                ]);
+                final finalizoIndex = _buscarColumna(headers, const [
+                  'finalizoelcurso',
+                  'finalizocurso',
+                  'completado',
+                  'completed',
+                ]);
+                final fechaFinalizacionIndex = _buscarColumna(headers, const [
+                  'fechadefinalizacion',
+                  'fechafinalizacion',
+                  'completiondate',
+                  'datecompleted',
+                  'timecompleted',
+                ]);
+                if (fechaFinalizacionIndex == -1) {
+                  throw const FormatException(
+                    'Falta la columna Fecha de finalización en el Excel de Moodle.',
+                  );
+                }
+                for (final row in rows.skip(headerIndex + 1)) {
+                  if ([
+                    legajoIndex,
+                    cursoIndex,
+                    finalizoIndex,
+                    fechaFinalizacionIndex,
+                  ].any((index) => index < 0 || index >= row.length)) {
+                    continue;
+                  }
+                  final legajo = row[legajoIndex].toString().trim();
+                  final cursoNombre = row[cursoIndex].toString().trim();
+                  final finalizo = _booleanoMoodle(
+                    row[finalizoIndex].toString(),
+                  );
+                  final fechaFinalizacion = _fechaMoodle(
+                    row[fechaFinalizacionIndex].toString(),
+                  );
+                  if (row[fechaFinalizacionIndex]
+                          .toString()
+                          .trim()
+                          .isNotEmpty &&
+                      fechaFinalizacion == null) {
+                    throw FormatException(
+                      'Fecha de finalización inválida para el legajo $legajo: ${row[fechaFinalizacionIndex]}.',
+                    );
+                  }
+                  if (legajo.isEmpty ||
+                      cursoNombre.isEmpty ||
+                      finalizo == null) {
+                    continue;
+                  }
+                  if (finalizo && fechaFinalizacion == null) {
+                    throw FormatException(
+                      'Falta una fecha de finalización válida para el legajo $legajo y el curso $cursoNombre.',
+                    );
+                  }
+                  certificaciones.add(
+                    CertificacionMoodle(
+                      legajo: legajo,
+                      cursoNombre: cursoNombre,
+                      finalizoCurso: finalizo,
+                      fechaFinalizacion: finalizo ? fechaFinalizacion : null,
+                    ),
+                  );
+                }
+              }
+
+              if (certificaciones.isEmpty) {
+                throw const FormatException(
+                  'No se encontraron filas LMS válidas en el Excel.',
+                );
+              }
+              return container
+                  .read(certificacionesMoodleRepositoryProvider)
+                  .upsertCertificacionesConResultado(certificaciones);
+            },
+            refrescar: () async {
+              container.invalidate(certificacionesMoodleProvider);
+              await Future.wait([
+                container.read(certificacionesMoodleProvider.future),
+              ]);
+            },
           );
-      ref.invalidate(certificacionesMoodleProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -513,11 +576,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on Object {
+    } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo leer el Excel de Moodle.')),
+        SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
+    } finally {
+      _terminarImportacion('finalizaciones');
     }
   }
 
@@ -580,181 +645,207 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   DateTime? _fechaMoodle(String value) => fechaImportacion(value);
 
   Future<void> _importarArchivo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx', 'csv'],
-      withData: true,
-    );
-    if (result == null || result.files.single.bytes == null) return;
-
+    if (!_iniciarImportacion('nomina')) return;
     try {
-      final extension = result.files.single.extension?.toLowerCase();
-      final rowsPorHoja = extension == 'xlsx'
-          ? _leerExcel(result.files.single.bytes!)
-          : {
-              'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                  .convert(
-                    utf8
-                        .decode(result.files.single.bytes!)
-                        .replaceFirst('\ufeff', ''),
-                  ),
-            };
-      final empleadosRepository = ref.read(empleadosRepositoryProvider);
-      final cursosRepository = ref.read(cursosRepositoryProvider);
-      final cargaDeHorasRepository = ref.read(
-        cargaDeHorasCRMRepositoryProvider,
+      final container = ProviderScope.containerOf(context, listen: false);
+      await WidgetsBinding.instance.endOfFrame;
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'csv'],
+        withData: true,
       );
-
-      var empleadosImportados = <Empleado>[];
-      var cursosImportados = <Curso>[];
-      var cargasDeHorasImportadas = <CargaDeHorasCRM>[];
+      if (result == null || result.files.single.bytes == null) return;
 
       var registrosImportados = 0;
-      for (final rows in rowsPorHoja.values) {
-        if (rows.length < 2) continue;
-        final headerIndex = _buscarFilaEncabezados(rows);
-        if (headerIndex == -1) continue;
-        final headers = rows[headerIndex]
-            .map((header) => _normalize(header.toString()))
-            .toList();
-        final seniorityIndex = _buscarColumnaSeniority(
-          headers,
-          rows,
-          headerIndex,
-        );
-        final records = rows
-            .skip(headerIndex + 1)
-            .where(
-              (row) => row.any((cell) => cell.toString().trim().isNotEmpty),
-            );
-
-        for (final row in records) {
-          final normalizedData = <String, String>{};
-          for (
-            var index = 0;
-            index < headers.length && index < row.length;
-            index++
-          ) {
-            normalizedData[headers[index]] = row[index].toString().trim();
-          }
-          if ((headers.contains('legajo') ||
-                  headers.contains('nlegajo') ||
-                  headers.contains('idempleado')) &&
-              (headers.contains('nombre') ||
-                  headers.contains('nombreyapellido'))) {
-            final empleadoData = _toCanonicalKeys(normalizedData, {
-              'nlegajo': 'legajo',
-              'idempleado': 'legajo',
-              'nombreyapellido': 'nombre',
-              'nivel': 'seniority',
-              'nivelseniority': 'seniority',
-              'niveldeseniority': 'seniority',
-              'senioridad': 'seniority',
-              'categoria': 'seniority',
-              'niveljerarquico': 'seniority',
-              'grado': 'seniority',
-              'email': 'mail',
-              'correo': 'mail',
-              'fechadeingreso': 'fechaIngreso',
-              'fechaingreso': 'fechaIngreso',
-              'correoelectronico': 'mail',
-              'gerencia': 'area',
-              'sector': 'area',
-              'departamento': 'area',
-              'unidad': 'area',
-              'team': 'equipo',
-              'equipo': 'equipo',
-              'equipogeneral': 'equipo',
-              'equipofuncional': 'equipo',
-              'equipoprincipal': 'equipo',
-              'manager': 'gerente',
-              'jefe': 'gerente',
-              'supervisor': 'gerente',
-              'reportaa': 'gerente',
-              for (final header in headers)
-                if (_esColumnaSeniority(header)) header: 'seniority',
-            });
-            if (seniorityIndex != -1 && seniorityIndex < row.length) {
-              empleadoData['seniority'] = Seniority.fromString(
-                row[seniorityIndex].toString().trim(),
-              ).name;
-            }
-            if (empleadoData['fechaIngreso']?.isEmpty ?? false) {
-              empleadoData.remove('fechaIngreso');
-            }
-            final empleado = Empleado.fromJson(empleadoData);
-            empleadosImportados = _reemplazarPorId(
-              empleadosImportados,
-              empleado,
-              (item) => item.legajo,
-            );
-          } else if ((headers.contains('cursonombre') ||
-                  headers.contains('nombrecurso') ||
-                  headers.contains('curso')) &&
-              headers.contains('empleadolegajo')) {
-            final cargaData = _toCanonicalKeys(normalizedData, {
-              'cursonombre': 'cursoNombre',
-              'nombrecurso': 'cursoNombre',
-              'curso': 'cursoNombre',
-              'empleadolegajo': 'empleadoLegajo',
-              'horastotales': 'horasTotales',
-            });
-            final carga = CargaDeHorasCRM.fromJson({
-              ...cargaData,
-              'tipo': TipoCargaDeHoras.tomada.name,
-            });
-            if (carga.id.isNotEmpty) {
-              cargasDeHorasImportadas = _reemplazarPorId(
-                cargasDeHorasImportadas,
-                carga,
-                (item) => item.id,
-              );
-            }
-          } else if (headers.contains('id') &&
-              headers.contains('nombre') &&
-              headers.contains('tipo')) {
-            final curso = Curso.fromJson(
-              _toCanonicalKeys(normalizedData, {
-                'areacurso': 'areaCurso',
-                'instructorlegajo': 'instructorLegajo',
-                'cargahorariahs': 'cargaHorariaHs',
-              }),
-            );
-            cursosImportados = _reemplazarPorId(
-              cursosImportados,
-              curso,
-              (item) => item.id,
-            );
-          } else {
-            throw FormatException(
-              'Encabezados no reconocidos en una hoja del archivo.',
-            );
-          }
-          registrosImportados++;
-        }
-      }
-      if (registrosImportados == 0) {
-        throw const FormatException('El archivo no tiene registros.');
-      }
-
-      await ref
+      await container
           .read(importacionServiceProvider)
-          .persistir(
+          .ejecutar(
             tipoArchivo: 'nomina',
             nombreArchivo: result.files.single.name,
-            registrosProcesados: registrosImportados,
-            guardar: () async {
-              await empleadosRepository.upsertEmpleados(empleadosImportados);
-              await cursosRepository.upsertCursos(cursosImportados);
-              await cargaDeHorasRepository.upsertCargasDeHoras(
-                cargasDeHorasImportadas,
+            procesar: () async {
+              final extension = result.files.single.extension?.toLowerCase();
+              final rowsPorHoja = extension == 'xlsx'
+                  ? _leerExcel(result.files.single.bytes!)
+                  : {
+                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
+                          .convert(
+                            utf8
+                                .decode(result.files.single.bytes!)
+                                .replaceFirst('\ufeff', ''),
+                          ),
+                    };
+              final empleadosRepository = container.read(
+                empleadosRepositoryProvider,
+              );
+              final cursosRepository = container.read(cursosRepositoryProvider);
+              final cargaDeHorasRepository = container.read(
+                cargaDeHorasCRMRepositoryProvider,
+              );
+
+              var empleadosImportados = <Empleado>[];
+              var cursosImportados = <Curso>[];
+              var cargasDeHorasImportadas = <CargaDeHorasCRM>[];
+
+              for (final rows in rowsPorHoja.values) {
+                if (rows.length < 2) continue;
+                final headerIndex = _buscarFilaEncabezados(rows);
+                if (headerIndex == -1) continue;
+                final headers = rows[headerIndex]
+                    .map((header) => _normalize(header.toString()))
+                    .toList();
+                final seniorityIndex = _buscarColumnaSeniority(
+                  headers,
+                  rows,
+                  headerIndex,
+                );
+                final records = rows
+                    .skip(headerIndex + 1)
+                    .where(
+                      (row) =>
+                          row.any((cell) => cell.toString().trim().isNotEmpty),
+                    );
+
+                for (final row in records) {
+                  final normalizedData = <String, String>{};
+                  for (
+                    var index = 0;
+                    index < headers.length && index < row.length;
+                    index++
+                  ) {
+                    normalizedData[headers[index]] = row[index]
+                        .toString()
+                        .trim();
+                  }
+                  if ((headers.contains('legajo') ||
+                          headers.contains('nlegajo') ||
+                          headers.contains('idempleado')) &&
+                      (headers.contains('nombre') ||
+                          headers.contains('nombreyapellido'))) {
+                    final empleadoData = _toCanonicalKeys(normalizedData, {
+                      'nlegajo': 'legajo',
+                      'idempleado': 'legajo',
+                      'nombreyapellido': 'nombre',
+                      'nivel': 'seniority',
+                      'nivelseniority': 'seniority',
+                      'niveldeseniority': 'seniority',
+                      'senioridad': 'seniority',
+                      'categoria': 'seniority',
+                      'niveljerarquico': 'seniority',
+                      'grado': 'seniority',
+                      'email': 'mail',
+                      'correo': 'mail',
+                      'fechadeingreso': 'fechaIngreso',
+                      'fechaingreso': 'fechaIngreso',
+                      'correoelectronico': 'mail',
+                      'gerencia': 'area',
+                      'sector': 'area',
+                      'departamento': 'area',
+                      'unidad': 'area',
+                      'team': 'equipo',
+                      'equipo': 'equipo',
+                      'equipogeneral': 'equipo',
+                      'equipofuncional': 'equipo',
+                      'equipoprincipal': 'equipo',
+                      'manager': 'gerente',
+                      'jefe': 'gerente',
+                      'supervisor': 'gerente',
+                      'reportaa': 'gerente',
+                      for (final header in headers)
+                        if (_esColumnaSeniority(header)) header: 'seniority',
+                    });
+                    if (seniorityIndex != -1 && seniorityIndex < row.length) {
+                      empleadoData['seniority'] = Seniority.fromString(
+                        row[seniorityIndex].toString().trim(),
+                      ).name;
+                    }
+                    if (empleadoData['fechaIngreso']?.isEmpty ?? false) {
+                      empleadoData.remove('fechaIngreso');
+                    }
+                    final empleado = Empleado.fromJson(empleadoData);
+                    empleadosImportados = _reemplazarPorId(
+                      empleadosImportados,
+                      empleado,
+                      (item) => item.legajo,
+                    );
+                  } else if ((headers.contains('cursonombre') ||
+                          headers.contains('nombrecurso') ||
+                          headers.contains('curso')) &&
+                      headers.contains('empleadolegajo')) {
+                    final cargaData = _toCanonicalKeys(normalizedData, {
+                      'cursonombre': 'cursoNombre',
+                      'nombrecurso': 'cursoNombre',
+                      'curso': 'cursoNombre',
+                      'empleadolegajo': 'empleadoLegajo',
+                      'horastotales': 'horasTotales',
+                    });
+                    final carga = CargaDeHorasCRM.fromJson({
+                      ...cargaData,
+                      'tipo': TipoCargaDeHoras.tomada.name,
+                    });
+                    if (carga.id.isNotEmpty) {
+                      cargasDeHorasImportadas = _reemplazarPorId(
+                        cargasDeHorasImportadas,
+                        carga,
+                        (item) => item.id,
+                      );
+                    }
+                  } else if (headers.contains('id') &&
+                      headers.contains('nombre') &&
+                      headers.contains('tipo')) {
+                    final curso = Curso.fromJson(
+                      _toCanonicalKeys(normalizedData, {
+                        'areacurso': 'areaCurso',
+                        'instructorlegajo': 'instructorLegajo',
+                        'cargahorariahs': 'cargaHorariaHs',
+                      }),
+                    );
+                    cursosImportados = _reemplazarPorId(
+                      cursosImportados,
+                      curso,
+                      (item) => item.id,
+                    );
+                  } else {
+                    throw FormatException(
+                      'Encabezados no reconocidos en una hoja del archivo.',
+                    );
+                  }
+                  registrosImportados++;
+                }
+              }
+              if (registrosImportados == 0) {
+                throw const FormatException('El archivo no tiene registros.');
+              }
+
+              var resumen = ResultadoUpsert.empty;
+              resumen += await empleadosRepository.upsertEmpleadosConResultado(
+                empleadosImportados,
+              );
+              resumen += await cursosRepository.upsertCursosConResultado(
+                cursosImportados,
+              );
+              resumen += await cargaDeHorasRepository
+                  .upsertCargasDeHorasConResultado(cargasDeHorasImportadas);
+              return ResultadoUpsert(
+                registrosProcesados: registrosImportados,
+                insertados: resumen.insertados,
+                actualizados: resumen.actualizados,
               );
             },
+            refrescar: () async {
+              container.invalidate(empleadosProvider);
+              container.invalidate(cursosProvider);
+              container.invalidate(cargasDeHorasCRMProvider);
+              container.invalidate(cargasDashboardProvider);
+              container.invalidate(certificacionesMoodleProvider);
+              await Future.wait([
+                container.read(empleadosProvider.future),
+                container.read(cursosProvider.future),
+                container.read(cargasDeHorasCRMProvider.future),
+                container.read(cargasDashboardProvider.future),
+                container.read(certificacionesMoodleProvider.future),
+              ]);
+            },
           );
-      ref.invalidate(empleadosProvider);
-      ref.invalidate(cursosProvider);
-      ref.invalidate(cargasDeHorasCRMProvider);
-      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -768,118 +859,140 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on Object {
+    } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo leer el archivo CSV.')),
+        SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
+    } finally {
+      _terminarImportacion('nomina');
     }
   }
 
   Future<void> _importarCursosArchivo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx', 'csv'],
-      withData: true,
-    );
-    if (result == null || result.files.single.bytes == null) return;
-
+    if (_cursosOcupados || !_iniciarImportacion('cursos')) return;
     try {
-      final extension = result.files.single.extension?.toLowerCase();
-      final rowsPorHoja = extension == 'xlsx'
-          ? _leerExcel(result.files.single.bytes!)
-          : {
-              'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                  .convert(
-                    utf8
-                        .decode(result.files.single.bytes!)
-                        .replaceFirst('\ufeff', ''),
-                  ),
-            };
-      final repository = ref.read(cursosRepositoryProvider);
+      final container = ProviderScope.containerOf(context, listen: false);
+      await WidgetsBinding.instance.endOfFrame;
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'csv'],
+        withData: true,
+      );
+      if (result == null || result.files.single.bytes == null) return;
 
       final cursosImportados = <Curso>[];
-      for (final rows in rowsPorHoja.values) {
-        if (rows.length < 2) continue;
-        final headerIndex = _buscarFilaCursos(rows);
-        if (headerIndex == -1) continue;
-        final headers = rows[headerIndex]
-            .map((header) => _normalize(header.toString()))
-            .toList();
-        final idIndex = _buscarColumna(headers, const [
-          'id',
-          'cursoid',
-          'courseid',
-          'iddelcurso',
-          'idcurso',
-          'shortname',
-          'courseshortname',
-          'codigo',
-        ]);
-        final nombreIndex = _buscarColumna(headers, const [
-          'nombre',
-          'nombrecurso',
-          'course',
-          'coursename',
-          'fullname',
-          'coursefullname',
-          'nombrecompleto',
-          'titulo',
-        ]);
-        if (idIndex == -1 || nombreIndex == -1) continue;
-
-        for (final row in rows.skip(headerIndex + 1)) {
-          if (idIndex >= row.length || nombreIndex >= row.length) continue;
-          final id = row[idIndex].toString().trim();
-          final nombre = row[nombreIndex].toString().trim();
-          if (id.isEmpty || nombre.isEmpty) continue;
-          final tipoIndex = _buscarColumna(headers, const [
-            'tipo',
-            'tipocurso',
-            'category',
-            'categoria',
-          ]);
-          final horasIndex = _buscarColumna(headers, const [
-            'cargahorariahs',
-            'cargahoraria',
-            'horas',
-            'hours',
-          ]);
-          cursosImportados.add(
-            Curso(
-              id: id,
-              nombre: nombre,
-              tipo: tipoIndex != -1 && tipoIndex < row.length
-                  ? _tipoCursoDesdeTexto(row[tipoIndex].toString())
-                  : TipoCurso.libresExploracion,
-              areaCurso: '',
-              instructorLegajo: '',
-              cargaHorariaHs: horasIndex != -1 && horasIndex < row.length
-                  ? double.tryParse(
-                          row[horasIndex].toString().replaceAll(',', '.'),
-                        ) ??
-                        0
-                  : 0,
-            ),
-          );
-        }
-      }
-
-      if (cursosImportados.isEmpty) {
-        throw const FormatException(
-          'No se encontraron cursos. Verificá las columnas de ID y nombre.',
-        );
-      }
-      await ref
+      await container
           .read(importacionServiceProvider)
-          .persistir(
+          .ejecutar(
             tipoArchivo: 'cursos_lms',
             nombreArchivo: result.files.single.name,
-            registrosProcesados: cursosImportados.length,
-            guardar: () => repository.upsertCursos(cursosImportados),
+            procesar: () async {
+              final extension = result.files.single.extension?.toLowerCase();
+              final rowsPorHoja = extension == 'xlsx'
+                  ? _leerExcel(result.files.single.bytes!)
+                  : {
+                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
+                          .convert(
+                            utf8
+                                .decode(result.files.single.bytes!)
+                                .replaceFirst('\ufeff', ''),
+                          ),
+                    };
+              final repository = container.read(cursosRepositoryProvider);
+
+              for (final rows in rowsPorHoja.values) {
+                if (rows.length < 2) continue;
+                final headerIndex = _buscarFilaCursos(rows);
+                if (headerIndex == -1) continue;
+                final headers = rows[headerIndex]
+                    .map((header) => _normalize(header.toString()))
+                    .toList();
+                final idIndex = _buscarColumna(headers, const [
+                  'id',
+                  'cursoid',
+                  'courseid',
+                  'iddelcurso',
+                  'idcurso',
+                  'shortname',
+                  'courseshortname',
+                  'codigo',
+                ]);
+                final nombreIndex = _buscarColumna(headers, const [
+                  'nombre',
+                  'nombrecurso',
+                  'course',
+                  'coursename',
+                  'fullname',
+                  'coursefullname',
+                  'nombrecompleto',
+                  'titulo',
+                ]);
+                if (idIndex == -1 || nombreIndex == -1) continue;
+
+                for (final row in rows.skip(headerIndex + 1)) {
+                  if (idIndex >= row.length || nombreIndex >= row.length) {
+                    continue;
+                  }
+                  final id = row[idIndex].toString().trim();
+                  final nombre = row[nombreIndex].toString().trim();
+                  if (id.isEmpty || nombre.isEmpty) continue;
+                  final tipoIndex = _buscarColumna(headers, const [
+                    'tipo',
+                    'tipocurso',
+                    'category',
+                    'categoria',
+                  ]);
+                  final horasIndex = _buscarColumna(headers, const [
+                    'cargahorariahs',
+                    'cargahoraria',
+                    'horas',
+                    'hours',
+                  ]);
+                  cursosImportados.add(
+                    Curso(
+                      id: id,
+                      nombre: nombre,
+                      tipo: tipoIndex != -1 && tipoIndex < row.length
+                          ? _tipoCursoDesdeTexto(row[tipoIndex].toString())
+                          : TipoCurso.libresExploracion,
+                      areaCurso: '',
+                      instructorLegajo: '',
+                      cargaHorariaHs:
+                          horasIndex != -1 && horasIndex < row.length
+                          ? double.tryParse(
+                                  row[horasIndex].toString().replaceAll(
+                                    ',',
+                                    '.',
+                                  ),
+                                ) ??
+                                0
+                          : 0,
+                    ),
+                  );
+                }
+              }
+
+              if (cursosImportados.isEmpty) {
+                throw const FormatException(
+                  'No se encontraron cursos. Verificá las columnas de ID y nombre.',
+                );
+              }
+              return repository.upsertCursosConResultado(cursosImportados);
+            },
+            refrescar: () async {
+              container.invalidate(cursosProvider);
+              container.invalidate(cargasDeHorasCRMProvider);
+              container.invalidate(cargasDashboardProvider);
+              container.invalidate(certificacionesMoodleProvider);
+              await Future.wait([
+                container.read(cursosProvider.future),
+                container.read(cargasDeHorasCRMProvider.future),
+                container.read(cargasDashboardProvider.future),
+                container.read(certificacionesMoodleProvider.future),
+              ]);
+            },
           );
-      ref.invalidate(cursosProvider);
-      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -893,141 +1006,161 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on Object {
+    } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo leer el archivo de cursos.')),
+        SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
+    } finally {
+      _terminarImportacion('cursos');
     }
   }
 
   Future<void> _importarCargaDeHoras() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['xlsx', 'csv'],
-      withData: true,
-    );
-    if (result == null || result.files.single.bytes == null) return;
-
+    if (!_iniciarImportacion('horas')) return;
     try {
-      final extension = result.files.single.extension?.toLowerCase();
-      final rowsPorHoja = extension == 'xlsx'
-          ? _leerExcel(result.files.single.bytes!)
-          : {
-              'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                  .convert(
-                    utf8
-                        .decode(result.files.single.bytes!)
-                        .replaceFirst('\ufeff', ''),
-                  ),
-            };
-      final repository = ref.read(cargaDeHorasCRMRepositoryProvider);
-      final cursosRepository = ref.read(cursosRepositoryProvider);
-      final cursosPorNombre = <String, Curso>{};
+      final container = ProviderScope.containerOf(context, listen: false);
+      await WidgetsBinding.instance.endOfFrame;
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'csv'],
+        withData: true,
+      );
+      if (result == null || result.files.single.bytes == null) return;
 
       final cargasImportadas = <CargaDeHorasCRM>[];
-      var encabezadoReconocido = false;
-
-      for (final rows in rowsPorHoja.values) {
-        if (rows.length < 2) continue;
-        final headerIndex = _buscarFilaCargaDeHoras(rows);
-        if (headerIndex == -1) continue;
-        encabezadoReconocido = true;
-        final headers = rows[headerIndex]
-            .map((header) => _normalize(header.toString()))
-            .toList();
-        final idIndex = _buscarColumnaCRM(headers, 'id');
-        final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
-        final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
-        final cursoIndex = headers.indexOf('curso');
-        final horasIndex = _buscarColumnaCRM(headers, 'horas');
-        if ([
-          idIndex,
-          legajoIndex,
-          fechaIndex,
-          cursoIndex,
-          horasIndex,
-        ].any((index) => index == -1)) {
-          continue;
-        }
-
-        for (final row in rows.skip(headerIndex + 1)) {
-          if (row.every((cell) => cell.toString().trim().isEmpty)) continue;
-          if ([
-            idIndex,
-            legajoIndex,
-            fechaIndex,
-            cursoIndex,
-            horasIndex,
-          ].any((index) => index >= row.length)) {
-            throw const FormatException(
-              'Fila CRM incompleta: faltan columnas obligatorias.',
-            );
-          }
-          final nombreCurso = row[cursoIndex].toString().trim();
-          final curso = cursosPorNombre[normalizarNombreCurso(nombreCurso)] ??=
-              resolverCurso(
-                nombreCurso,
-                await cursosRepository.getCursos(nombre: nombreCurso),
-              );
-          final fecha = _fechaDesdeCelda(row[fechaIndex].toString());
-          String? fuente(String campo) {
-            final index = headers.indexOf(campo);
-            return index < 0 || index >= row.length
-                ? null
-                : row[index].toString().trim();
-          }
-
-          final horas =
-              double.tryParse(
-                row[horasIndex].toString().replaceAll(',', '.'),
-              ) ??
-              0;
-          if (horas <= 0) continue;
-          final id = row[idIndex].toString().trim();
-          final legajo = row[legajoIndex].toString().trim();
-          if (id.isEmpty || legajo.isEmpty) continue;
-
-          cargasImportadas.add(
-            CargaDeHorasCRM(
-              id: id,
-              cursoNombre: curso.nombre,
-              cursoId: curso.id,
-              caso: fuente('caso'),
-              descripcionCurso: fuente('descripcioncurso'),
-              clasificacion: fuente('clasificacion'),
-              proyecto: fuente('proyecto'),
-              proyectoItem: fuente('proyectoitem'),
-              descripcion: fuente('descripcion'),
-              empleadoLegajo: legajo,
-              fecha: fecha,
-              horasTotales: horas,
-              tipo: TipoCargaDeHoras.tomada,
-            ),
-          );
-        }
-      }
-
-      if (cargasImportadas.isEmpty) {
-        if (!encabezadoReconocido) {
-          throw const FormatException(
-            'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, fecha, curso y horas total.',
-          );
-        }
-        throw const FormatException(
-          'El archivo no tiene registros CRM válidos.',
-        );
-      }
-      await ref
+      await container
           .read(importacionServiceProvider)
-          .persistir(
+          .ejecutar(
             tipoArchivo: 'horas_crm',
             nombreArchivo: result.files.single.name,
-            registrosProcesados: cargasImportadas.length,
-            guardar: () => repository.upsertCargasDeHoras(cargasImportadas),
+            procesar: () async {
+              final extension = result.files.single.extension?.toLowerCase();
+              final rowsPorHoja = extension == 'xlsx'
+                  ? _leerExcel(result.files.single.bytes!)
+                  : {
+                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
+                          .convert(
+                            utf8
+                                .decode(result.files.single.bytes!)
+                                .replaceFirst('\ufeff', ''),
+                          ),
+                    };
+              final repository = container.read(
+                cargaDeHorasCRMRepositoryProvider,
+              );
+              final cursosRepository = container.read(cursosRepositoryProvider);
+              final cursosPorNombre = <String, Curso>{};
+
+              var encabezadoReconocido = false;
+
+              for (final rows in rowsPorHoja.values) {
+                if (rows.length < 2) continue;
+                final headerIndex = _buscarFilaCargaDeHoras(rows);
+                if (headerIndex == -1) continue;
+                encabezadoReconocido = true;
+                final headers = rows[headerIndex]
+                    .map((header) => _normalize(header.toString()))
+                    .toList();
+                final idIndex = _buscarColumnaCRM(headers, 'id');
+                final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
+                final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
+                final cursoIndex = headers.indexOf('curso');
+                final horasIndex = _buscarColumnaCRM(headers, 'horas');
+                if ([
+                  idIndex,
+                  legajoIndex,
+                  fechaIndex,
+                  cursoIndex,
+                  horasIndex,
+                ].any((index) => index == -1)) {
+                  continue;
+                }
+
+                for (final row in rows.skip(headerIndex + 1)) {
+                  if (row.every((cell) => cell.toString().trim().isEmpty)) {
+                    continue;
+                  }
+                  if ([
+                    idIndex,
+                    legajoIndex,
+                    fechaIndex,
+                    cursoIndex,
+                    horasIndex,
+                  ].any((index) => index >= row.length)) {
+                    throw const FormatException(
+                      'Fila CRM incompleta: faltan columnas obligatorias.',
+                    );
+                  }
+                  final nombreCurso = row[cursoIndex].toString().trim();
+                  final curso =
+                      cursosPorNombre[normalizarNombreCurso(
+                        nombreCurso,
+                      )] ??= resolverCurso(
+                        nombreCurso,
+                        await cursosRepository.getCursos(nombre: nombreCurso),
+                      );
+                  final fecha = _fechaDesdeCelda(row[fechaIndex].toString());
+                  String? fuente(String campo) {
+                    final index = headers.indexOf(campo);
+                    return index < 0 || index >= row.length
+                        ? null
+                        : row[index].toString().trim();
+                  }
+
+                  final horas =
+                      double.tryParse(
+                        row[horasIndex].toString().replaceAll(',', '.'),
+                      ) ??
+                      0;
+                  if (horas <= 0) continue;
+                  final id = row[idIndex].toString().trim();
+                  final legajo = row[legajoIndex].toString().trim();
+                  if (id.isEmpty || legajo.isEmpty) continue;
+
+                  cargasImportadas.add(
+                    CargaDeHorasCRM(
+                      id: id,
+                      cursoNombre: curso.nombre,
+                      cursoId: curso.id,
+                      caso: fuente('caso'),
+                      descripcionCurso: fuente('descripcioncurso'),
+                      clasificacion: fuente('clasificacion'),
+                      proyecto: fuente('proyecto'),
+                      proyectoItem: fuente('proyectoitem'),
+                      descripcion: fuente('descripcion'),
+                      empleadoLegajo: legajo,
+                      fecha: fecha,
+                      horasTotales: horas,
+                      tipo: TipoCargaDeHoras.tomada,
+                    ),
+                  );
+                }
+              }
+
+              if (cargasImportadas.isEmpty) {
+                if (!encabezadoReconocido) {
+                  throw const FormatException(
+                    'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, fecha, curso y horas total.',
+                  );
+                }
+                throw const FormatException(
+                  'El archivo no tiene registros CRM válidos.',
+                );
+              }
+              return repository.upsertCargasDeHorasConResultado(
+                cargasImportadas,
+              );
+            },
+            refrescar: () async {
+              container.invalidate(cargasDeHorasCRMProvider);
+              container.invalidate(cargasDashboardProvider);
+              await Future.wait([
+                container.read(cargasDeHorasCRMProvider.future),
+                container.read(cargasDashboardProvider.future),
+              ]);
+            },
           );
-      ref.invalidate(cargasDeHorasCRMProvider);
-      ref.invalidate(cargasDashboardProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1041,11 +1174,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on Object {
+    } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo leer el archivo de horas.')),
+        SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
+    } finally {
+      _terminarImportacion('horas');
     }
   }
 
@@ -1156,14 +1291,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         'id' => header.contains('transaccion') && header.contains('id'),
         'legajo' => header.contains('legajo'),
         'fecha' => header == 'fecha' || header.contains('fecha'),
-        'caso' =>
-          header == 'caso' ||
-              header.contains('descripcion') ||
-              header.contains('detalle') ||
-              header.contains('concepto'),
-        'proyecto' =>
-          header.contains('proyecto') &&
-              (header.contains('item') || header == 'proyecto'),
         'horas' => header.contains('hora') && header.contains('total'),
         _ => false,
       };
