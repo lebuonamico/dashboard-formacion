@@ -1,9 +1,9 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/domain/modelos/equipo_global.dart';
+import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
-import 'package:app_finnegans/domain/modelos/estado_equipo.dart';
+import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 /// Leandro: Servicio de negocio de Equipos.
@@ -126,6 +126,37 @@ class EquiposService {
 
     equipos.sort(_compararEquiposPorPrioridad);
     return equipos;
+  }
+
+  // Leandro: Busca un equipo y arma su detalle con las mismas reglas del resumen.
+  DetalleEquipoGeneral? obtenerDetalleEquipo({
+    required List<CumplimientoEmpleado> cumplimientos,
+    required String area,
+    required String equipo,
+  }) {
+    final areaBuscada = _normalizarComparacion(area);
+    final equipoBuscado = _normalizarComparacion(
+      _nombreEquipoNormalizado(equipo),
+    );
+    final miembros =
+        cumplimientos.where((cumplimiento) {
+          final empleado = cumplimiento.empleado;
+          return _normalizarComparacion(empleado.area) == areaBuscada &&
+              _normalizarComparacion(
+                    _nombreEquipoNormalizado(empleado.equipo),
+                  ) ==
+                  equipoBuscado;
+        }).toList()..sort(
+          (a, b) =>
+              a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
+        );
+
+    if (miembros.isEmpty) return null;
+
+    return DetalleEquipoGeneral(
+      resumen: _crearResumenEquipo(miembros),
+      miembros: miembros,
+    );
   }
 
   // Leandro: Un único resumen alimenta KPI, donuts y tarjetas del mismo período.
@@ -308,6 +339,8 @@ class EquiposService {
   String _crearTeamId(String area, String equipo) {
     return '${_normalizarId(area)}-${_normalizarId(equipo)}';
   }
+
+  String _normalizarComparacion(String valor) => valor.trim().toLowerCase();
 
   String _normalizarId(String valor) {
     return valor

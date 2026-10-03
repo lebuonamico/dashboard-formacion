@@ -6,7 +6,7 @@ import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
-final empleadosRepositoryProvider = Provider<EmpleadosRepository>((ref) {
+final   empleadosRepositoryProvider = Provider<EmpleadosRepository>((ref) {
   return LocalEmpleadosRepository();
 });
 

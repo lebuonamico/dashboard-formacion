@@ -1,7 +1,7 @@
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-import 'package:app_finnegans/presentation/providers/periodo_providers.dart';
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
+import 'package:app_finnegans/presentation/providers/period_providers.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_header.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
@@ -9,7 +9,7 @@ import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,9 +1,9 @@
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 /// Leandro: Controles de búsqueda, área y estado.
-/// Sus callbacks actualizan Riverpod; el filtrado real ocurre en equipos_providers.dart.
+/// Sus callbacks actualizan Riverpod; el filtrado real ocurre en teams_providers.dart.
 class EquiposFilters extends StatefulWidget {
   final List<String> areas;
   final String searchText;

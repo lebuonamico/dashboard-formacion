@@ -1,5 +1,5 @@
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_donut_chart.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 /// Leandro: Donut que muestra las horas aplicables al objetivo por categoría.

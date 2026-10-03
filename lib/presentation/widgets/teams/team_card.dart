@@ -1,6 +1,6 @@
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/estado_equipo_style.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

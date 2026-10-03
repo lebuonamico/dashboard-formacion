@@ -1,6 +1,7 @@
-import 'package:app_finnegans/presentation/providers/equipos_providers.dart';
-import 'package:app_finnegans/presentation/widgets/equipos/equipos_styles.dart';
-import 'package:app_finnegans/presentation/widgets/shared/periodo_segmented_control.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/period_segmented_control.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 /// Leandro: Selector global de período; sus cambios recalculan todo el dashboard.
@@ -158,7 +159,7 @@ class _MonthField extends StatelessWidget {
           .map(
             (month) => DropdownMenuItem<int>(
               value: month,
-              child: Text(_monthLabel(month), overflow: TextOverflow.ellipsis),
+              child: Text(nombreMes(month), overflow: TextOverflow.ellipsis),
             ),
           )
           .toList(),
@@ -219,23 +220,4 @@ InputDecoration _periodInputDecoration(String hint, IconData icon) {
       borderSide: const BorderSide(color: equiposBrand, width: 1.5),
     ),
   );
-}
-
-String _monthLabel(int month) {
-  const labels = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ];
-
-  return labels[month - 1];
 }

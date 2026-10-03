@@ -15,26 +15,33 @@ class CumplimientoService {
     final cursosMap = {
       for (final curso in cursos) normalizarNombreCurso(curso.nombre): curso,
     };
+    // Leandro: Indexa una vez los Excel para no recorrerlos completos por empleado.
+    final cargasPorLegajo = <String, List<CargaDeHorasCRM>>{};
+    for (final carga in cargasDeHoras) {
+      cargasPorLegajo.putIfAbsent(carga.empleadoLegajo, () => []).add(carga);
+    }
+    final certificacionesPorLegajo = <String, List<CertificacionMoodle>>{};
+    for (final certificacion in certificacionesMoodle) {
+      certificacionesPorLegajo
+          .putIfAbsent(certificacion.legajo, () => [])
+          .add(certificacion);
+    }
 
     return empleados.map((empleado) {
-      final horasValidas = <TipoCurso, double>{
-        TipoCurso.habilidadesDeNegocio: 0.0,
-        TipoCurso.habilidadesBlandas: 0.0,
-        TipoCurso.libresExploracion: 0.0,
-        TipoCurso.dictadoCapacitaciones: 0.0,
-      };
-      final horasDeclaradas = <TipoCurso, double>{
-        TipoCurso.habilidadesDeNegocio: 0.0,
-        TipoCurso.habilidadesBlandas: 0.0,
-        TipoCurso.libresExploracion: 0.0,
-        TipoCurso.dictadoCapacitaciones: 0.0,
-      };
+      final horasValidas = _horasPorCategoriaEnCero();
+      final horasDeclaradas = _horasPorCategoriaEnCero();
 
-      final cargasTomadas = cargasDeHoras.where(
-        (carga) => carga.empleadoLegajo == empleado.legajo && !carga.esDictada,
-      );
       final horasCrmPorCurso = <String, double>{};
-      for (final carga in cargasTomadas) {
+      final cargasEmpleado =
+          cargasPorLegajo[empleado.legajo] ?? const <CargaDeHorasCRM>[];
+      for (final carga in cargasEmpleado) {
+        if (carga.esDictada) {
+          horasDeclaradas[TipoCurso.dictadoCapacitaciones] =
+              (horasDeclaradas[TipoCurso.dictadoCapacitaciones] ?? 0) +
+              carga.horasTotales;
+          continue;
+        }
+
         final cursoNormalizado = normalizarNombreCurso(carga.cursoNombre);
         final curso = cursosMap[cursoNormalizado];
         if (curso != null) {
@@ -50,12 +57,14 @@ class CumplimientoService {
 
       // LMS confirma la finalización; CRM aporta las horas y Cursos fija el máximo.
       final cursosValidados = <String>{};
-      for (final certificacion in certificacionesMoodle) {
+      final certificacionesEmpleado =
+          certificacionesPorLegajo[empleado.legajo] ??
+          const <CertificacionMoodle>[];
+      for (final certificacion in certificacionesEmpleado) {
         final cursoNormalizado = normalizarNombreCurso(
           certificacion.cursoNombre,
         );
-        if (certificacion.legajo != empleado.legajo ||
-            !certificacion.finalizoCurso ||
+        if (!certificacion.finalizoCurso ||
             !cursosValidados.add(cursoNormalizado)) {
           continue;
         }
@@ -74,16 +83,6 @@ class CumplimientoService {
             (horasValidas[curso.tipo] ?? 0) + horasAcreditadas;
       }
 
-      // Las horas dictadas se obtienen directamente del CRM.
-      final cargasDictadas = cargasDeHoras.where(
-        (carga) => carga.empleadoLegajo == empleado.legajo && carga.esDictada,
-      );
-      for (final carga in cargasDictadas) {
-        horasDeclaradas[TipoCurso.dictadoCapacitaciones] =
-            (horasDeclaradas[TipoCurso.dictadoCapacitaciones] ?? 0) +
-            carga.horasTotales;
-      }
-
       // Requerimientos mensuales según el seniority del empleado.
       final horasRequeridas = empleado.seniority.planFormacion;
 
@@ -95,6 +94,10 @@ class CumplimientoService {
       );
     }).toList();
   }
+
+  static Map<TipoCurso, double> _horasPorCategoriaEnCero() => {
+    for (final tipo in TipoCurso.values) tipo: 0.0,
+  };
 
   static String normalizarNombreCurso(String nombre) => nombre
       .trim()
