@@ -1,6 +1,8 @@
+import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 
 class Empleado {
+  final DateTime? fechaIngreso;
   final String legajo;
   final String nombre;
   final String apellido;
@@ -11,6 +13,7 @@ class Empleado {
   final String gerente;
 
   Empleado({
+    this.fechaIngreso,
     required this.legajo,
     required this.nombre,
     required this.apellido,
@@ -24,27 +27,31 @@ class Empleado {
   String get nombreCompleto => '$nombre $apellido';
 
   Map<String, dynamic> toJson() => {
-        'legajo': legajo,
-        'nombre': nombre,
-        'apellido': apellido,
-        'seniority': seniority.name,
-        'area': area,
-        'mail': mail,
-        'equipo': equipo,
-        'gerente': gerente,
-      };
+    'fechaIngreso': fechaIngreso?.toIso8601String(),
+    'legajo': legajo,
+    'nombre': nombre,
+    'apellido': apellido,
+    'seniority': seniority.name,
+    'area': area,
+    'mail': mail,
+    'equipo': equipo,
+    'gerente': gerente,
+  };
 
   factory Empleado.fromJson(Map<String, dynamic> json) => Empleado(
-        legajo: json['legajo']?.toString() ?? '',
-        nombre: json['nombre']?.toString() ?? '',
-        apellido: json['apellido']?.toString() ?? '',
-        seniority: Seniority.values.firstWhere(
-          (s) => s.name == json['seniority'],
-          orElse: () => Seniority.fromString(json['seniority']?.toString() ?? ''),
-        ),
-        area: json['area']?.toString() ?? '',
-        mail: json['mail']?.toString() ?? '',
-        equipo: json['equipo']?.toString() ?? '',
-        gerente: json['gerente']?.toString() ?? '',
-      );
+    fechaIngreso: json['fechaIngreso'] == null
+        ? null
+        : fechaObligatoria(json['fechaIngreso'].toString()),
+    legajo: json['legajo']?.toString() ?? '',
+    nombre: json['nombre']?.toString() ?? '',
+    apellido: json['apellido']?.toString() ?? '',
+    seniority: Seniority.values.firstWhere(
+      (s) => s.name == json['seniority'],
+      orElse: () => Seniority.fromString(json['seniority']?.toString() ?? ''),
+    ),
+    area: json['area']?.toString() ?? '',
+    mail: json['mail']?.toString() ?? '',
+    equipo: json['equipo']?.toString() ?? '',
+    gerente: json['gerente']?.toString() ?? '',
+  );
 }

@@ -1,12 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/widgets/reloj_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends ConsumerWidget {
   const SideMenu({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final uri = GoRouterState.of(context).uri;
     final currentPath = uri.path;
     final requestedOrigin = uri.queryParameters['origen'];
@@ -178,8 +180,24 @@ class SideMenu extends StatelessWidget {
               isSelected: false,
               textColor: const Color(0xFFEF4444),
               iconColor: const Color(0xFFEF4444),
-              onTap: () {
-                context.go('/'); // Navega a la pantalla de login
+              onTap: () async {
+                final auth = ref.read(authControllerProvider);
+                try {
+                  await auth.signOut();
+                  if (context.mounted) {
+                    context.go(auth.enabled ? '/login' : '/');
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'No se pudo completar el cierre de sesión.',
+                        ),
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ),

@@ -52,6 +52,17 @@ final cargasDeHorasCompletasProvider =
         return AsyncValue.error(cargasAsync.error!, cargasAsync.stackTrace!);
       }
 
+      if (empleadosAsync.hasError) {
+        return AsyncValue.error(
+          empleadosAsync.error!,
+          empleadosAsync.stackTrace!,
+        );
+      }
+
+      if (cursosAsync.hasError) {
+        return AsyncValue.error(cursosAsync.error!, cursosAsync.stackTrace!);
+      }
+
       final cargas = cargasAsync.value ?? [];
       final empMap = {for (var e in (empleadosAsync.value ?? [])) e.legajo: e};
       final cursoMap = {

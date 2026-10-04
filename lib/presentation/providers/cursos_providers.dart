@@ -36,6 +36,10 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
     return AsyncValue.error(cursosAsync.error!, cursosAsync.stackTrace!);
   }
 
+  if (empleadosAsync.hasError) {
+    return AsyncValue.error(empleadosAsync.error!, empleadosAsync.stackTrace!);
+  }
+
   final cursos = cursosAsync.value ?? [];
   final empleados = empleadosAsync.value ?? [];
   final empMap = {
