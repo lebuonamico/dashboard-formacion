@@ -1,6 +1,7 @@
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -42,14 +43,7 @@ class CursadasScreen extends ConsumerWidget {
                           color: Color(0xFF0F172A),
                         ),
                       ),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text(
-                          'U',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
+                      const UserAvatar(),
                     ],
                   ),
                 ),
