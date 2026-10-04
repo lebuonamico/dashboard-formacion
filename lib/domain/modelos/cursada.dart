@@ -1,3 +1,5 @@
+import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
+
 class Cursada {
   final String id;
   final String cursoId;
@@ -12,16 +14,16 @@ class Cursada {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'cursoId': cursoId,
-        'empleadoLegajo': empleadoLegajo,
-        'fecha': fecha.toIso8601String(),
-      };
+    'id': id,
+    'cursoId': cursoId,
+    'empleadoLegajo': empleadoLegajo,
+    'fecha': fecha.toIso8601String(),
+  };
 
   factory Cursada.fromJson(Map<String, dynamic> json) => Cursada(
-        id: json['id']?.toString() ?? '',
-        cursoId: json['cursoId']?.toString() ?? '',
-        empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
-        fecha: DateTime.tryParse(json['fecha']?.toString() ?? '') ?? DateTime.now(),
-      );
+    id: json['id']?.toString() ?? '',
+    cursoId: json['cursoId']?.toString() ?? '',
+    empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
+    fecha: fechaObligatoria(json['fecha']?.toString() ?? ''),
+  );
 }

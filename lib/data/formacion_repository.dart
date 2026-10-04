@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/cursada.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/repositorios/formacion_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class MockFormacionRepository implements FormacionRepository {
   @override
@@ -181,81 +178,4 @@ class MockFormacionRepository implements FormacionRepository {
 
   @override
   Future<void> resetToMock() async {}
-}
-
-class LocalFormacionRepository extends MockFormacionRepository {
-  static const _empleadosKey = 'formacion_empleados';
-  static const _cursosKey = 'formacion_cursos';
-  static const _cursadasKey = 'formacion_cursadas';
-
-  Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
-
-  @override
-  Future<List<Empleado>> getEmpleados() async {
-    final preferences = await _storage;
-    final raw = preferences.getString(_empleadosKey);
-    if (raw == null) return super.getEmpleados();
-
-    return _decodeList(raw, Empleado.fromJson);
-  }
-
-  @override
-  Future<List<Curso>> getCursos() async {
-    final preferences = await _storage;
-    final raw = preferences.getString(_cursosKey);
-    if (raw == null) return super.getCursos();
-
-    return _decodeList(raw, Curso.fromJson);
-  }
-
-  @override
-  Future<List<Cursada>> getCursadas() async {
-    final preferences = await _storage;
-    final raw = preferences.getString(_cursadasKey);
-    if (raw == null) return super.getCursadas();
-
-    return _decodeList(raw, Cursada.fromJson);
-  }
-
-  @override
-  Future<void> replaceData({
-    required List<Empleado> empleados,
-    required List<Curso> cursos,
-    required List<Cursada> cursadas,
-  }) async {
-    final preferences = await _storage;
-    await preferences.setString(
-      _empleadosKey,
-      jsonEncode(empleados.map((empleado) => empleado.toJson()).toList()),
-    );
-    await preferences.setString(
-      _cursosKey,
-      jsonEncode(cursos.map((curso) => curso.toJson()).toList()),
-    );
-    await preferences.setString(
-      _cursadasKey,
-      jsonEncode(cursadas.map((cursada) => cursada.toJson()).toList()),
-    );
-  }
-  //comentario
-  @override
-  Future<void> resetToMock() async {
-    final preferences = await _storage;
-    await preferences.remove(_empleadosKey);
-    await preferences.remove(_cursosKey);
-    await preferences.remove(_cursadasKey);
-  }
-
-  List<T> _decodeList<T>(String raw, T Function(Map<String, dynamic>) fromJson) {
-    try {
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      return decoded
-          .map((item) => fromJson(Map<String, dynamic>.from(item as Map)))
-          .toList();
-    } on FormatException {
-      return [];
-    } on TypeError {
-      return [];
-    }
-  }
 }

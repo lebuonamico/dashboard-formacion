@@ -1,21 +1,23 @@
 # Dashboard de Formación
 
-La pantalla de configuración guarda localmente el trimestre, las horas base y los
-datos importados. La información queda disponible al volver a abrir la app.
+La importación conserva la selección de archivos, parsing y validaciones existentes.
+Las nuevas cargas realizan UPSERT; los repositories locales y mocks se mantienen
+para validar gradualmente el reemplazo. Una primera carga local guarda únicamente
+los registros importados; las siguientes conservan los registros anteriores.
+CRM resuelve `Curso` por nombre normalizado del catálogo LMS, conserva la
+trazabilidad original y rechaza fechas inválidas.
 
-## Importación Excel / CSV
+## Preparación de Supabase
 
-El botón **Subir Archivo** acepta un archivo `.xlsx` o `.csv`. En Excel recorre
-todas las hojas y detecta el tipo de registro a partir de sus encabezados. Si un
-tipo de registro reemplaza la colección local correspondiente, evitando mezclar la
-nómina importada con los datos mock.
+Copiar `config/supabase.example.json` a `config/supabase.local.json` (ignorado por Git).
+Ejecutar `flutter run --dart-define-from-file=config/supabase.local.json`.
+`USE_SUPABASE=false` mantiene los repositories locales. Para activarlo, configurar
+URL/clave pública y suministrar `SupabaseMappings` mediante un override de
+`supabaseMappingsProvider` en `ProviderScope`; no hay nombres físicos ni claves
+por defecto. La inicialización conserva la sesión de Supabase Auth.
 
-Encabezados esperados:
-
-- Empleados: `legajo,nombre,apellido,seniority,area,mail,equipo,gerente`
-- Cursos: `id,nombre,tipo,areaCurso,instructorLegajo,cargaHorariaHs`
-- Cursadas: `id,cursoId,empleadoLegajo,fecha`
-
-Los valores de `seniority` y `tipo` deben coincidir con los nombres definidos en
-los enums de la aplicación. El botón **Restablecer Datos Mock** elimina la copia
-local y vuelve a mostrar la semilla de desarrollo.
+Pendientes del diseño SQL: tablas/columnas, restricciones de UPSERT, PK/FK,
+índices, RLS, histórico de finalizaciones y bajas de maestros. El contrato y hooks
+de auditoría están preparados; `importacionesRepositoryProvider` queda sin
+persistencia hasta definir su implementación. Insertados/actualizados permanecen
+sin valor hasta disponer de conteos confiables. No se generó SQL.

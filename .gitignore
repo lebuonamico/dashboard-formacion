@@ -44,3 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .vercel
+
+# Configuración local de Supabase
+config/*.local.json
+.env
+.env.*
+!.env.example
