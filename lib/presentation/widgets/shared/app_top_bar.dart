@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 
 /// Leandro: Encabezado común de las pantallas, con regreso opcional.
 class AppTopBar extends StatelessWidget {
@@ -38,11 +39,7 @@ class AppTopBar extends StatelessWidget {
               ),
             ),
           ),
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFF0D53C3),
-            child: Text('U', style: TextStyle(color: Colors.white)),
-          ),
+          const UserAvatar(),
         ],
       ),
     );

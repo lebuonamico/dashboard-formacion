@@ -1,5 +1,7 @@
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
+import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
@@ -40,14 +42,7 @@ class CursosScreen extends ConsumerWidget {
                           color: Color(0xFF0F172A),
                         ),
                       ),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(0xFF0D53C3),
-                        child: const Text(
-                          'U',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
+                      const UserAvatar(),
                     ],
                   ),
                 ),
@@ -76,7 +71,7 @@ class CursosScreen extends ConsumerWidget {
                                   ),
                                 );
                               }
-                              return _buildTablaCursos(cursosList);
+                              return _TablaCursosPaginada(cursos: cursosList);
                             },
                           ),
                         ),
@@ -152,84 +147,180 @@ class CursosScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTablaCursos(List<CursoViewModel> cursosList) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SingleChildScrollView(
-          child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-            horizontalMargin: 20,
-            columnSpacing: 24,
-            columns: const [
-              DataColumn(
-                label: Text(
-                  'ID',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+}
+
+/// Gris de los datos secundarios (encabezados y columna ID).
+const _grisSuave = Color(0xFF64748B);
+const _tinta = Color(0xFF0F172A);
+
+/// Encabezados en gris y chicos: el que manda visualmente es el nombre del
+/// curso, no el título de la columna.
+const _estiloEncabezado = TextStyle(
+  fontSize: 13,
+  fontWeight: FontWeight.w600,
+  color: _grisSuave,
+);
+
+/// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
+class _TablaCursosPaginada extends StatefulWidget {
+  final List<CursoViewModel> cursos;
+
+  const _TablaCursosPaginada({required this.cursos});
+
+  @override
+  State<_TablaCursosPaginada> createState() => _TablaCursosPaginadaState();
+}
+
+class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
+  static const _altoFila = 44.0;
+  static const _altoEncabezado = 44.0;
+  static const _altoPaginador = 60.0;
+  static const _separacion = 12.0;
+
+  /// Mínimo razonable si la ventana queda muy baja.
+  static const _minimoPorPagina = 5;
+
+  int _paginaActual = 0;
+
+  @override
+  void didUpdateWidget(covariant _TablaCursosPaginada oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Al cambiar el filtro o la búsqueda, volver a la primera página.
+    if (oldWidget.cursos != widget.cursos) {
+      _paginaActual = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total = widget.cursos.length;
+
+        // Cuántas filas entran en el alto que nos dieron. Así la tabla llena la
+        // página y no queda un hueco entre la última fila y el paginador.
+        final altoParaTabla =
+            constraints.maxHeight - _altoPaginador - _separacion;
+        final cursosPorPagina =
+            ((altoParaTabla - _altoEncabezado) / _altoFila).floor().clamp(
+              _minimoPorPagina,
+              // Nunca más filas que cursos hay.
+              total < _minimoPorPagina ? _minimoPorPagina : total,
+            );
+
+        final totalPaginas = total == 0
+            ? 1
+            : (total + cursosPorPagina - 1) ~/ cursosPorPagina;
+        final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
+        final inicio = paginaSegura * cursosPorPagina;
+        final finCalculado = inicio + cursosPorPagina;
+        final fin = finCalculado > total ? total : finCalculado;
+        final visibles = widget.cursos.sublist(inicio, fin);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sin recuadro: la tabla se dibuja directo sobre la página y ocupa
+            // todo el ancho disponible.
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  // Red de seguridad por si algo no entra.
+                  child: SingleChildScrollView(child: _tabla(visibles)),
                 ),
               ),
-              DataColumn(
-                label: Text(
-                  'Nombre del curso',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Tipo',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Carga horaria',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+            ),
+            if (totalPaginas > 1) ...[
+              const SizedBox(height: _separacion),
+              PaginacionResultados(
+                paginaActual: paginaSegura,
+                cantidadPaginas: totalPaginas,
+                desde: inicio + 1,
+                hasta: fin,
+                totalResultados: total,
+                etiquetaResultados: 'cursos',
+                icono: Icons.school_outlined,
+                onPrevious: paginaSegura > 0
+                    ? () => setState(() => _paginaActual = paginaSegura - 1)
+                    : null,
+                onNext: paginaSegura < totalPaginas - 1
+                    ? () => setState(() => _paginaActual = paginaSegura + 1)
+                    : null,
               ),
             ],
-            rows: cursosList.map((vm) {
-              final c = vm.curso;
-              return DataRow(
-                cells: [
-                  DataCell(
-                    Text(
-                      c.id,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      c.nombre,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  DataCell(_buildTipoChip(c.tipo)),
-                  DataCell(
-                    Text(
-                      '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildTipoChip(TipoCurso tipo) {
-    Color bg;
-    Color text;
+  Widget _tabla(List<CursoViewModel> visibles) {
+    return DataTable(
+      // Sin fondo propio: el encabezado se apoya sobre el color de la página y
+      // se distingue por la negrita y la línea divisoria de abajo.
+      headingRowColor: WidgetStateProperty.all(Colors.transparent),
+      horizontalMargin: 0,
+      columnSpacing: 24,
+      // Filas más compactas: entran más cursos sin que se vea apretado.
+      headingRowHeight: 44,
+      dataRowMinHeight: 44,
+      dataRowMaxHeight: 44,
+      dividerThickness: 1,
+      columns: const [
+        DataColumn(label: Text('ID', style: _estiloEncabezado)),
+        DataColumn(label: Text('Nombre del curso', style: _estiloEncabezado)),
+        DataColumn(label: Text('Tipo', style: _estiloEncabezado)),
+        DataColumn(label: Text('Carga horaria', style: _estiloEncabezado)),
+      ],
+      rows: [
+        for (final vm in visibles)
+          DataRow(
+            cells: [
+              // El ID es dato secundario: va en gris para que no le compita al
+              // nombre del curso.
+              DataCell(
+                Text(
+                  vm.curso.id,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: _grisSuave,
+                  ),
+                ),
+              ),
+              DataCell(
+                Text(
+                  vm.curso.nombre,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _tinta,
+                  ),
+                ),
+              ),
+              DataCell(_tipoChip(vm.curso.tipo)),
+              DataCell(
+                Text(
+                  '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _tinta,
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+Widget _tipoChip(TipoCurso tipo) {
+  Color bg;
+  Color text;
 
     switch (tipo) {
       case TipoCurso.habilidadesDeNegocio:
@@ -265,5 +356,4 @@ class CursosScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 }
