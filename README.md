@@ -7,10 +7,28 @@ los registros importados; las siguientes conservan los registros anteriores.
 CRM resuelve `Curso` por nombre normalizado del catálogo LMS, conserva la
 trazabilidad original y rechaza fechas inválidas.
 
+## Ejecución
+
+Flutter debe estar disponible en `PATH`. Ambos comandos abren Chrome en el puerto 3000.
+
+### Desarrollo con mocks/local
+
+```console
+dart run tool/run.dart local
+```
+
+### Desarrollo con Supabase real
+
+```console
+dart run tool/run.dart supabase
+```
+
+Requiere `config/supabase.local.json`, con `USE_SUPABASE=true` y la configuración
+existente de Supabase. Este archivo está ignorado por Git y no debe subirse al repositorio.
+
 ## Preparación de Supabase
 
 Copiar `config/supabase.example.json` a `config/supabase.local.json` (ignorado por Git).
-Ejecutar `flutter run --dart-define-from-file=config/supabase.local.json`.
 `USE_SUPABASE=false` mantiene los repositories locales. Para activarlo, configurar
 URL/clave pública y suministrar `SupabaseMappings` mediante un override de
 `supabaseMappingsProvider` en `ProviderScope`; no hay nombres físicos ni claves
