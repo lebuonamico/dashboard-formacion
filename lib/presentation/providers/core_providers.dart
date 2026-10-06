@@ -31,6 +31,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
         'equipo': 'equipo_general',
         'gerente': 'gerente',
         'fechaIngreso': 'fecha_ingreso',
+        'activo': 'activo',
       },
     ),
     cursos: SupabaseTableMapping(
@@ -41,6 +42,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
         'nombre': 'nombre',
         'tipo': 'tipo',
         'cargaHorariaHs': 'carga_horaria',
+        'activo': 'activo',
       },
     ),
     horas: SupabaseTableMapping(

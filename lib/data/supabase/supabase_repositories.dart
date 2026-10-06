@@ -4,11 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/data/supabase/supabase_mapping.dart';
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
+import 'package:app_finnegans/domain/repositorios/empleados_historial_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
@@ -138,7 +140,11 @@ class _Table {
 }
 
 class SupabaseEmpleadosRepository
-    implements EmpleadosRepository, CountedUpsertRepository<Empleado> {
+    implements
+        EmpleadosRepository,
+        CountedUpsertRepository<Empleado>,
+        FotoVigenteRepository<Empleado>,
+        EmpleadosHistorialRepository {
   final _Table _table;
   SupabaseEmpleadosRepository(
     SupabaseClient client,
@@ -173,6 +179,53 @@ class SupabaseEmpleadosRepository
   Future<ResultadoUpsert> upsertConResultado(List<Empleado> items) =>
       _table.upsert(items.map((e) => e.toJson()).toList());
   @override
+  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
+    List<Empleado> items,
+  ) async {
+    _table.mapping.requireFields(['activo']);
+    if (items.isEmpty || items.any((item) => item.legajo.trim().isEmpty)) {
+      throw const FormatException(
+        'La foto de Nómina está vacía o tiene claves inválidas.',
+      );
+    }
+    final presentes = items.map((item) => item.legajo).toSet();
+    final anteriores = await getEmpleados();
+    final cambios = [
+      for (final item in items) item.copyWith(activo: true),
+      for (final item in anteriores)
+        if (item.activo && !presentes.contains(item.legajo))
+          item.copyWith(activo: false),
+    ];
+    // Leandro: llama a upsertConResultado para guardar presentes y bajas en una escritura con el trigger de historial existente.
+    final resultado = await upsertConResultado(cambios);
+    return ResultadoUpsert(
+      registrosProcesados: items.length,
+      insertados: resultado.insertados,
+      actualizados: resultado.actualizados,
+    );
+  }
+
+  @override
+  Future<List<EmpleadoHistorial>> getHistorialEmpleados() async {
+    final historial = <EmpleadoHistorial>[];
+    const pageSize = 500;
+    for (var offset = 0; ; offset += pageSize) {
+      final rows = await _table.client
+          .from('empleado_historial')
+          .select(
+            'id,legajo,seniority,sector,equipo_general,gerente,activo,vigente_desde,vigente_hasta',
+          )
+          .order('legajo')
+          .order('vigente_desde')
+          .order('id')
+          .range(offset, offset + pageSize - 1);
+      historial.addAll(rows.map(EmpleadoHistorial.fromJson));
+      if (rows.length < pageSize) break;
+    }
+    return historial;
+  }
+
+  @override
   Future<void> replaceEmpleados(List<Empleado> empleados) => upsert(empleados);
   @override
   Future<void> resetToMock() async => throw UnsupportedError(
@@ -181,7 +234,10 @@ class SupabaseEmpleadosRepository
 }
 
 class SupabaseCursosRepository
-    implements CursosRepository, CountedUpsertRepository<Curso> {
+    implements
+        CursosRepository,
+        CountedUpsertRepository<Curso>,
+        FotoVigenteRepository<Curso> {
   final _Table _table;
   SupabaseCursosRepository(SupabaseClient client, SupabaseTableMapping mapping)
     : _table = _Table(client, mapping) {
@@ -208,10 +264,37 @@ class SupabaseCursosRepository
                 'nombre': c.nombre.trim(),
                 'tipo': c.tipo.name,
                 'cargaHorariaHs': c.cargaHorariaHs,
+                'activo': c.activo,
               },
             )
             .toList(),
       );
+  @override
+  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
+    List<Curso> items,
+  ) async {
+    _table.mapping.requireFields(['activo']);
+    if (items.isEmpty || items.any((item) => item.id.trim().isEmpty)) {
+      throw const FormatException(
+        'La foto de Cursos está vacía o tiene claves inválidas.',
+      );
+    }
+    final presentes = items.map((item) => item.id).toSet();
+    final anteriores = await getCursos();
+    final cambios = [
+      for (final item in items) item.copyWith(activo: true),
+      for (final item in anteriores)
+        if (item.activo && !presentes.contains(item.id))
+          item.copyWith(activo: false),
+    ];
+    final resultado = await upsertConResultado(cambios);
+    return ResultadoUpsert(
+      registrosProcesados: items.length,
+      insertados: resultado.insertados,
+      actualizados: resultado.actualizados,
+    );
+  }
+
   @override
   Future<void> replaceCursos(List<Curso> cursos) => upsert(cursos);
   @override

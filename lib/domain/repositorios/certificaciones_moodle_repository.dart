@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
@@ -32,10 +33,32 @@ extension CertificacionesMoodleUpsert on CertificacionesMoodleRepository {
       await (this as UpsertRepository<CertificacionMoodle>).upsert(items);
       return;
     }
+    final registros = [...await getCertificaciones(), ...items];
+    final idsPorNombre = idsCursosCertificaciones(registros);
     final merged = <String, CertificacionMoodle>{};
-    for (final item in [...await getCertificaciones(), ...items]) {
-      merged[jsonEncode(item.toJson())] = item;
+    for (final item in registros) {
+      merged[claveCertificacionMoodle(item, idsPorNombre)] = item;
     }
     await replaceCertificaciones(merged.values.toList());
   }
 }
+
+Map<String, String> idsCursosCertificaciones(
+  Iterable<CertificacionMoodle> items,
+) => {
+  for (final item in items)
+    if (item.cursoId?.trim().isNotEmpty == true &&
+        item.cursoNombre.trim().isNotEmpty)
+      normalizarNombreCurso(item.cursoNombre): item.cursoId!,
+};
+
+String claveCertificacionMoodle(
+  CertificacionMoodle item,
+  Map<String, String> idsPorNombre,
+) => jsonEncode([
+  item.legajo,
+  item.cursoId?.trim().isNotEmpty == true
+      ? item.cursoId
+      : idsPorNombre[normalizarNombreCurso(item.cursoNombre)] ??
+            normalizarNombreCurso(item.cursoNombre),
+]);

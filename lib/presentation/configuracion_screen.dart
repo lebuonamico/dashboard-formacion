@@ -535,7 +535,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       legajo: legajo,
                       cursoNombre: cursoNombre,
                       finalizoCurso: finalizo,
-                      fechaFinalizacion: finalizo ? fechaFinalizacion : null,
+                      fechaFinalizacion: fechaFinalizacion,
                     ),
                   );
                 }
@@ -679,27 +679,42 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               var empleadosImportados = <Empleado>[];
               var cursosImportados = <Curso>[];
               var cargasDeHorasImportadas = <CargaDeHorasCRM>[];
+              final empleadosValidados = <String, String>{};
 
-              for (final rows in rowsPorHoja.values) {
-                if (rows.length < 2) continue;
+              for (final hoja in rowsPorHoja.entries) {
+                final rows = hoja.value;
+                if (!rows.any(_filaConDatos)) continue;
                 final headerIndex = _buscarFilaEncabezados(rows);
-                if (headerIndex == -1) continue;
+                if (headerIndex == -1) {
+                  throw FormatException(
+                    'No se reconocen los encabezados de nómina en la hoja "${hoja.key}". No se sincronizó la nómina.',
+                  );
+                }
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
+                _validarEncabezadosMaestro(headers, hoja.key);
                 final seniorityIndex = _buscarColumnaSeniority(
                   headers,
                   rows,
                   headerIndex,
                 );
-                final records = rows
-                    .skip(headerIndex + 1)
-                    .where(
-                      (row) =>
-                          row.any((cell) => cell.toString().trim().isNotEmpty),
-                    );
+                if (seniorityIndex == -1 ||
+                    _buscarColumna(headers, const [
+                          'fechadeingreso',
+                          'fechaingreso',
+                        ]) ==
+                        -1) {
+                  throw FormatException(
+                    'Faltan las columnas Seniority o Fecha de ingreso en la hoja "${hoja.key}".',
+                  );
+                }
 
-                for (final row in records) {
+                for (var fila = headerIndex + 1; fila < rows.length; fila++) {
+                  final row = rows[fila];
+                  if (!_filaConDatos(row)) continue;
+                  final ubicacion = 'hoja "${hoja.key}", fila ${fila + 1}';
+                  _validarColumnasFila(row, headers, ubicacion);
                   final normalizedData = <String, String>{};
                   for (
                     var index = 0;
@@ -747,15 +762,39 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       for (final header in headers)
                         if (_esColumnaSeniority(header)) header: 'seniority',
                     });
-                    if (seniorityIndex != -1 && seniorityIndex < row.length) {
-                      empleadoData['seniority'] = Seniority.fromString(
-                        row[seniorityIndex].toString().trim(),
-                      ).name;
+                    if (empleadoData['legajo']?.toString().trim().isEmpty ??
+                        true) {
+                      throw FormatException('Falta el legajo en $ubicacion.');
                     }
-                    if (empleadoData['fechaIngreso']?.isEmpty ?? false) {
-                      empleadoData.remove('fechaIngreso');
+                    if (empleadoData['nombre']?.toString().trim().isEmpty ??
+                        true) {
+                      throw FormatException('Falta el nombre en $ubicacion.');
                     }
+                    final seniorityTexto = seniorityIndex < row.length
+                        ? row[seniorityIndex].toString().trim()
+                        : '';
+                    empleadoData['seniority'] = _seniorityDesdeTexto(
+                      seniorityTexto,
+                      ubicacion,
+                    ).name;
+                    final fechaIngreso = empleadoData['fechaIngreso']
+                            ?.toString() ??
+                        '';
+                    final fecha = fechaImportacion(fechaIngreso);
+                    if (fecha == null) {
+                      throw FormatException(
+                        'Fecha de ingreso inválida en $ubicacion: "$fechaIngreso".',
+                      );
+                    }
+                    empleadoData['fechaIngreso'] = fecha.toIso8601String();
                     final empleado = Empleado.fromJson(empleadoData);
+                    _validarDuplicadoMaestro(
+                      empleadosValidados,
+                      empleado.legajo,
+                      empleado.toJson(),
+                      'legajo',
+                      ubicacion,
+                    );
                     empleadosImportados = _reemplazarPorId(
                       empleadosImportados,
                       empleado,
@@ -811,9 +850,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               }
 
               var resumen = ResultadoUpsert.empty;
-              resumen += await empleadosRepository.upsertEmpleadosConResultado(
-                empleadosImportados,
-              );
+              // Leandro: llama a la sincronización de nómina para actualizar la foto vigente solo después de validar el archivo completo.
+              resumen += await empleadosRepository
+                  .sincronizarFotoVigenteConResultado(empleadosImportados);
               resumen += await cursosRepository.upsertCursosConResultado(
                 cursosImportados,
               );
@@ -827,12 +866,14 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             },
             refrescar: () async {
               container.invalidate(empleadosProvider);
+              container.invalidate(empleadoHistorialProvider);
               container.invalidate(cursosProvider);
               container.invalidate(cargasDeHorasCRMProvider);
               container.invalidate(cargasDashboardProvider);
               container.invalidate(certificacionesMoodleProvider);
               await Future.wait([
                 container.read(empleadosProvider.future),
+                container.read(empleadoHistorialProvider.future),
                 container.read(cursosProvider.future),
                 container.read(cargasDeHorasCRMProvider.future),
                 container.read(cargasDashboardProvider.future),
@@ -894,14 +935,21 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                           ),
                     };
               final repository = container.read(cursosRepositoryProvider);
+              final cursosValidados = <String, String>{};
 
-              for (final rows in rowsPorHoja.values) {
-                if (rows.length < 2) continue;
+              for (final hoja in rowsPorHoja.entries) {
+                final rows = hoja.value;
+                if (!rows.any(_filaConDatos)) continue;
                 final headerIndex = _buscarFilaCursos(rows);
-                if (headerIndex == -1) continue;
+                if (headerIndex == -1) {
+                  throw FormatException(
+                    'No se encontraron cursos con encabezados válidos en la hoja "${hoja.key}". No se sincronizó el catálogo.',
+                  );
+                }
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
+                _validarEncabezadosMaestro(headers, hoja.key);
                 final idIndex = _buscarColumna(headers, const [
                   'id',
                   'cursoid',
@@ -922,48 +970,69 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'nombrecompleto',
                   'titulo',
                 ]);
-                if (idIndex == -1 || nombreIndex == -1) continue;
+                final tipoIndex = _buscarColumna(headers, const [
+                  'tipo',
+                  'tipocurso',
+                  'category',
+                  'categoria',
+                ]);
+                final horasIndex = _buscarColumna(headers, const [
+                  'cargahorariahs',
+                  'cargahoraria',
+                  'horas',
+                  'hours',
+                ]);
+                if ([idIndex, nombreIndex, tipoIndex, horasIndex]
+                    .any((index) => index == -1)) {
+                  throw FormatException(
+                    'Faltan columnas obligatorias de ID, nombre, tipo o carga horaria en la hoja "${hoja.key}".',
+                  );
+                }
 
-                for (final row in rows.skip(headerIndex + 1)) {
-                  if (idIndex >= row.length || nombreIndex >= row.length) {
-                    continue;
+                for (var fila = headerIndex + 1; fila < rows.length; fila++) {
+                  final row = rows[fila];
+                  if (!_filaConDatos(row)) continue;
+                  final ubicacion = 'hoja "${hoja.key}", fila ${fila + 1}';
+                  _validarColumnasFila(row, headers, ubicacion);
+                  if ([idIndex, nombreIndex, tipoIndex, horasIndex]
+                      .any((index) => index >= row.length)) {
+                    throw FormatException(
+                      'Faltan datos obligatorios del curso en $ubicacion.',
+                    );
                   }
                   final id = row[idIndex].toString().trim();
                   final nombre = row[nombreIndex].toString().trim();
-                  if (id.isEmpty || nombre.isEmpty) continue;
-                  final tipoIndex = _buscarColumna(headers, const [
-                    'tipo',
-                    'tipocurso',
-                    'category',
-                    'categoria',
-                  ]);
-                  final horasIndex = _buscarColumna(headers, const [
-                    'cargahorariahs',
-                    'cargahoraria',
-                    'horas',
-                    'hours',
-                  ]);
-                  cursosImportados.add(
-                    Curso(
-                      id: id,
-                      nombre: nombre,
-                      tipo: tipoIndex != -1 && tipoIndex < row.length
-                          ? _tipoCursoDesdeTexto(row[tipoIndex].toString())
-                          : TipoCurso.libresExploracion,
-                      areaCurso: '',
-                      instructorLegajo: '',
-                      cargaHorariaHs:
-                          horasIndex != -1 && horasIndex < row.length
-                          ? double.tryParse(
-                                  row[horasIndex].toString().replaceAll(
-                                    ',',
-                                    '.',
-                                  ),
-                                ) ??
-                                0
-                          : 0,
+                  if (id.isEmpty || nombre.isEmpty) {
+                    throw FormatException(
+                      'Falta el ID o nombre del curso en $ubicacion.',
+                    );
+                  }
+                  final horasTexto = row[horasIndex].toString().trim();
+                  final horas = double.tryParse(horasTexto.replaceAll(',', '.'));
+                  if (horas == null || !horas.isFinite || horas < 0) {
+                    throw FormatException(
+                      'Carga horaria inválida en $ubicacion: "$horasTexto".',
+                    );
+                  }
+                  final curso = Curso(
+                    id: id,
+                    nombre: nombre,
+                    tipo: _tipoCursoDesdeTexto(
+                      row[tipoIndex].toString(),
+                      ubicacion,
                     ),
+                    areaCurso: '',
+                    instructorLegajo: '',
+                    cargaHorariaHs: horas,
                   );
+                  _validarDuplicadoMaestro(
+                    cursosValidados,
+                    curso.id,
+                    curso.toJson(),
+                    'ID de curso',
+                    ubicacion,
+                  );
+                  cursosImportados.add(curso);
                 }
               }
 
@@ -972,7 +1041,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'No se encontraron cursos. Verificá las columnas de ID y nombre.',
                 );
               }
-              return repository.upsertCursosConResultado(cursosImportados);
+              // Leandro: llama a la sincronización del catálogo para dar altas, bajas y reactivaciones después de validar todas las hojas.
+              return repository.sincronizarFotoVigenteConResultado(
+                cursosImportados,
+              );
             },
             refrescar: () async {
               container.invalidate(cursosProvider);
@@ -1303,7 +1375,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  TipoCurso _tipoCursoDesdeTexto(String value) {
+  TipoCurso _tipoCursoDesdeTexto(String value, String ubicacion) {
     final normalized = _normalize(value);
     for (final tipo in TipoCurso.values) {
       if (_normalize(tipo.name) == normalized ||
@@ -1320,7 +1392,76 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     if (normalized.contains('dictad') || normalized.contains('impart')) {
       return TipoCurso.dictadoCapacitaciones;
     }
-    return TipoCurso.libresExploracion;
+    if (normalized.contains('libre') ||
+        normalized.contains('exploracion') ||
+        normalized.contains('profundizacion')) {
+      return TipoCurso.libresExploracion;
+    }
+    throw FormatException('Tipo de curso inválido en $ubicacion: "$value".');
+  }
+
+  bool _filaConDatos(List<dynamic> row) =>
+      row.any((cell) => cell.toString().trim().isNotEmpty);
+
+  void _validarEncabezadosMaestro(List<String> headers, String hoja) {
+    final vistos = <String>{};
+    for (final header in headers.where((header) => header.isNotEmpty)) {
+      if (!vistos.add(header)) {
+        throw FormatException(
+          'Encabezado duplicado "$header" en la hoja "$hoja".',
+        );
+      }
+    }
+  }
+
+  void _validarColumnasFila(
+    List<dynamic> row,
+    List<String> headers,
+    String ubicacion,
+  ) {
+    for (var index = 0; index < row.length; index++) {
+      if (row[index].toString().trim().isEmpty) continue;
+      if (index >= headers.length || headers[index].isEmpty) {
+        throw FormatException(
+          'Hay datos sin encabezado de columna en $ubicacion.',
+        );
+      }
+    }
+  }
+
+  void _validarDuplicadoMaestro(
+    Map<String, String> validados,
+    String id,
+    Map<String, dynamic> data,
+    String campo,
+    String ubicacion,
+  ) {
+    final contenido = jsonEncode(data);
+    final anterior = validados[id];
+    if (anterior != null && anterior != contenido) {
+      throw FormatException(
+        'El $campo "$id" tiene datos contradictorios en $ubicacion.',
+      );
+    }
+    validados[id] = contenido;
+  }
+
+  Seniority _seniorityDesdeTexto(String value, String ubicacion) {
+    final normalized = _normalize(value);
+    final configurado = Seniority.values.any(
+      (seniority) => _normalize(seniority.name) == normalized ||
+          _normalize(seniority.label) == normalized,
+    );
+    final aliasValido = RegExp(
+      r'^trainee(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$|^t$'
+      r'|^(?:junior|jr|j|senior|senor|sr|s)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$'
+      r'|^(?:semisenior|semisenor|ssr|ss)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)$'
+      r'|^(?:manager|gerente|m)$',
+    ).hasMatch(normalized);
+    if (!configurado && !aliasValido) {
+      throw FormatException('Seniority inválido en $ubicacion: "$value".');
+    }
+    return Seniority.fromString(value);
   }
 
   bool _esColumnaSeniority(String header) {

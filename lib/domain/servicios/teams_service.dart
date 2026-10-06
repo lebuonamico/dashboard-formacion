@@ -1,10 +1,13 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
 class EquiposService {
   bool tieneDatosEnPeriodo({
@@ -54,21 +57,168 @@ class EquiposService {
     }).toList();
   }
 
-  // La población del período depende del ingreso, aunque no haya actividad CRM/LMS.
   List<Empleado> filtrarEmpleadosPorPeriodo({
     required List<Empleado> empleados,
+    List<EmpleadoHistorial>? historial,
     required int anio,
     required int mes,
     required bool esAnual,
   }) {
+    final inicioSiguiente = DateTime(anio, esAnual ? 13 : mes + 1);
     final ultimoDia = DateTime(anio, esAnual ? 13 : mes + 1, 0);
+    final vigenciasPorLegajo = <String, List<EmpleadoHistorial>>{};
+    for (final vigencia in historial ?? <EmpleadoHistorial>[]) {
+      vigenciasPorLegajo.putIfAbsent(vigencia.legajo, () => []).add(vigencia);
+    }
 
-    return empleados.where((empleado) {
+    final elegibles = <Empleado>[];
+    for (final empleado in empleados) {
       final ingreso = empleado.fechaIngreso;
-      if (ingreso == null) return false;
+      if (ingreso == null) continue;
       final fechaIngreso = DateTime(ingreso.year, ingreso.month, ingreso.day);
-      return !fechaIngreso.isAfter(ultimoDia);
-    }).toList();
+      if (fechaIngreso.isAfter(ultimoDia)) continue;
+      if (historial == null) {
+        if (empleado.activo) elegibles.add(empleado);
+        continue;
+      }
+
+      final vigencias = vigenciasPorLegajo[empleado.legajo] ?? [];
+      final vigentes = vigencias.where((vigencia) {
+        final hasta = vigencia.vigenteHasta;
+        return vigencia.vigenteDesde.isBefore(inicioSiguiente) &&
+            (hasta == null || !hasta.isBefore(inicioSiguiente));
+      }).toList();
+      if (vigentes.isEmpty && vigencias.isNotEmpty) {
+        // Leandro: llama a reduce para recuperar el primer estado conocido sin usar el activo actual.
+        final primera = vigencias.reduce(
+          (anterior, actual) =>
+              actual.vigenteDesde.isBefore(anterior.vigenteDesde)
+              ? actual
+              : anterior,
+        );
+        if (!primera.vigenteDesde.isBefore(inicioSiguiente)) {
+          vigentes.addAll(
+            vigencias.where(
+              (vigencia) =>
+                  vigencia.vigenteDesde.isAtSameMomentAs(primera.vigenteDesde),
+            ),
+          );
+        }
+      }
+      if (vigentes.length != 1) {
+        throw StateError(
+          'El historial del colaborador ${empleado.legajo} no tiene una '
+          'vigencia única al cierre de $mes/$anio.',
+        );
+      }
+      final vigente = vigentes.single;
+      if (vigente.activo) {
+        // Leandro: llama a reconstruir para usar el estado, seniority y equipo vigentes al cierre del mes.
+        elegibles.add(vigente.reconstruir(empleado));
+      }
+    }
+    return elegibles;
+  }
+
+  int? ultimoMesConDatos({
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+  }) {
+    for (var mes = 12; mes >= 1; mes--) {
+      if (tieneDatosEnPeriodo(
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        mes: mes,
+        esAnual: false,
+      )) {
+        return mes;
+      }
+    }
+    return null;
+  }
+
+  List<CumplimientoEmpleado> calcularCumplimientoAnual({
+    required List<Empleado> empleados,
+    List<EmpleadoHistorial>? historial,
+    required List<Curso> cursos,
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    required CumplimientoService cumplimientoService,
+  }) {
+    final acumulados = <String, CumplimientoEmpleado>{};
+
+    for (var mes = 1; mes <= 12; mes++) {
+      // Leandro: llama a tieneDatosEnPeriodo para acumular sólo los meses que tienen registros CRM o LMS.
+      if (!tieneDatosEnPeriodo(
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        mes: mes,
+        esAnual: false,
+      )) {
+        continue;
+      }
+
+      // Leandro: llama a calcularCumplimientoGlobal para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
+      final cumplimientosMensuales = cumplimientoService
+          .calcularCumplimientoGlobal(
+            empleados: filtrarEmpleadosPorPeriodo(
+              empleados: empleados,
+              historial: historial,
+              anio: anio,
+              mes: mes,
+              esAnual: false,
+            ),
+            cursos: cursos,
+            cargasDeHoras: filtrarCargasPorPeriodo(
+              cargas: cargas,
+              anio: anio,
+              mes: mes,
+              esAnual: false,
+            ),
+            certificacionesMoodle: filtrarCertificacionesPorPeriodo(
+              certificaciones: certificaciones,
+              anio: anio,
+              mes: mes,
+              esAnual: false,
+            ),
+          );
+
+      for (final mensual in cumplimientosMensuales) {
+        final empleado = mensual.empleado;
+        final clave =
+            '${empleado.legajo}::${empleado.area}::'
+            '${_nombreEquipoNormalizado(empleado.equipo)}';
+        final anterior = acumulados[clave];
+        acumulados[clave] = CumplimientoEmpleado(
+          empleado: mensual.empleado,
+          horasValidas: {
+            for (final tipo in TipoCurso.values)
+              // Leandro: llama a horasAplicablesAlObjetivo para sumar horas ya limitadas en cada mes.
+              tipo:
+                  (anterior?.horasValidas[tipo] ?? 0) +
+                  mensual.horasAplicablesAlObjetivo(tipo),
+          },
+          horasDeclaradas: {
+            for (final tipo in TipoCurso.values)
+              tipo:
+                  (anterior?.horasDeclaradas[tipo] ?? 0) +
+                  (mensual.horasDeclaradas[tipo] ?? 0),
+          },
+          horasRequeridas: {
+            for (final tipo in TipoCurso.values)
+              tipo:
+                  (anterior?.horasRequeridas[tipo] ?? 0) +
+                  (mensual.horasRequeridas[tipo] ?? 0),
+          },
+        );
+      }
+    }
+
+    return acumulados.values.toList();
   }
 
   int contarMesesConRegistros({
@@ -167,8 +317,9 @@ class EquiposService {
   }
 
   ResumenEquiposPeriodo calcularResumenPeriodo(
-    List<CumplimientoEmpleado> cumplimientos,
-  ) {
+    List<CumplimientoEmpleado> cumplimientos, {
+    int? colaboradoresAlCierre,
+  }) {
     // Leandro: llama a calcularEquiposGlobales para obtener los equipos que se suman en los indicadores del período.
     final equipos = calcularEquiposGlobales(cumplimientos);
     var colaboradores = 0;
@@ -205,7 +356,7 @@ class EquiposService {
 
     return ResumenEquiposPeriodo(
       equipos: equipos,
-      colaboradores: colaboradores,
+      colaboradores: colaboradoresAlCierre ?? colaboradores,
       horasRealizadas: horasRealizadas,
       horasObjetivo: horasObjetivo,
       horasNegocio: horasNegocio,

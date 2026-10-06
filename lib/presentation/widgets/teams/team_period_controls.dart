@@ -13,7 +13,7 @@ class EquiposPeriodControls extends StatelessWidget {
   final ValueChanged<AlcancePeriodo> onScopeChanged;
   final ValueChanged<int?> onMonthChanged;
   final ValueChanged<int?> onYearChanged;
-  final ValueChanged<bool> onLoadedRecordsChanged;
+  final ValueChanged<bool>? onLoadedRecordsChanged;
 
   const EquiposPeriodControls({
     super.key,
@@ -21,11 +21,11 @@ class EquiposPeriodControls extends StatelessWidget {
     required this.selectedMonth,
     required this.selectedYear,
     required this.availableYears,
-    required this.soloRegistrosCargados,
+    this.soloRegistrosCargados = false,
     required this.onScopeChanged,
     required this.onMonthChanged,
     required this.onYearChanged,
-    required this.onLoadedRecordsChanged,
+    this.onLoadedRecordsChanged,
   });
 
   @override
@@ -38,7 +38,11 @@ class EquiposPeriodControls extends StatelessWidget {
       decoration: equiposPanelDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final title = _PeriodTitle();
+          final title = _PeriodTitle(
+            esAnual:
+                alcance == AlcancePeriodo.anual &&
+                onLoadedRecordsChanged == null,
+          );
           // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
           final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
             selected: alcance,
@@ -89,8 +93,10 @@ class EquiposPeriodControls extends StatelessWidget {
                 monthField,
                 const SizedBox(height: 12),
                 yearField,
-                const SizedBox(height: 12),
-                loadedRecordsControl,
+                if (onLoadedRecordsChanged != null) ...[
+                  const SizedBox(height: 12),
+                  loadedRecordsControl,
+                ],
               ],
             );
           }
@@ -104,8 +110,10 @@ class EquiposPeriodControls extends StatelessWidget {
               SizedBox(width: 170, child: monthField),
               const SizedBox(width: 12),
               SizedBox(width: 135, child: yearField),
-              const SizedBox(width: 12),
-              loadedRecordsControl,
+              if (onLoadedRecordsChanged != null) ...[
+                const SizedBox(width: 12),
+                loadedRecordsControl,
+              ],
             ],
           );
         },
@@ -115,6 +123,10 @@ class EquiposPeriodControls extends StatelessWidget {
 }
 
 class _PeriodTitle extends StatelessWidget {
+  final bool esAnual;
+
+  const _PeriodTitle({this.esAnual = false});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -125,8 +137,9 @@ class _PeriodTitle extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Tooltip(
-          message:
-              'El período se evalúa si tiene registros CRM o LMS. Se incluyen todos los equipos con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
+          message: esAnual
+              ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
+              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen todos los equipos con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
           child: Icon(
             Icons.info_outline,
             size: 16,

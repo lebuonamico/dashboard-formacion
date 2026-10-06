@@ -11,6 +11,7 @@ class Empleado {
   final String mail;
   final String equipo;
   final String gerente;
+  final bool activo;
 
   Empleado({
     this.fechaIngreso,
@@ -22,9 +23,29 @@ class Empleado {
     required this.mail,
     this.equipo = '',
     this.gerente = '',
+    this.activo = true,
   });
 
   String get nombreCompleto => '$nombre $apellido';
+
+  Empleado copyWith({
+    Seniority? seniority,
+    String? area,
+    String? equipo,
+    String? gerente,
+    bool? activo,
+  }) => Empleado(
+    fechaIngreso: fechaIngreso,
+    legajo: legajo,
+    nombre: nombre,
+    apellido: apellido,
+    seniority: seniority ?? this.seniority,
+    area: area ?? this.area,
+    mail: mail,
+    equipo: equipo ?? this.equipo,
+    gerente: gerente ?? this.gerente,
+    activo: activo ?? this.activo,
+  );
 
   Map<String, dynamic> toJson() => {
     'fechaIngreso': fechaIngreso?.toIso8601String(),
@@ -36,6 +57,7 @@ class Empleado {
     'mail': mail,
     'equipo': equipo,
     'gerente': gerente,
+    'activo': activo,
   };
 
   factory Empleado.fromJson(Map<String, dynamic> json) => Empleado(
@@ -53,5 +75,6 @@ class Empleado {
     mail: json['mail']?.toString() ?? '',
     equipo: json['equipo']?.toString() ?? '',
     gerente: json['gerente']?.toString() ?? '',
+    activo: json['activo'] as bool? ?? true,
   );
 }

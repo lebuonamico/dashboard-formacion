@@ -27,9 +27,8 @@ class EquipoScreen extends ConsumerWidget {
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
-    final soloRegistros = ref.watch(soloRegistrosCargadosPeriodoProvider);
     // Leandro: llama a _periodoLabel para armar el nombre del período que aparece en el encabezado.
-    final periodo = _periodoLabel(alcance, mes, anio, soloRegistros);
+    final periodo = _periodoLabel(alcance, mes, anio);
 
     return Scaffold(
       backgroundColor: equiposBackground,
@@ -53,7 +52,11 @@ class EquipoScreen extends ConsumerWidget {
                     error: (error, _) => _ErrorState(message: '$error'),
                     data: (detalle) =>
                         // Leandro: llama al widget _EquipoContent para presentar el detalle del equipo y su período.
-                        _EquipoContent(detalle: detalle, periodo: periodo),
+                        _EquipoContent(
+                          detalle: detalle,
+                          periodo: periodo,
+                          esAnual: alcance == AlcancePeriodo.anual,
+                        ),
                   ),
                 ),
               ],
@@ -64,24 +67,24 @@ class EquipoScreen extends ConsumerWidget {
     );
   }
 
-  String _periodoLabel(
-    AlcancePeriodo alcance,
-    int mes,
-    int anio,
-    bool soloRegistros,
-  ) {
+  String _periodoLabel(AlcancePeriodo alcance, int mes, int anio) {
     if (alcance == AlcancePeriodo.mensual) {
       return '${nombreMes(mes)} $anio';
     }
-    return soloRegistros ? 'Año $anio · sólo meses con registros' : 'Año $anio';
+    return 'Año $anio · meses con datos';
   }
 }
 
 class _EquipoContent extends StatelessWidget {
   final DetalleEquipoGeneral detalle;
   final String periodo;
+  final bool esAnual;
 
-  const _EquipoContent({required this.detalle, required this.periodo});
+  const _EquipoContent({
+    required this.detalle,
+    required this.periodo,
+    required this.esAnual,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +104,9 @@ class _EquipoContent extends StatelessWidget {
               title: 'Integrantes',
               value: '${equipo.cantidadIntegrantes}',
               detail: 'nómina del equipo',
-              help:
-                  'Personas de la nómina que pertenecen al equipo evaluado en el período.',
+              help: esAnual
+                  ? 'Colaboradores elegibles en al menos uno de los meses con datos del año para este equipo.'
+                  : 'Personas de la nómina que pertenecen al equipo evaluado en el período.',
               icon: Icons.people_outline,
               color: equiposBrand,
             ),
@@ -110,8 +114,9 @@ class _EquipoContent extends StatelessWidget {
               title: 'Horas realizadas',
               value: _horas(equipo.horasRealizadas),
               detail: 'aplicadas al objetivo del período',
-              help:
-                  'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
+              help: esAnual
+                  ? 'Suma de las horas válidas de los meses con datos del año.'
+                  : 'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
               icon: Icons.schedule_outlined,
               color: const Color(0xFF0E7490),
             ),
@@ -119,8 +124,9 @@ class _EquipoContent extends StatelessWidget {
               title: 'Objetivo del período',
               value: _horas(equipo.horasObjetivo),
               detail: 'según seniority y período',
-              help:
-                  'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
+              help: esAnual
+                  ? 'Suma de los objetivos mensuales de los integrantes elegibles en los meses con datos del año.'
+                  : 'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
               icon: Icons.flag_outlined,
               color: const Color(0xFF6941C6),
             ),
@@ -129,8 +135,9 @@ class _EquipoContent extends StatelessWidget {
               value: '${equipo.porcentajeCumplimiento.toStringAsFixed(1)}%',
               detail:
                   '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
-              help:
-                  'Horas realizadas sobre horas objetivo; el estado final también considera cuántos integrantes cumplieron.',
+              help: esAnual
+                  ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
+                  : 'Horas realizadas sobre horas objetivo; el estado final también considera cuántos integrantes cumplieron.',
               icon: Icons.trending_up,
               color: equipo.estado.colorTexto,
             ),
@@ -138,7 +145,7 @@ class _EquipoContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         // Leandro: llama al widget EquipoDetalleResumen para mostrar la distribución y el avance de las horas.
-        EquipoDetalleResumen(equipo: equipo),
+        EquipoDetalleResumen(equipo: equipo, esAnual: esAnual),
         const SizedBox(height: 24),
         // Leandro: llama al widget EquipoMiembrosTable para listar el cumplimiento de cada integrante.
         EquipoMiembrosTable(miembros: detalle.miembros),
