@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Leandro: Datos que necesita una tarjeta KPI; no contiene reglas de negocio.
 class KpiData {
   final String title;
   final String value;
@@ -19,7 +18,6 @@ class KpiData {
   });
 }
 
-/// Leandro: Grilla responsive compartida por pantallas que muestran indicadores.
 class KpiGrid extends StatelessWidget {
   final List<KpiData> items;
   final double cardHeight;
@@ -28,6 +26,7 @@ class KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Leandro: llama a LayoutBuilder para ajustar las columnas de KPIs al ancho disponible.
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 1050
@@ -45,6 +44,7 @@ class KpiGrid extends StatelessWidget {
                 (item) => SizedBox(
                   width: cardWidth,
                   height: cardHeight,
+                  // Leandro: llama a _KpiCard para mostrar el valor y el detalle de cada indicador.
                   child: _KpiCard(data: item),
                 ),
               )
@@ -109,6 +109,7 @@ class _KpiCard extends StatelessWidget {
                     ),
                     if (data.help != null) ...[
                       const SizedBox(width: 4),
+                      // Leandro: llama a Tooltip para mostrar la ayuda asociada al indicador.
                       Tooltip(
                         message: data.help!,
                         child: const Icon(

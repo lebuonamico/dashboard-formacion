@@ -17,8 +17,6 @@ export 'package:app_finnegans/domain/modelos/team_overview.dart';
 export 'package:app_finnegans/domain/modelos/team_status.dart';
 export 'package:app_finnegans/presentation/providers/period_providers.dart';
 
-// Leandro: La primera sección contiene el flujo del dashboard de Equipos.
-// Al final permanecen los providers anteriores que usan Áreas y el detalle.
 
 class ResumenEquipoViewModel {
   final String nombreArea;
@@ -56,13 +54,12 @@ class DetalleEquipoViewModel {
   });
 }
 
-// Leandro: Estado de los filtros. La búsqueda también es utilizada por la pantalla de Áreas.
 final busquedaEquipoProvider = StateProvider<String>((ref) => '');
 final filtroAreaEquipoProvider = StateProvider<String?>((ref) => null);
 final filtroEstadoEquipoProvider = StateProvider<EstadoEquipo?>((ref) => null);
 
-/// Leandro: Expone el servicio que concentra las reglas de cálculo de Equipos.
 final equiposServiceProvider = Provider<EquiposService>((ref) {
+  // Leandro: llama a EquiposService para disponer de los cálculos compartidos por resumen y detalle.
   return EquiposService();
 });
 
@@ -81,11 +78,30 @@ final aniosEquipoDisponiblesProvider = FutureProvider<List<int>>((ref) async {
   return lista;
 });
 
-/// Leandro: Arma el cumplimiento por persona para el período seleccionado.
-/// Llama a CumplimientoService y luego ajusta el objetivo si la vista es anual.
+final hayDatosEquiposPeriodoProvider = FutureProvider<bool>((ref) async {
+  final alcance = ref.watch(alcancePeriodoProvider);
+  final mes = ref.watch(filtroMesPeriodoProvider);
+  final anio = ref.watch(filtroAnioPeriodoProvider);
+  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
+  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
+  // Leandro: llama a tieneDatosEnPeriodo para comprobar si existen registros CRM o LMS en el período elegido.
+  return ref
+      .read(equiposServiceProvider)
+      .tieneDatosEnPeriodo(
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        mes: mes,
+        esAnual: alcance == AlcancePeriodo.anual,
+      );
+});
+
 final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   ref,
 ) async {
+  // Leandro: llama a hayDatosEquiposPeriodoProvider para evitar evaluar colaboradores cuando no hay datos del período.
+  if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) return [];
+
   final empleados = await ref.watch(empleadosProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
@@ -97,13 +113,14 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final cumplimientoService = ref.read(cumplimientoServiceProvider);
   final equiposService = ref.read(equiposServiceProvider);
 
-  // Leandro: El período siempre limita el año y, en modo mensual, también el mes.
+  // Leandro: llama a filtrarCargasPorPeriodo para seleccionar las horas CRM del mes o año elegido.
   final cargasFiltradas = equiposService.filtrarCargasPorPeriodo(
     cargas: cargasDeHoras,
     anio: anio,
     mes: mes,
     esAnual: alcance == AlcancePeriodo.anual,
   );
+  // Leandro: llama a filtrarCertificacionesPorPeriodo para seleccionar las finalizaciones LMS del período.
   final certificacionesFiltradas = equiposService
       .filtrarCertificacionesPorPeriodo(
         certificaciones: certificaciones,
@@ -111,15 +128,17 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
         mes: mes,
         esAnual: alcance == AlcancePeriodo.anual,
       );
-  final empleadosDeEquiposActivos = equiposService
-      .filtrarEmpleadosDeEquiposActivos(
-        empleados: empleados,
-        cargas: cargasFiltradas,
-        certificaciones: certificacionesFiltradas,
-      );
+  // Leandro: llama a filtrarEmpleadosPorPeriodo para incluir a quienes ingresaron hasta el cierre del período.
+  final empleadosElegibles = equiposService.filtrarEmpleadosPorPeriodo(
+    empleados: empleados,
+    anio: anio,
+    mes: mes,
+    esAnual: alcance == AlcancePeriodo.anual,
+  );
 
+  // Leandro: llama a calcularCumplimientoGlobal para obtener las horas válidas y los objetivos de los colaboradores elegibles.
   final cumplimientos = cumplimientoService.calcularCumplimientoGlobal(
-    empleados: empleadosDeEquiposActivos,
+    empleados: empleadosElegibles,
     cursos: cursos,
     cargasDeHoras: cargasFiltradas,
     certificacionesMoodle: certificacionesFiltradas,
@@ -129,6 +148,7 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     return cumplimientos;
   }
 
+  // Leandro: llama a contarMesesConRegistros para definir el objetivo anual cuando se eligen sólo meses cargados.
   final mesesObjetivo = soloRegistrosCargados
       ? equiposService.contarMesesConRegistros(
           cargas: cargasFiltradas,
@@ -136,18 +156,23 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
           anio: anio,
         )
       : 12;
+  // Leandro: llama a convertirObjetivoMensualAAnual para expresar el objetivo con el alcance anual seleccionado.
   return equiposService.convertirObjetivoMensualAAnual(
     cumplimientos,
     mesesConRegistros: mesesObjetivo,
   );
 });
 
-/// Leandro: Este resultado único alimenta KPI, donuts y tarjetas del período.
 final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   ref,
 ) async {
+  if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) {
+    // Leandro: llama a ResumenEquiposPeriodo.sinDatos para representar un período que todavía no fue evaluado.
+    return const ResumenEquiposPeriodo.sinDatos();
+  }
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
+  // Leandro: llama a calcularResumenPeriodo para obtener los indicadores y estados de todos los equipos elegibles.
   return equiposService.calcularResumenPeriodo(cumplimientos);
 });
 
@@ -159,7 +184,6 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
   return resumen.equipos;
 });
 
-/// Leandro: Filtra la lista calculada por búsqueda, área y estado para las tarjetas.
 final equiposGlobalFiltradosProvider =
     Provider<AsyncValue<List<EquipoGlobalViewModel>>>((ref) {
       final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
@@ -167,7 +191,7 @@ final equiposGlobalFiltradosProvider =
       final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
       final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
 
-      // Leandro: Si los datos todavía cargan o fallan, AsyncValue conserva ese estado.
+      // Leandro: llama a AsyncValue.whenData para aplicar los filtros sólo cuando el resumen está disponible.
       return resumenAsync.whenData((resumen) {
         return resumen.equipos.where((equipo) {
           final coincideBusqueda =
@@ -186,8 +210,6 @@ final equiposGlobalFiltradosProvider =
       });
     });
 
-// Leandro: Desde aquí continúan los providers anteriores de Áreas y del detalle.
-// Listado consolidado de todos los equipos
 final equiposResumenProvider = FutureProvider<List<ResumenEquipoViewModel>>((
   ref,
 ) async {
@@ -291,6 +313,7 @@ final detalleEquipoGeneralProvider =
           cumplimientoEquiposProvider.future,
         );
         final equiposService = ref.read(equiposServiceProvider);
+        // Leandro: llama a obtenerDetalleEquipo para recuperar los integrantes y el resumen del equipo solicitado.
         final detalle = equiposService.obtenerDetalleEquipo(
           cumplimientos: cumplimientos,
           area: params.area,

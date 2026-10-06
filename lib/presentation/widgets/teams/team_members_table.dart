@@ -5,7 +5,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Leandro: Tabla paginada de integrantes; recibe el cumplimiento ya calculado.
 class EquipoMiembrosTable extends StatefulWidget {
   final List<CumplimientoEmpleado> miembros;
 
@@ -55,6 +54,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
         ),
         const SizedBox(height: 12),
         if (totalPaginas > 1) ...[
+          // Leandro: llama a PaginacionResultados para recorrer las páginas de integrantes.
           PaginacionResultados(
             paginaActual: paginaSegura,
             cantidadPaginas: totalPaginas,
@@ -97,6 +97,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
                       DataColumn(label: Text('Cumplimiento')),
                       DataColumn(label: Text('Por categoría')),
                     ],
+                    // Leandro: llama a _buildRow para convertir cada integrante visible en una fila.
                     rows: miembrosVisibles.map(_buildRow).toList(),
                   ),
                 ),
@@ -113,6 +114,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
     final cumple = miembro.cumpleObjetivo;
 
     return DataRow(
+      // Leandro: llama a context.push para abrir el detalle del colaborador seleccionado.
       onSelectChanged: (_) =>
           context.push('/empleados/${Uri.encodeComponent(empleado.legajo)}'),
       cells: [
@@ -139,6 +141,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
           ),
         ),
         DataCell(
+          // Leandro: llama a ProgresoHorasPorCategoria para mostrar el avance del integrante por categoría.
           ProgresoHorasPorCategoria(
             cumplimiento: miembro,
             mostrarSoloHorasAplicables: true,

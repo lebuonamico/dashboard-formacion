@@ -1,4 +1,3 @@
-/// Leandro: Estado calculado por EquiposService; los colores se asignan en la UI.
 enum EstadoEquipo {
   enObjetivo('En objetivo'),
   enRiesgo('En riesgo'),

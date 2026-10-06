@@ -2,7 +2,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Datos visuales de un segmento del donut y su leyenda.
 class EquiposDonutSlice {
   final String label;
   final double value;
@@ -19,7 +18,6 @@ class EquiposDonutSlice {
   });
 }
 
-/// Leandro: Llama al DonutChart compartido y agrega la leyenda propia de Equipos.
 class EquiposDonutChart extends StatelessWidget {
   final List<EquiposDonutSlice> slices;
   final String centerValue;
@@ -40,6 +38,7 @@ class EquiposDonutChart extends StatelessWidget {
 
     return Row(
       children: [
+        // Leandro: llama a DonutChart para representar los segmentos del resumen.
         DonutChart(
           segments: slices
               .map(
@@ -57,6 +56,7 @@ class EquiposDonutChart extends StatelessWidget {
           child: Column(
             children: [
               for (final slice in slices) ...[
+                // Leandro: llama a _DonutLegendItem para mostrar el valor y porcentaje de cada segmento.
                 _DonutLegendItem(
                   slice: slice,
                   total: total,

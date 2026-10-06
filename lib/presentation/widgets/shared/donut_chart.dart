@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Leandro: Segmento reutilizable para gráficos donut de la app.
-/// Leandro: Sólo guarda valor y color; la leyenda la define cada pantalla.
 class DonutChartSegment {
   final double value;
   final Color color;
@@ -11,8 +9,6 @@ class DonutChartSegment {
   const DonutChartSegment({required this.value, required this.color});
 }
 
-/// Leandro: Donut visual compartido por Dashboard y Equipos.
-/// Leandro: Centraliza tamaño, trazo y geometría para evitar diseños distintos.
 class DonutChart extends StatelessWidget {
   final List<DonutChartSegment> segments;
   final String centerText;
@@ -34,6 +30,7 @@ class DonutChart extends StatelessWidget {
     return SizedBox(
       width: 132,
       height: 132,
+      // Leandro: llama a CustomPaint con _DonutPainter para dibujar los segmentos del gráfico.
       child: CustomPaint(
         painter: _DonutPainter(segments),
         child: Center(
@@ -96,6 +93,7 @@ class _DonutPainter extends CustomPainter {
         ..strokeCap = StrokeCap.butt
         ..strokeWidth = strokeWidth;
 
+      // Leandro: llama a drawArc para representar la proporción de cada segmento.
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle,
