@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Leandro: Coordina el detalle; las reglas llegan resueltas desde el provider.
 class EquipoScreen extends ConsumerWidget {
   final String area;
   final String equipo;
@@ -21,6 +20,7 @@ class EquipoScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Leandro: llama a detalleEquipoGeneralProvider para obtener el resumen y los integrantes del equipo elegido.
     final detalleAsync = ref.watch(
       detalleEquipoGeneralProvider((area: area, equipo: equipo)),
     );
@@ -28,6 +28,7 @@ class EquipoScreen extends ConsumerWidget {
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
     final soloRegistros = ref.watch(soloRegistrosCargadosPeriodoProvider);
+    // Leandro: llama a _periodoLabel para armar el nombre del período que aparece en el encabezado.
     final periodo = _periodoLabel(alcance, mes, anio, soloRegistros);
 
     return Scaffold(
@@ -38,17 +39,20 @@ class EquipoScreen extends ConsumerWidget {
           Expanded(
             child: Column(
               children: [
+                // Leandro: llama al widget AppTopBar para mostrar el título del detalle y permitir volver a la pantalla anterior.
                 AppTopBar(
                   title: 'Detalle de equipo',
                   onBack: () => context.pop(),
                 ),
                 Expanded(
+                  // Leandro: llama a AsyncValue.when para mostrar la carga, el error o los datos del equipo.
                   child: detalleAsync.when(
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: equiposBrand),
                     ),
                     error: (error, _) => _ErrorState(message: '$error'),
                     data: (detalle) =>
+                        // Leandro: llama al widget _EquipoContent para presentar el detalle del equipo y su período.
                         _EquipoContent(detalle: detalle, periodo: periodo),
                   ),
                 ),
@@ -86,8 +90,10 @@ class _EquipoContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
       children: [
+        // Leandro: llama al widget EquipoDetalleHeader para mostrar el nombre, el período y el estado del equipo.
         EquipoDetalleHeader(equipo: equipo, periodo: periodo),
         const SizedBox(height: 22),
+        // Leandro: llama al widget KpiGrid para mostrar integrantes, horas, objetivo y cumplimiento del equipo.
         KpiGrid(
           cardHeight: 112,
           items: [
@@ -131,8 +137,10 @@ class _EquipoContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
+        // Leandro: llama al widget EquipoDetalleResumen para mostrar la distribución y el avance de las horas.
         EquipoDetalleResumen(equipo: equipo),
         const SizedBox(height: 24),
+        // Leandro: llama al widget EquipoMiembrosTable para listar el cumplimiento de cada integrante.
         EquipoMiembrosTable(miembros: detalle.miembros),
       ],
     );

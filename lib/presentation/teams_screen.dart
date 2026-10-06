@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_filters.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
@@ -11,34 +12,37 @@ import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Leandro: Pantalla principal de /equipos.
-/// Flujo: observa los providers, resuelve carga/error y envía los datos a cada widget.
 class EquiposScreen extends ConsumerWidget {
   const EquiposScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Leandro: El resumen completo alimenta indicadores y donuts; el filtro, las tarjetas.
+    // Leandro: llama a resumenEquiposPeriodoProvider para obtener los indicadores y el estado de datos del período.
     final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
+    // Leandro: llama a equiposGlobalFiltradosProvider para obtener los equipos que coinciden con los filtros.
     final equiposFiltradosAsync = ref.watch(equiposGlobalFiltradosProvider);
 
     return Scaffold(
       backgroundColor: equiposBackground,
       body: Row(
         children: [
+          // Leandro: llama al widget SideMenu para mostrar la navegación de la aplicación.
           const SideMenu(),
           Expanded(
             child: Column(
               children: [
+                // Leandro: llama al widget AppTopBar para mostrar el título de la pantalla de Equipos.
                 const AppTopBar(title: 'Dashboard global de equipos'),
                 Expanded(
-                  // Leandro: Según el provider, muestra carga, error o el dashboard.
+                  // Leandro: llama a AsyncValue.when para mostrar la carga, el error o el contenido del período.
                   child: resumenAsync.when(
+                    skipLoadingOnRefresh: false,
                     loading: () => const Center(
                       child: CircularProgressIndicator(color: equiposBrand),
                     ),
                     error: (error, _) => _ErrorState(message: '$error'),
                     data: (resumen) {
+                      // Leandro: llama al widget _DashboardContent para presentar el resumen y los equipos filtrados.
                       return _DashboardContent(
                         resumen: resumen,
                         equiposFiltradosAsync: equiposFiltradosAsync,
@@ -55,7 +59,6 @@ class EquiposScreen extends ConsumerWidget {
   }
 }
 
-// Leandro: Coordina los widgets; los cálculos ya llegan resueltos por el servicio.
 class _DashboardContent extends ConsumerWidget {
   final ResumenEquiposPeriodo resumen;
   final AsyncValue<List<EquipoGlobalViewModel>> equiposFiltradosAsync;
@@ -68,7 +71,6 @@ class _DashboardContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final equipos = resumen.equipos;
-    // Leandro: Estas áreas únicas alimentan el selector del widget EquiposFilters.
     final areas = equipos.map((equipo) => equipo.area).toSet().toList()..sort();
     final busqueda = ref.watch(busquedaEquipoProvider);
     final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
@@ -100,10 +102,13 @@ class _DashboardContent extends ConsumerWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          'Seguimiento del avance de ${equipos.length} equipos de formación.',
+          resumen.tieneDatos
+              ? 'Seguimiento del avance de ${equipos.length} equipos de formación.'
+              : 'Seleccioná un período con datos cargados.',
           style: const TextStyle(fontSize: 14, color: equiposMuted),
         ),
         const SizedBox(height: 18),
+        // Leandro: llama al widget EquiposPeriodControls para elegir el mes, el año y el alcance de los indicadores.
         EquiposPeriodControls(
           alcance: alcanceSeleccionado,
           selectedMonth: mesSeleccionado,
@@ -131,10 +136,18 @@ class _DashboardContent extends ConsumerWidget {
           },
         ),
         const SizedBox(height: 22),
-        if (equipos.isEmpty)
+        if (!resumen.tieneDatos)
+          // Leandro: llama al widget _EmptyDataState para informar que el período seleccionado no tiene registros.
+          _EmptyDataState(
+            periodoSinDatos: alcanceSeleccionado == AlcancePeriodo.anual
+                ? '$anioSeleccionado'
+                : '${nombreMes(mesSeleccionado)} $anioSeleccionado',
+          )
+        else if (equipos.isEmpty)
+          // Leandro: llama al widget _EmptyDataState para informar que no hay equipos con colaboradores elegibles.
           const _EmptyDataState()
         else ...[
-          // Leandro: EquiposKpiSection muestra los cuatro indicadores generales.
+          // Leandro: llama al widget EquiposKpiSection para mostrar equipos, colaboradores, horas y cumplimiento global.
           EquiposKpiSection(
             totalEquipos: resumen.totalEquipos,
             totalColaboradores: resumen.colaboradores,
@@ -144,14 +157,16 @@ class _DashboardContent extends ConsumerWidget {
             cumplimientoGlobal: resumen.cumplimientoGlobal,
           ),
           const SizedBox(height: 16),
-          // Leandro: _DashboardChartsRow muestra los dos donuts del período seleccionado.
+          // Leandro: llama al widget _DashboardChartsRow para organizar los gráficos de estados y categorías.
           _DashboardChartsRow(
+            // Leandro: llama al widget EquiposStatusSummary para mostrar cuántos equipos hay en cada estado.
             statusChart: EquiposStatusSummary(
               total: resumen.totalEquipos,
               enObjetivo: resumen.enObjetivo,
               enRiesgo: resumen.enRiesgo,
               criticos: resumen.criticos,
             ),
+            // Leandro: llama al widget EquiposCategoryDistribution para mostrar las horas válidas por categoría.
             categoryChart: EquiposCategoryDistribution(
               horasNegocio: resumen.horasNegocio,
               horasBlandas: resumen.horasBlandas,
@@ -160,7 +175,7 @@ class _DashboardContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // Leandro: EquiposFilters actualiza los providers de búsqueda, área y estado.
+          // Leandro: llama al widget EquiposFilters para actualizar la búsqueda y los filtros de área y estado.
           EquiposFilters(
             areas: areas,
             searchText: busqueda,
@@ -183,12 +198,12 @@ class _DashboardContent extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 24),
-          // Leandro: EquiposResults recibe sólo las tarjetas que cumplen los filtros.
           equiposFiltradosAsync.when(
             loading: () => const Center(
               child: CircularProgressIndicator(color: equiposBrand),
             ),
             error: (error, _) => _ErrorState(message: '$error'),
+            // Leandro: llama al widget EquiposResults para mostrar y paginar las tarjetas de los equipos filtrados.
             data: (equiposFiltrados) => EquiposResults(
               key: ValueKey(
                 '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
@@ -237,9 +252,11 @@ class _DashboardChartsRow extends StatelessWidget {
   }
 }
 
-// Leandro: Se muestra cuando la lista completa no contiene equipos.
+// Distingue un período sin registros de una nómina sin equipos elegibles.
 class _EmptyDataState extends StatelessWidget {
-  const _EmptyDataState();
+  final String? periodoSinDatos;
+
+  const _EmptyDataState({this.periodoSinDatos});
 
   @override
   Widget build(BuildContext context) {
@@ -249,17 +266,26 @@ class _EmptyDataState extends StatelessWidget {
       decoration: equiposPanelDecoration(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.groups_outlined, size: 34, color: equiposMuted),
-          SizedBox(height: 10),
+        children: [
+          const Icon(Icons.groups_outlined, size: 34, color: equiposMuted),
+          const SizedBox(height: 10),
           Text(
-            'No hay equipos activos en este período.',
-            style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
+            periodoSinDatos != null
+                ? 'No hay datos cargados para $periodoSinDatos.'
+                : 'No hay equipos con colaboradores elegibles en este período.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: equiposInk,
+            ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
-            'Probá otro mes o verificá que existan cargas CRM o finalizaciones LMS.',
-            style: TextStyle(color: equiposMuted),
+            periodoSinDatos != null
+                ? 'Probá otro período o cargá información CRM/LMS para evaluarlo.'
+                : 'Verificá la nómina elegible para el período seleccionado.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: equiposMuted),
           ),
         ],
       ),
@@ -267,7 +293,6 @@ class _EmptyDataState extends StatelessWidget {
   }
 }
 
-// Leandro: Muestra al usuario el error informado por el provider.
 class _ErrorState extends StatelessWidget {
   final String message;
 

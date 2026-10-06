@@ -6,10 +6,25 @@ import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
-/// Leandro: Servicio de negocio de Equipos.
-/// Leandro: Acá viven las reglas; los providers sólo coordinan datos y estado de UI.
 class EquiposService {
-  // Leandro: Recibe todas las cargas CRM y devuelve sólo las del período elegido.
+  bool tieneDatosEnPeriodo({
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    required int mes,
+    required bool esAnual,
+  }) {
+    bool perteneceAlPeriodo(DateTime fecha) =>
+        fecha.year == anio && (esAnual || fecha.month == mes);
+
+    // Leandro: llama a perteneceAlPeriodo para reconocer los registros CRM o LMS del mes o año elegido.
+    return cargas.any((carga) => perteneceAlPeriodo(carga.fecha)) ||
+        certificaciones.any((certificacion) {
+          final fecha = certificacion.fechaFinalizacion;
+          return fecha != null && perteneceAlPeriodo(fecha);
+        });
+  }
+
   List<CargaDeHorasCRM> filtrarCargasPorPeriodo({
     required List<CargaDeHorasCRM> cargas,
     required int anio,
@@ -24,7 +39,6 @@ class EquiposService {
     }).toList();
   }
 
-  // Leandro: Cada finalización LMS pertenece al mes indicado por el propio Excel.
   List<CertificacionMoodle> filtrarCertificacionesPorPeriodo({
     required List<CertificacionMoodle> certificaciones,
     required int anio,
@@ -40,29 +54,23 @@ class EquiposService {
     }).toList();
   }
 
-  // Leandro: Activo significa que el equipo tuvo al menos un registro en el período.
-  // Se conserva toda su nómina para que una persona con cero horas también impacte.
-  List<Empleado> filtrarEmpleadosDeEquiposActivos({
+  // La población del período depende del ingreso, aunque no haya actividad CRM/LMS.
+  List<Empleado> filtrarEmpleadosPorPeriodo({
     required List<Empleado> empleados,
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    required int mes,
+    required bool esAnual,
   }) {
-    final legajosConActividad = <String>{
-      ...cargas.map((carga) => carga.empleadoLegajo.trim()),
-      ...certificaciones.map((certificacion) => certificacion.legajo.trim()),
-    }..remove('');
+    final ultimoDia = DateTime(anio, esAnual ? 13 : mes + 1, 0);
 
-    final equiposActivos = empleados
-        .where((empleado) => legajosConActividad.contains(empleado.legajo))
-        .map(_claveEquipo)
-        .toSet();
-
-    return empleados
-        .where((empleado) => equiposActivos.contains(_claveEquipo(empleado)))
-        .toList();
+    return empleados.where((empleado) {
+      final ingreso = empleado.fechaIngreso;
+      if (ingreso == null) return false;
+      final fechaIngreso = DateTime(ingreso.year, ingreso.month, ingreso.day);
+      return !fechaIngreso.isAfter(ultimoDia);
+    }).toList();
   }
 
-  // Leandro: Para la vista anual cuenta los meses con actividad CRM o LMS.
   int contarMesesConRegistros({
     required List<CargaDeHorasCRM> cargas,
     required List<CertificacionMoodle> certificaciones,
@@ -84,7 +92,6 @@ class EquiposService {
     return meses.length;
   }
 
-  // Leandro: Para la vista anual conserva las horas y multiplica el objetivo por los meses.
   List<CumplimientoEmpleado> convertirObjetivoMensualAAnual(
     List<CumplimientoEmpleado> cumplimientos, {
     int mesesConRegistros = 12,
@@ -104,13 +111,11 @@ class EquiposService {
     }).toList();
   }
 
-  // Leandro: Agrupa los cumplimientos individuales y genera un resumen por equipo.
   List<EquipoGlobalViewModel> calcularEquiposGlobales(
     List<CumplimientoEmpleado> cumplimientos,
   ) {
     final agrupadoPorEquipo = <String, List<CumplimientoEmpleado>>{};
 
-    // Leandro: Área + equipo evita mezclar nombres iguales pertenecientes a áreas distintas.
     for (final cumplimiento in cumplimientos) {
       final empleado = cumplimiento.empleado;
       final nombreEquipo = _nombreEquipoNormalizado(empleado.equipo);
@@ -121,14 +126,15 @@ class EquiposService {
 
     final equipos = <EquipoGlobalViewModel>[];
     for (final miembros in agrupadoPorEquipo.values) {
+      // Leandro: llama a _crearResumenEquipo para obtener los indicadores de cada grupo de integrantes.
       equipos.add(_crearResumenEquipo(miembros));
     }
 
+    // Leandro: llama a _compararEquiposPorPrioridad para mostrar primero los equipos que requieren atención.
     equipos.sort(_compararEquiposPorPrioridad);
     return equipos;
   }
 
-  // Leandro: Busca un equipo y arma su detalle con las mismas reglas del resumen.
   DetalleEquipoGeneral? obtenerDetalleEquipo({
     required List<CumplimientoEmpleado> cumplimientos,
     required String area,
@@ -154,15 +160,16 @@ class EquiposService {
     if (miembros.isEmpty) return null;
 
     return DetalleEquipoGeneral(
+      // Leandro: llama a _crearResumenEquipo para usar en el detalle los mismos indicadores que en la vista global.
       resumen: _crearResumenEquipo(miembros),
       miembros: miembros,
     );
   }
 
-  // Leandro: Un único resumen alimenta KPI, donuts y tarjetas del mismo período.
   ResumenEquiposPeriodo calcularResumenPeriodo(
     List<CumplimientoEmpleado> cumplimientos,
   ) {
+    // Leandro: llama a calcularEquiposGlobales para obtener los equipos que se suman en los indicadores del período.
     final equipos = calcularEquiposGlobales(cumplimientos);
     var colaboradores = 0;
     var horasRealizadas = 0.0;
@@ -214,7 +221,6 @@ class EquiposService {
   EquipoGlobalViewModel _crearResumenEquipo(
     List<CumplimientoEmpleado> miembros,
   ) {
-    // Leandro: Este método suma horas, objetivos, categorías e integrantes del equipo.
     final primerMiembro = miembros.first.empleado;
     final nombreEquipo = _nombreEquipoNormalizado(primerMiembro.equipo);
     final horasRealizadas = miembros.fold<double>(
@@ -245,6 +251,7 @@ class EquiposService {
       horasRealizadas: horasRealizadas,
       horasObjetivo: horasObjetivo,
       desvioHoras: horasRealizadas - horasObjetivo,
+      // Leandro: llama a _sumarHorasCategoria para separar las horas aplicables al objetivo por categoría.
       horasNegocio: _sumarHorasCategoria(
         miembros,
         TipoCurso.habilidadesDeNegocio,
@@ -262,6 +269,7 @@ class EquiposService {
           ? 0
           : horasRealizadas / cantidadIntegrantes,
       porcentajeCumplimiento: porcentajeCumplimiento,
+      // Leandro: llama a calcularEstadoEquipo para asignar el estado usando el avance y el cumplimiento de los integrantes.
       estado: calcularEstadoEquipo(
         porcentajeCumplimiento: porcentajeCumplimiento,
         cantidadIntegrantes: cantidadIntegrantes,
@@ -270,8 +278,6 @@ class EquiposService {
     );
   }
 
-  // Leandro: En objetivo exige horas completas y que todos cumplan individualmente.
-  // Así una persona con horas de más no compensa a otra que todavía no cumplió.
   EstadoEquipo calcularEstadoEquipo({
     required double porcentajeCumplimiento,
     required int cantidadIntegrantes,
@@ -323,13 +329,8 @@ class EquiposService {
   ) {
     return miembros.fold<double>(
       0,
-      // Leandro: Equipos muestra las horas que aplican al plan de cada seniority.
       (total, miembro) => total + miembro.horasAplicablesAlObjetivo(tipo),
     );
-  }
-
-  String _claveEquipo(Empleado empleado) {
-    return '${empleado.area.trim()}::${_nombreEquipoNormalizado(empleado.equipo)}';
   }
 
   String _nombreEquipoNormalizado(String equipo) {

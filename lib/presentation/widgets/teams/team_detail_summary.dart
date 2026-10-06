@@ -4,7 +4,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart'
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Encabezado del equipo con su período y estado calculado.
 class EquipoDetalleHeader extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
   final String periodo;
@@ -93,7 +92,6 @@ class EquipoDetalleHeader extends StatelessWidget {
   }
 }
 
-/// Leandro: Alinea la distribución y el avance usando el mismo resumen calculado.
 class EquipoDetalleResumen extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -103,12 +101,14 @@ class EquipoDetalleResumen extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Leandro: llama a EquiposCategoryDistribution para mostrar las horas del equipo por categoría.
         final distribucion = EquiposCategoryDistribution(
           horasNegocio: equipo.horasNegocio,
           horasBlandas: equipo.horasBlandas,
           horasLibres: equipo.horasLibres,
           horasDictado: equipo.horasDictado,
         );
+        // Leandro: llama a _TeamProgressPanel para mostrar el cumplimiento y desvío del equipo.
         final avance = _TeamProgressPanel(equipo: equipo);
 
         if (constraints.maxWidth < 1050) {
@@ -182,6 +182,7 @@ class _TeamProgressPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          // Leandro: llama a _MetricRow para mostrar cuántos integrantes cumplen su objetivo.
           _MetricRow(
             label: 'Integrantes en objetivo',
             value:

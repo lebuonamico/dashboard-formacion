@@ -4,7 +4,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Leandro: Tarjeta llamada desde EquiposResults para mostrar un equipo calculado.
 class EquipoCard extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -12,7 +11,6 @@ class EquipoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: La barra se limita visualmente al 100 %, aunque el dato pueda superarlo.
     final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
 
     return Material(
@@ -20,7 +18,7 @@ class EquipoCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        // Leandro: Al tocar la tarjeta navega al detalle usando área y equipo en la ruta.
+        // Leandro: llama a context.push para abrir el detalle del equipo al tocar la tarjeta.
         onTap: () => context.push(
           '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}?origen=equipos',
         ),
@@ -43,12 +41,16 @@ class EquipoCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Leandro: llama a _CardHeader para mostrar el nombre, área y estado del equipo.
                       _CardHeader(equipo: equipo),
                       const SizedBox(height: 13),
+                      // Leandro: llama a _LeaderRow para mostrar el líder del equipo.
                       _LeaderRow(lider: equipo.lider),
                       const Spacer(),
+                      // Leandro: llama a _ProgressSection para mostrar integrantes en objetivo y avance de horas.
                       _ProgressSection(equipo: equipo, progress: progress),
                       const SizedBox(height: 9),
+                      // Leandro: llama a _CardFooter para mostrar las horas realizadas y el desvío.
                       _CardFooter(equipo: equipo),
                     ],
                   ),
@@ -62,7 +64,6 @@ class EquipoCard extends StatelessWidget {
   }
 }
 
-// Leandro: Cabecera con nombre, área y estado del equipo.
 class _CardHeader extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -103,13 +104,13 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        // Leandro: llama a _StatusBadge para mostrar la insignia del estado del equipo.
         _StatusBadge(status: equipo.estado),
       ],
     );
   }
 }
 
-// Leandro: Fila visual con el líder informado por Nómina.
 class _LeaderRow extends StatelessWidget {
   final String lider;
 
@@ -134,7 +135,6 @@ class _LeaderRow extends StatelessWidget {
   }
 }
 
-// Leandro: Muestra cumplimiento individual y avance agregado de horas.
 class _ProgressSection extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
   final double progress;
@@ -198,7 +198,6 @@ class _ProgressSection extends StatelessWidget {
   }
 }
 
-// Leandro: Pie con horas realizadas/objetivo y acceso visual al detalle.
 class _CardFooter extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
 
@@ -224,6 +223,7 @@ class _CardFooter extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
+                // Leandro: llama a _formatDesvio para mostrar las horas faltantes o excedentes del equipo.
                 _formatDesvio(equipo.desvioHoras),
                 style: TextStyle(
                   fontSize: 12,
@@ -260,7 +260,6 @@ class _CardFooter extends StatelessWidget {
   }
 }
 
-// Leandro: Traduce el EstadoEquipo calculado por el servicio a una insignia visual.
 class _StatusBadge extends StatelessWidget {
   final EstadoEquipo status;
 

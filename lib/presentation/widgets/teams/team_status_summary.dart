@@ -2,7 +2,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Donut de estados. Recibe los conteos de todos los equipos desde EquiposScreen.
 class EquiposStatusSummary extends StatelessWidget {
   final int total;
   final int enObjetivo;
@@ -19,7 +18,6 @@ class EquiposStatusSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Requieren atención los equipos en riesgo y los críticos.
     final requierenAtencion = enRiesgo + criticos;
 
     return Container(
@@ -27,7 +25,9 @@ class EquiposStatusSummary extends StatelessWidget {
       decoration: equiposPanelDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // Leandro: llama a _StatusHeading para indicar cuántos equipos requieren atención.
           final heading = _StatusHeading(requierenAtencion: requierenAtencion);
+          // Leandro: llama a EquiposDonutChart para mostrar la distribución de estados de los equipos.
           final chart = EquiposDonutChart(
             centerValue: '$total',
             centerLabel: 'EQUIPOS',
@@ -84,7 +84,6 @@ class EquiposStatusSummary extends StatelessWidget {
   }
 }
 
-// Leandro: Mensaje que resume cuántos equipos requieren atención.
 class _StatusHeading extends StatelessWidget {
   final int requierenAtencion;
 
