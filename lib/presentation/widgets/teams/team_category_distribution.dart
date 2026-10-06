@@ -7,6 +7,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
   final double horasBlandas;
   final double horasLibres;
   final double horasDictado;
+  final bool esAnual;
 
   const EquiposCategoryDistribution({
     super.key,
@@ -14,6 +15,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
     required this.horasBlandas,
     required this.horasLibres,
     required this.horasDictado,
+    this.esAnual = false,
   });
 
   @override
@@ -37,8 +39,9 @@ class EquiposCategoryDistribution extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Tooltip(
-                message:
-                    'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
+                message: esAnual
+                    ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
+                    : 'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
                 child: Icon(
                   Icons.info_outline,
                   size: 16,

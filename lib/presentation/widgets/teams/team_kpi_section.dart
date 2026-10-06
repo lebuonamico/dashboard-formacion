@@ -9,6 +9,7 @@ class EquiposKpiSection extends StatelessWidget {
   final double horasObjetivo;
   final double desvioHoras;
   final double cumplimientoGlobal;
+  final bool esAnual;
 
   const EquiposKpiSection({
     super.key,
@@ -18,6 +19,7 @@ class EquiposKpiSection extends StatelessWidget {
     required this.horasObjetivo,
     required this.desvioHoras,
     required this.cumplimientoGlobal,
+    this.esAnual = false,
   });
 
   @override
@@ -29,8 +31,9 @@ class EquiposKpiSection extends StatelessWidget {
           title: 'Equipos activos',
           value: '$totalEquipos',
           detail: 'en seguimiento',
-          help:
-              'Equipos con al menos una carga CRM o una finalización LMS en el período seleccionado.',
+          help: esAnual
+              ? 'Equipos con colaboradores elegibles en al menos uno de los meses con datos del año.'
+              : 'Equipos con colaboradores elegibles en el período seleccionado.',
           icon: Icons.groups_outlined,
           color: equiposBrand,
         ),
@@ -38,8 +41,9 @@ class EquiposKpiSection extends StatelessWidget {
           title: 'Colaboradores',
           value: '$totalColaboradores',
           detail: 'en todos los equipos',
-          help:
-              'Integrantes de la nómina actual pertenecientes a los equipos activos del período.',
+          help: esAnual
+              ? 'Colaboradores elegibles al último período con datos disponible del año.'
+              : 'Colaboradores que ya ingresaron y estaban activos al cierre del período seleccionado.',
           icon: Icons.people_outline,
           color: const Color(0xFF0E7490),
         ),
@@ -48,8 +52,9 @@ class EquiposKpiSection extends StatelessWidget {
           value: horasRealizadas.toStringAsFixed(1),
           // Leandro: llama a _formatDesvio para expresar las horas faltantes o excedentes.
           detail: _formatDesvio(desvioHoras),
-          help:
-              'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',
+          help: esAnual
+              ? 'Suma de las horas válidas de los meses con datos del año.'
+              : 'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',
           icon: Icons.schedule_outlined,
           color: desvioHoras >= 0
               ? const Color(0xFF16A34A)
@@ -61,8 +66,9 @@ class EquiposKpiSection extends StatelessWidget {
           detail: cumplimientoGlobal >= 100
               ? 'objetivo alcanzado'
               : 'avance acumulado',
-          help:
-              'Horas realizadas totales dividido horas objetivo totales. No es un promedio simple de equipos.',
+          help: esAnual
+              ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
+              : 'Porcentaje de horas válidas realizadas sobre las horas objetivo del período.',
           icon: Icons.trending_up,
           color: cumplimientoGlobal >= 100
               ? const Color(0xFF16A34A)

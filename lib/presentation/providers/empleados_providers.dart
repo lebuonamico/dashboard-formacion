@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
+import 'package:app_finnegans/domain/repositorios/empleados_historial_repository.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
@@ -15,6 +17,15 @@ import 'package:flutter_riverpod/legacy.dart';
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
   final repo = ref.watch(empleadosRepositoryProvider);
   return repo.getEmpleados();
+});
+
+final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
+  ref,
+) async {
+  final repo = ref.watch(empleadosRepositoryProvider);
+  if (repo is! EmpleadosHistorialRepository) return null;
+  // Leandro: llama a getHistorialEmpleados para consultar las vigencias sin escribir un historial paralelo.
+  return (repo as EmpleadosHistorialRepository).getHistorialEmpleados();
 });
 
 final busquedaEmpleadoProvider = StateProvider<String>((ref) => '');

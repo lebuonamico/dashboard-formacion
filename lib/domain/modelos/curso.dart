@@ -7,6 +7,7 @@ class Curso {
   final String areaCurso;
   final String instructorLegajo; // Empleado que dicta
   final double cargaHorariaHs;
+  final bool activo;
 
   Curso({
     required this.id,
@@ -15,7 +16,18 @@ class Curso {
     required this.areaCurso,
     required this.instructorLegajo,
     required this.cargaHorariaHs,
+    this.activo = true,
   });
+
+  Curso copyWith({bool? activo}) => Curso(
+    id: id,
+    nombre: nombre,
+    tipo: tipo,
+    areaCurso: areaCurso,
+    instructorLegajo: instructorLegajo,
+    cargaHorariaHs: cargaHorariaHs,
+    activo: activo ?? this.activo,
+  );
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -24,6 +36,7 @@ class Curso {
         'areaCurso': areaCurso,
         'instructorLegajo': instructorLegajo,
         'cargaHorariaHs': cargaHorariaHs,
+        'activo': activo,
       };
 
   factory Curso.fromJson(Map<String, dynamic> json) => Curso(
@@ -36,5 +49,6 @@ class Curso {
         areaCurso: json['areaCurso']?.toString() ?? '',
         instructorLegajo: json['instructorLegajo']?.toString() ?? '',
         cargaHorariaHs: double.tryParse(json['cargaHorariaHs'].toString()) ?? 0,
+        activo: json['activo'] as bool? ?? true,
       );
 }

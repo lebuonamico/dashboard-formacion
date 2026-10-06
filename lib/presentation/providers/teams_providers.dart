@@ -103,17 +103,30 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) return [];
 
   final empleados = await ref.watch(empleadosProvider.future);
+  final historial = await ref.watch(empleadoHistorialProvider.future);
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
-  final soloRegistrosCargados = ref.watch(soloRegistrosCargadosPeriodoProvider);
   final cumplimientoService = ref.read(cumplimientoServiceProvider);
   final equiposService = ref.read(equiposServiceProvider);
 
-  // Leandro: llama a filtrarCargasPorPeriodo para seleccionar las horas CRM del mes o año elegido.
+  if (alcance == AlcancePeriodo.anual) {
+    // Leandro: llama a calcularCumplimientoAnual para sumar los resultados mensuales de los períodos con datos.
+    return equiposService.calcularCumplimientoAnual(
+      empleados: empleados,
+      historial: historial,
+      cursos: cursos,
+      cargas: cargasDeHoras,
+      certificaciones: certificaciones,
+      anio: anio,
+      cumplimientoService: cumplimientoService,
+    );
+  }
+
+  // Leandro: llama a filtrarCargasPorPeriodo para seleccionar las horas CRM del mes elegido.
   final cargasFiltradas = equiposService.filtrarCargasPorPeriodo(
     cargas: cargasDeHoras,
     anio: anio,
@@ -128,9 +141,10 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
         mes: mes,
         esAnual: alcance == AlcancePeriodo.anual,
       );
-  // Leandro: llama a filtrarEmpleadosPorPeriodo para incluir a quienes ingresaron hasta el cierre del período.
+  // Leandro: llama a filtrarEmpleadosPorPeriodo para incluir los ingresos y estados activos vigentes al cierre del mes.
   final empleadosElegibles = equiposService.filtrarEmpleadosPorPeriodo(
     empleados: empleados,
+    historial: historial,
     anio: anio,
     mes: mes,
     esAnual: alcance == AlcancePeriodo.anual,
@@ -144,23 +158,7 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     certificacionesMoodle: certificacionesFiltradas,
   );
 
-  if (alcance == AlcancePeriodo.mensual) {
-    return cumplimientos;
-  }
-
-  // Leandro: llama a contarMesesConRegistros para definir el objetivo anual cuando se eligen sólo meses cargados.
-  final mesesObjetivo = soloRegistrosCargados
-      ? equiposService.contarMesesConRegistros(
-          cargas: cargasFiltradas,
-          certificaciones: certificacionesFiltradas,
-          anio: anio,
-        )
-      : 12;
-  // Leandro: llama a convertirObjetivoMensualAAnual para expresar el objetivo con el alcance anual seleccionado.
-  return equiposService.convertirObjetivoMensualAAnual(
-    cumplimientos,
-    mesesConRegistros: mesesObjetivo,
-  );
+  return cumplimientos;
 });
 
 final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
@@ -172,8 +170,38 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   }
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
+  int? colaboradoresAlCierre;
+  if (ref.watch(alcancePeriodoProvider) == AlcancePeriodo.anual) {
+    final empleados = await ref.watch(empleadosProvider.future);
+    final historial = await ref.watch(empleadoHistorialProvider.future);
+    final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
+    final certificaciones = await ref.watch(
+      certificacionesMoodleProvider.future,
+    );
+    final anio = ref.watch(filtroAnioPeriodoProvider);
+    // Leandro: llama a ultimoMesConDatos para contar la población anual al cierre del último mes disponible.
+    final ultimoMes = equiposService.ultimoMesConDatos(
+      cargas: cargas,
+      certificaciones: certificaciones,
+      anio: anio,
+    );
+    if (ultimoMes != null) {
+      colaboradoresAlCierre = equiposService
+          .filtrarEmpleadosPorPeriodo(
+            empleados: empleados,
+            historial: historial,
+            anio: anio,
+            mes: ultimoMes,
+            esAnual: false,
+          )
+          .length;
+    }
+  }
   // Leandro: llama a calcularResumenPeriodo para obtener los indicadores y estados de todos los equipos elegibles.
-  return equiposService.calcularResumenPeriodo(cumplimientos);
+  return equiposService.calcularResumenPeriodo(
+    cumplimientos,
+    colaboradoresAlCierre: colaboradoresAlCierre,
+  );
 });
 
 // Conserva el contrato usado por Dashboard y por el detalle de Áreas.
