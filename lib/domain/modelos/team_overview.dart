@@ -1,7 +1,6 @@
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 
-/// Leandro: Resultado que EquiposService entrega al provider y luego a los widgets.
 class EquipoGlobalViewModel {
   final String id;
   final String nombre;
@@ -42,6 +41,7 @@ class EquipoGlobalViewModel {
 
 /// Totales del período que consume la pantalla de Equipos.
 class ResumenEquiposPeriodo {
+  final bool tieneDatos;
   final List<EquipoGlobalViewModel> equipos;
   final int colaboradores;
   final double horasRealizadas;
@@ -55,6 +55,7 @@ class ResumenEquiposPeriodo {
   final int criticos;
 
   const ResumenEquiposPeriodo({
+    this.tieneDatos = true,
     required this.equipos,
     required this.colaboradores,
     required this.horasRealizadas,
@@ -67,6 +68,22 @@ class ResumenEquiposPeriodo {
     required this.enRiesgo,
     required this.criticos,
   });
+
+  const ResumenEquiposPeriodo.sinDatos()
+    : this(
+        tieneDatos: false,
+        equipos: const [],
+        colaboradores: 0,
+        horasRealizadas: 0,
+        horasObjetivo: 0,
+        horasNegocio: 0,
+        horasBlandas: 0,
+        horasLibres: 0,
+        horasDictado: 0,
+        enObjetivo: 0,
+        enRiesgo: 0,
+        criticos: 0,
+      );
 
   int get totalEquipos => equipos.length;
   double get desvioHoras => horasRealizadas - horasObjetivo;

@@ -2,8 +2,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Donut que muestra las horas aplicables al objetivo por categoría.
-/// Recibe los totales ya calculados por EquiposScreen.
 class EquiposCategoryDistribution extends StatelessWidget {
   final double horasNegocio;
   final double horasBlandas;
@@ -50,6 +48,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          // Leandro: llama a EquiposDonutChart para mostrar las horas por categoría.
           EquiposDonutChart(
             centerValue: total.toStringAsFixed(1),
             centerLabel: 'HORAS',

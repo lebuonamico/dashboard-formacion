@@ -2,7 +2,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Traduce el resumen del período a tarjetas del KpiGrid compartido.
 class EquiposKpiSection extends StatelessWidget {
   final int totalEquipos;
   final int totalColaboradores;
@@ -23,6 +22,7 @@ class EquiposKpiSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Leandro: llama a KpiGrid para mostrar los indicadores globales del período.
     return KpiGrid(
       items: [
         KpiData(
@@ -46,6 +46,7 @@ class EquiposKpiSection extends StatelessWidget {
         KpiData(
           title: 'Horas realizadas',
           value: horasRealizadas.toStringAsFixed(1),
+          // Leandro: llama a _formatDesvio para expresar las horas faltantes o excedentes.
           detail: _formatDesvio(desvioHoras),
           help:
               'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',

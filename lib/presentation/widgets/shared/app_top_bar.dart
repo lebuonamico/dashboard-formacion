@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 
-/// Leandro: Encabezado común de las pantallas, con regreso opcional.
 class AppTopBar extends StatelessWidget {
   final String title;
   final VoidCallback? onBack;
@@ -20,6 +19,7 @@ class AppTopBar extends StatelessWidget {
       child: Row(
         children: [
           if (onBack != null) ...[
+            // Leandro: llama a IconButton con onBack para permitir volver a la pantalla anterior.
             IconButton(
               onPressed: onBack,
               icon: const Icon(Icons.arrow_back),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Leandro: Control visual de paginación compartido por los listados de la app.
 /// La pantalla calcula las páginas y este widget sólo muestra el estado y botones.
 class PaginacionResultados extends StatelessWidget {
   final int paginaActual;
@@ -60,6 +59,7 @@ class PaginacionResultados extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Leandro: llama a IconButton.filledTonal con onPrevious para solicitar la página anterior.
               IconButton.filledTonal(
                 onPressed: onPrevious,
                 icon: const Icon(Icons.chevron_left),
@@ -75,6 +75,7 @@ class PaginacionResultados extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
+              // Leandro: llama a IconButton.filledTonal con onNext para solicitar la página siguiente.
               IconButton.filledTonal(
                 onPressed: onNext,
                 icon: const Icon(Icons.chevron_right),

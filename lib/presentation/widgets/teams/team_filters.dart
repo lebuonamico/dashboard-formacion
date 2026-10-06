@@ -2,8 +2,6 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Controles de búsqueda, área y estado.
-/// Sus callbacks actualizan Riverpod; el filtrado real ocurre en teams_providers.dart.
 class EquiposFilters extends StatefulWidget {
   final List<String> areas;
   final String searchText;
@@ -62,16 +60,15 @@ class _EquiposFiltersState extends State<EquiposFilters> {
       decoration: equiposPanelDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Leandro: Al escribir inicia el flujo control -> pantalla -> provider -> resultados.
           final searchField = TextField(
             controller: _searchController,
+            // Leandro: llama a onSearch al escribir para actualizar la búsqueda de equipos.
             onChanged: widget.onSearch,
             decoration: _inputDecoration(
               'Buscar por equipo, área o líder',
               Icons.search,
             ),
           );
-          // Leandro: Un cambio de período puede dejar fuera al área seleccionada.
           final areaSeleccionadaValida =
               widget.areas.contains(widget.selectedArea)
               ? widget.selectedArea
@@ -96,9 +93,9 @@ class _EquiposFiltersState extends State<EquiposFilters> {
                 ),
               ),
             ],
+            // Leandro: llama a onArea para filtrar los equipos por el área seleccionada.
             onChanged: widget.onArea,
           );
-          // Leandro: null representa "Todos los estados" en el provider.
           final statusField = DropdownButtonFormField<EstadoEquipo?>(
             initialValue: widget.selectedStatus,
             isExpanded: true,
@@ -124,9 +121,11 @@ class _EquiposFiltersState extends State<EquiposFilters> {
                 child: Text('Crítico'),
               ),
             ],
+            // Leandro: llama a onStatus para filtrar los equipos por su estado.
             onChanged: widget.onStatus,
           );
           final clearButton = OutlinedButton.icon(
+            // Leandro: llama a onClear para quitar los filtros activos.
             onPressed: widget.hasActiveFilters ? widget.onClear : null,
             icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
             label: const Text('Limpiar'),
@@ -145,7 +144,6 @@ class _EquiposFiltersState extends State<EquiposFilters> {
             ),
           );
 
-          // Leandro: En pantallas angostas apila los controles; en escritorio usa una fila.
           if (constraints.maxWidth < 800) {
             return Column(
               children: [
@@ -176,7 +174,6 @@ class _EquiposFiltersState extends State<EquiposFilters> {
     );
   }
 
-  // Leandro: Estilo visual compartido por los tres controles.
   InputDecoration _inputDecoration(String hint, IconData icon) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
