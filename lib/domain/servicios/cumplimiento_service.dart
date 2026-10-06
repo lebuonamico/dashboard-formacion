@@ -15,7 +15,6 @@ class CumplimientoService {
     final cursosMap = {
       for (final curso in cursos) normalizarNombreCurso(curso.nombre): curso,
     };
-    // Leandro: Indexa una vez los Excel para no recorrerlos completos por empleado.
     final cargasPorLegajo = <String, List<CargaDeHorasCRM>>{};
     for (final carga in cargasDeHoras) {
       cargasPorLegajo.putIfAbsent(carga.empleadoLegajo, () => []).add(carga);
@@ -28,6 +27,7 @@ class CumplimientoService {
     }
 
     return empleados.map((empleado) {
+      // Leandro: llama a _horasPorCategoriaEnCero para inicializar las horas del colaborador sin inventar actividad.
       final horasValidas = _horasPorCategoriaEnCero();
       final horasDeclaradas = _horasPorCategoriaEnCero();
 
@@ -42,6 +42,7 @@ class CumplimientoService {
           continue;
         }
 
+        // Leandro: llama a normalizarNombreCurso para buscar el curso CRM en el catálogo con un nombre uniforme.
         final cursoNormalizado = normalizarNombreCurso(carga.cursoNombre);
         final curso = cursosMap[cursoNormalizado];
         if (curso != null) {
@@ -61,6 +62,7 @@ class CumplimientoService {
           certificacionesPorLegajo[empleado.legajo] ??
           const <CertificacionMoodle>[];
       for (final certificacion in certificacionesEmpleado) {
+        // Leandro: llama a normalizarNombreCurso para relacionar la finalización LMS con las horas CRM del mismo curso.
         final cursoNormalizado = normalizarNombreCurso(
           certificacion.cursoNombre,
         );
@@ -86,6 +88,7 @@ class CumplimientoService {
       // Requerimientos mensuales según el seniority del empleado.
       final horasRequeridas = empleado.seniority.planFormacion;
 
+      // Leandro: llama a CumplimientoEmpleado para entregar las horas validadas, declaradas y requeridas de cada persona.
       return CumplimientoEmpleado(
         empleado: empleado,
         horasValidas: horasValidas,

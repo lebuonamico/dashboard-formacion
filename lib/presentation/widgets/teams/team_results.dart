@@ -8,7 +8,6 @@ const _maxCardWidth = 410.0;
 const _gridSpacing = 16.0;
 const _rowsPerPage = 2;
 
-/// Leandro: Recibe los equipos filtrados y llama a EquipoCard por cada resultado.
 class EquiposResults extends StatefulWidget {
   final List<EquipoGlobalViewModel> equipos;
   final int totalEquipos;
@@ -29,7 +28,7 @@ class _EquiposResultsState extends State<EquiposResults> {
   @override
   void didUpdateWidget(covariant EquiposResults oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Leandro: Si se recargan los datos, el listado vuelve a una página válida.
+    // Leandro: llama a _mismosEquipos para reiniciar la página cuando cambian los resultados.
     if (!_mismosEquipos(oldWidget.equipos, widget.equipos)) {
       _paginaActual = 0;
     }
@@ -56,7 +55,6 @@ class _EquiposResultsState extends State<EquiposResults> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Leandro: La cantidad por página se adapta al ancho y completa dos filas.
         final columnasCalculadas =
             (constraints.maxWidth / (_maxCardWidth + _gridSpacing)).ceil();
         final columnas = columnasCalculadas < 1 ? 1 : columnasCalculadas;
@@ -83,6 +81,7 @@ class _EquiposResultsState extends State<EquiposResults> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Leandro: llama a _CountBadge para mostrar cuántos equipos coinciden con los filtros.
                 _CountBadge(count: widget.equipos.length),
                 const Spacer(),
                 Text(
@@ -94,11 +93,12 @@ class _EquiposResultsState extends State<EquiposResults> {
               ],
             ),
             const SizedBox(height: 13),
-            // Leandro: Sin coincidencias cambia sólo esta sección; los KPI siguen visibles.
             if (widget.equipos.isEmpty)
+              // Leandro: llama a _EmptySearch para avisar que ningún equipo coincide con los filtros.
               const _EmptySearch()
             else ...[
               if (cantidadPaginas > 1) ...[
+                // Leandro: llama a PaginacionResultados para recorrer las páginas de equipos.
                 PaginacionResultados(
                   paginaActual: paginaSegura,
                   cantidadPaginas: cantidadPaginas,
@@ -116,6 +116,7 @@ class _EquiposResultsState extends State<EquiposResults> {
                 ),
                 const SizedBox(height: 18),
               ],
+              // Leandro: llama a _TeamsGrid para mostrar los equipos de la página actual.
               _TeamsGrid(equipos: equiposVisibles),
             ],
           ],
@@ -125,7 +126,6 @@ class _EquiposResultsState extends State<EquiposResults> {
   }
 }
 
-// Leandro: Contador de equipos visibles después de aplicar filtros.
 class _CountBadge extends StatelessWidget {
   final int count;
 
@@ -151,7 +151,6 @@ class _CountBadge extends StatelessWidget {
   }
 }
 
-// Leandro: Convierte la lista filtrada en una grilla de EquipoCard.
 class _TeamsGrid extends StatelessWidget {
   final List<EquipoGlobalViewModel> equipos;
 
@@ -159,8 +158,8 @@ class _TeamsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Leandro: llama a GridView.builder para distribuir las tarjetas de equipos.
     return GridView.builder(
-      // Leandro: El desplazamiento lo maneja el ListView principal de EquiposScreen.
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -170,12 +169,12 @@ class _TeamsGrid extends StatelessWidget {
         mainAxisExtent: 252,
       ),
       itemCount: equipos.length,
+      // Leandro: llama a EquipoCard para mostrar el resumen de cada equipo visible.
       itemBuilder: (context, index) => EquipoCard(equipo: equipos[index]),
     );
   }
 }
 
-// Leandro: Se muestra cuando los filtros no encuentran coincidencias.
 class _EmptySearch extends StatelessWidget {
   const _EmptySearch();
 

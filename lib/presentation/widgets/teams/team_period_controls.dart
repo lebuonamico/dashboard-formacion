@@ -4,7 +4,6 @@ import 'package:app_finnegans/presentation/widgets/shared/period_segmented_contr
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Selector global de período; sus cambios recalculan todo el dashboard.
 class EquiposPeriodControls extends StatelessWidget {
   final AlcancePeriodo alcance;
   final int selectedMonth;
@@ -31,7 +30,6 @@ class EquiposPeriodControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: Incluye el año seleccionado aunque todavía no tenga cargas CRM.
     final yearOptions = {...availableYears, selectedYear}.toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -41,6 +39,7 @@ class EquiposPeriodControls extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final title = _PeriodTitle();
+          // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
           final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
             selected: alcance,
             options: AlcancePeriodo.values,
@@ -51,11 +50,13 @@ class EquiposPeriodControls extends StatelessWidget {
             selectedForegroundColor: Colors.white,
             unselectedForegroundColor: equiposInk,
           );
+          // Leandro: llama a _MonthField para seleccionar el mes del período.
           final monthField = _MonthField(
             selectedMonth: selectedMonth,
             enabled: alcance == AlcancePeriodo.mensual,
             onChanged: onMonthChanged,
           );
+          // Leandro: llama a _YearField para seleccionar el año del período.
           final yearField = _YearField(
             selectedYear: selectedYear,
             yearOptions: yearOptions,
@@ -125,7 +126,7 @@ class _PeriodTitle extends StatelessWidget {
         const SizedBox(width: 6),
         Tooltip(
           message:
-              'El período recalcula toda la pantalla. Un equipo está activo si registra actividad CRM o una finalización LMS; se evalúa a toda su nómina.',
+              'El período se evalúa si tiene registros CRM o LMS. Se incluyen todos los equipos con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
           child: Icon(
             Icons.info_outline,
             size: 16,
@@ -150,7 +151,6 @@ class _MonthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: En modo anual deshabilita el mes porque el corte abarca todo el año.
     return DropdownButtonFormField<int>(
       initialValue: selectedMonth,
       isExpanded: true,

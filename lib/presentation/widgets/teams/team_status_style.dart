@@ -1,7 +1,6 @@
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:flutter/material.dart';
 
-/// Leandro: Convierte el estado calculado por el servicio en colores de la interfaz.
 extension EstadoEquipoStyle on EstadoEquipo {
   Color get colorTexto {
     switch (this) {
