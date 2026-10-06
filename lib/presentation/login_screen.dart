@@ -1,11 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authControllerProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       body: Center(
@@ -97,11 +100,16 @@ class LoginScreen extends StatelessWidget {
 
                     // Botón Google Sign-In
                     OutlinedButton(
-                      onPressed: () {
-                        context.go(
-                          '/dashboard',
-                        ); // Navega a la pantalla de dashboard
-                      },
+                      onPressed:
+                          auth.isSigningIn || auth.isValidatingAuthorization
+                          ? null
+                          : () async {
+                              if (!auth.enabled) {
+                                context.go('/dashboard');
+                                return;
+                              }
+                              await auth.signInWithGoogle();
+                            },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
                         side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -113,11 +121,19 @@ class LoginScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Aca va el icono de Google... a poner.
+                          if (auth.isSigningIn ||
+                              auth.isValidatingAuthorization)
+                            const SizedBox.square(
+                              key: Key('auth_loading'),
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           const SizedBox(width: 12),
-                          const Text(
-                            'Iniciar sesión con Google',
-                            style: TextStyle(
+                          Text(
+                            auth.isValidatingAuthorization
+                                ? 'Validando autorización...'
+                                : 'Iniciar sesión con Google',
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1E293B),
@@ -126,6 +142,14 @@ class LoginScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (auth.error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        auth.error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ],
                     const SizedBox(height: 28),
 
                     // Separador ENTERPRISE ACCESS
