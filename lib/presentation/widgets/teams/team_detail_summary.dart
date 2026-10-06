@@ -94,8 +94,13 @@ class EquipoDetalleHeader extends StatelessWidget {
 
 class EquipoDetalleResumen extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
+  final bool esAnual;
 
-  const EquipoDetalleResumen({super.key, required this.equipo});
+  const EquipoDetalleResumen({
+    super.key,
+    required this.equipo,
+    this.esAnual = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +112,7 @@ class EquipoDetalleResumen extends StatelessWidget {
           horasBlandas: equipo.horasBlandas,
           horasLibres: equipo.horasLibres,
           horasDictado: equipo.horasDictado,
+          esAnual: esAnual,
         );
         // Leandro: llama a _TeamProgressPanel para mostrar el cumplimiento y desvío del equipo.
         final avance = _TeamProgressPanel(equipo: equipo);

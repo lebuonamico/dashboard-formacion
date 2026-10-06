@@ -78,9 +78,6 @@ class _DashboardContent extends ConsumerWidget {
     final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
     final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
     final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
-    final soloRegistrosCargados = ref.watch(
-      soloRegistrosCargadosPeriodoProvider,
-    );
     final aniosDisponibles = ref
         .watch(aniosEquipoDisponiblesProvider)
         .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
@@ -114,7 +111,6 @@ class _DashboardContent extends ConsumerWidget {
           selectedMonth: mesSeleccionado,
           selectedYear: anioSeleccionado,
           availableYears: aniosDisponibles,
-          soloRegistrosCargados: soloRegistrosCargados,
           onScopeChanged: (value) {
             ref.read(alcancePeriodoProvider.notifier).state = value;
             ref.read(filtroAreaEquipoProvider.notifier).state = null;
@@ -127,11 +123,6 @@ class _DashboardContent extends ConsumerWidget {
           onYearChanged: (value) {
             if (value == null) return;
             ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-            ref.read(filtroAreaEquipoProvider.notifier).state = null;
-          },
-          onLoadedRecordsChanged: (value) {
-            ref.read(soloRegistrosCargadosPeriodoProvider.notifier).state =
-                value;
             ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
         ),
@@ -155,6 +146,7 @@ class _DashboardContent extends ConsumerWidget {
             horasObjetivo: resumen.horasObjetivo,
             desvioHoras: resumen.desvioHoras,
             cumplimientoGlobal: resumen.cumplimientoGlobal,
+            esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
           ),
           const SizedBox(height: 16),
           // Leandro: llama al widget _DashboardChartsRow para organizar los gráficos de estados y categorías.
@@ -172,6 +164,7 @@ class _DashboardContent extends ConsumerWidget {
               horasBlandas: resumen.horasBlandas,
               horasLibres: resumen.horasLibres,
               horasDictado: resumen.horasDictado,
+              esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
             ),
           ),
           const SizedBox(height: 24),
@@ -207,7 +200,7 @@ class _DashboardContent extends ConsumerWidget {
             data: (equiposFiltrados) => EquiposResults(
               key: ValueKey(
                 '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
-                '$soloRegistrosCargados-$busqueda-$areaSeleccionada-'
+                '$busqueda-$areaSeleccionada-'
                 '$estadoSeleccionado',
               ),
               equipos: equiposFiltrados,

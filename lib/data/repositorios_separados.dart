@@ -6,6 +6,7 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
@@ -114,7 +115,7 @@ class MockCargaDeHorasCRMRepository implements CargaDeHorasCRMRepository {
 }
 
 class LocalEmpleadosRepository extends MockEmpleadosRepository
-    implements UpsertRepository<Empleado> {
+    implements UpsertRepository<Empleado>, FotoVigenteRepository<Empleado> {
   static const _key = 'formacion_empleados';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
@@ -130,6 +131,41 @@ class LocalEmpleadosRepository extends MockEmpleadosRepository
       for (final item in [...existing, ...items]) item.legajo: item,
     };
     await replaceEmpleados(merged.values.toList());
+  }
+
+  @override
+  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
+    List<Empleado> items,
+  ) async {
+    if (items.isEmpty || items.any((item) => item.legajo.trim().isEmpty)) {
+      throw const FormatException(
+        'La foto de Nómina está vacía o tiene claves inválidas.',
+      );
+    }
+    final raw = (await _storage).getString(_key);
+    final anteriores = raw == null
+        ? <Empleado>[]
+        : _decodeList(raw, Empleado.fromJson);
+    final actuales = {for (final item in anteriores) item.legajo: item};
+    final presentes = {
+      for (final item in items) item.legajo: item.copyWith(activo: true),
+    };
+    final cambios = [
+      ...presentes.values,
+      for (final item in anteriores)
+        if (item.activo && !presentes.containsKey(item.legajo))
+          item.copyWith(activo: false),
+    ];
+    final insertados = presentes.keys
+        .where((key) => !actuales.containsKey(key))
+        .length;
+    final merged = {...actuales, for (final item in cambios) item.legajo: item};
+    await replaceEmpleados(merged.values.toList());
+    return ResultadoUpsert(
+      registrosProcesados: items.length,
+      insertados: insertados,
+      actualizados: cambios.length - insertados,
+    );
   }
 
   @override
@@ -155,7 +191,7 @@ class LocalEmpleadosRepository extends MockEmpleadosRepository
 }
 
 class LocalCursosRepository extends MockCursosRepository
-    implements UpsertRepository<Curso> {
+    implements UpsertRepository<Curso>, FotoVigenteRepository<Curso> {
   static const _key = 'formacion_cursos';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
@@ -169,6 +205,41 @@ class LocalCursosRepository extends MockCursosRepository
       for (final item in [...existing, ...items]) item.id: item,
     };
     await replaceCursos(merged.values.toList());
+  }
+
+  @override
+  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
+    List<Curso> items,
+  ) async {
+    if (items.isEmpty || items.any((item) => item.id.trim().isEmpty)) {
+      throw const FormatException(
+        'La foto de Cursos está vacía o tiene claves inválidas.',
+      );
+    }
+    final raw = (await _storage).getString(_key);
+    final anteriores = raw == null
+        ? <Curso>[]
+        : _decodeList(raw, Curso.fromJson);
+    final actuales = {for (final item in anteriores) item.id: item};
+    final presentes = {
+      for (final item in items) item.id: item.copyWith(activo: true),
+    };
+    final cambios = [
+      ...presentes.values,
+      for (final item in anteriores)
+        if (item.activo && !presentes.containsKey(item.id))
+          item.copyWith(activo: false),
+    ];
+    final insertados = presentes.keys
+        .where((key) => !actuales.containsKey(key))
+        .length;
+    final merged = {...actuales, for (final item in cambios) item.id: item};
+    await replaceCursos(merged.values.toList());
+    return ResultadoUpsert(
+      registrosProcesados: items.length,
+      insertados: insertados,
+      actualizados: cambios.length - insertados,
+    );
   }
 
   @override
@@ -294,10 +365,12 @@ class LocalCertificacionesMoodleRepository
     final existing = raw == null
         ? <CertificacionMoodle>[]
         : _decodeList(raw, CertificacionMoodle.fromJson);
-    // Preserve imported rows; the future SQL design determines historical identity.
+    // Corrections replace the explicit employee/course state; absent pairs remain.
+    final registros = [...existing, ...items];
+    final idsPorNombre = idsCursosCertificaciones(registros);
     final rows = {
-      for (final item in [...existing, ...items])
-        jsonEncode(item.toJson()): item,
+      for (final item in registros)
+        claveCertificacionMoodle(item, idsPorNombre): item,
     };
     await replaceCertificaciones(rows.values.toList());
   }
