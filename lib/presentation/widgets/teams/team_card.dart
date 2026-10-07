@@ -6,8 +6,9 @@ import 'package:go_router/go_router.dart';
 
 class EquipoCard extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
+  final bool esAnual;
 
-  const EquipoCard({super.key, required this.equipo});
+  const EquipoCard({super.key, required this.equipo, this.esAnual = false});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +49,11 @@ class EquipoCard extends StatelessWidget {
                       _LeaderRow(lider: equipo.lider),
                       const Spacer(),
                       // Leandro: llama a _ProgressSection para mostrar integrantes en objetivo y avance de horas.
-                      _ProgressSection(equipo: equipo, progress: progress),
+                      _ProgressSection(
+                        equipo: equipo,
+                        progress: progress,
+                        esAnual: esAnual,
+                      ),
                       const SizedBox(height: 9),
                       // Leandro: llama a _CardFooter para mostrar las horas realizadas y el desvío.
                       _CardFooter(equipo: equipo),
@@ -138,8 +143,13 @@ class _LeaderRow extends StatelessWidget {
 class _ProgressSection extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
   final double progress;
+  final bool esAnual;
 
-  const _ProgressSection({required this.equipo, required this.progress});
+  const _ProgressSection({
+    required this.equipo,
+    required this.progress,
+    required this.esAnual,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -161,8 +171,9 @@ class _ProgressSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Tooltip(
-                    message:
-                        'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
+                    message: esAnual
+                        ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
+                        : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
                     child: Icon(
                       Icons.info_outline,
                       size: 14,

@@ -105,7 +105,7 @@ class _EquipoContent extends StatelessWidget {
               value: '${equipo.cantidadIntegrantes}',
               detail: 'nómina del equipo',
               help: esAnual
-                  ? 'Colaboradores elegibles en al menos uno de los meses con datos del año para este equipo.'
+                  ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
                   : 'Personas de la nómina que pertenecen al equipo evaluado en el período.',
               icon: Icons.people_outline,
               color: equiposBrand,

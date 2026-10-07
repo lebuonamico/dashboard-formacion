@@ -11,11 +11,13 @@ const _rowsPerPage = 2;
 class EquiposResults extends StatefulWidget {
   final List<EquipoGlobalViewModel> equipos;
   final int totalEquipos;
+  final bool esAnual;
 
   const EquiposResults({
     super.key,
     required this.equipos,
     required this.totalEquipos,
+    this.esAnual = false,
   });
 
   @override
@@ -117,7 +119,7 @@ class _EquiposResultsState extends State<EquiposResults> {
                 const SizedBox(height: 18),
               ],
               // Leandro: llama a _TeamsGrid para mostrar los equipos de la página actual.
-              _TeamsGrid(equipos: equiposVisibles),
+              _TeamsGrid(equipos: equiposVisibles, esAnual: widget.esAnual),
             ],
           ],
         );
@@ -153,8 +155,9 @@ class _CountBadge extends StatelessWidget {
 
 class _TeamsGrid extends StatelessWidget {
   final List<EquipoGlobalViewModel> equipos;
+  final bool esAnual;
 
-  const _TeamsGrid({required this.equipos});
+  const _TeamsGrid({required this.equipos, required this.esAnual});
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +173,8 @@ class _TeamsGrid extends StatelessWidget {
       ),
       itemCount: equipos.length,
       // Leandro: llama a EquipoCard para mostrar el resumen de cada equipo visible.
-      itemBuilder: (context, index) => EquipoCard(equipo: equipos[index]),
+      itemBuilder: (context, index) =>
+          EquipoCard(equipo: equipos[index], esAnual: esAnual),
     );
   }
 }
