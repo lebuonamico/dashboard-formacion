@@ -233,13 +233,15 @@ class _DashboardChartsRow extends StatelessWidget {
           );
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: statusChart),
-            const SizedBox(width: 16),
-            Expanded(child: categoryChart),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: statusChart),
+              const SizedBox(width: 16),
+              Expanded(child: categoryChart),
+            ],
+          ),
         );
       },
     );

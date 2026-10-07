@@ -21,10 +21,10 @@ class EquiposStatusSummary extends StatelessWidget {
     final requierenAtencion = enRiesgo + criticos;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.all(18),
       decoration: equiposPanelDecoration(),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
+      child: Builder(
+        builder: (context) {
           // Leandro: llama a _StatusHeading para indicar cuántos equipos requieren atención.
           final heading = _StatusHeading(requierenAtencion: requierenAtencion);
           // Leandro: llama a EquiposDonutChart para mostrar la distribución de estados de los equipos.
@@ -59,23 +59,19 @@ class EquiposStatusSummary extends StatelessWidget {
             ],
           );
 
-          if (constraints.maxWidth < 760) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [heading, const SizedBox(height: 18), chart],
-            );
-          }
-
-          return Row(
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(width: 260, child: heading),
-              const SizedBox(width: 24),
-              const SizedBox(
-                height: 52,
-                child: VerticalDivider(width: 1, color: equiposBorder),
+              SizedBox(height: 44, child: heading),
+              const SizedBox(height: 12),
+              Flexible(
+                fit: FlexFit.loose,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 166),
+                  child: Center(child: chart),
+                ),
               ),
-              const SizedBox(width: 24),
-              Expanded(child: chart),
             ],
           );
         },
