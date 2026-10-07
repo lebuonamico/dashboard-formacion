@@ -294,26 +294,22 @@ class EquiposService {
     final equipoBuscado = _normalizarComparacion(
       _nombreEquipoNormalizado(equipo),
     );
-    final miembros =
-        cumplimientos.where((cumplimiento) {
-          final empleado = cumplimiento.empleado;
-          return _normalizarComparacion(empleado.area) == areaBuscada &&
-              _normalizarComparacion(
-                    _nombreEquipoNormalizado(empleado.equipo),
-                  ) ==
-                  equipoBuscado;
-        }).toList()..sort(
-          (a, b) =>
-              a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
-        );
+    final miembros = cumplimientos.where((cumplimiento) {
+      final empleado = cumplimiento.empleado;
+      return _normalizarComparacion(empleado.area) == areaBuscada &&
+          _normalizarComparacion(_nombreEquipoNormalizado(empleado.equipo)) ==
+              equipoBuscado;
+    }).toList();
 
     if (miembros.isEmpty) return null;
 
-    return DetalleEquipoGeneral(
-      // Leandro: llama a _crearResumenEquipo para usar en el detalle los mismos indicadores que en la vista global.
-      resumen: _crearResumenEquipo(miembros),
-      miembros: miembros,
+    // Leandro: llama a _crearResumenEquipo antes de ordenar la tabla para conservar la misma fuente de líder que la vista global.
+    final resumen = _crearResumenEquipo(miembros);
+    miembros.sort(
+      (a, b) => a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
     );
+
+    return DetalleEquipoGeneral(resumen: resumen, miembros: miembros);
   }
 
   ResumenEquiposPeriodo calcularResumenPeriodo(
