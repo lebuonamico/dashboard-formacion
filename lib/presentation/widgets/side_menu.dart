@@ -22,6 +22,9 @@ class SideMenu extends ConsumerWidget {
       return currentPath.startsWith(path);
     }
 
+    final auth = ref.watch(authControllerProvider);
+    final mostrarAdmin = auth.esAdmin || !auth.enabled;
+
     return Container(
       width: 260,
       decoration: const BoxDecoration(
@@ -165,6 +168,15 @@ class SideMenu extends ConsumerWidget {
                     ); // Navega a la pantalla de configuración
                   },
                 ),
+                if (mostrarAdmin)
+                  _MenuItem(
+                    icon: Icons.admin_panel_settings_outlined,
+                    label: 'Panel de administrador',
+                    isSelected: isSelected('admin', '/admin'),
+                    onTap: () {
+                      context.push('/admin');
+                    },
+                  ),
               ],
             ),
           ),

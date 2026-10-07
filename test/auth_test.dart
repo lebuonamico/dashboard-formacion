@@ -26,6 +26,7 @@ const _privatePaths = [
   '/areas/Producto',
   '/areas/Producto/equipos/Formacion',
   '/equipos',
+  '/admin',
 ];
 
 Map<String, dynamic> _sessionJson({bool expired = false}) {
@@ -96,7 +97,7 @@ SupabaseClient _client({
       if (request.url.path == '/rest/v1/usuarios_autorizados') {
         return http.Response(
           jsonEncode([
-            {'email': 'test@example.com', 'activo': true, 'rol': 'usuario'},
+            {'email': 'test@example.com', 'activo': true, 'rol': 'admin'},
           ]),
           200,
           request: request,
