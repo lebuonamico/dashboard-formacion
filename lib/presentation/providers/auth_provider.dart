@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
+import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 
 String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
@@ -60,6 +61,10 @@ class AuthController extends ChangeNotifier {
       hasValidSession &&
       _authorizedUser != null &&
       _authorizedUser == _currentUser;
+
+  String? get email => isAuthorized ? _authorizedUser?.$2 : null;
+
+  bool get esAdmin => isAuthorized && rol == RolUsuario.admin.name;
 
   void _clearAuthorization() {
     _authorizationRevision++;
@@ -120,11 +125,14 @@ class AuthController extends ChangeNotifier {
           : await _client!
                 .schema('public')
                 .from('usuarios_autorizados')
-                .select('activo,rol')
-                .eq('email', email)
+                .select('activo,rol,ff_eliminar,ff_bloqueo')
+                .eq('email', email.trim().toLowerCase())
                 .maybeSingle();
       if (!_isCurrentValidation(user, revision)) return;
-      if (row != null && row['activo'] == true) {
+      if (row != null &&
+          row['activo'] == true &&
+          row['ff_eliminar'] == null &&
+          row['ff_bloqueo'] == null) {
         rol = row['rol'] as String?;
         _authorizedUser = user;
       } else {
@@ -153,6 +161,7 @@ class AuthController extends ChangeNotifier {
     if (!enabled) return null;
     final isLogin = path == '/' || path == '/login';
     if (!isAuthorized) return path == '/login' ? null : '/login';
+    if (path.startsWith('/admin') && !esAdmin) return '/dashboard';
     return isLogin ? '/dashboard' : null;
   }
 

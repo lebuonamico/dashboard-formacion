@@ -14,6 +14,7 @@ import 'package:app_finnegans/presentation/cursada_screen.dart';
 import 'package:app_finnegans/presentation/certificacion_screen.dart';
 import 'package:app_finnegans/presentation/empleado_detalle_screen.dart';
 import 'package:app_finnegans/presentation/teams_screen.dart';
+import 'package:app_finnegans/presentation/admin_screen.dart';
 
 GoRouter createAppRouter(AuthController auth) => GoRouter(
   initialLocation: '/',
@@ -92,6 +93,11 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
       path: '/equipos',
       pageBuilder: (context, state) =>
           const NoTransitionPage(child: EquiposScreen()),
+    ),
+    GoRoute(
+      path: '/admin',
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: AdminScreen()),
     ),
   ],
 );
