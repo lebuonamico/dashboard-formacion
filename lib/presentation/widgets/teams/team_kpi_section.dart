@@ -42,8 +42,8 @@ class EquiposKpiSection extends StatelessWidget {
           value: '$totalColaboradores',
           detail: 'en todos los equipos',
           help: esAnual
-              ? 'Colaboradores elegibles al último período con datos disponible del año.'
-              : 'Colaboradores que ya ingresaron y estaban activos al cierre del período seleccionado.',
+              ? 'Colaboradores únicos que fueron elegibles en al menos uno de los meses con datos del año.'
+              : 'Colaboradores elegibles en el período seleccionado.',
           icon: Icons.people_outline,
           color: const Color(0xFF0E7490),
         ),

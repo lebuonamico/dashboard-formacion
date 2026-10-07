@@ -115,7 +115,7 @@ class EquipoDetalleResumen extends StatelessWidget {
           esAnual: esAnual,
         );
         // Leandro: llama a _TeamProgressPanel para mostrar el cumplimiento y desvío del equipo.
-        final avance = _TeamProgressPanel(equipo: equipo);
+        final avance = _TeamProgressPanel(equipo: equipo, esAnual: esAnual);
 
         if (constraints.maxWidth < 1050) {
           return Column(
@@ -138,8 +138,9 @@ class EquipoDetalleResumen extends StatelessWidget {
 
 class _TeamProgressPanel extends StatelessWidget {
   final EquipoGlobalViewModel equipo;
+  final bool esAnual;
 
-  const _TeamProgressPanel({required this.equipo});
+  const _TeamProgressPanel({required this.equipo, required this.esAnual});
 
   @override
   Widget build(BuildContext context) {
@@ -189,11 +190,22 @@ class _TeamProgressPanel extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           // Leandro: llama a _MetricRow para mostrar cuántos integrantes cumplen su objetivo.
-          _MetricRow(
-            label: 'Integrantes en objetivo',
-            value:
-                '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes}',
-          ),
+          if (esAnual)
+            Tooltip(
+              message:
+                  'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.',
+              child: _MetricRow(
+                label: 'Integrantes en objetivo',
+                value:
+                    '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes}',
+              ),
+            )
+          else
+            _MetricRow(
+              label: 'Integrantes en objetivo',
+              value:
+                  '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes}',
+            ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',

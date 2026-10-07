@@ -54,6 +54,7 @@ class EquiposDonutChart extends StatelessWidget {
         const SizedBox(width: 18),
         Expanded(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               for (final slice in slices) ...[
                 // Leandro: llama a _DonutLegendItem para mostrar el valor y porcentaje de cada segmento.
