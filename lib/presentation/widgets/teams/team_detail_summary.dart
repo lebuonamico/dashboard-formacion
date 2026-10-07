@@ -123,13 +123,15 @@ class EquipoDetalleResumen extends StatelessWidget {
           );
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: SizedBox(height: 260, child: distribucion)),
-            const SizedBox(width: 16),
-            Expanded(child: SizedBox(height: 260, child: avance)),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: distribucion),
+              const SizedBox(width: 16),
+              Expanded(child: avance),
+            ],
+          ),
         );
       },
     );
