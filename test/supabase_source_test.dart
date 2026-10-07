@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/data/supabase/supabase_repositories.dart';
+import 'package:app_finnegans/data/supabase/supabase_usuarios_autorizados_repository.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
@@ -85,6 +86,10 @@ void _expectRemoteRepositories(ProviderContainer container) {
     container.read(certificacionesMoodleRepositoryProvider),
     isA<SupabaseCertificacionesMoodleRepository>(),
   );
+  expect(
+    container.read(usuariosAutorizadosRepositoryProvider),
+    isA<SupabaseUsuariosAutorizadosRepository>(),
+  );
 }
 
 void main() {
@@ -119,6 +124,7 @@ void main() {
         container.read(certificacionesMoodleRepositoryProvider),
         isA<LocalCertificacionesMoodleRepository>(),
       );
+      expect(container.read(usuariosAutorizadosRepositoryProvider), isNull);
       expect(
         (await container.read(empleadosProvider.future)).single.legajo,
         'LOCAL-ONLY',

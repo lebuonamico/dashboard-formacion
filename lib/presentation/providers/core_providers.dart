@@ -4,6 +4,8 @@ import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/data/supabase/supabase_mapping.dart';
 import 'package:app_finnegans/data/supabase/supabase_importaciones_repository.dart';
 import 'package:app_finnegans/data/supabase/supabase_repositories.dart';
+import 'package:app_finnegans/data/supabase/supabase_usuarios_autorizados_repository.dart';
+import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/data/repositorios_separados.dart';
@@ -129,3 +131,12 @@ final importacionServiceProvider = Provider<ImportacionService>(
   (ref) =>
       ImportacionService(auditoria: ref.watch(importacionesRepositoryProvider)),
 );
+
+final usuariosAutorizadosRepositoryProvider =
+    Provider<UsuariosAutorizadosRepository?>(
+      (ref) => SupabaseConfig.enabled
+          ? SupabaseUsuariosAutorizadosRepository(
+              ref.watch(supabaseClientProvider),
+            )
+          : null,
+    );

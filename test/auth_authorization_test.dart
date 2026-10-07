@@ -117,11 +117,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'Usuario activo autoriza la sesión y expone el rol sin permisos extra',
+    'Usuario admin autoriza la sesión y habilita el panel de administración',
     () async {
       final fixture = _AuthFixture(
         authorization: (request) async => _rows(request, [
-          {'email': 'test@example.com', 'activo': true, 'rol': 'administrador'},
+          {'email': 'test@example.com', 'activo': true, 'rol': 'admin'},
         ]),
       );
       final auth = _controller(fixture.client);
@@ -131,29 +131,86 @@ void main() {
 
       expect(auth.hasValidSession, isTrue);
       expect(auth.isValidatingAuthorization, isFalse);
-      expect(auth.rol, 'administrador');
+      expect(auth.rol, 'admin');
+      expect(auth.esAdmin, isTrue);
+      expect(auth.email, 'test@example.com');
       expect(auth.error, isNull);
       expect(auth.redirect('/login'), '/dashboard');
       expect(auth.redirect('/configuracion'), isNull);
+      expect(auth.redirect('/admin'), isNull);
       expect(fixture.logoutRequests, isEmpty);
       final request = fixture.authorizationRequests.single;
       expect(request.method, 'GET');
       expect(request.url.queryParameters['email'], 'eq.test@example.com');
-      expect(request.url.queryParameters['select'], 'activo,rol');
+      expect(
+        request.url.queryParameters['select'],
+        'activo,rol,ff_eliminar,ff_bloqueo',
+      );
       expect(request.headers['accept-profile'], 'public');
       expect(request.headers['authorization'], startsWith('Bearer '));
 
       await auth.signOut();
       expect(auth.isAuthorized, isFalse);
       expect(auth.rol, isNull);
+      expect(auth.esAdmin, isFalse);
+      expect(auth.email, isNull);
       expect(auth.redirect('/dashboard'), '/login');
     },
   );
 
+  test('Un usuario autorizado sin rol admin no entra a /admin', () async {
+    final fixture = _AuthFixture(
+      authorization: (request) async => _rows(request, [
+        {'email': 'test@example.com', 'activo': true, 'rol': 'academia'},
+      ]),
+    );
+    final auth = _controller(fixture.client);
+
+    await fixture.signIn();
+    await _waitUntil(() => auth.isAuthorized);
+
+    expect(auth.esAdmin, isFalse);
+    expect(auth.redirect('/admin'), '/dashboard');
+    expect(auth.redirect('/dashboard'), isNull);
+    expect(auth.redirect('/configuracion'), isNull);
+  });
+
+  test('Un rol desconocido no concede el panel de administración', () async {
+    final fixture = _AuthFixture(
+      authorization: (request) async => _rows(request, [
+        {'email': 'test@example.com', 'activo': true, 'rol': 'superadmin'},
+      ]),
+    );
+    final auth = _controller(fixture.client);
+
+    await fixture.signIn();
+    await _waitUntil(() => auth.isAuthorized);
+
+    expect(auth.rol, 'superadmin');
+    expect(auth.esAdmin, isFalse);
+    expect(auth.redirect('/admin'), '/dashboard');
+  });
+
   for (final entry in <String, List<Map<String, dynamic>>>{
     'Usuario ausente de la lista': [],
     'Usuario con activo=false': [
-      {'email': 'test@example.com', 'activo': false, 'rol': 'administrador'},
+      {'email': 'test@example.com', 'activo': false, 'rol': 'admin'},
+    ],
+    'Usuario bloqueado': [
+      {
+        'email': 'test@example.com',
+        'activo': true,
+        'rol': 'admin',
+        'ff_bloqueo': '2026-10-03T14:30:00+00:00',
+      },
+    ],
+    'Usuario eliminado': [
+      {
+        'email': 'test@example.com',
+        'activo': true,
+        'rol': 'admin',
+        'ff_eliminar': '2026-10-03T14:30:00+00:00',
+      },
     ],
   }.entries) {
     test('${entry.key} cierra sesión y muestra el motivo', () async {
@@ -276,7 +333,7 @@ void main() {
       await auth.signOut();
       response.complete(
         _rows(request, [
-          {'email': 'test@example.com', 'activo': true, 'rol': 'administrador'},
+          {'email': 'test@example.com', 'activo': true, 'rol': 'admin'},
         ]),
       );
       await Future<void>.delayed(Duration.zero);
