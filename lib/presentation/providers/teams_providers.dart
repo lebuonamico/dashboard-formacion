@@ -170,37 +170,15 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   }
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
-  int? colaboradoresAlCierre;
-  if (ref.watch(alcancePeriodoProvider) == AlcancePeriodo.anual) {
-    final empleados = await ref.watch(empleadosProvider.future);
-    final historial = await ref.watch(empleadoHistorialProvider.future);
-    final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-    final certificaciones = await ref.watch(
-      certificacionesMoodleProvider.future,
-    );
-    final anio = ref.watch(filtroAnioPeriodoProvider);
-    // Leandro: llama a ultimoMesConDatos para contar la población anual al cierre del último mes disponible.
-    final ultimoMes = equiposService.ultimoMesConDatos(
-      cargas: cargas,
-      certificaciones: certificaciones,
-      anio: anio,
-    );
-    if (ultimoMes != null) {
-      colaboradoresAlCierre = equiposService
-          .filtrarEmpleadosPorPeriodo(
-            empleados: empleados,
-            historial: historial,
-            anio: anio,
-            mes: ultimoMes,
-            esAnual: false,
-          )
-          .length;
-    }
-  }
+  // Leandro: llama a toSet para contar una sola vez cada legajo elegible en los meses con datos del año.
+  final colaboradoresUnicosAnuales =
+      ref.watch(alcancePeriodoProvider) == AlcancePeriodo.anual
+      ? cumplimientos.map((item) => item.empleado.legajo).toSet().length
+      : null;
   // Leandro: llama a calcularResumenPeriodo para obtener los indicadores y estados de todos los equipos elegibles.
   return equiposService.calcularResumenPeriodo(
     cumplimientos,
-    colaboradoresAlCierre: colaboradoresAlCierre,
+    colaboradoresAlCierre: colaboradoresUnicosAnuales,
   );
 });
 

@@ -205,6 +205,7 @@ class _DashboardContent extends ConsumerWidget {
               ),
               equipos: equiposFiltrados,
               totalEquipos: resumen.totalEquipos,
+              esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
             ),
           ),
         ],
