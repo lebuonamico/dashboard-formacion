@@ -159,6 +159,69 @@ void main() {
       expect(find.text('No se encontraron datos.'), findsOneWidget);
       expect(find.textContaining('NaN'), findsNothing);
     });
+
+    testWidgets('usa la misma base que Equipos', (tester) async {
+      final container = await _mostrar(
+        tester,
+        ruta: '/dashboard',
+        pantalla: (_) => const DashboardScreen(),
+        empleados: [
+          _empleado,
+          // Ni el inactivo ni el que no tiene fecha de ingreso son elegibles.
+          Empleado(
+            legajo: '200',
+            nombre: 'Baja',
+            apellido: 'Inactiva',
+            seniority: Seniority.junior1,
+            area: 'Tecnología',
+            mail: 'baja@finnegans.com',
+            equipo: 'Plataforma',
+            gerente: 'Beto',
+            fechaIngreso: DateTime(2020, 1, 1),
+            activo: false,
+          ),
+          Empleado(
+            legajo: '300',
+            nombre: 'Sin',
+            apellido: 'Ingreso',
+            seniority: Seniority.junior1,
+            area: 'Tecnología',
+            mail: 'sin@finnegans.com',
+            equipo: 'Plataforma',
+            gerente: 'Beto',
+          ),
+        ],
+        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        // Finalizó en marzo: no valida las horas CRM de junio.
+        certificaciones: [
+          CertificacionMoodle(
+            legajo: _empleado.legajo,
+            cursoNombre: _curso.nombre,
+            finalizoCurso: true,
+            fechaFinalizacion: DateTime(_anio, 3, 20),
+          ),
+        ],
+      );
+
+      final cumplimientos = await container.read(
+        cumplimientoDashboardProvider.future,
+      );
+      final resumenEquipos = await container.read(
+        resumenEquiposPeriodoProvider.future,
+      );
+      final horasDashboard = cumplimientos.fold<double>(
+        0,
+        (total, item) => total + item.totalHorasCompletadas,
+      );
+
+      expect(cumplimientos.map((item) => item.empleado.legajo).toSet(), {
+        _empleado.legajo,
+      });
+      expect(resumenEquipos.colaboradores, 1);
+      expect(horasDashboard, resumenEquipos.horasRealizadas);
+      expect(horasDashboard, 0);
+      expect(find.text('0.0 h válidas para el objetivo'), findsOneWidget);
+    });
   });
 
   group('Áreas', () {
