@@ -142,10 +142,10 @@ class LoginScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (auth.error != null) ...[
+                    if (auth.loginError != null) ...[
                       const SizedBox(height: 12),
                       Text(
-                        auth.error!,
+                        auth.loginError!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
                       ),
