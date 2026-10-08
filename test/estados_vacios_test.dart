@@ -345,11 +345,77 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Ninguna certificación coincide con la búsqueda.'),
+          find.text('Ninguna certificación coincide con los filtros.'),
           findsOneWidget,
         );
         expect(find.text('No hay certificaciones LMS cargadas.'), findsNothing);
       },
     );
+
+    testWidgets('el filtro por estado deja afuera las que no coinciden', (
+      tester,
+    ) async {
+      final container = await _mostrar(
+        tester,
+        ruta: '/certificaciones',
+        pantalla: (_) => const CertificacionScreen(),
+        certificaciones: [
+          CertificacionMoodle(
+            legajo: _empleado.legajo,
+            cursoNombre: _curso.nombre,
+            finalizoCurso: true,
+            fechaFinalizacion: DateTime(_anio, _mes, 20),
+          ),
+        ],
+      );
+      expect(find.text('Ana Pérez'), findsOneWidget);
+      expect(find.text('20/06/2026'), findsOneWidget);
+
+      container.read(filtroEstadoCertificacionProvider.notifier).state = false;
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna certificación coincide con los filtros.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('avisa cuando el curso o el legajo quedan fuera del cálculo', (
+      tester,
+    ) async {
+      await _mostrar(
+        tester,
+        ruta: '/certificaciones',
+        pantalla: (_) => const CertificacionScreen(),
+        certificaciones: [
+          CertificacionMoodle(
+            legajo: _empleado.legajo,
+            cursoNombre: 'Curso que no está en el catálogo',
+            finalizoCurso: true,
+            fechaFinalizacion: DateTime(_anio, _mes, 20),
+          ),
+          CertificacionMoodle(
+            legajo: '999',
+            cursoNombre: _curso.nombre,
+            finalizoCurso: false,
+          ),
+        ],
+      );
+
+      expect(find.text('2 fuera del cálculo'), findsOneWidget);
+      expect(
+        find.byTooltip(
+          'El curso no está en el catálogo: esta finalización no acredita horas.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byTooltip(
+          'El legajo no está en la nómina: no suma al cumplimiento de ningún equipo.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Fuera de la nómina'), findsOneWidget);
+    });
   });
 }

@@ -2,6 +2,7 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
+import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
@@ -164,7 +165,6 @@ class CursosScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 /// Gris de los datos secundarios (encabezados y columna ID).
@@ -219,8 +219,9 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
         // página y no queda un hueco entre la última fila y el paginador.
         final altoParaTabla =
             constraints.maxHeight - _altoPaginador - _separacion;
-        final cursosPorPagina =
-            ((altoParaTabla - _altoEncabezado) / _altoFila).floor().clamp(
+        final cursosPorPagina = ((altoParaTabla - _altoEncabezado) / _altoFila)
+            .floor()
+            .clamp(
               _minimoPorPagina,
               // Nunca más filas que cursos hay.
               total < _minimoPorPagina ? _minimoPorPagina : total,
@@ -318,7 +319,7 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                   ),
                 ),
               ),
-              DataCell(_tipoChip(vm.curso.tipo)),
+              DataCell(TipoCursoChip(tipo: vm.curso.tipo)),
               DataCell(
                 Text(
                   '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',
@@ -334,44 +335,4 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
       ],
     );
   }
-}
-
-Widget _tipoChip(TipoCurso tipo) {
-  Color bg;
-  Color text;
-
-    switch (tipo) {
-      case TipoCurso.habilidadesDeNegocio:
-        bg = const Color(0xFFEFF6FF);
-        text = const Color(0xFF1D4ED8);
-        break;
-      case TipoCurso.habilidadesBlandas:
-        bg = const Color(0xFFF3E8FF);
-        text = const Color(0xFF7E22CE);
-        break;
-      case TipoCurso.libresExploracion:
-        bg = const Color(0xFFECFDF5);
-        text = const Color(0xFF047857);
-        break;
-      case TipoCurso.dictadoCapacitaciones:
-        bg = const Color(0xFFFFF7ED);
-        text = const Color(0xFFC2410C);
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        tipo.label,
-        style: TextStyle(
-          color: text,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
 }
