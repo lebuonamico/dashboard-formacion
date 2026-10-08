@@ -6,14 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
-import 'package:app_finnegans/presentation/providers/access_message_provider.dart';
+import 'package:app_finnegans/core/auth/access_rejection.dart';
 
 String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
     isWeb ? baseUri.origin : null;
 
 class AuthController extends ChangeNotifier {
   final SupabaseClient? _client;
-  final void Function(bool authorized)? _onAuthorizationResult;
   StreamSubscription<AuthState>? _subscription;
   String? error;
   bool _authorizationDenied = false;
@@ -26,10 +25,7 @@ class AuthController extends ChangeNotifier {
   int _authorizationRevision = 0;
   bool _disposed = false;
 
-  AuthController(
-    this._client, {
-    void Function(bool authorized)? onAuthorizationResult,
-  }) : _onAuthorizationResult = onAuthorizationResult {
+  AuthController(this._client) {
     _subscription = _client?.auth.onAuthStateChange.listen(
       (state) {
         if (_disposed) return;
@@ -140,11 +136,11 @@ class AuthController extends ChangeNotifier {
         rol = row['rol'] as String?;
         _authorizedUser = user;
         _authorizationDenied = false;
-        _onAuthorizationResult?.call(true);
+        clearAccessRejection();
       } else {
         _authorizationDenied = true;
-        // Store the UI message outside AuthController before clearing the session.
-        _onAuthorizationResult?.call(false);
+        // Persist only the generic reason before logout or OAuth navigation.
+        rememberUnauthorizedAccess();
         try {
           await _client!.auth.signOut();
         } catch (_) {
@@ -221,10 +217,5 @@ class AuthController extends ChangeNotifier {
 final authControllerProvider = ChangeNotifierProvider<AuthController>(
   (ref) => AuthController(
     SupabaseConfig.enabled ? ref.watch(supabaseClientProvider) : null,
-    onAuthorizationResult: (authorized) {
-      ref.read(accessRejectionMessageProvider.notifier).state = authorized
-          ? null
-          : unauthorizedAccessMessage;
-    },
   ),
 );

@@ -1,17 +1,36 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/presentation/providers/access_message_provider.dart';
+import 'package:app_finnegans/core/auth/access_rejection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  String? _rejectionMessage;
+
+  @override
+  Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-    final rejectionMessage = ref.watch(accessRejectionMessageProvider);
-    final loginMessage = rejectionMessage ?? auth.error;
+    if (!auth.hasValidSession && !auth.isValidatingAuthorization) {
+      // Read on arrival or after logout when login is already mounted.
+      final pendingMessage = readAccessRejectionMessage();
+      if (pendingMessage != null) {
+        _rejectionMessage = pendingMessage;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Consume only after this screen has actually displayed the text.
+          if (mounted && !ref.read(authControllerProvider).hasValidSession) {
+            consumeAccessRejectionMessage();
+          }
+        });
+      }
+    }
+    final loginMessage = _rejectionMessage ?? auth.error;
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       body: Center(
@@ -111,9 +130,8 @@ class LoginScreen extends ConsumerWidget {
                                 context.go('/dashboard');
                                 return;
                               }
-                              ref
-                                  .read(accessRejectionMessageProvider.notifier)
-                                  .state = null;
+                              clearAccessRejection();
+                              setState(() => _rejectionMessage = null);
                               await auth.signInWithGoogle();
                             },
                       style: OutlinedButton.styleFrom(
