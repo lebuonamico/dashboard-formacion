@@ -44,9 +44,6 @@ class AuthController extends ChangeNotifier {
 
   bool get enabled => _client != null;
 
-  /// Mail del usuario logueado, para mostrarlo en la interfaz.
-  String? get email => _currentUser?.$2;
-
   bool get hasValidSession {
     final session = _client?.auth.currentSession;
     return session != null && !session.isExpired;
@@ -62,6 +59,7 @@ class AuthController extends ChangeNotifier {
       _authorizedUser != null &&
       _authorizedUser == _currentUser;
 
+  /// Mail del usuario autorizado, para mostrarlo en la interfaz.
   String? get email => isAuthorized ? _authorizedUser?.$2 : null;
 
   bool get esAdmin => isAuthorized && rol == RolUsuario.admin.name;

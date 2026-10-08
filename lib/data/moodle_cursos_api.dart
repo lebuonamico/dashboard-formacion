@@ -1,52 +1,38 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MoodleCursosApi {
-  static const _token = 'c1838bd2db5e4c5fb233c4d6a6f693bb';
-  static final Uri _endpoint = Uri.https(
-    'academia-test.finneg.com',
-    '/webservice/rest/server.php',
-  );
-
   Future<List<Curso>> getCursos() async {
-    final uri = _endpoint.replace(
-      queryParameters: {
-        'wstoken': _token,
-        'wsfunction': 'core_course_get_courses',
-        'moodlewsrestformat': 'json',
-      },
-    );
-    final response = await http
-        .get(uri, headers: const {'Accept': 'application/json'})
-        .timeout(const Duration(seconds: 30));
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw FormatException(
-        'Moodle respondió con estado HTTP ${response.statusCode}.',
+    final client = Supabase.instance.client;
+    if (client.auth.currentSession == null) {
+      throw const FormatException(
+        'Iniciá sesión para sincronizar los cursos de Moodle.',
       );
     }
-
-    final dynamic decoded;
     try {
-      decoded = jsonDecode(response.body);
-    } on FormatException {
-      throw const FormatException('Moodle devolvió una respuesta inválida.');
+      final response = await client.functions
+          .invoke('moodle-cursos')
+          .timeout(const Duration(seconds: 30));
+      if (response.status != 200) {
+        throw const FormatException('No se pudieron consultar los cursos.');
+      }
+      return parseCourses(response.data);
+    } on FunctionException catch (error) {
+      throw FormatException(switch (error.status) {
+        401 => 'Iniciá sesión nuevamente para sincronizar los cursos.',
+        403 => 'Tu usuario no está autorizado para sincronizar los cursos.',
+        _ =>
+          'No se pudieron consultar los cursos de Moodle. Intentá nuevamente.',
+      });
     }
-    return parseCourses(decoded);
   }
 
   static List<Curso> parseCourses(Object? response) {
     if (response is Map) {
-      final message = response['message']?.toString();
-      throw FormatException(
-        message == null || message.isEmpty
-            ? 'Moodle devolvió un error al consultar los cursos.'
-            : 'Moodle: $message',
-      );
+      throw const FormatException('No se pudieron consultar los cursos.');
     }
     if (response is! List) {
       throw const FormatException(
