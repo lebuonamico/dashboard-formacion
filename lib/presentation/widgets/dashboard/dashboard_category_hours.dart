@@ -19,9 +19,11 @@ class DashboardCategoryHours extends StatelessWidget {
         final resumen = {
           for (final tipo in TipoCurso.values)
             tipo: _CategoryHoursSummary(
+              // Sólo lo que suma al objetivo, igual que "Horas realizadas"
+              // de Equipos y Áreas.
               completed: cumplimientos.fold<double>(
                 0,
-                (total, item) => total + (item.horasCompletadas[tipo] ?? 0),
+                (total, item) => total + item.horasAplicablesAlObjetivo(tipo),
               ),
               expected: cumplimientos.fold<double>(
                 0,

@@ -15,6 +15,10 @@ class DashboardKpiGrid extends StatelessWidget {
   final int anioSeleccionado;
   final bool soloRegistrosCargados;
 
+  /// Meses evaluados en el período: 1 en el mensual, los meses con datos en
+  /// el anual. Sirve para pasar las horas del período a un ritmo mensual.
+  final int mesesEvaluados;
+
   const DashboardKpiGrid({
     super.key,
     required this.cumplimientosAsync,
@@ -25,6 +29,7 @@ class DashboardKpiGrid extends StatelessWidget {
     required this.mesSeleccionado,
     required this.anioSeleccionado,
     required this.soloRegistrosCargados,
+    this.mesesEvaluados = 1,
   });
 
   @override
@@ -50,34 +55,40 @@ class DashboardKpiGrid extends StatelessWidget {
     final equipos = equiposAsync.value ?? [];
     if (cumplimientos.isEmpty) return const SizedBox.shrink();
 
-    final totalEmpleados = cumplimientos.length;
-    final totalHoras = cumplimientos.fold<double>(
+    // Misma base que Equipos y Áreas. En el anual un legajo puede repetirse
+    // si cambió de equipo: se cuenta una sola vez.
+    final legajos = {for (final item in cumplimientos) item.empleado.legajo};
+    final totalEmpleados = legajos.length;
+    final horasRealizadas = cumplimientos.fold<double>(
       0,
       (total, item) => total + item.totalHorasCompletadas,
     );
-    final horasValidadasLms = cumplimientos.fold<double>(
+    final horasObjetivo = cumplimientos.fold<double>(
       0,
-      (total, item) =>
-          total +
-          item.horasValidas.values.fold(0.0, (sum, horas) => sum + horas),
+      (total, item) => total + item.totalHorasRequeridas,
     );
-    final promedioHoras = totalHoras / totalEmpleados;
-    final promedioCumplimiento =
-        cumplimientos
-            .map((item) => item.porcentajeTotal)
-            .reduce((a, b) => a + b) /
-        totalEmpleados;
-    final empleadosTomaronCurso = cargas
+    // Igual que "Cumplimiento global" de Equipos y Áreas.
+    final cumplimientoGlobal = horasObjetivo == 0
+        ? 0.0
+        : horasRealizadas / horasObjetivo * 100;
+    final mesesDelPeriodo = mesesEvaluados < 1 ? 1 : mesesEvaluados;
+    final ritmoMensual = horasRealizadas / totalEmpleados / mesesDelPeriodo;
+    final proyeccionAnual = ritmoMensual * 12;
+    // Sólo la nómina del período: un legajo del CRM fuera de la nómina no
+    // cuenta como colaborador capacitándose.
+    final cargasNomina = cargas
+        .where((carga) => legajos.contains(carga.empleadoLegajo))
+        .toList();
+    final empleadosTomaronCurso = cargasNomina
         .where((carga) => !carga.esDictada)
         .map((carga) => carga.empleadoLegajo)
         .toSet()
         .length;
-    final horasDeclaradasPeriodo = cargas.fold<double>(
+    final horasDeclaradasPeriodo = cargasNomina.fold<double>(
       0,
       (total, carga) => total + carga.horasTotales,
     );
-    final metaPeriodo =
-        totalEmpleados * 8.0 * (alcance == AlcancePeriodo.anual ? 12 : 1);
+    final metaPeriodo = horasObjetivo;
     const nombresMeses = [
       'ENERO',
       'FEBRERO',
@@ -130,25 +141,23 @@ class DashboardKpiGrid extends StatelessWidget {
         progressLabel: soloRegistrosCargados
             ? 'Todos los registros importados'
             : alcance == AlcancePeriodo.anual
-            ? 'Meta anual: 96 h por colaborador'
-            : 'Meta mensual: 8 h por colaborador',
+            ? 'Meta: ${metaPeriodo.toStringAsFixed(0)} h en $mesesDelPeriodo ${mesesDelPeriodo == 1 ? 'mes' : 'meses'} con datos'
+            : 'Meta: ${metaPeriodo.toStringAsFixed(0)} h según seniority',
         footer: soloRegistrosCargados
             ? 'Sin filtro temporal'
             : '${(metaPeriodo - horasDeclaradasPeriodo).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
         secondaryText:
-            '${horasValidadasLms.toStringAsFixed(1)} h validadas LMS (acumuladas)',
+            '${horasRealizadas.toStringAsFixed(1)} h válidas para el objetivo',
         icon: Icons.schedule_outlined,
         color: const Color(0xFF2563EB),
       ),
       DashboardKpiCard(
         title: 'PROYECCIÓN ANUAL',
-        value: '${(promedioHoras * 12).toStringAsFixed(0)} h',
+        value: '${proyeccionAnual.toStringAsFixed(0)} h',
         suffix: '/ Meta: 96 h',
-        progress: (promedioHoras * 12 / 96).clamp(0.0, 1.0),
-        progressLabel:
-            'Ritmo actual: ${promedioHoras.toStringAsFixed(1)} h/mes',
-        footer:
-            'Cumplimiento promedio ${promedioCumplimiento.toStringAsFixed(0)}%',
+        progress: (proyeccionAnual / 96).clamp(0.0, 1.0),
+        progressLabel: 'Ritmo actual: ${ritmoMensual.toStringAsFixed(1)} h/mes',
+        footer: 'Cumplimiento global ${cumplimientoGlobal.toStringAsFixed(0)}%',
         icon: Icons.trending_up,
         color: const Color(0xFF2563EB),
       ),

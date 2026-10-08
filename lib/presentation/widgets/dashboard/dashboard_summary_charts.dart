@@ -95,9 +95,10 @@ class _CategorySummary {
   factory _CategorySummary.from(List<CumplimientoEmpleado> items) {
     final hours = <TipoCurso, double>{};
     for (final tipo in TipoCurso.values) {
+      // Sólo lo que suma al objetivo: el total coincide con totalCompleted.
       hours[tipo] = items.fold<double>(
         0,
-        (total, item) => total + (item.horasCompletadas[tipo] ?? 0),
+        (total, item) => total + item.horasAplicablesAlObjetivo(tipo),
       );
     }
 

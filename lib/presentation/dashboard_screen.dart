@@ -24,6 +24,8 @@ class DashboardScreen extends ConsumerWidget {
     final areasAsync = ref.watch(semaforoPorAreaProvider);
     final cargasAsync = ref.watch(cargasDashboardProvider);
     final equiposAsync = ref.watch(equiposGlobalProvider);
+    final mesesEvaluados =
+        ref.watch(mesesEvaluadosDashboardProvider).value ?? 1;
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
@@ -102,6 +104,7 @@ class DashboardScreen extends ConsumerWidget {
                                   mesSeleccionado: mes,
                                   anioSeleccionado: anio,
                                   soloRegistrosCargados: soloRegistrosCargados,
+                                  mesesEvaluados: mesesEvaluados,
                                 ),
                                 const SizedBox(height: 28),
                                 DashboardCategoryHours(
