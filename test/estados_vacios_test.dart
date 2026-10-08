@@ -245,6 +245,36 @@ void main() {
       );
       expect(find.text('No hay empleados cargados.'), findsNothing);
     });
+
+    testWidgets('con muchos empleados pagina el directorio', (tester) async {
+      final empleados = [
+        for (var i = 0; i < 80; i++)
+          Empleado(
+            legajo: '${1000 + i}',
+            nombre: 'Empleado',
+            apellido: '$i',
+            seniority: Seniority.values[i % Seniority.values.length],
+            area: 'Tecnología',
+            mail: 'empleado$i@finnegans.com',
+            equipo: 'Plataforma',
+            gerente: 'Beto',
+          ),
+      ];
+      await _mostrar(
+        tester,
+        ruta: '/empleados',
+        pantalla: (_) => const EmpleadosScreen(),
+        empleados: empleados,
+      );
+
+      expect(find.textContaining('de 80 empleados'), findsOneWidget);
+      expect(find.textContaining('Página 1 de'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Página siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Página 2 de'), findsOneWidget);
+    });
   });
 
   group('Cursos', () {

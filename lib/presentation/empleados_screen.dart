@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
+import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
@@ -60,7 +62,7 @@ class EmpleadosScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildFilterBar(ref),
+                        const _BarraFiltrosEmpleados(),
                         const SizedBox(height: 20),
                         Expanded(
                           child: empleadosFiltrados.when(
@@ -98,20 +100,18 @@ class EmpleadosScreen extends ConsumerWidget {
                                 loading: () => const Center(
                                   child: CircularProgressIndicator(),
                                 ),
-                                error: (_, _) => _buildTablaDirectorio(
-                                  context,
-                                  empleados,
-                                  const {},
+                                error: (_, _) => _TablaEmpleadosPaginada(
+                                  empleados: empleados,
+                                  cumplimientoPorLegajo: const {},
                                 ),
                                 data: (items) {
                                   final porLegajo = {
                                     for (final item in items)
                                       item.empleado.legajo: item,
                                   };
-                                  return _buildTablaDirectorio(
-                                    context,
-                                    empleados,
-                                    porLegajo,
+                                  return _TablaEmpleadosPaginada(
+                                    empleados: empleados,
+                                    cumplimientoPorLegajo: porLegajo,
                                   );
                                 },
                               );
@@ -129,9 +129,49 @@ class EmpleadosScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildFilterBar(WidgetRef ref) {
-    final senioritySeleccionado = ref.watch(filtroSeniorityProvider);
+/// Buscador + Seniority. Es stateful para poder vaciar el texto del buscador
+/// desde "Limpiar filtros".
+class _BarraFiltrosEmpleados extends ConsumerStatefulWidget {
+  const _BarraFiltrosEmpleados();
+
+  @override
+  ConsumerState<_BarraFiltrosEmpleados> createState() =>
+      _BarraFiltrosEmpleadosState();
+}
+
+class _BarraFiltrosEmpleadosState
+    extends ConsumerState<_BarraFiltrosEmpleados> {
+  late final TextEditingController _busqueda;
+
+  @override
+  void initState() {
+    super.initState();
+    // Los filtros persisten al navegar: el texto arranca con la búsqueda vigente.
+    _busqueda = TextEditingController(
+      text: ref.read(busquedaEmpleadoProvider),
+    );
+  }
+
+  @override
+  void dispose() {
+    _busqueda.dispose();
+    super.dispose();
+  }
+
+  void _limpiarFiltros() {
+    _busqueda.clear();
+    ref.read(busquedaEmpleadoProvider.notifier).state = '';
+    ref.read(filtroSeniorityProvider.notifier).state = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final busqueda = ref.watch(busquedaEmpleadoProvider);
+    final seniority = ref.watch(filtroSeniorityProvider);
+
+    final hayFiltros = busqueda.isNotEmpty || seniority != null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -144,6 +184,7 @@ class EmpleadosScreen extends ConsumerWidget {
         children: [
           Expanded(
             child: TextField(
+              controller: _busqueda,
               onChanged: (val) =>
                   ref.read(busquedaEmpleadoProvider.notifier).state = val,
               decoration: const InputDecoration(
@@ -162,185 +203,321 @@ class EmpleadosScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 16),
-          DropdownButtonHideUnderline(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFCBD5E1)),
-                borderRadius: BorderRadius.circular(4),
+          _Desplegable<Seniority?>(
+            value: seniority,
+            items: [
+              const DropdownMenuItem<Seniority?>(
+                value: null,
+                child: Text('Todos los seniorities'),
               ),
-              child: DropdownButton<Seniority?>(
-                value: senioritySeleccionado,
-                hint: const Text('Todos los seniorities'),
-                items: [
-                  const DropdownMenuItem<Seniority?>(
-                    value: null,
-                    child: Text('Todos los seniorities'),
-                  ),
-                  ...Seniority.values.map(
-                    (s) => DropdownMenuItem(value: s, child: Text(s.label)),
-                  ),
-                ],
-                onChanged: (val) =>
-                    ref.read(filtroSeniorityProvider.notifier).state = val,
+              for (final s in Seniority.values)
+                DropdownMenuItem<Seniority?>(value: s, child: Text(s.label)),
+            ],
+            onChanged: (val) =>
+                ref.read(filtroSeniorityProvider.notifier).state = val,
+          ),
+          if (hayFiltros) ...[
+            const SizedBox(width: 12),
+            TextButton.icon(
+              onPressed: _limpiarFiltros,
+              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+              label: const Text('Limpiar filtros'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0D53C3),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildTablaDirectorio(
-    BuildContext context,
-    List<Empleado> empleados,
-    Map<String, CumplimientoEmpleado> cumplimientoPorLegajo,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+/// Desplegable con el borde de los filtros del resto de las pantallas.
+class _Desplegable<T> extends StatelessWidget {
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+
+  const _Desplegable({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonHideUnderline(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: onChanged == null ? const Color(0xFFF8FAFC) : null,
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: DropdownButton<T>(
+          value: value,
+          items: items,
+          onChanged: onChanged,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: SingleChildScrollView(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              showCheckboxColumn: false,
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
-              dataRowMinHeight: 64,
-              dataRowMaxHeight: 72,
-              horizontalMargin: 20,
-              columnSpacing: 24,
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'Legajo',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+    );
+  }
+}
+
+/// Gris de los datos secundarios (encabezados, mail y equipo).
+const _grisSuave = Color(0xFF64748B);
+const _tinta = Color(0xFF0F172A);
+
+/// Encabezados en gris y chicos, igual que Carga de horas CRM.
+const _estiloEncabezado = TextStyle(
+  fontSize: 13,
+  fontWeight: FontWeight.w600,
+  color: _grisSuave,
+);
+
+/// Tabla del directorio, de a una página por vez y a todo el ancho.
+class _TablaEmpleadosPaginada extends StatefulWidget {
+  final List<Empleado> empleados;
+  final Map<String, CumplimientoEmpleado> cumplimientoPorLegajo;
+
+  const _TablaEmpleadosPaginada({
+    required this.empleados,
+    required this.cumplimientoPorLegajo,
+  });
+
+  @override
+  State<_TablaEmpleadosPaginada> createState() =>
+      _TablaEmpleadosPaginadaState();
+}
+
+class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
+  // Filas de dos líneas: nombre + mail, área + equipo y las fichas de
+  // progreso en dos renglones.
+  static const _altoFila = 56.0;
+  static const _altoEncabezado = 44.0;
+  static const _altoPaginador = 60.0;
+  static const _separacion = 12.0;
+
+  /// Debajo de este ancho las columnas se aprietan demasiado: aparece el
+  /// scroll horizontal en lugar de cortar todos los textos. Es mayor que en
+  /// el CRM porque la columna de progreso tiene ancho fijo.
+  static const _anchoMinimo = 1100.0;
+
+  /// Las fichas de [ProgresoHorasPorCategoria] miden 256 px fijos; la columna
+  /// suma el espacio entre columnas para que no desborden.
+  static const _anchoProgreso = 256.0 + 24.0;
+
+  /// Mínimo razonable si la ventana queda muy baja.
+  static const _minimoPorPagina = 5;
+
+  int _paginaActual = 0;
+
+  @override
+  void didUpdateWidget(covariant _TablaEmpleadosPaginada oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Al cambiar el filtro o la búsqueda, volver a la primera página.
+    if (oldWidget.empleados != widget.empleados) {
+      _paginaActual = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total = widget.empleados.length;
+
+        // Cuántas filas entran en el alto disponible, para que la tabla llene
+        // la página sin dejar un hueco antes del paginador.
+        final altoParaTabla =
+            constraints.maxHeight - _altoPaginador - _separacion;
+        final porPagina = ((altoParaTabla - _altoEncabezado) / _altoFila)
+            .floor()
+            .clamp(
+              _minimoPorPagina,
+              total < _minimoPorPagina ? _minimoPorPagina : total,
+            );
+
+        final totalPaginas = total == 0
+            ? 1
+            : (total + porPagina - 1) ~/ porPagina;
+        final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
+        final inicio = paginaSegura * porPagina;
+        final finCalculado = inicio + porPagina;
+        final fin = finCalculado > total ? total : finCalculado;
+        final visibles = widget.empleados.sublist(inicio, fin);
+
+        // Ancho fijo (no un mínimo): las columnas flex necesitan un ancho
+        // acotado para repartirse, si no colapsan dentro del scroll.
+        final ancho = constraints.maxWidth < _anchoMinimo
+            ? _anchoMinimo
+            : constraints.maxWidth;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: ancho,
+                  // Red de seguridad por si algo no entra.
+                  child: SingleChildScrollView(child: _tabla(visibles)),
+                ),
+              ),
+            ),
+            if (totalPaginas > 1) ...[
+              const SizedBox(height: _separacion),
+              PaginacionResultados(
+                paginaActual: paginaSegura,
+                cantidadPaginas: totalPaginas,
+                desde: inicio + 1,
+                hasta: fin,
+                totalResultados: total,
+                etiquetaResultados: 'empleados',
+                icono: Icons.people_outline,
+                onPrevious: paginaSegura > 0
+                    ? () => setState(() => _paginaActual = paginaSegura - 1)
+                    : null,
+                onNext: paginaSegura < totalPaginas - 1
+                    ? () => setState(() => _paginaActual = paginaSegura + 1)
+                    : null,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _tabla(List<Empleado> visibles) {
+    return DataTable(
+      showCheckboxColumn: false,
+      headingRowColor: WidgetStateProperty.all(Colors.transparent),
+      horizontalMargin: 0,
+      columnSpacing: 24,
+      headingRowHeight: _altoEncabezado,
+      dataRowMinHeight: _altoFila,
+      dataRowMaxHeight: _altoFila,
+      dividerThickness: 1,
+      // Proporciones del ancho: el nombre y el área son lo que más se lee,
+      // el legajo es un dato corto.
+      columns: const [
+        DataColumn(
+          columnWidth: FlexColumnWidth(1),
+          label: Text('Legajo', style: _estiloEncabezado),
+        ),
+        DataColumn(
+          columnWidth: FlexColumnWidth(3),
+          label: Text('Empleado', style: _estiloEncabezado),
+        ),
+        DataColumn(
+          columnWidth: FlexColumnWidth(2.5),
+          label: Text('Área / Equipo', style: _estiloEncabezado),
+        ),
+        DataColumn(
+          columnWidth: FlexColumnWidth(1.6),
+          label: Text('Seniority', style: _estiloEncabezado),
+        ),
+        DataColumn(
+          columnWidth: FixedColumnWidth(_anchoProgreso),
+          label: Text('Progreso por categoría', style: _estiloEncabezado),
+        ),
+      ],
+      rows: [
+        for (final emp in visibles)
+          DataRow(
+            onSelectChanged: (_) => context.push('/empleados/${emp.legajo}'),
+            cells: [
+              DataCell(
+                Text(
+                  emp.legajo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
                   ),
                 ),
-                DataColumn(
-                  label: Text(
-                    'Empleado',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              ),
+              DataCell(_celdaEmpleado(emp)),
+              DataCell(_celdaAreaEquipo(emp)),
+              DataCell(SeniorityChip(seniority: emp.seniority)),
+              DataCell(
+                ProgresoHorasPorCategoria(
+                  cumplimiento: widget.cumplimientoPorLegajo[emp.legajo],
                 ),
-                DataColumn(
-                  label: Text(
-                    'Área',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Equipo',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Seniority',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Progreso por categoría',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-              rows: empleados.map((emp) {
-                return DataRow(
-                  onSelectChanged: (_) =>
-                      context.push('/empleados/${emp.legajo}'),
-                  cells: [
-                    DataCell(
-                      Text(
-                        emp.legajo,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    DataCell(
-                      SizedBox(
-                        width: 190,
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: const Color(0xFFE2E8F0),
-                              child: Text(
-                                emp.nombre.substring(0, 1),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${emp.nombre} ${emp.apellido}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    emp.mail,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    DataCell(Text(emp.area)),
-                    DataCell(Text(_mostrarDato(emp.equipo))),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          emp.seniority.label,
-                          style: const TextStyle(
-                            color: Color(0xFF1D4ED8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    DataCell(
-                      ProgresoHorasPorCategoria(
-                        cumplimiento: cumplimientoPorLegajo[emp.legajo],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _celdaEmpleado(Empleado emp) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: const Color(0xFFE2E8F0),
+          child: Text(
+            emp.nombre.isEmpty ? '?' : emp.nombre.substring(0, 1),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _tinta,
             ),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${emp.nombre} ${emp.apellido}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _tinta,
+                ),
+              ),
+              Text(
+                _mostrarDato(emp.mail),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: _grisSuave),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _celdaAreaEquipo(Empleado emp) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _mostrarDato(emp.area),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
+        ),
+        Text(
+          _mostrarDato(emp.equipo),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, color: _grisSuave),
+        ),
+      ],
     );
   }
 
