@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/presentation/providers/access_message_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,8 @@ class LoginScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
+    final rejectionMessage = ref.watch(accessRejectionMessageProvider);
+    final loginMessage = rejectionMessage ?? auth.error;
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       body: Center(
@@ -108,6 +111,9 @@ class LoginScreen extends ConsumerWidget {
                                 context.go('/dashboard');
                                 return;
                               }
+                              ref
+                                  .read(accessRejectionMessageProvider.notifier)
+                                  .state = null;
                               await auth.signInWithGoogle();
                             },
                       style: OutlinedButton.styleFrom(
@@ -142,10 +148,10 @@ class LoginScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (auth.loginError != null) ...[
+                    if (loginMessage != null) ...[
                       const SizedBox(height: 12),
                       Text(
-                        auth.loginError!,
+                        loginMessage,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
                       ),

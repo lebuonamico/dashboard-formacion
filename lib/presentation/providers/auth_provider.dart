@@ -6,15 +6,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/access_message_provider.dart';
 
 String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
     isWeb ? baseUri.origin : null;
 
 class AuthController extends ChangeNotifier {
-  static const _unauthorizedMessage =
-      'Tu cuenta no está autorizada para acceder al sistema. Contactá a un administrador.';
-
   final SupabaseClient? _client;
+  final void Function(bool authorized)? _onAuthorizationResult;
   StreamSubscription<AuthState>? _subscription;
   String? error;
   bool _authorizationDenied = false;
@@ -27,7 +26,10 @@ class AuthController extends ChangeNotifier {
   int _authorizationRevision = 0;
   bool _disposed = false;
 
-  AuthController(this._client) {
+  AuthController(
+    this._client, {
+    void Function(bool authorized)? onAuthorizationResult,
+  }) : _onAuthorizationResult = onAuthorizationResult {
     _subscription = _client?.auth.onAuthStateChange.listen(
       (state) {
         if (_disposed) return;
@@ -47,9 +49,6 @@ class AuthController extends ChangeNotifier {
   }
 
   bool get enabled => _client != null;
-
-  // Keep an authorization denial separate from transient OAuth/session errors.
-  String? get loginError => _authorizationDenied ? _unauthorizedMessage : error;
 
   bool get hasValidSession {
     final session = _client?.auth.currentSession;
@@ -141,11 +140,11 @@ class AuthController extends ChangeNotifier {
         rol = row['rol'] as String?;
         _authorizedUser = user;
         _authorizationDenied = false;
+        _onAuthorizationResult?.call(true);
       } else {
         _authorizationDenied = true;
-        error = _unauthorizedMessage;
-        // Publish before signOut invalidates this validation's revision.
-        notifyListeners();
+        // Store the UI message outside AuthController before clearing the session.
+        _onAuthorizationResult?.call(false);
         try {
           await _client!.auth.signOut();
         } catch (_) {
@@ -222,5 +221,10 @@ class AuthController extends ChangeNotifier {
 final authControllerProvider = ChangeNotifierProvider<AuthController>(
   (ref) => AuthController(
     SupabaseConfig.enabled ? ref.watch(supabaseClientProvider) : null,
+    onAuthorizationResult: (authorized) {
+      ref.read(accessRejectionMessageProvider.notifier).state = authorized
+          ? null
+          : unauthorizedAccessMessage;
+    },
   ),
 );
