@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/presentation/widgets/reloj_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -180,8 +179,6 @@ class SideMenu extends ConsumerWidget {
               ],
             ),
           ),
-          // Reloj
-          const ClockWidget(),
           // Logout
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
           Padding(
