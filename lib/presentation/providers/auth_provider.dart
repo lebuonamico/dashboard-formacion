@@ -11,9 +11,13 @@ String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
     isWeb ? baseUri.origin : null;
 
 class AuthController extends ChangeNotifier {
+  static const _unauthorizedMessage =
+      'Tu cuenta no está autorizada para acceder al sistema. Contactá a un administrador.';
+
   final SupabaseClient? _client;
   StreamSubscription<AuthState>? _subscription;
   String? error;
+  bool _authorizationDenied = false;
   bool isSigningIn = false;
   bool isValidatingAuthorization = false;
   String? rol;
@@ -43,6 +47,9 @@ class AuthController extends ChangeNotifier {
   }
 
   bool get enabled => _client != null;
+
+  // Keep an authorization denial separate from transient OAuth/session errors.
+  String? get loginError => _authorizationDenied ? _unauthorizedMessage : error;
 
   bool get hasValidSession {
     final session = _client?.auth.currentSession;
@@ -79,7 +86,7 @@ class AuthController extends ChangeNotifier {
       _clearAuthorization();
       // Keep a denial visible after the automatic signedOut event.
       notifyListeners();
-    } else if (!isAuthorized) {
+    } else if (!isAuthorized && !_authorizationDenied) {
       unawaited(validateAuthorization());
     } else {
       notifyListeners();
@@ -133,8 +140,12 @@ class AuthController extends ChangeNotifier {
           row['ff_bloqueo'] == null) {
         rol = row['rol'] as String?;
         _authorizedUser = user;
+        _authorizationDenied = false;
       } else {
-        error = 'Tu usuario no está autorizado para acceder a esta aplicación.';
+        _authorizationDenied = true;
+        error = _unauthorizedMessage;
+        // Publish before signOut invalidates this validation's revision.
+        notifyListeners();
         try {
           await _client!.auth.signOut();
         } catch (_) {
@@ -167,6 +178,7 @@ class AuthController extends ChangeNotifier {
     if (!enabled || isSigningIn || isValidatingAuthorization || _disposed) {
       return;
     }
+    _authorizationDenied = false;
     if (hasValidSession) {
       await validateAuthorization();
       return;
@@ -192,6 +204,7 @@ class AuthController extends ChangeNotifier {
 
   Future<void> signOut() async {
     _clearAuthorization();
+    _authorizationDenied = false;
     error = null;
     if (!_disposed) notifyListeners();
     await _client?.auth.signOut();
