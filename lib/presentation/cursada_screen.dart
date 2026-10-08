@@ -1,6 +1,7 @@
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
@@ -66,10 +67,27 @@ class CursadasScreen extends ConsumerWidget {
                                 Center(child: Text('Error: $err')),
                             data: (lista) {
                               if (lista.isEmpty) {
-                                return const Center(
-                                  child: Text(
-                                    'No hay cargas de horas coincidentes.',
-                                  ),
+                                final hayCargas =
+                                    ref
+                                        .watch(cargasDeHorasCRMProvider)
+                                        .value
+                                        ?.isNotEmpty ??
+                                    false;
+                                return SingleChildScrollView(
+                                  child: hayCargas
+                                      ? const EmptyDataState(
+                                          icon: Icons.search_off_outlined,
+                                          title:
+                                              'Ninguna carga de horas coincide con los filtros.',
+                                          message:
+                                              'Probá con otra búsqueda o curso.',
+                                        )
+                                      : const EmptyDataState(
+                                          icon: Icons.schedule_outlined,
+                                          title: 'No hay horas CRM cargadas.',
+                                          message:
+                                              'Importá el reporte de horas del CRM.',
+                                        ),
                                 );
                               }
                               return _buildTablaAsistencias(lista);

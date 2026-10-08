@@ -1,12 +1,14 @@
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_header.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_hours.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +19,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hayDatosAsync = ref.watch(hayDatosPeriodoProvider);
     final cumplimientoAsync = ref.watch(cumplimientoDashboardProvider);
     final areasAsync = ref.watch(semaforoPorAreaProvider);
     final cargasAsync = ref.watch(cargasDashboardProvider);
@@ -77,30 +80,47 @@ class DashboardScreen extends ConsumerWidget {
                           },
                         ),
                         const SizedBox(height: 24),
-                        DashboardKpiGrid(
-                          cumplimientosAsync: cumplimientoAsync,
-                          cargasAsync: cargasAsync,
-                          areasAsync: areasAsync,
-                          equiposAsync: equiposAsync,
-                          alcance: alcance,
-                          mesSeleccionado: mes,
-                          anioSeleccionado: anio,
-                          soloRegistrosCargados: soloRegistrosCargados,
+                        hayDatosAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, _) => Text('Error: $error'),
+                          data: (hayDatos) {
+                            if (!hayDatos) {
+                              return EmptyDataState.periodoSinDatos(
+                                periodo: etiquetaPeriodo(alcance, mes, anio),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                DashboardKpiGrid(
+                                  cumplimientosAsync: cumplimientoAsync,
+                                  cargasAsync: cargasAsync,
+                                  areasAsync: areasAsync,
+                                  equiposAsync: equiposAsync,
+                                  alcance: alcance,
+                                  mesSeleccionado: mes,
+                                  anioSeleccionado: anio,
+                                  soloRegistrosCargados: soloRegistrosCargados,
+                                ),
+                                const SizedBox(height: 28),
+                                DashboardCategoryHours(
+                                  cumplimientosAsync: cumplimientoAsync,
+                                ),
+                                const SizedBox(height: 28),
+                                DashboardSummaryCharts(
+                                  cumplimientosAsync: cumplimientoAsync,
+                                ),
+                                const SizedBox(height: 28),
+                                // DashboardAreaCompliancePanel(areasAsync: areasAsync),
+                                // const SizedBox(height: 28),
+                                DashboardMonthlyHours(cargasAsync: cargasAsync),
+                                const SizedBox(height: 28),
+                                DashboardAreasSection(areasAsync: areasAsync),
+                              ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 28),
-                        DashboardCategoryHours(
-                          cumplimientosAsync: cumplimientoAsync,
-                        ),
-                        const SizedBox(height: 28),
-                        DashboardSummaryCharts(
-                          cumplimientosAsync: cumplimientoAsync,
-                        ),
-                        const SizedBox(height: 28),
-                        // DashboardAreaCompliancePanel(areasAsync: areasAsync),
-                        // const SizedBox(height: 28),
-                        DashboardMonthlyHours(cargasAsync: cargasAsync),
-                        const SizedBox(height: 28),
-                        DashboardAreasSection(areasAsync: areasAsync),
                       ],
                     ),
                   ),

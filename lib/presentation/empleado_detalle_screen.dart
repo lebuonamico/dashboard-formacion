@@ -1,7 +1,9 @@
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
+import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +30,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     final periodoTexto = alcance == AlcancePeriodo.anual
         ? 'Año $anio'
         : '${nombreMes(mes)} $anio';
+    final hayDatosPeriodo = ref.watch(hayDatosPeriodoProvider).value ?? true;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -91,38 +94,49 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(24.0),
                         children: [
                           // Cabecera con datos del empleado
-                          _buildHeaderEmpleado(emp, cump),
+                          _buildHeaderEmpleado(
+                            emp,
+                            cump,
+                            mostrarCumplimiento: hayDatosPeriodo,
+                          ),
                           const SizedBox(height: 16),
 
                           // Filtro de período global
                           const PeriodoFilterPanel(),
                           const SizedBox(height: 24),
 
-                          // Desglose de cumplimiento por categoría
-                          Text(
-                            'Desglose del plan de formación ($periodoTexto)',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
+                          if (!hayDatosPeriodo) ...[
+                            EmptyDataState.periodoSinDatos(
+                              periodo: etiquetaPeriodo(alcance, mes, anio),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildGridCategorias(cump),
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 24),
+                          ] else ...[
+                            // Desglose de cumplimiento por categoría
+                            Text(
+                              'Desglose del plan de formación ($periodoTexto)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildGridCategorias(cump),
+                            const SizedBox(height: 24),
 
-                          // Cursos del período: Moodle y CRM
-                          Text(
-                            'Cursos del período ($periodoTexto)',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
+                            // Cursos del período: Moodle y CRM
+                            Text(
+                              'Cursos del período ($periodoTexto)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildColumnasCursos(detalle),
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 12),
+                            _buildColumnasCursos(detalle),
+                            const SizedBox(height: 24),
+                          ],
 
                           // Cursos Dictados (si aplica al seniority)
                           if ((cump.horasRequeridas[TipoCurso
@@ -154,7 +168,11 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderEmpleado(Empleado emp, CumplimientoEmpleado cump) {
+  Widget _buildHeaderEmpleado(
+    Empleado emp,
+    CumplimientoEmpleado cump, {
+    required bool mostrarCumplimiento,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -250,48 +268,49 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             ),
           ),
           // Estado de Cumplimiento Global
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cump.cumpleObjetivo
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(8),
+          if (mostrarCumplimiento)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cump.cumpleObjetivo
+                    ? const Color(0xFFDCFCE7)
+                    : const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    '${cump.totalHorasValidas.toStringAsFixed(0)} / ${cump.totalHorasRequeridas.toStringAsFixed(0)} hs LMS',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: cump.cumpleObjetivo
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFD97706),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    cump.cumpleObjetivo ? 'Objetivo cumplido' : 'En progreso',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cump.cumpleObjetivo
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFD97706),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'CRM declaró ${cump.totalHorasDeclaradas.toStringAsFixed(0)} hs',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              children: [
-                Text(
-                  '${cump.totalHorasValidas.toStringAsFixed(0)} / ${cump.totalHorasRequeridas.toStringAsFixed(0)} hs LMS',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: cump.cumpleObjetivo
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFD97706),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  cump.cumpleObjetivo ? 'Objetivo cumplido' : 'En progreso',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: cump.cumpleObjetivo
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFD97706),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'CRM declaró ${cump.totalHorasDeclaradas.toStringAsFixed(0)} hs',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

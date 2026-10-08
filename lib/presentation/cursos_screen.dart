@@ -1,5 +1,6 @@
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,10 +66,27 @@ class CursosScreen extends ConsumerWidget {
                                 Center(child: Text('Error: $err')),
                             data: (cursosList) {
                               if (cursosList.isEmpty) {
-                                return const Center(
-                                  child: Text(
-                                    'No se encontraron cursos con los filtros aplicados.',
-                                  ),
+                                final hayCursos =
+                                    ref
+                                        .watch(cursosProvider)
+                                        .value
+                                        ?.isNotEmpty ??
+                                    false;
+                                return SingleChildScrollView(
+                                  child: hayCursos
+                                      ? const EmptyDataState(
+                                          icon: Icons.search_off_outlined,
+                                          title:
+                                              'No se encontraron cursos con los filtros aplicados.',
+                                          message:
+                                              'Probá con otra búsqueda o tipo de curso.',
+                                        )
+                                      : const EmptyDataState(
+                                          icon: Icons.menu_book_outlined,
+                                          title: 'No hay cursos cargados.',
+                                          message:
+                                              'Importá el catálogo de cursos o sincronizalo desde Moodle.',
+                                        ),
                                 );
                               }
                               return _TablaCursosPaginada(cursos: cursosList);

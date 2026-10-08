@@ -5,8 +5,8 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
-import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
 final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   ref,
@@ -23,6 +23,16 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
       ? DateTime(anio + 1)
       : DateTime(anio, mes + 1);
   return repo.getCargasDeHoras(desde: desde, hasta: hasta);
+});
+
+final hayDatosPeriodoProvider = FutureProvider<bool>((ref) async {
+  if (!ref.watch(soloRegistrosCargadosPeriodoProvider)) {
+    return ref.watch(hayDatosEquiposPeriodoProvider.future);
+  }
+  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
+  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
+  return cargas.isNotEmpty ||
+      certificaciones.any((item) => item.fechaFinalizacion != null);
 });
 
 final cumplimientoDashboardProvider =

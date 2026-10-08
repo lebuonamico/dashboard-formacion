@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 
 class CertificacionScreen extends ConsumerWidget {
@@ -87,10 +88,22 @@ class CertificacionScreen extends ConsumerWidget {
                                     );
                               }).toList();
                               if (filtradas.isEmpty) {
-                                return const Center(
-                                  child: Text(
-                                    'No hay certificaciones LMS para mostrar.',
-                                  ),
+                                return SingleChildScrollView(
+                                  child: items.isNotEmpty
+                                      ? const EmptyDataState(
+                                          icon: Icons.search_off_outlined,
+                                          title:
+                                              'Ninguna certificación coincide con la búsqueda.',
+                                          message:
+                                              'Probá con otro legajo o nombre de curso.',
+                                        )
+                                      : const EmptyDataState(
+                                          icon: Icons.menu_book_outlined,
+                                          title:
+                                              'No hay certificaciones LMS cargadas.',
+                                          message:
+                                              'Importá el Excel de finalizaciones del LMS.',
+                                        ),
                                 );
                               }
                               return Container(
