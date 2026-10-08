@@ -593,7 +593,7 @@ class MetricasScreen extends ConsumerWidget {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: inst.cursosDictados.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final c = inst.cursosDictados[i];
                         return Container(

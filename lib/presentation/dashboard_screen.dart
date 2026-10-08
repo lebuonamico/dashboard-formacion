@@ -1,6 +1,5 @@
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';

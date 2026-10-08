@@ -131,13 +131,16 @@ class AreaDetalleScreen extends ConsumerWidget {
 
                       // Filtrado dinámico de la tabla
                       final miembrosVisibles = miembros.where((m) {
-                        if (filtroEstado == 'cumplido')
+                        if (filtroEstado == 'cumplido') {
                           return m.porcentajeTotal >= 100.0;
-                        if (filtroEstado == 'riesgo')
+                        }
+                        if (filtroEstado == 'riesgo') {
                           return m.porcentajeTotal >= 70.0 &&
                               m.porcentajeTotal < 100.0;
-                        if (filtroEstado == 'critico')
+                        }
+                        if (filtroEstado == 'critico') {
                           return m.porcentajeTotal < 70.0;
+                        }
                         return true;
                       }).toList();
 

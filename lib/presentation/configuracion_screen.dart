@@ -76,12 +76,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Future<void> _cargarModoCursos() async {
     final preferences = await SharedPreferences.getInstance();
+    // La sincronización directa está deshabilitada, incluso si estaba guardada.
+    await preferences.setBool(_modoMoodleKey, false);
     if (!mounted) return;
     setState(() {
-      _usaMoodle = preferences.getBool(_modoMoodleKey) ?? false;
+      _usaMoodle = false;
       _modoCargado = true;
     });
-    if (_usaMoodle) _sincronizarCursosMoodle();
   }
 
   Future<void> _cambiarModoCursos(bool usaMoodle) async {
@@ -192,111 +193,41 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   Widget _buildSeccionCursos(BuildContext context) {
     return _ConfigCard(
       titulo: 'Carga de cursos',
-      subtitulo: 'Elegí cómo actualizar el catálogo de cursos',
+      subtitulo: 'Importá el catálogo de cursos desde Excel / CSV',
       children: [
-        SwitchListTile(
+        ListTile(
           contentPadding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: Color(0xFF15803D),
+            ),
+          ),
           title: const Text(
-            'Usar API de Moodle',
+            'Importar cursos desde Excel / CSV',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: Text(
-            _usaMoodle
-                ? 'Fuente activa: Moodle'
-                : 'Fuente activa: archivo Excel / CSV',
+          subtitle: const Text(
+            'El área y el instructor se completan posteriormente desde las cursadas',
           ),
-          value: _usaMoodle,
-          onChanged: _modoCargado && !_cursosOcupados
-              ? _cambiarModoCursos
-              : null,
+          trailing: OutlinedButton.icon(
+            key: const Key('importar_cursos'),
+            onPressed: _cursosOcupados ? null : _importarCursosArchivo,
+            icon: _iconoImportacion('cursos'),
+            label: const Text('Cargar cursos'),
+          ),
         ),
-        if (_usaMoodle) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _sincronizandoCursos
-                      ? 'Consultando Moodle...'
-                      : '${_cursosMoodle.length} cursos disponibles',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Actualizar cursos',
-                onPressed: _cursosOcupados ? null : _sincronizarCursosMoodle,
-                icon: _sincronizandoCursos
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync),
-              ),
-            ],
-          ),
-          if (_errorCursosMoodle != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                _errorCursosMoodle!,
-                style: const TextStyle(color: Color(0xFFB91C1C)),
-              ),
-            ),
-          if (_cursosMoodle.isNotEmpty)
-            SizedBox(
-              height: 320,
-              child: ListView.separated(
-                itemCount: _cursosMoodle.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final curso = _cursosMoodle[index];
-                  return ListTile(
-                    dense: true,
-                    title: Text(curso.nombre),
-                    subtitle: Text('ID ${curso.id}'),
-                  );
-                },
-              ),
-            )
-          else if (!_sincronizandoCursos && _errorCursosMoodle == null)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text('No hay cursos cargados.'),
-            ),
-        ] else
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(
-                Icons.school_outlined,
-                color: Color(0xFF15803D),
-              ),
-            ),
-            title: const Text(
-              'Importar cursos desde Excel / CSV',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Text(
-              'El área y el instructor se completan posteriormente desde las cursadas',
-            ),
-            trailing: OutlinedButton.icon(
-              key: const Key('importar_cursos'),
-              onPressed: _cursosOcupados ? null : _importarCursosArchivo,
-              icon: _iconoImportacion('cursos'),
-              label: const Text('Cargar cursos'),
-            ),
-          ),
       ],
     );
   }
 
   Future<void> _sincronizarCursosMoodle() async {
-    if (_cursosOcupados) return;
+    if (!_usaMoodle || _cursosOcupados) return;
     setState(() {
       _sincronizandoCursos = true;
       _errorCursosMoodle = null;
@@ -400,7 +331,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   Widget _buildSeccionCargaLms(BuildContext context) {
     return _ConfigCard(
       titulo: 'Certificaciones LMS',
-      subtitulo: 'Importá el estado y la fecha de finalización desde Moodle',
+      subtitulo: 'Importá el estado y la fecha de finalización desde Excel',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
