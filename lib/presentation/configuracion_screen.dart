@@ -76,12 +76,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 
   Future<void> _cargarModoCursos() async {
     final preferences = await SharedPreferences.getInstance();
+    // La sincronización directa está deshabilitada, incluso si estaba guardada.
+    await preferences.setBool(_modoMoodleKey, false);
     if (!mounted) return;
     setState(() {
-      _usaMoodle = preferences.getBool(_modoMoodleKey) ?? false;
+      _usaMoodle = false;
       _modoCargado = true;
     });
-    if (_usaMoodle) _sincronizarCursosMoodle();
   }
 
   Future<void> _cambiarModoCursos(bool usaMoodle) async {
@@ -200,15 +201,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             'Usar API de Moodle',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: Text(
-            _usaMoodle
-                ? 'Fuente activa: Moodle'
-                : 'Fuente activa: archivo Excel / CSV',
+          subtitle: const Text(
+            'Sincronización directa no disponible. Usá archivo Excel / CSV.',
           ),
           value: _usaMoodle,
-          onChanged: _modoCargado && !_cursosOcupados
-              ? _cambiarModoCursos
-              : null,
+          onChanged: null,
         ),
         if (_usaMoodle) ...[
           const SizedBox(height: 12),
@@ -296,7 +293,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   }
 
   Future<void> _sincronizarCursosMoodle() async {
-    if (_cursosOcupados) return;
+    if (!_usaMoodle || _cursosOcupados) return;
     setState(() {
       _sincronizandoCursos = true;
       _errorCursosMoodle = null;
