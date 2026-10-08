@@ -1,4 +1,3 @@
-import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_detail_summary.dart';
