@@ -64,6 +64,23 @@ class AuthController extends ChangeNotifier {
   /// Mail del usuario autorizado, para mostrarlo en la interfaz.
   String? get email => isAuthorized ? _authorizedUser?.$2 : null;
 
+  /// Nombre que Google completa en los metadatos del usuario de Supabase.
+  String? get nombre => _metadato(const ['full_name', 'name']);
+
+  /// Foto de perfil de Google, si la cuenta tiene una.
+  String? get fotoUrl => _metadato(const ['avatar_url', 'picture']);
+
+  String? _metadato(List<String> claves) {
+    if (!isAuthorized) return null;
+    final metadata = _client?.auth.currentUser?.userMetadata;
+    if (metadata == null) return null;
+    for (final clave in claves) {
+      final valor = metadata[clave];
+      if (valor is String && valor.trim().isNotEmpty) return valor.trim();
+    }
+    return null;
+  }
+
   bool get esAdmin => isAuthorized && rol == RolUsuario.admin.name;
 
   void _clearAuthorization() {
