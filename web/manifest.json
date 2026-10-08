@@ -1,11 +1,11 @@
 {
-    "name": "app_finnegans",
-    "short_name": "app_finnegans",
+    "name": "Finnegans · Portal de formación",
+    "short_name": "Finnegans Formación",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Portal de formación interna de Finnegans: KPI de horas de capacitación tomadas y dictadas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

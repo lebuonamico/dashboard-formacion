@@ -310,6 +310,53 @@ void main() {
       );
       expect(find.text('No hay horas CRM cargadas.'), findsNothing);
     });
+
+    testWidgets('con cargas y un área sin coincidencias lo distingue', (
+      tester,
+    ) async {
+      final container = await _mostrar(
+        tester,
+        ruta: '/cursadas',
+        pantalla: (_) => const CursadasScreen(),
+        cargas: [_carga(DateTime(_anio, _mes, 10))],
+      );
+
+      container.read(filtroAreaCargaProvider.notifier).state = 'Inexistente';
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna carga de horas coincide con los filtros.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('con muchas cargas pagina los registros', (tester) async {
+      final cargas = [
+        for (var i = 0; i < 80; i++)
+          CargaDeHorasCRM(
+            id: 'tx-$i',
+            cursoNombre: _curso.nombre,
+            empleadoLegajo: _empleado.legajo,
+            fecha: DateTime(_anio, _mes, 1 + i % 28),
+            horasTotales: 1,
+            tipo: TipoCargaDeHoras.tomada,
+          ),
+      ];
+      await _mostrar(
+        tester,
+        ruta: '/cursadas',
+        pantalla: (_) => const CursadasScreen(),
+        cargas: cargas,
+      );
+
+      expect(find.textContaining('de 80 registros'), findsOneWidget);
+      expect(find.textContaining('Página 1 de'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Página siguiente'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Página 2 de'), findsOneWidget);
+    });
   });
 
   group('Certificaciones', () {
