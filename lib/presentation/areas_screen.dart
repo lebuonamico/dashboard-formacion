@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 
 class AreasScreen extends ConsumerWidget {
   const AreasScreen({super.key});
@@ -11,6 +14,14 @@ class AreasScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final areasAsync = ref.watch(equiposResumenProvider);
+    final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
+    final busqueda = ref.watch(busquedaEquipoProvider);
+    final alcance = ref.watch(alcancePeriodoProvider);
+    final mes = ref.watch(filtroMesPeriodoProvider);
+    final anio = ref.watch(filtroAnioPeriodoProvider);
+    final aniosDisponibles = ref
+        .watch(aniosEquipoDisponiblesProvider)
+        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
     final requestedOrigin = GoRouterState.of(
       context,
     ).uri.queryParameters['origen'];
@@ -60,6 +71,28 @@ class AreasScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        EquiposPeriodControls(
+                          alcance: alcance,
+                          selectedMonth: mes,
+                          selectedYear: anio,
+                          availableYears: aniosDisponibles,
+                          onScopeChanged: (value) {
+                            ref.read(alcancePeriodoProvider.notifier).state =
+                                value;
+                          },
+                          onMonthChanged: (value) {
+                            if (value == null) return;
+                            ref.read(filtroMesPeriodoProvider.notifier).state =
+                                value;
+                          },
+                          onYearChanged: (value) {
+                            if (value == null) return;
+                            ref.read(filtroAnioPeriodoProvider.notifier).state =
+                                value;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
                         // Barra de búsqueda
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -102,8 +135,16 @@ class AreasScreen extends ConsumerWidget {
                                 Center(child: Text('Error: $err')),
                             data: (areas) {
                               if (areas.isEmpty) {
-                                return const Center(
-                                  child: Text('No se encontraron áreas.'),
+                                return SingleChildScrollView(
+                                  child: _buildEstadoVacio(
+                                    hayDatos: hayDatosAsync.value ?? true,
+                                    hayBusqueda: busqueda.trim().isNotEmpty,
+                                    periodo: etiquetaPeriodo(
+                                      alcance,
+                                      mes,
+                                      anio,
+                                    ),
+                                  ),
                                 );
                               }
 
@@ -133,6 +174,31 @@ class AreasScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildEstadoVacio({
+    required bool hayDatos,
+    required bool hayBusqueda,
+    required String periodo,
+  }) {
+    if (!hayDatos) {
+      return EmptyDataState.periodoSinDatos(
+        icon: Icons.apartment_outlined,
+        periodo: periodo,
+      );
+    }
+    if (hayBusqueda) {
+      return const EmptyDataState(
+        icon: Icons.search_off_outlined,
+        title: 'No hay áreas que coincidan con la búsqueda.',
+        message: 'Probá con otro nombre de área o equipo general.',
+      );
+    }
+    return const EmptyDataState(
+      icon: Icons.apartment_outlined,
+      title: 'No hay áreas con colaboradores elegibles en este período.',
+      message: 'Verificá la nómina elegible para el período seleccionado.',
     );
   }
 

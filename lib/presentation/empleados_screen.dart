@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
@@ -70,8 +71,27 @@ class EmpleadosScreen extends ConsumerWidget {
                                 Center(child: Text('Error: $err')),
                             data: (empleados) {
                               if (empleados.isEmpty) {
-                                return const Center(
-                                  child: Text('No se encontraron empleados.'),
+                                final hayNomina =
+                                    ref
+                                        .watch(empleadosProvider)
+                                        .value
+                                        ?.isNotEmpty ??
+                                    false;
+                                return SingleChildScrollView(
+                                  child: hayNomina
+                                      ? const EmptyDataState(
+                                          icon: Icons.search_off_outlined,
+                                          title:
+                                              'Ningún empleado coincide con los filtros.',
+                                          message:
+                                              'Probá con otra búsqueda o seniority.',
+                                        )
+                                      : const EmptyDataState(
+                                          icon: Icons.people_outline,
+                                          title: 'No hay empleados cargados.',
+                                          message:
+                                              'Importá la nómina para ver el directorio.',
+                                        ),
                                 );
                               }
                               return cumplimientos.when(

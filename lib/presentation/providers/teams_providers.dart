@@ -3,7 +3,6 @@ import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/servicios/teams_service.dart';
-import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
@@ -16,7 +15,6 @@ import 'package:flutter_riverpod/legacy.dart';
 export 'package:app_finnegans/domain/modelos/team_overview.dart';
 export 'package:app_finnegans/domain/modelos/team_status.dart';
 export 'package:app_finnegans/presentation/providers/period_providers.dart';
-
 
 class ResumenEquipoViewModel {
   final String nombreArea;
@@ -216,10 +214,51 @@ final equiposGlobalFiltradosProvider =
       });
     });
 
+ResumenEquipoViewModel _resumirArea(
+  String area,
+  List<CumplimientoEmpleado> miembros,
+) {
+  final legajos = miembros.map((m) => m.empleado.legajo).toSet();
+  final legajosPendientes = miembros
+      .where((m) => !m.cumpleObjetivo)
+      .map((m) => m.empleado.legajo)
+      .toSet();
+  final horasRealizadas = miembros.fold<double>(
+    0.0,
+    (acc, item) => acc + item.totalHorasCompletadas,
+  );
+  final horasRequeridas = miembros.fold<double>(
+    0.0,
+    (acc, item) => acc + item.totalHorasRequeridas,
+  );
+
+  final porcentaje = horasRequeridas == 0
+      ? 100.0
+      : (horasRealizadas / horasRequeridas) * 100;
+  final equiposGenerales =
+      miembros
+          .map((miembro) => miembro.empleado.equipo.trim())
+          .where((equipo) => equipo.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+
+  return ResumenEquipoViewModel(
+    nombreArea: area,
+    cantidadIntegrantes: legajos.length,
+    integrantesCumplen: legajos.difference(legajosPendientes).length,
+    horasTotalesRealizadas: horasRealizadas,
+    horasTotalesRequeridas: horasRequeridas,
+    porcentajeCumplimiento: porcentaje,
+    semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
+    equiposGenerales: equiposGenerales,
+  );
+}
+
 final equiposResumenProvider = FutureProvider<List<ResumenEquipoViewModel>>((
   ref,
 ) async {
-  final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
+  final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final query = ref.watch(busquedaEquipoProvider).toLowerCase();
 
   final agrupado = <String, List<CumplimientoEmpleado>>{};
@@ -227,44 +266,9 @@ final equiposResumenProvider = FutureProvider<List<ResumenEquipoViewModel>>((
     agrupado.putIfAbsent(item.empleado.area, () => []).add(item);
   }
 
-  final lista = <ResumenEquipoViewModel>[];
-
-  agrupado.forEach((area, miembros) {
-    final totalIntegrantes = miembros.length;
-    final integrantesCumplen = miembros.where((m) => m.cumpleObjetivo).length;
-    final horasRealizadas = miembros.fold<double>(
-      0.0,
-      (acc, item) => acc + item.totalHorasCompletadas,
-    );
-    final horasRequeridas = miembros.fold<double>(
-      0.0,
-      (acc, item) => acc + item.totalHorasRequeridas,
-    );
-
-    final porcentaje = horasRequeridas == 0
-        ? 100.0
-        : (horasRealizadas / horasRequeridas) * 100;
-    final equiposGenerales =
-        miembros
-            .map((miembro) => miembro.empleado.equipo.trim())
-            .where((equipo) => equipo.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-
-    lista.add(
-      ResumenEquipoViewModel(
-        nombreArea: area,
-        cantidadIntegrantes: totalIntegrantes,
-        integrantesCumplen: integrantesCumplen,
-        horasTotalesRealizadas: horasRealizadas,
-        horasTotalesRequeridas: horasRequeridas,
-        porcentajeCumplimiento: porcentaje,
-        semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
-        equiposGenerales: equiposGenerales,
-      ),
-    );
-  });
+  final lista = [
+    for (final entry in agrupado.entries) _resumirArea(entry.key, entry.value),
+  ];
 
   return lista
       .where(
@@ -279,23 +283,19 @@ final equiposResumenProvider = FutureProvider<List<ResumenEquipoViewModel>>((
 
 // Detalle de un equipo particular por su nombre/área
 final detalleEquipoProvider =
-    FutureProvider.family<DetalleEquipoViewModel, String>((
+    FutureProvider.family<DetalleEquipoViewModel?, String>((
       ref,
       nombreArea,
     ) async {
-      final cumplimientos = await ref.watch(cumplimientoGlobalProvider.future);
-      final areas = await ref.watch(equiposResumenProvider.future);
-
-      final resumen = areas.firstWhere(
-        (e) => e.nombreArea.toLowerCase() == nombreArea.toLowerCase(),
-        orElse: () => throw Exception('Equipo no encontrado'),
-      );
+      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
 
       final miembros = cumplimientos
           .where(
             (c) => c.empleado.area.toLowerCase() == nombreArea.toLowerCase(),
           )
           .toList();
+      if (miembros.isEmpty) return null;
+      final resumen = _resumirArea(miembros.first.empleado.area, miembros);
       final miembrosPorEquipo = <String, List<CumplimientoEmpleado>>{};
       for (final miembro in miembros) {
         final equipo = miembro.empleado.equipo.trim().isEmpty
@@ -313,22 +313,16 @@ final detalleEquipoProvider =
     });
 
 final detalleEquipoGeneralProvider =
-    FutureProvider.family<DetalleEquipoGeneral, ({String area, String equipo})>(
-      (ref, params) async {
-        final cumplimientos = await ref.watch(
-          cumplimientoEquiposProvider.future,
-        );
-        final equiposService = ref.read(equiposServiceProvider);
-        // Leandro: llama a obtenerDetalleEquipo para recuperar los integrantes y el resumen del equipo solicitado.
-        final detalle = equiposService.obtenerDetalleEquipo(
-          cumplimientos: cumplimientos,
-          area: params.area,
-          equipo: params.equipo,
-        );
-        if (detalle == null) {
-          throw Exception('Equipo general no encontrado');
-        }
-
-        return detalle;
-      },
-    );
+    FutureProvider.family<
+      DetalleEquipoGeneral?,
+      ({String area, String equipo})
+    >((ref, params) async {
+      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
+      final equiposService = ref.read(equiposServiceProvider);
+      // Leandro: llama a obtenerDetalleEquipo para recuperar los integrantes y el resumen del equipo solicitado.
+      return equiposService.obtenerDetalleEquipo(
+        cumplimientos: cumplimientos,
+        area: params.area,
+        equipo: params.equipo,
+      );
+    });

@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 
 // Filtro local de estado para los miembros del equipo
@@ -20,6 +23,30 @@ class AreaDetalleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detalleAsync = ref.watch(detalleEquipoProvider(nombreArea));
     final filtroEstado = ref.watch(filtroEstadoMiembroProvider);
+    final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
+    final alcance = ref.watch(alcancePeriodoProvider);
+    final mes = ref.watch(filtroMesPeriodoProvider);
+    final anio = ref.watch(filtroAnioPeriodoProvider);
+    final aniosDisponibles = ref
+        .watch(aniosEquipoDisponiblesProvider)
+        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
+    final periodControls = EquiposPeriodControls(
+      alcance: alcance,
+      selectedMonth: mes,
+      selectedYear: anio,
+      availableYears: aniosDisponibles,
+      onScopeChanged: (value) {
+        ref.read(alcancePeriodoProvider.notifier).state = value;
+      },
+      onMonthChanged: (value) {
+        if (value == null) return;
+        ref.read(filtroMesPeriodoProvider.notifier).state = value;
+      },
+      onYearChanged: (value) {
+        if (value == null) return;
+        ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+      },
+    );
     final requestedOrigin = GoRouterState.of(
       context,
     ).uri.queryParameters['origen'];
@@ -75,6 +102,30 @@ class AreaDetalleScreen extends ConsumerWidget {
                         const Center(child: CircularProgressIndicator()),
                     error: (err, _) => Center(child: Text('Error: $err')),
                     data: (detalle) {
+                      final periodo = etiquetaPeriodo(alcance, mes, anio);
+                      if (!(hayDatosAsync.value ?? true) || detalle == null) {
+                        return ListView(
+                          padding: const EdgeInsets.all(24.0),
+                          children: [
+                            periodControls,
+                            const SizedBox(height: 24),
+                            if (!(hayDatosAsync.value ?? true))
+                              EmptyDataState.periodoSinDatos(
+                                icon: Icons.apartment_outlined,
+                                periodo: periodo,
+                              )
+                            else
+                              EmptyDataState(
+                                icon: Icons.apartment_outlined,
+                                title:
+                                    'El área $nombreArea no tiene colaboradores elegibles en $periodo.',
+                                message:
+                                    'Probá otro período o verificá la nómina del área.',
+                              ),
+                          ],
+                        );
+                      }
+
                       final res = detalle.resumen;
                       final miembros = detalle.miembros;
 
@@ -93,6 +144,8 @@ class AreaDetalleScreen extends ConsumerWidget {
                       return ListView(
                         padding: const EdgeInsets.all(24.0),
                         children: [
+                          periodControls,
+                          const SizedBox(height: 24),
                           _buildAreaSummary(
                             context,
                             res,
@@ -149,179 +202,185 @@ class AreaDetalleScreen extends ConsumerWidget {
                           const SizedBox(height: 12),
 
                           // Tabla de Nómina del Área
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: DataTable(
-                                showCheckboxColumn: false,
-                                headingRowColor: WidgetStateProperty.all(
-                                  const Color(0xFFF8FAFC),
+                          if (miembrosVisibles.isEmpty)
+                            const EmptyDataState(
+                              compact: true,
+                              icon: Icons.filter_alt_off_outlined,
+                              title:
+                                  'Ningún integrante coincide con el filtro.',
+                            )
+                          else
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
                                 ),
-                                columns: const [
-                                  DataColumn(
-                                    label: Text(
-                                      'Legajo',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: DataTable(
+                                  showCheckboxColumn: false,
+                                  headingRowColor: WidgetStateProperty.all(
+                                    const Color(0xFFF8FAFC),
                                   ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Colaborador',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Seniority',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Horas realizadas / plan',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Progreso',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: Text(
-                                      'Estado',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                rows: miembrosVisibles.map((m) {
-                                  final emp = m.empleado;
-                                  final cumple = m.cumpleObjetivo;
-
-                                  return DataRow(
-                                    onSelectChanged: (_) => context.push(
-                                      '/empleados/${emp.legajo}',
-                                    ),
-                                    cells: [
-                                      DataCell(
-                                        Text(
-                                          emp.legajo,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                  columns: const [
+                                    DataColumn(
+                                      label: Text(
+                                        'Legajo',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      DataCell(
-                                        Row(
-                                          children: [
-                                            CircleAvatar(
-                                              radius: 12,
-                                              backgroundColor: const Color(
-                                                0xFFE2E8F0,
-                                              ),
-                                              child: Text(
-                                                emp.nombre.substring(0, 1),
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Colaborador',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Seniority',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Horas realizadas / plan',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Progreso',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Estado',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  rows: miembrosVisibles.map((m) {
+                                    final emp = m.empleado;
+                                    final cumple = m.cumpleObjetivo;
+
+                                    return DataRow(
+                                      onSelectChanged: (_) => context.push(
+                                        '/empleados/${emp.legajo}',
+                                      ),
+                                      cells: [
+                                        DataCell(
+                                          Text(
+                                            emp.legajo,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 12,
+                                                backgroundColor: const Color(
+                                                  0xFFE2E8F0,
+                                                ),
+                                                child: Text(
+                                                  emp.nombre.substring(0, 1),
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${emp.nombre} ${emp.apellido}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Icon(
+                                                Icons.open_in_new,
+                                                size: 12,
+                                                color: Color(0xFF94A3B8),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        DataCell(Text(emp.seniority.label)),
+                                        DataCell(
+                                          Text(
+                                            '${m.totalHorasCompletadas.toStringAsFixed(0)} / ${m.totalHorasRequeridas.toStringAsFixed(0)} hs',
+                                          ),
+                                        ),
+                                        DataCell(
+                                          SizedBox(
+                                            width: 90,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              child: LinearProgressIndicator(
+                                                value: (m.porcentajeTotal / 100)
+                                                    .clamp(0.0, 1.0),
+                                                minHeight: 6,
+                                                backgroundColor: const Color(
+                                                  0xFFF1F5F9,
+                                                ),
+                                                color: cumple
+                                                    ? const Color(0xFF16A34A)
+                                                    : const Color(0xFFF59E0B),
+                                              ),
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '${emp.nombre} ${emp.apellido}',
-                                              style: const TextStyle(
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: cumple
+                                                  ? const Color(0xFFDCFCE7)
+                                                  : const Color(0xFFFEE2E2),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              cumple ? 'Cumplido' : 'Pendiente',
+                                              style: TextStyle(
+                                                color: cumple
+                                                    ? const Color(0xFF16A34A)
+                                                    : const Color(0xFFDC2626),
                                                 fontWeight: FontWeight.w600,
+                                                fontSize: 11,
                                               ),
                                             ),
-                                            const SizedBox(width: 4),
-                                            const Icon(
-                                              Icons.open_in_new,
-                                              size: 12,
-                                              color: Color(0xFF94A3B8),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      DataCell(Text(emp.seniority.label)),
-                                      DataCell(
-                                        Text(
-                                          '${m.totalHorasCompletadas.toStringAsFixed(0)} / ${m.totalHorasRequeridas.toStringAsFixed(0)} hs',
-                                        ),
-                                      ),
-                                      DataCell(
-                                        SizedBox(
-                                          width: 90,
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            child: LinearProgressIndicator(
-                                              value: (m.porcentajeTotal / 100)
-                                                  .clamp(0.0, 1.0),
-                                              minHeight: 6,
-                                              backgroundColor: const Color(
-                                                0xFFF1F5F9,
-                                              ),
-                                              color: cumple
-                                                  ? const Color(0xFF16A34A)
-                                                  : const Color(0xFFF59E0B),
-                                            ),
                                           ),
                                         ),
-                                      ),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: cumple
-                                                ? const Color(0xFFDCFCE7)
-                                                : const Color(0xFFFEE2E2),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            cumple ? 'Cumplido' : 'Pendiente',
-                                            style: TextStyle(
-                                              color: cumple
-                                                  ? const Color(0xFF16A34A)
-                                                  : const Color(0xFFDC2626),
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       );
                     },

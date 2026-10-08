@@ -78,7 +78,10 @@ class _Cursos extends CursosRepository
   @override
   Future<List<Curso>> getCursos({String? id, String? nombre}) async {
     consultas++;
-    return consultaPendiente?.future ?? List.of(guardados);
+    if (upserts > 0 && consultaPendiente != null) {
+      return consultaPendiente!.future;
+    }
+    return List.of(guardados);
   }
 
   @override
@@ -617,7 +620,7 @@ void main() {
       _verificarLoading(tester, 'cursos', true);
       expect(cursos.upserts, 1);
       expect(auditoria.registros, isEmpty);
-      expect(cursos.consultas, 1);
+      expect(cursos.consultas, 2);
       expect(find.byType(SnackBar), findsNothing);
 
       persistencia.complete(
@@ -632,13 +635,13 @@ void main() {
       expect(auditoria.registros.single.estado, EstadoImportacion.completada);
       expect(auditoria.registros.single.insertados, 0);
       expect(auditoria.registros.single.actualizados, 1);
-      expect(cursos.consultas, 1);
+      expect(cursos.consultas, 2);
       expect(find.byType(SnackBar), findsNothing);
 
       auditar.complete();
       await tester.pump();
       _verificarLoading(tester, 'cursos', true);
-      expect(cursos.consultas, 2);
+      expect(cursos.consultas, 3);
       expect(find.byType(SnackBar), findsNothing);
 
       refresh.complete(List.of(cursos.guardados));
@@ -683,7 +686,7 @@ void main() {
       await tester.pumpAndSettle();
 
       _verificarLoading(tester, 'cursos', false);
-      expect(cursos.consultas, 1);
+      expect(cursos.consultas, 2);
       expect(cursos.guardados, isEmpty);
       expect(auditoria.registros.single.estado, EstadoImportacion.fallida);
       expect(auditoria.registros.single.errores.single, contains('Supabase'));
@@ -852,7 +855,7 @@ void main() {
       expect(find.byType(ConfiguracionScreen), findsNothing);
       expect(find.text('Otra pantalla'), findsOneWidget);
       expect(auditoria.registros, isEmpty);
-      expect(cursos.consultas, 1);
+      expect(cursos.consultas, 2);
 
       persistencia.complete(
         const ResultadoUpsert(
@@ -865,7 +868,7 @@ void main() {
 
       expect(auditoria.registros.single.estado, EstadoImportacion.completada);
       expect(auditoria.registros.single.insertados, 1);
-      expect(cursos.consultas, 2);
+      expect(cursos.consultas, 3);
       expect(horas.consultas, greaterThan(1));
       expect(certificaciones.consultas, 2);
       expect(

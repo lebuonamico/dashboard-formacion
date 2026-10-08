@@ -44,9 +44,6 @@ class AuthController extends ChangeNotifier {
 
   bool get enabled => _client != null;
 
-  /// Mail del usuario logueado, para mostrarlo en la interfaz.
-  String? get email => _currentUser?.$2;
-
   bool get hasValidSession {
     final session = _client?.auth.currentSession;
     return session != null && !session.isExpired;

@@ -6,6 +6,7 @@ import 'package:app_finnegans/presentation/widgets/teams/team_members_table.dart
 import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class EquipoScreen extends ConsumerWidget {
     final detalleAsync = ref.watch(
       detalleEquipoGeneralProvider((area: area, equipo: equipo)),
     );
+    final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
@@ -50,13 +52,34 @@ class EquipoScreen extends ConsumerWidget {
                       child: CircularProgressIndicator(color: equiposBrand),
                     ),
                     error: (error, _) => _ErrorState(message: '$error'),
-                    data: (detalle) =>
-                        // Leandro: llama al widget _EquipoContent para presentar el detalle del equipo y su período.
-                        _EquipoContent(
-                          detalle: detalle,
-                          periodo: periodo,
-                          esAnual: alcance == AlcancePeriodo.anual,
-                        ),
+                    data: (detalle) {
+                      final etiqueta = etiquetaPeriodo(alcance, mes, anio);
+                      if (!(hayDatosAsync.value ?? true)) {
+                        return _EmptyContent(
+                          child: EmptyDataState.periodoSinDatos(
+                            icon: Icons.groups_outlined,
+                            periodo: etiqueta,
+                          ),
+                        );
+                      }
+                      if (detalle == null) {
+                        return _EmptyContent(
+                          child: EmptyDataState(
+                            icon: Icons.groups_outlined,
+                            title:
+                                'El equipo $equipo no tiene colaboradores elegibles en $etiqueta.',
+                            message:
+                                'Probá otro período o verificá la nómina del equipo.',
+                          ),
+                        );
+                      }
+                      // Leandro: llama al widget _EquipoContent para presentar el detalle del equipo y su período.
+                      return _EquipoContent(
+                        detalle: detalle,
+                        periodo: periodo,
+                        esAnual: alcance == AlcancePeriodo.anual,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -154,6 +177,20 @@ class _EquipoContent extends StatelessWidget {
   }
 
   String _horas(double value) => '${value.toStringAsFixed(1)} h';
+}
+
+class _EmptyContent extends StatelessWidget {
+  final Widget child;
+
+  const _EmptyContent({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      children: [child],
+    );
+  }
 }
 
 class _ErrorState extends StatelessWidget {

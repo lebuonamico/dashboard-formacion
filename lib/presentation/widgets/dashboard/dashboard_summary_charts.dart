@@ -217,26 +217,63 @@ class _CategoryChartCard extends StatelessWidget {
       footer: 'Capacitaciones distribuidas entre los 4 pilares',
       action: 'Ver cursos',
       onAction: () => context.push('/cursos'),
-      child: Row(
-        children: [
-          DonutChart(
-            segments: [
-              for (var index = 0; index < TipoCurso.values.length; index++)
-                DonutChartSegment(
-                  value: summary.hours[TipoCurso.values[index]] ?? 0,
-                  color: colors[index],
+      child: summary.totalHours == 0
+          ? const _SinDatosCategorias()
+          : Row(
+              children: [
+                DonutChart(
+                  segments: [
+                    for (
+                      var index = 0;
+                      index < TipoCurso.values.length;
+                      index++
+                    )
+                      DonutChartSegment(
+                        value: summary.hours[TipoCurso.values[index]] ?? 0,
+                        color: colors[index],
+                      ),
+                  ],
+                  centerText: '${summary.averageHours.toStringAsFixed(1)} h',
+                  centerSubtitle: 'PROMEDIO',
                 ),
-            ],
-            centerText: '${summary.averageHours.toStringAsFixed(1)} h',
-            centerSubtitle: 'PROMEDIO',
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: _LegendList(
-              items: legend,
-              total: summary.totalHours,
-              showPercentages: true,
+                const SizedBox(width: 18),
+                Expanded(
+                  child: _LegendList(
+                    items: legend,
+                    total: summary.totalHours,
+                    showPercentages: true,
+                  ),
+                ),
+              ],
             ),
+    );
+  }
+}
+
+class _SinDatosCategorias extends StatelessWidget {
+  const _SinDatosCategorias();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.donut_large_outlined, size: 30, color: Color(0xFF64748B)),
+          SizedBox(height: 8),
+          Text(
+            'No se encontraron datos.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'No hay horas válidas en ninguna categoría para este período.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
           ),
         ],
       ),

@@ -31,6 +31,7 @@ void main() {
         'equipo': 'Formación',
         'gerente': 'María',
         'fechaIngreso': '2024-03-01',
+        'activo': true,
       };
       final row = <String, dynamic>{
         'legajo': '10',
@@ -42,6 +43,7 @@ void main() {
         'equipo_general': 'Formación',
         'gerente': 'María',
         'fecha_ingreso': '2024-03-01',
+        'activo': true,
       };
 
       expect(mapping.table, 'empleados');
@@ -57,12 +59,14 @@ void main() {
         'nombre': 'Curso LMS',
         'tipo': 'habilidadesDeNegocio',
         'cargaHorariaHs': 4.0,
+        'activo': true,
       };
       final row = <String, dynamic>{
         'id_curso': '107',
         'nombre': 'Curso LMS',
         'tipo': 'habilidadesDeNegocio',
         'carga_horaria': 4.0,
+        'activo': true,
       };
 
       expect(mapping.table, 'cursos');
