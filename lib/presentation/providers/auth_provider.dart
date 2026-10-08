@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/core/auth/access_rejection.dart';
 
 String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
     isWeb ? baseUri.origin : null;
@@ -14,6 +15,7 @@ class AuthController extends ChangeNotifier {
   final SupabaseClient? _client;
   StreamSubscription<AuthState>? _subscription;
   String? error;
+  bool _authorizationDenied = false;
   bool isSigningIn = false;
   bool isValidatingAuthorization = false;
   String? rol;
@@ -59,6 +61,7 @@ class AuthController extends ChangeNotifier {
       _authorizedUser != null &&
       _authorizedUser == _currentUser;
 
+  /// Mail del usuario autorizado, para mostrarlo en la interfaz.
   String? get email => isAuthorized ? _authorizedUser?.$2 : null;
 
   /// Nombre que Google completa en los metadatos del usuario de Supabase.
@@ -95,7 +98,7 @@ class AuthController extends ChangeNotifier {
       _clearAuthorization();
       // Keep a denial visible after the automatic signedOut event.
       notifyListeners();
-    } else if (!isAuthorized) {
+    } else if (!isAuthorized && !_authorizationDenied) {
       unawaited(validateAuthorization());
     } else {
       notifyListeners();
@@ -149,8 +152,12 @@ class AuthController extends ChangeNotifier {
           row['ff_bloqueo'] == null) {
         rol = row['rol'] as String?;
         _authorizedUser = user;
+        _authorizationDenied = false;
+        clearAccessRejection();
       } else {
-        error = 'Tu usuario no está autorizado para acceder a esta aplicación.';
+        _authorizationDenied = true;
+        // Persist only the generic reason before logout or OAuth navigation.
+        rememberUnauthorizedAccess();
         try {
           await _client!.auth.signOut();
         } catch (_) {
@@ -183,6 +190,7 @@ class AuthController extends ChangeNotifier {
     if (!enabled || isSigningIn || isValidatingAuthorization || _disposed) {
       return;
     }
+    _authorizationDenied = false;
     if (hasValidSession) {
       await validateAuthorization();
       return;
@@ -208,6 +216,7 @@ class AuthController extends ChangeNotifier {
 
   Future<void> signOut() async {
     _clearAuthorization();
+    _authorizationDenied = false;
     error = null;
     if (!_disposed) notifyListeners();
     await _client?.auth.signOut();
