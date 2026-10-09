@@ -133,17 +133,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Redirect de Google', () {
-    test('Web usa el origin actual sin ruta, query ni fragmento', () {
+    test('Web usa el origin actual con / final, sin query ni fragmento', () {
       for (final origin in [
         'http://localhost:3000',
         'https://formacion.example.com',
+        'https://deploy-preview-55--formacion.example.com',
       ]) {
         expect(
           googleOAuthRedirectTo(
             isWeb: true,
             baseUri: Uri.parse('$origin/login?code=test#/dashboard'),
           ),
-          origin,
+          '$origin/',
         );
       }
     });
