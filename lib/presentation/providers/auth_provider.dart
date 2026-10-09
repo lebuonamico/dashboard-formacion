@@ -9,7 +9,7 @@ import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/core/auth/access_rejection.dart';
 
 String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
-    isWeb ? baseUri.origin : null;
+    isWeb ? '${baseUri.origin}/' : null;
 
 class AuthController extends ChangeNotifier {
   final SupabaseClient? _client;
