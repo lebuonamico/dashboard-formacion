@@ -187,7 +187,7 @@ void main() {
   );
 
   test(
-    'Local completions retain dated rows and repeated import is idempotent',
+    'Local completions keep one row per employee/course and repeated import is idempotent',
     () async {
       final repo = LocalCertificacionesMoodleRepository();
       final january = CertificacionMoodle(
@@ -205,7 +205,9 @@ void main() {
       await repo.upsertCertificaciones([january]);
       await repo.upsertCertificaciones([february]);
       await repo.upsertCertificaciones([february]);
-      expect((await repo.getCertificaciones()).length, 2);
+      final rows = await repo.getCertificaciones();
+      expect(rows.length, 1);
+      expect(rows.single.fechaFinalizacion, DateTime(2025, 2, 1));
     },
   );
 

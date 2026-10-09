@@ -8,6 +8,7 @@ import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -128,15 +129,24 @@ class _DashboardContent extends ConsumerWidget {
         ),
         const SizedBox(height: 22),
         if (!resumen.tieneDatos)
-          // Leandro: llama al widget _EmptyDataState para informar que el período seleccionado no tiene registros.
-          _EmptyDataState(
-            periodoSinDatos: alcanceSeleccionado == AlcancePeriodo.anual
-                ? '$anioSeleccionado'
-                : '${nombreMes(mesSeleccionado)} $anioSeleccionado',
+          // Leandro: llama al widget EmptyDataState para informar que el período seleccionado no tiene registros.
+          EmptyDataState.periodoSinDatos(
+            icon: Icons.groups_outlined,
+            periodo: etiquetaPeriodo(
+              alcanceSeleccionado,
+              mesSeleccionado,
+              anioSeleccionado,
+            ),
           )
         else if (equipos.isEmpty)
-          // Leandro: llama al widget _EmptyDataState para informar que no hay equipos con colaboradores elegibles.
-          const _EmptyDataState()
+          // Leandro: llama al widget EmptyDataState para informar que no hay equipos con colaboradores elegibles.
+          const EmptyDataState(
+            icon: Icons.groups_outlined,
+            title:
+                'No hay equipos con colaboradores elegibles en este período.',
+            message:
+                'Verificá la nómina elegible para el período seleccionado.',
+          )
         else ...[
           // Leandro: llama al widget EquiposKpiSection para mostrar equipos, colaboradores, horas y cumplimiento global.
           EquiposKpiSection(
@@ -244,47 +254,6 @@ class _DashboardChartsRow extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-// Distingue un período sin registros de una nómina sin equipos elegibles.
-class _EmptyDataState extends StatelessWidget {
-  final String? periodoSinDatos;
-
-  const _EmptyDataState({this.periodoSinDatos});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 72, horizontal: 24),
-      decoration: equiposPanelDecoration(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.groups_outlined, size: 34, color: equiposMuted),
-          const SizedBox(height: 10),
-          Text(
-            periodoSinDatos != null
-                ? 'No hay datos cargados para $periodoSinDatos.'
-                : 'No hay equipos con colaboradores elegibles en este período.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: equiposInk,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            periodoSinDatos != null
-                ? 'Probá otro período o cargá información CRM/LMS para evaluarlo.'
-                : 'Verificá la nómina elegible para el período seleccionado.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: equiposMuted),
-          ),
-        ],
-      ),
     );
   }
 }

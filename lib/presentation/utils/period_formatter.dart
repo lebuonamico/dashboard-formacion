@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/providers/period_providers.dart';
+
 const _meses = [
   'Enero',
   'Febrero',
@@ -20,3 +22,6 @@ String nombreMes(int mes) {
   }
   return _meses[mes - 1];
 }
+
+String etiquetaPeriodo(AlcancePeriodo alcance, int mes, int anio) =>
+    alcance == AlcancePeriodo.anual ? '$anio' : '${nombreMes(mes)} $anio';
