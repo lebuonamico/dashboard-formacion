@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
+import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_filters.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_results.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_status_summary.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 
 class AreasScreen extends ConsumerWidget {
   const AreasScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final areasAsync = ref.watch(equiposResumenProvider);
+    final resumenAsync = ref.watch(resumenAreasPeriodoProvider);
+    final areasFiltradasAsync = ref.watch(areasFiltradasProvider);
     final requestedOrigin = GoRouterState.of(
       context,
     ).uri.queryParameters['origen'];
@@ -20,111 +31,25 @@ class AreasScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: areasBackground,
       body: Row(
         children: [
           const SideMenu(),
           Expanded(
             child: Column(
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Áreas y equipos generales',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
-                  ),
-                ),
-
-                // Contenido
+                const AppTopBar(title: 'Áreas y equipos generales'),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Barra de búsqueda
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: TextField(
-                            onChanged: (val) =>
-                                ref
-                                        .read(busquedaEquipoProvider.notifier)
-                                        .state =
-                                    val,
-                            decoration: const InputDecoration(
-                              hintText: 'Buscar área o equipo general...',
-                              prefixIcon: Icon(
-                                Icons.search,
-                                size: 20,
-                                color: Color(0xFF64748B),
-                              ),
-                              isDense: true,
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Grid de Áreas
-                        Expanded(
-                          child: areasAsync.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                            data: (areas) {
-                              if (areas.isEmpty) {
-                                return const Center(
-                                  child: Text('No se encontraron áreas.'),
-                                );
-                              }
-
-                              return GridView.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 16,
-                                      mainAxisSpacing: 16,
-                                      mainAxisExtent: 180,
-                                    ),
-                                itemCount: areas.length,
-                                itemBuilder: (context, index) {
-                                  final area = areas[index];
-                                  return _buildAreaCard(context, area, origin);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                  child: resumenAsync.when(
+                    skipLoadingOnRefresh: false,
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: areasBrand),
+                    ),
+                    error: (error, _) => _ErrorState(message: '$error'),
+                    data: (resumen) => _AreasContent(
+                      resumen: resumen,
+                      areasFiltradasAsync: areasFiltradasAsync,
+                      origin: origin,
                     ),
                   ),
                 ),
@@ -135,134 +60,198 @@ class AreasScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildAreaCard(
-    BuildContext context,
-    ResumenEquipoViewModel eq,
-    String? origin,
-  ) {
-    final destination = '/areas/${Uri.encodeComponent(eq.nombreArea)}';
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => context.push(
-        origin == null ? destination : '$destination?origen=$origin',
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+class _AreasContent extends ConsumerWidget {
+  final ResumenAreasPeriodo resumen;
+  final AsyncValue<List<AreaGlobalViewModel>> areasFiltradasAsync;
+  final String? origin;
+
+  const _AreasContent({
+    required this.resumen,
+    required this.areasFiltradasAsync,
+    required this.origin,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final areas = resumen.areas;
+    final busqueda = ref.watch(busquedaAreaProvider);
+    final estadoSeleccionado = ref.watch(filtroEstadoAreaProvider);
+    final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
+    final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
+    final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
+    final aniosDisponibles = ref
+        .watch(aniosEquipoDisponiblesProvider)
+        .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
+    final esAnual = alcanceSeleccionado == AlcancePeriodo.anual;
+    final hayFiltrosActivos =
+        busqueda.trim().isNotEmpty || estadoSeleccionado != null;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      children: [
+        const Text(
+          'Vista general',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: areasInk,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    eq.nombreArea,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: eq.semaforo.colorFondo,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    eq.semaforo.label,
-                    style: TextStyle(
-                      color: eq.semaforo.colorTexto,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+        const SizedBox(height: 5),
+        Text(
+          resumen.tieneDatos
+              ? 'Seguimiento del avance de ${areas.length} áreas de formación.'
+              : 'Seleccioná un período con datos cargados.',
+          style: const TextStyle(fontSize: 14, color: areasMuted),
+        ),
+        const SizedBox(height: 18),
+        AreasPeriodControls(
+          alcance: alcanceSeleccionado,
+          selectedMonth: mesSeleccionado,
+          selectedYear: anioSeleccionado,
+          availableYears: aniosDisponibles,
+          onScopeChanged: (value) {
+            ref.read(alcancePeriodoProvider.notifier).state = value;
+          },
+          onMonthChanged: (value) {
+            if (value == null) return;
+            ref.read(filtroMesPeriodoProvider.notifier).state = value;
+          },
+          onYearChanged: (value) {
+            if (value == null) return;
+            ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+          },
+        ),
+        const SizedBox(height: 22),
+        if (!resumen.tieneDatos)
+          EmptyDataState.periodoSinDatos(
+            icon: Icons.apartment_outlined,
+            periodo: etiquetaPeriodo(
+              alcanceSeleccionado,
+              mesSeleccionado,
+              anioSeleccionado,
             ),
-            if (eq.equiposGenerales.isNotEmpty)
-              Text(
-                '${eq.equiposGenerales.length} equipo${eq.equiposGenerales.length == 1 ? '' : 's'} general${eq.equiposGenerales.length == 1 ? '' : 'es'}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              )
-            else
-              const Text(
-                'Sin equipo general asignado',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          )
+        else if (areas.isEmpty)
+          const EmptyDataState(
+            icon: Icons.apartment_outlined,
+            title: 'No hay áreas con colaboradores elegibles en este período.',
+            message:
+                'Verificá la nómina elegible para el período seleccionado.',
+          )
+        else ...[
+          AreasKpiSection(
+            totalAreas: resumen.totalAreas,
+            totalColaboradores: resumen.colaboradores,
+            horasRealizadas: resumen.horasRealizadas,
+            horasObjetivo: resumen.horasObjetivo,
+            desvioHoras: resumen.desvioHoras,
+            cumplimientoGlobal: resumen.cumplimientoGlobal,
+            esAnual: esAnual,
+          ),
+          const SizedBox(height: 16),
+          _ChartsRow(
+            statusChart: AreasStatusSummary(
+              total: resumen.totalAreas,
+              enObjetivo: resumen.enObjetivo,
+              enRiesgo: resumen.enRiesgo,
+              criticos: resumen.criticos,
+            ),
+            categoryChart: AreasCategoryDistribution(
+              horasNegocio: resumen.horasNegocio,
+              horasBlandas: resumen.horasBlandas,
+              horasLibres: resumen.horasLibres,
+              horasDictado: resumen.horasDictado,
+              esAnual: esAnual,
+            ),
+          ),
+          const SizedBox(height: 24),
+          AreasFilters(
+            searchText: busqueda,
+            selectedStatus: estadoSeleccionado,
+            hasActiveFilters: hayFiltrosActivos,
+            onSearch: (value) {
+              ref.read(busquedaAreaProvider.notifier).state = value;
+            },
+            onStatus: (value) {
+              ref.read(filtroEstadoAreaProvider.notifier).state = value;
+            },
+            onClear: () {
+              ref.read(busquedaAreaProvider.notifier).state = '';
+              ref.read(filtroEstadoAreaProvider.notifier).state = null;
+            },
+          ),
+          const SizedBox(height: 24),
+          areasFiltradasAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: areasBrand),
+            ),
+            error: (error, _) => _ErrorState(message: '$error'),
+            data: (areasFiltradas) => AreasResults(
+              key: ValueKey(
+                '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
+                '$busqueda-$estadoSeleccionado',
               ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${eq.integrantesCumplen} de ${eq.cantidadIntegrantes} colaboradores en objetivo',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${eq.horasTotalesRealizadas.toStringAsFixed(0)} / ${eq.horasTotalesRequeridas.toStringAsFixed(0)} hs',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    Text(
-                      '${eq.porcentajeCumplimiento.toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: eq.semaforo.colorTexto,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (eq.porcentajeCumplimiento / 100).clamp(0.0, 1.0),
-                    minHeight: 6,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    color: eq.semaforo.colorTexto,
-                  ),
-                ),
-              ],
+              areas: areasFiltradas,
+              totalAreas: resumen.totalAreas,
+              esAnual: esAnual,
+              origen: origin,
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: const [
-                Text(
-                  'Ver área',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0D53C3),
-                  ),
-                ),
-                SizedBox(width: 4),
-                Icon(Icons.arrow_forward, size: 14, color: Color(0xFF0D53C3)),
-              ],
-            ),
-          ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Estado y categorías lado a lado; en pantallas angostas, uno debajo del otro.
+class _ChartsRow extends StatelessWidget {
+  final Widget statusChart;
+  final Widget categoryChart;
+
+  const _ChartsRow({required this.statusChart, required this.categoryChart});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 1180) {
+          return Column(
+            children: [statusChart, const SizedBox(height: 16), categoryChart],
+          );
+        }
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: statusChart),
+              const SizedBox(width: 16),
+              Expanded(child: categoryChart),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+
+  const _ErrorState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'No pudimos cargar las áreas.\n$message',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFFDC2626)),
         ),
       ),
     );

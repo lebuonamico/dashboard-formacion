@@ -277,7 +277,11 @@ final semaforoPorAreaProvider = FutureProvider<List<SemaforoAreaViewModel>>((
     resultado.add(
       SemaforoAreaViewModel(
         area: area,
-        cantidadColaboradores: listaItems.length,
+        // En el anual un legajo puede repetirse si cambió de equipo.
+        cantidadColaboradores: listaItems
+            .map((item) => item.empleado.legajo)
+            .toSet()
+            .length,
         horasCompletadas: horasCompletadas,
         horasRequeridas: horasRequeridas,
         porcentajeCumplimiento: porcentaje,
