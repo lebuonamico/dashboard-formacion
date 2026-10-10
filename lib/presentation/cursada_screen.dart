@@ -1,12 +1,14 @@
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 
 class CursadasScreen extends ConsumerWidget {
   const CursadasScreen({super.key});
@@ -17,274 +19,154 @@ class CursadasScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Carga de horas CRM',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
+                const Text(
+                  'Carga de horas CRM',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-
-                // Contenido
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _BarraFiltrosCrm(),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: cursadasAsync.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                            data: (lista) {
-                              if (lista.isEmpty) {
-                                final hayCargas =
-                                    ref
-                                        .watch(cargasDeHorasCRMProvider)
-                                        .value
-                                        ?.isNotEmpty ??
-                                    false;
-                                return SingleChildScrollView(
-                                  child: hayCargas
-                                      ? const EmptyDataState(
-                                          icon: Icons.search_off_outlined,
-                                          title:
-                                              'Ninguna carga de horas coincide con los filtros.',
-                                          message:
-                                              'Probá con otra búsqueda, período o área.',
-                                        )
-                                      : const EmptyDataState(
-                                          icon: Icons.schedule_outlined,
-                                          title: 'No hay horas CRM cargadas.',
-                                          message:
-                                              'Importá el reporte de horas del CRM.',
-                                        ),
-                                );
-                              }
-                              return _TablaCargasPaginada(cargas: lista);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const UserAvatar(),
               ],
             ),
           ),
+
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _BarraFiltrosCrm(),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: cursadasAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
+                      data: (lista) => FadeIn(
+                        child: (() {
+                          if (lista.isEmpty) {
+                            final hayCargas =
+                                ref
+                                    .watch(cargasDeHorasCRMProvider)
+                                    .value
+                                    ?.isNotEmpty ??
+                                false;
+                            return SingleChildScrollView(
+                              child: hayCargas
+                                  ? const EmptyDataState(
+                                      icon: Icons.search_off_outlined,
+                                      title:
+                                          'Ninguna carga de horas coincide con los filtros.',
+                                      message:
+                                          'Probá con otra búsqueda, período o área.',
+                                    )
+                                  : const EmptyDataState(
+                                      icon: Icons.schedule_outlined,
+                                      title: 'No hay horas CRM cargadas.',
+                                      message:
+                                          'Importá el reporte de horas del CRM.',
+                                    ),
+                            );
+                          }
+                          return _TablaCargasPaginada(cargas: lista);
+                        })(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Buscador + Año, Mes y Área. Es stateful para poder vaciar el texto del
-/// buscador desde "Limpiar filtros".
-class _BarraFiltrosCrm extends ConsumerStatefulWidget {
+/// Buscador por texto (colaborador, legajo, curso o área) y desplegables de
+/// año y mes.
+class _BarraFiltrosCrm extends ConsumerWidget {
   const _BarraFiltrosCrm();
 
   @override
-  ConsumerState<_BarraFiltrosCrm> createState() => _BarraFiltrosCrmState();
-}
-
-class _BarraFiltrosCrmState extends ConsumerState<_BarraFiltrosCrm> {
-  late final TextEditingController _busqueda;
-
-  @override
-  void initState() {
-    super.initState();
-    // Los filtros persisten al navegar: el texto arranca con la búsqueda vigente.
-    _busqueda = TextEditingController(
-      text: ref.read(busquedaCargaDeHorasProvider),
-    );
-  }
-
-  @override
-  void dispose() {
-    _busqueda.dispose();
-    super.dispose();
-  }
-
-  void _limpiarFiltros() {
-    _busqueda.clear();
-    ref.read(busquedaCargaDeHorasProvider.notifier).state = '';
-    ref.read(filtroAnioCargaProvider.notifier).state = null;
-    ref.read(filtroMesCargaProvider.notifier).state = null;
-    ref.read(filtroAreaCargaProvider.notifier).state = null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final busqueda = ref.watch(busquedaCargaDeHorasProvider);
     final anio = ref.watch(filtroAnioCargaProvider);
     final mes = ref.watch(filtroMesCargaProvider);
-    final area = ref.watch(filtroAreaCargaProvider);
     final anios = ref.watch(aniosCargasDisponiblesProvider).value ?? const [];
-    final areas = ref.watch(areasCargasDisponiblesProvider).value ?? const [];
 
-    final hayFiltros =
-        busqueda.isNotEmpty || anio != null || mes != null || area != null;
-
-    final selectorMes = _Desplegable<int?>(
-      value: anio == null ? null : mes,
-      items: [
-        const DropdownMenuItem<int?>(
-          value: null,
-          child: Text('Todos los meses'),
-        ),
-        for (var m = 1; m <= 12; m++)
-          DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
-      ],
-      // Sin año elegido el mes no filtra: queda deshabilitado.
-      onChanged: anio == null
-          ? null
-          : (val) => ref.read(filtroMesCargaProvider.notifier).state = val,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _busqueda,
-              onChanged: (val) =>
-                  ref.read(busquedaCargaDeHorasProvider.notifier).state = val,
-              decoration: const InputDecoration(
-                hintText: 'Buscar por colaborador, legajo o curso...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 20,
-                  color: Color(0xFF64748B),
-                ),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-              ),
+    return FilterBar(
+      searchHint: 'Buscar por colaborador, legajo, curso o área...',
+      searchText: busqueda,
+      hasActiveFilters: busqueda.isNotEmpty || anio != null || mes != null,
+      onSearch: (value) =>
+          ref.read(busquedaCargaDeHorasProvider.notifier).state = value,
+      filters: [
+        FilterDropdown<int?>(
+          value: anio,
+          hint: 'Todos los años',
+          icon: Icons.event_outlined,
+          width: 220,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Todos los años'),
             ),
-          ),
-          const SizedBox(width: 16),
-          _Desplegable<int?>(
-            value: anio,
-            items: [
-              const DropdownMenuItem<int?>(
-                value: null,
-                child: Text('Todos los años'),
-              ),
-              // Si el año elegido ya no tiene cargas, se mantiene visible para
-              // que el desplegable no quede con un valor inexistente.
-              for (final a in {...anios, ?anio})
-                DropdownMenuItem<int?>(value: a, child: Text('$a')),
-            ],
-            onChanged: (val) {
-              ref.read(filtroAnioCargaProvider.notifier).state = val;
-              if (val == null) {
-                ref.read(filtroMesCargaProvider.notifier).state = null;
-              }
-            },
-          ),
-          const SizedBox(width: 12),
-          if (anio == null)
-            Tooltip(
-              message: 'Elegí un año para filtrar por mes',
-              child: selectorMes,
-            )
-          else
-            selectorMes,
-          const SizedBox(width: 12),
-          _Desplegable<String?>(
-            value: area,
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('Todas las áreas'),
-              ),
-              for (final a in {...areas, ?area})
-                DropdownMenuItem<String?>(value: a, child: Text(a)),
-            ],
-            onChanged: (val) =>
-                ref.read(filtroAreaCargaProvider.notifier).state = val,
-          ),
-          if (hayFiltros) ...[
-            const SizedBox(width: 12),
-            TextButton.icon(
-              onPressed: _limpiarFiltros,
-              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-              label: const Text('Limpiar filtros'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0D53C3),
-              ),
-            ),
+            // Si el año elegido ya no tiene cargas, se mantiene visible para
+            // que el desplegable no quede con un valor inexistente.
+            for (final a in {...anios, ?anio})
+              DropdownMenuItem<int?>(value: a, child: Text('$a')),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Desplegable con el borde de los filtros del resto de las pantallas.
-class _Desplegable<T> extends StatelessWidget {
-  final T value;
-  final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?>? onChanged;
-
-  const _Desplegable({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: onChanged == null ? const Color(0xFFF8FAFC) : null,
-          border: Border.all(color: const Color(0xFFCBD5E1)),
-          borderRadius: BorderRadius.circular(4),
+          onChanged: (value) {
+            ref.read(filtroAnioCargaProvider.notifier).state = value;
+            if (value == null) {
+              ref.read(filtroMesCargaProvider.notifier).state = null;
+            }
+          },
         ),
-        child: DropdownButton<T>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
+        FilterDropdown<int?>(
+          value: anio == null ? null : mes,
+          hint: 'Todos los meses',
+          icon: Icons.calendar_month_outlined,
+          width: 240,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Todos los meses'),
+            ),
+            for (var m = 1; m <= 12; m++)
+              DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
+          ],
+          // Sin año elegido el mes no filtra: queda deshabilitado.
+          onChanged: anio == null
+              ? null
+              : (value) =>
+                    ref.read(filtroMesCargaProvider.notifier).state = value,
+          tooltip: anio == null ? 'Elegí un año para filtrar por mes' : null,
         ),
-      ),
+      ],
+      onClear: () {
+        ref.read(busquedaCargaDeHorasProvider.notifier).state = '';
+        ref.read(filtroAnioCargaProvider.notifier).state = null;
+        ref.read(filtroMesCargaProvider.notifier).state = null;
+      },
     );
   }
 }

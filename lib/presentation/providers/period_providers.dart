@@ -19,7 +19,3 @@ final filtroMesPeriodoProvider = StateProvider<int>(
 final filtroAnioPeriodoProvider = StateProvider<int>(
   (ref) => DateTime.now().year,
 );
-
-final soloRegistrosCargadosPeriodoProvider = StateProvider<bool>(
-  (ref) => false,
-);
