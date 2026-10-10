@@ -1,14 +1,14 @@
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
-import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
-import 'package:app_finnegans/presentation/providers/period_providers.dart';
+import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_back_button.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
@@ -30,137 +30,122 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     final periodoTexto = alcance == AlcancePeriodo.anual
         ? 'Año $anio'
         : '${nombreMes(mes)} $anio';
-    final hayDatosPeriodo = ref.watch(hayDatosPeriodoProvider).value ?? true;
+    final hayDatosPeriodo =
+        ref.watch(hayDatosEquiposPeriodoProvider).value ?? true;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar con botón Volver
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
               children: [
-                // TopBar con botón Volver
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Color(0xFF0F172A),
-                        ),
-                        onPressed: () => context.pop(),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Perfil del colaborador',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Contenido
-                Expanded(
-                  child: detalleAsync.when(
-                    // Al cambiar el período mantiene los datos previos en pantalla.
-                    skipLoadingOnReload: true,
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Center(child: Text('Error: $err')),
-                    data: (detalle) {
-                      if (detalle == null) {
-                        return const Center(
-                          child: Text('Empleado no encontrado.'),
-                        );
-                      }
-
-                      final emp = detalle.empleado;
-                      final cump = detalle.cumplimiento;
-
-                      return ListView(
-                        padding: const EdgeInsets.all(24.0),
-                        children: [
-                          // Cabecera con datos del empleado
-                          _buildHeaderEmpleado(
-                            emp,
-                            cump,
-                            mostrarCumplimiento: hayDatosPeriodo,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Filtro de período global
-                          const PeriodoFilterPanel(),
-                          const SizedBox(height: 24),
-
-                          if (!hayDatosPeriodo) ...[
-                            EmptyDataState.periodoSinDatos(
-                              periodo: etiquetaPeriodo(alcance, mes, anio),
-                            ),
-                            const SizedBox(height: 24),
-                          ] else ...[
-                            // Desglose de cumplimiento por categoría
-                            Text(
-                              'Desglose del plan de formación ($periodoTexto)',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildGridCategorias(cump),
-                            const SizedBox(height: 24),
-
-                            // Cursos del período: Moodle y CRM
-                            Text(
-                              'Cursos del período ($periodoTexto)',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildColumnasCursos(detalle),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Cursos Dictados (si aplica al seniority)
-                          if ((cump.horasRequeridas[TipoCurso
-                                          .dictadoCapacitaciones] ??
-                                      0) >
-                                  0 ||
-                              detalle.cursosDictados.isNotEmpty) ...[
-                            const Text(
-                              'Cursos dictados como instructor',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildTablaDictados(detalle.cursosDictados),
-                          ],
-                        ],
-                      );
-                    },
+                AppBackButton(onPressed: () => context.pop()),
+                const SizedBox(width: 8),
+                const Text(
+                  'Perfil del colaborador',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Contenido
+          Expanded(
+            child: detalleAsync.when(
+              // Al cambiar el período mantiene los datos previos en pantalla.
+              skipLoadingOnReload: true,
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
+              data: (detalle) => FadeIn(
+                child: (() {
+                  if (detalle == null) {
+                    return const Center(child: Text('Empleado no encontrado.'));
+                  }
+
+                  final emp = detalle.empleado;
+                  final cump = detalle.cumplimiento;
+
+                  return ListView(
+                    padding: const EdgeInsets.all(24.0),
+                    children: [
+                      // Cabecera con datos del empleado
+                      _buildHeaderEmpleado(
+                        emp,
+                        cump,
+                        mostrarCumplimiento: hayDatosPeriodo,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Filtro de período global
+                      const PeriodoFilterPanel(),
+                      const SizedBox(height: 24),
+
+                      if (!hayDatosPeriodo) ...[
+                        EmptyDataState.periodoSinDatos(
+                          periodo: etiquetaPeriodo(alcance, mes, anio),
+                        ),
+                        const SizedBox(height: 24),
+                      ] else ...[
+                        // Desglose de cumplimiento por categoría
+                        Text(
+                          'Desglose del plan de formación ($periodoTexto)',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildGridCategorias(cump),
+                        const SizedBox(height: 24),
+
+                        // Cursos del período: Moodle y CRM
+                        Text(
+                          'Cursos del período ($periodoTexto)',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildColumnasCursos(detalle),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Cursos Dictados (si aplica al seniority)
+                      if ((cump.horasRequeridas[TipoCurso
+                                      .dictadoCapacitaciones] ??
+                                  0) >
+                              0 ||
+                          detalle.cursosDictados.isNotEmpty) ...[
+                        const Text(
+                          'Cursos dictados como instructor',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTablaDictados(detalle.cursosDictados),
+                      ],
+                    ],
+                  );
+                })(),
+              ),
             ),
           ),
         ],

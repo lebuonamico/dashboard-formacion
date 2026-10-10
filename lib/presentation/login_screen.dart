@@ -62,17 +62,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Icono de cabecera
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D53C3),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.article_outlined,
-                        color: Colors.white,
-                        size: 28,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'assets/images/logo_finnegans.png',
+                        width: 52,
+                        height: 52,
                       ),
                     ),
                     const SizedBox(height: 16),

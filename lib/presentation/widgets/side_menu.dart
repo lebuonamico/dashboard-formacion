@@ -14,6 +14,9 @@ const double _altoHeader = 64;
 
 const Duration _duracionAnimacion = Duration(milliseconds: 220);
 
+/// Transición de color del ítem activo del menú.
+const Duration _duracionColor = Duration(milliseconds: 200);
+
 class SideMenu extends ConsumerStatefulWidget {
   const SideMenu({super.key});
 
@@ -157,17 +160,12 @@ class _SideMenuState extends ConsumerState<SideMenu>
             ),
             child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D53C3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.article_outlined,
-                    color: Colors.white,
-                    size: 20,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/logo_finnegans.png',
+                    width: 36,
+                    height: 36,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -407,7 +405,7 @@ class _PestanaToggleState extends State<_PestanaToggle> {
   }
 }
 
-class _MenuItem extends StatelessWidget {
+class _MenuItem extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
@@ -425,34 +423,87 @@ class _MenuItem extends StatelessWidget {
   });
 
   @override
+  State<_MenuItem> createState() => _MenuItemState();
+}
+
+class _MenuItemState extends State<_MenuItem> {
+  static const _marca = Color(0xFF0D53C3);
+  static final _radio = BorderRadius.circular(8);
+
+  bool _hover = false;
+  bool _presionado = false;
+
+  @override
   Widget build(BuildContext context) {
-    final defaultColor = isSelected
-        ? const Color(0xFF0D53C3)
-        : const Color(0xFF64748B);
-    final bgColor = isSelected
-        ? const Color(0xFF0D53C3).withValues(alpha: 0.08)
+    final seleccionado = widget.isSelected;
+    final colorTexto =
+        widget.textColor ?? (seleccionado ? _marca : const Color(0xFF334155));
+    final colorIcono =
+        widget.iconColor ?? (seleccionado ? _marca : const Color(0xFF64748B));
+
+    // Sin ripple: el feedback es continuo. El fondo del ítem se desvanece entre
+    // reposo, hover, presionado y seleccionado, y el texto y el ícono cambian de
+    // color con la misma curva. Así nada aparece ni se borra de golpe.
+    final colorFondo = _presionado
+        ? _marca.withValues(alpha: seleccionado ? 0.14 : 0.1)
+        : seleccionado
+        ? _marca.withValues(alpha: _hover ? 0.11 : 0.08)
+        : _hover
+        ? const Color(0xFF0F172A).withValues(alpha: 0.05)
         : Colors.transparent;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-        child: ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          onTap: onTap,
-          dense: true,
-          leading: Icon(icon, size: 20, color: iconColor ?? defaultColor),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color:
-                  textColor ??
-                  (isSelected
-                      ? const Color(0xFF0D53C3)
-                      : const Color(0xFF334155)),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Listener(
+          onPointerDown: (_) => setState(() => _presionado = true),
+          onPointerUp: (_) => setState(() => _presionado = false),
+          onPointerCancel: (_) => setState(() => _presionado = false),
+          child: AnimatedContainer(
+            duration: _duracionColor,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(color: colorFondo, borderRadius: _radio),
+            child: Material(
+              type: MaterialType.transparency,
+              borderRadius: _radio,
+              child: TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: colorIcono),
+                duration: _duracionColor,
+                curve: Curves.easeOut,
+                builder: (context, iconoAnimado, _) =>
+                    TweenAnimationBuilder<Color?>(
+                      tween: ColorTween(end: colorTexto),
+                      duration: _duracionColor,
+                      curve: Curves.easeOut,
+                      builder: (context, textoAnimado, _) => ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: _radio),
+                        onTap: widget.onTap,
+                        dense: true,
+                        // Sin ripple ni resaltados propios del ListTile.
+                        splashColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        focusColor: _marca.withValues(alpha: 0.08),
+                        enableFeedback: false,
+                        leading: Icon(
+                          widget.icon,
+                          size: 20,
+                          color: iconoAnimado,
+                        ),
+                        title: Text(
+                          widget.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: seleccionado
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: textoAnimado,
+                          ),
+                        ),
+                      ),
+                    ),
+              ),
             ),
           ),
         ),

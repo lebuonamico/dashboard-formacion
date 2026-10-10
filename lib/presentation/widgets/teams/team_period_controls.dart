@@ -9,11 +9,9 @@ class EquiposPeriodControls extends StatelessWidget {
   final int selectedMonth;
   final int selectedYear;
   final List<int> availableYears;
-  final bool soloRegistrosCargados;
   final ValueChanged<AlcancePeriodo> onScopeChanged;
   final ValueChanged<int?> onMonthChanged;
   final ValueChanged<int?> onYearChanged;
-  final ValueChanged<bool>? onLoadedRecordsChanged;
 
   const EquiposPeriodControls({
     super.key,
@@ -21,11 +19,9 @@ class EquiposPeriodControls extends StatelessWidget {
     required this.selectedMonth,
     required this.selectedYear,
     required this.availableYears,
-    this.soloRegistrosCargados = false,
     required this.onScopeChanged,
     required this.onMonthChanged,
     required this.onYearChanged,
-    this.onLoadedRecordsChanged,
   });
 
   @override
@@ -38,11 +34,7 @@ class EquiposPeriodControls extends StatelessWidget {
       decoration: equiposPanelDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final title = _PeriodTitle(
-            esAnual:
-                alcance == AlcancePeriodo.anual &&
-                onLoadedRecordsChanged == null,
-          );
+          final title = _PeriodTitle(esAnual: alcance == AlcancePeriodo.anual);
           // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
           final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
             selected: alcance,
@@ -66,22 +58,6 @@ class EquiposPeriodControls extends StatelessWidget {
             yearOptions: yearOptions,
             onChanged: onYearChanged,
           );
-          final loadedRecordsControl = FilterChip(
-            selected: soloRegistrosCargados,
-            label: const Text('Sólo registros cargados'),
-            onSelected: alcance == AlcancePeriodo.anual
-                ? onLoadedRecordsChanged
-                : null,
-            avatar: const Icon(Icons.fact_check_outlined, size: 17),
-            selectedColor: equiposBrand.withValues(alpha: 0.12),
-            checkmarkColor: equiposBrand,
-            labelStyle: TextStyle(
-              color: alcance == AlcancePeriodo.anual
-                  ? equiposInk
-                  : equiposMuted.withValues(alpha: 0.6),
-            ),
-          );
-
           if (constraints.maxWidth < 820) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,10 +69,6 @@ class EquiposPeriodControls extends StatelessWidget {
                 monthField,
                 const SizedBox(height: 12),
                 yearField,
-                if (onLoadedRecordsChanged != null) ...[
-                  const SizedBox(height: 12),
-                  loadedRecordsControl,
-                ],
               ],
             );
           }
@@ -110,10 +82,6 @@ class EquiposPeriodControls extends StatelessWidget {
               SizedBox(width: 170, child: monthField),
               const SizedBox(width: 12),
               SizedBox(width: 135, child: yearField),
-              if (onLoadedRecordsChanged != null) ...[
-                const SizedBox(width: 12),
-                loadedRecordsControl,
-              ],
             ],
           );
         },

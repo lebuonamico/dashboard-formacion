@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
+import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_filters.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_results.dart';
@@ -14,6 +14,8 @@ import 'package:app_finnegans/presentation/widgets/areas/area_status_summary.dar
 import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 
 class AreasScreen extends ConsumerWidget {
   const AreasScreen({super.key});
@@ -32,28 +34,23 @@ class AreasScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: areasBackground,
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
+          const AppTopBar(title: 'Áreas y equipos generales'),
           Expanded(
-            child: Column(
-              children: [
-                const AppTopBar(title: 'Áreas y equipos generales'),
-                Expanded(
-                  child: resumenAsync.when(
-                    skipLoadingOnRefresh: false,
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: areasBrand),
-                    ),
-                    error: (error, _) => _ErrorState(message: '$error'),
-                    data: (resumen) => _AreasContent(
-                      resumen: resumen,
-                      areasFiltradasAsync: areasFiltradasAsync,
-                      origin: origin,
-                    ),
-                  ),
+            child: resumenAsync.when(
+              skipLoadingOnRefresh: false,
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: areasBrand),
+              ),
+              error: (error, _) => _ErrorState(message: '$error'),
+              data: (resumen) => FadeIn(
+                child: _AreasContent(
+                  resumen: resumen,
+                  areasFiltradasAsync: areasFiltradasAsync,
+                  origin: origin,
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -168,16 +165,35 @@ class _AreasContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          AreasFilters(
+          FilterBar(
+            searchHint: 'Buscar por área o equipo general',
             searchText: busqueda,
-            selectedStatus: estadoSeleccionado,
             hasActiveFilters: hayFiltrosActivos,
             onSearch: (value) {
               ref.read(busquedaAreaProvider.notifier).state = value;
             },
-            onStatus: (value) {
-              ref.read(filtroEstadoAreaProvider.notifier).state = value;
-            },
+            filters: [
+              FilterDropdown<EstadoSemaforo?>(
+                value: estadoSeleccionado,
+                hint: 'Todos los estados',
+                icon: Icons.traffic_outlined,
+                width: 250,
+                items: [
+                  const DropdownMenuItem<EstadoSemaforo?>(
+                    value: null,
+                    child: Text('Todos los estados'),
+                  ),
+                  for (final estado in EstadoSemaforo.values)
+                    DropdownMenuItem<EstadoSemaforo?>(
+                      value: estado,
+                      child: Text(estado.label),
+                    ),
+                ],
+                onChanged: (value) {
+                  ref.read(filtroEstadoAreaProvider.notifier).state = value;
+                },
+              ),
+            ],
             onClear: () {
               ref.read(busquedaAreaProvider.notifier).state = '';
               ref.read(filtroEstadoAreaProvider.notifier).state = null;

@@ -53,7 +53,6 @@ class DetalleEquipoViewModel {
 }
 
 final busquedaEquipoProvider = StateProvider<String>((ref) => '');
-final filtroAreaEquipoProvider = StateProvider<String?>((ref) => null);
 final filtroEstadoEquipoProvider = StateProvider<EstadoEquipo?>((ref) => null);
 
 final equiposServiceProvider = Provider<EquiposService>((ref) {
@@ -190,7 +189,6 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
 
 final equiposGlobalFiltradosProvider =
     Provider<AsyncValue<List<EquipoGlobalViewModel>>>((ref) {
-      final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
       final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
       final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
       final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
@@ -204,12 +202,10 @@ final equiposGlobalFiltradosProvider =
               equipo.area.toLowerCase().contains(query) ||
               equipo.lider.toLowerCase().contains(query);
 
-          final coincideArea =
-              areaSeleccionada == null || equipo.area == areaSeleccionada;
           final coincideEstado =
               estadoSeleccionado == null || equipo.estado == estadoSeleccionado;
 
-          return coincideBusqueda && coincideArea && coincideEstado;
+          return coincideBusqueda && coincideEstado;
         }).toList();
       });
     });

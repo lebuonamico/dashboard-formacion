@@ -1,5 +1,7 @@
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,21 +17,8 @@ class DashboardAreasSection extends ConsumerStatefulWidget {
 }
 
 class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
-  late final TextEditingController _searchController;
-  String? _selectedArea;
+  String _search = '';
   EstadoSemaforo? _selectedStatus;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,20 +58,13 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
           data: (areas) {
             if (areas.isEmpty) return const _EmptyAreasState();
 
-            final areasDisponibles =
-                areas.map((area) => area.area).toSet().toList()..sort();
-            final selectedArea = areasDisponibles.contains(_selectedArea)
-                ? _selectedArea
-                : null;
-            final query = _searchController.text.trim().toLowerCase();
+            final query = _search.trim().toLowerCase();
             final areasFiltradas = areas.where((area) {
               final matchesSearch =
                   query.isEmpty || area.area.toLowerCase().contains(query);
-              final matchesArea =
-                  selectedArea == null || area.area == selectedArea;
               final matchesStatus =
                   _selectedStatus == null || area.semaforo == _selectedStatus;
-              return matchesSearch && matchesArea && matchesStatus;
+              return matchesSearch && matchesStatus;
             }).toList();
 
             return equiposAsync.when(
@@ -100,7 +82,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
 
                 return Column(
                   children: [
-                    _buildFilterBar(areasDisponibles, selectedArea),
+                    _buildFilterBar(),
                     const SizedBox(height: 16),
                     if (areasFiltradas.isEmpty)
                       const _EmptyFilteredAreasState()
@@ -144,139 +126,37 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
     );
   }
 
-  Widget _buildFilterBar(List<String> areas, String? selectedArea) {
-    final hasActiveFilters =
-        _searchController.text.trim().isNotEmpty ||
-        selectedArea != null ||
-        _selectedStatus != null;
-
-    final searchField = TextField(
-      controller: _searchController,
-      onChanged: (_) => setState(() {}),
-      decoration: _inputDecoration('Buscar por área', Icons.search),
-    );
-    final areaField = DropdownButtonFormField<String?>(
-      initialValue: selectedArea,
-      isExpanded: true,
-      decoration: _inputDecoration('Todas las áreas', Icons.apartment_outlined),
-      items: [
-        const DropdownMenuItem<String?>(
-          value: null,
-          child: Text('Todas las áreas'),
-        ),
-        ...areas.map(
-          (area) => DropdownMenuItem<String?>(
-            value: area,
-            child: Text(area, overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-      onChanged: (value) => setState(() => _selectedArea = value),
-    );
-    final statusField = DropdownButtonFormField<EstadoSemaforo?>(
-      initialValue: _selectedStatus,
-      isExpanded: true,
-      decoration: _inputDecoration('Todos los estados', Icons.traffic_outlined),
-      items: const [
-        DropdownMenuItem<EstadoSemaforo?>(
-          value: null,
-          child: Text('Todos los estados'),
-        ),
-        DropdownMenuItem<EstadoSemaforo?>(
-          value: EstadoSemaforo.verde,
-          child: Text('En objetivo'),
-        ),
-        DropdownMenuItem<EstadoSemaforo?>(
-          value: EstadoSemaforo.amarillo,
-          child: Text('En riesgo'),
-        ),
-        DropdownMenuItem<EstadoSemaforo?>(
-          value: EstadoSemaforo.rojo,
-          child: Text('Crítico'),
+  Widget _buildFilterBar() {
+    return FilterBar(
+      searchHint: 'Buscar por área',
+      searchText: _search,
+      hasActiveFilters:
+          _search.trim().isNotEmpty || _selectedStatus != null,
+      onSearch: (value) => setState(() => _search = value),
+      filters: [
+        FilterDropdown<EstadoSemaforo?>(
+          value: _selectedStatus,
+          hint: 'Todos los estados',
+          icon: Icons.traffic_outlined,
+          width: 250,
+          items: [
+            const DropdownMenuItem<EstadoSemaforo?>(
+              value: null,
+              child: Text('Todos los estados'),
+            ),
+            for (final estado in EstadoSemaforo.values)
+              DropdownMenuItem<EstadoSemaforo?>(
+                value: estado,
+                child: Text(estado.label),
+              ),
+          ],
+          onChanged: (value) => setState(() => _selectedStatus = value),
         ),
       ],
-      onChanged: (value) => setState(() => _selectedStatus = value),
-    );
-    final clearButton = OutlinedButton.icon(
-      onPressed: hasActiveFilters
-          ? () {
-              _searchController.clear();
-              setState(() {
-                _selectedArea = null;
-                _selectedStatus = null;
-              });
-            }
-          : null,
-      icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-      label: const Text('Limpiar'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF0D53C3),
-        disabledForegroundColor: const Color(0xFF94A3B8),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
-      ),
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 800) {
-            return Column(
-              children: [
-                searchField,
-                const SizedBox(height: 12),
-                areaField,
-                const SizedBox(height: 12),
-                statusField,
-                const SizedBox(height: 12),
-                Align(alignment: Alignment.centerLeft, child: clearButton),
-              ],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(child: searchField),
-              const SizedBox(width: 12),
-              SizedBox(width: 230, child: areaField),
-              const SizedBox(width: 12),
-              SizedBox(width: 250, child: statusField),
-              const SizedBox(width: 12),
-              clearButton,
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint, IconData icon) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-    );
-
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-      prefixIcon: Icon(icon, size: 19, color: Color(0xFF64748B)),
-      prefixIconConstraints: const BoxConstraints(minWidth: 42),
-      filled: true,
-      fillColor: const Color(0xFFF9FAFB),
-      contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-      border: border,
-      enabledBorder: border,
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF0D53C3), width: 1.5),
-      ),
+      onClear: () => setState(() {
+        _search = '';
+        _selectedStatus = null;
+      }),
     );
   }
 }
