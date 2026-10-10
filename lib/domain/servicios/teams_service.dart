@@ -221,27 +221,6 @@ class EquiposService {
     return acumulados.values.toList();
   }
 
-  int contarMesesConRegistros({
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-  }) {
-    final meses = cargas
-        .where((carga) => carga.fecha.year == anio)
-        .map((carga) => carga.fecha.month)
-        .toSet();
-    meses.addAll(
-      certificaciones
-          .where(
-            (certificacion) =>
-                certificacion.finalizoCurso &&
-                certificacion.fechaFinalizacion?.year == anio,
-          )
-          .map((certificacion) => certificacion.fechaFinalizacion!.month),
-    );
-    return meses.length;
-  }
-
   List<CumplimientoEmpleado> convertirObjetivoMensualAAnual(
     List<CumplimientoEmpleado> cumplimientos, {
     int mesesConRegistros = 12,

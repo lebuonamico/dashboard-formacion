@@ -13,7 +13,6 @@ class DashboardKpiGrid extends StatelessWidget {
   final AlcancePeriodo alcance;
   final int mesSeleccionado;
   final int anioSeleccionado;
-  final bool soloRegistrosCargados;
 
   /// Meses evaluados en el período: 1 en el mensual, los meses con datos en
   /// el anual. Sirve para pasar las horas del período a un ritmo mensual.
@@ -28,7 +27,6 @@ class DashboardKpiGrid extends StatelessWidget {
     required this.alcance,
     required this.mesSeleccionado,
     required this.anioSeleccionado,
-    required this.soloRegistrosCargados,
     this.mesesEvaluados = 1,
   });
 
@@ -103,9 +101,7 @@ class DashboardKpiGrid extends StatelessWidget {
       'NOVIEMBRE',
       'DICIEMBRE',
     ];
-    final periodoLabel = soloRegistrosCargados
-        ? 'TODOS LOS REGISTROS'
-        : alcance == AlcancePeriodo.anual
+    final periodoLabel = alcance == AlcancePeriodo.anual
         ? 'AÑO $anioSeleccionado'
         : '${nombresMeses[mesSeleccionado - 1]} $anioSeleccionado';
 
@@ -135,17 +131,14 @@ class DashboardKpiGrid extends StatelessWidget {
         title: 'HORAS DECLARADAS CRM · $periodoLabel',
         value: '${horasDeclaradasPeriodo.toStringAsFixed(1)} h',
         suffix: 'declaradas',
-        progress: soloRegistrosCargados || metaPeriodo == 0
+        progress: metaPeriodo == 0
             ? 0
             : (horasDeclaradasPeriodo / metaPeriodo).clamp(0.0, 1.0),
-        progressLabel: soloRegistrosCargados
-            ? 'Todos los registros importados'
-            : alcance == AlcancePeriodo.anual
+        progressLabel: alcance == AlcancePeriodo.anual
             ? 'Meta: ${metaPeriodo.toStringAsFixed(0)} h en $mesesDelPeriodo ${mesesDelPeriodo == 1 ? 'mes' : 'meses'} con datos'
             : 'Meta: ${metaPeriodo.toStringAsFixed(0)} h según seniority',
-        footer: soloRegistrosCargados
-            ? 'Sin filtro temporal'
-            : '${(metaPeriodo - horasDeclaradasPeriodo).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
+        footer:
+            '${(metaPeriodo - horasDeclaradasPeriodo).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
         secondaryText:
             '${horasRealizadas.toStringAsFixed(1)} h válidas para el objetivo',
         icon: Icons.schedule_outlined,

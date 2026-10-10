@@ -1,11 +1,13 @@
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class CursosScreen extends ConsumerWidget {
@@ -17,88 +19,76 @@ class CursosScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Catálogo de cursos y formaciones',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
+                const Text(
+                  'Catálogo de cursos y formaciones',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-
-                // Contenido
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildFilterBar(ref),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: cursosAsync.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                            data: (cursosList) {
-                              if (cursosList.isEmpty) {
-                                final hayCursos =
-                                    ref
-                                        .watch(cursosProvider)
-                                        .value
-                                        ?.isNotEmpty ??
-                                    false;
-                                return SingleChildScrollView(
-                                  child: hayCursos
-                                      ? const EmptyDataState(
-                                          icon: Icons.search_off_outlined,
-                                          title:
-                                              'No se encontraron cursos con los filtros aplicados.',
-                                          message:
-                                              'Probá con otra búsqueda o tipo de curso.',
-                                        )
-                                      : const EmptyDataState(
-                                          icon: Icons.menu_book_outlined,
-                                          title: 'No hay cursos cargados.',
-                                          message:
-                                              'Importá el catálogo de cursos o sincronizalo desde Moodle.',
-                                        ),
-                                );
-                              }
-                              return _TablaCursosPaginada(cursos: cursosList);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const UserAvatar(),
               ],
+            ),
+          ),
+
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFilterBar(ref),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: cursosAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
+                      data: (cursosList) => FadeIn(
+                        child: (() {
+                          if (cursosList.isEmpty) {
+                            final hayCursos =
+                                ref.watch(cursosProvider).value?.isNotEmpty ??
+                                false;
+                            return SingleChildScrollView(
+                              child: hayCursos
+                                  ? const EmptyDataState(
+                                      icon: Icons.search_off_outlined,
+                                      title:
+                                          'No se encontraron cursos con los filtros aplicados.',
+                                      message:
+                                          'Probá con otra búsqueda o tipo de curso.',
+                                    )
+                                  : const EmptyDataState(
+                                      icon: Icons.menu_book_outlined,
+                                      title: 'No hay cursos cargados.',
+                                      message:
+                                          'Importá el catálogo de cursos o sincronizalo desde Moodle.',
+                                    ),
+                            );
+                          }
+                          return _TablaCursosPaginada(cursos: cursosList);
+                        })(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -107,62 +97,41 @@ class CursosScreen extends ConsumerWidget {
   }
 
   Widget _buildFilterBar(WidgetRef ref) {
+    final busqueda = ref.watch(busquedaCursoProvider);
     final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              onChanged: (val) =>
-                  ref.read(busquedaCursoProvider.notifier).state = val,
-              decoration: const InputDecoration(
-                hintText: 'Buscar por nombre o ID...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 20,
-                  color: Color(0xFF64748B),
-                ),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-              ),
+    return FilterBar(
+      searchHint: 'Buscar por nombre o ID...',
+      searchText: busqueda,
+      hasActiveFilters: busqueda.isNotEmpty || tipoSeleccionado != null,
+      onSearch: (value) =>
+          ref.read(busquedaCursoProvider.notifier).state = value,
+      filters: [
+        FilterDropdown<TipoCurso?>(
+          value: tipoSeleccionado,
+          hint: 'Todos los tipos',
+          icon: Icons.category_outlined,
+          // "Dictado de capacitaciones" es la opción más larga.
+          width: 300,
+          items: [
+            const DropdownMenuItem<TipoCurso?>(
+              value: null,
+              child: Text('Todos los tipos'),
             ),
-          ),
-          const SizedBox(width: 16),
-          DropdownButtonHideUnderline(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFCBD5E1)),
-                borderRadius: BorderRadius.circular(4),
+            for (final tipo in TipoCurso.values)
+              DropdownMenuItem<TipoCurso?>(
+                value: tipo,
+                child: Text(tipo.label),
               ),
-              child: DropdownButton<TipoCurso?>(
-                value: tipoSeleccionado,
-                hint: const Text('Todos los tipos'),
-                items: [
-                  const DropdownMenuItem<TipoCurso?>(
-                    value: null,
-                    child: Text('Todos los tipos'),
-                  ),
-                  ...TipoCurso.values.map(
-                    (t) => DropdownMenuItem(value: t, child: Text(t.label)),
-                  ),
-                ],
-                onChanged: (val) =>
-                    ref.read(filtroTipoCursoProvider.notifier).state = val,
-              ),
-            ),
-          ),
-        ],
-      ),
+          ],
+          onChanged: (value) =>
+              ref.read(filtroTipoCursoProvider.notifier).state = value,
+        ),
+      ],
+      onClear: () {
+        ref.read(busquedaCursoProvider.notifier).state = '';
+        ref.read(filtroTipoCursoProvider.notifier).state = null;
+      },
     );
   }
 }

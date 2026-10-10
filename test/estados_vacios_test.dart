@@ -358,6 +358,27 @@ void main() {
     },
   );
 
+  testWidgets(
+    'El detalle de equipo lista integrantes sin checkbox y la fila es clickeable',
+    (tester) async {
+      await _mostrar(
+        tester,
+        ruta: '/equipo',
+        pantalla: (_) =>
+            const EquipoScreen(area: 'Tecnología', equipo: 'Plataforma'),
+        cargas: [_carga(DateTime(_anio, _mes, 10))],
+      );
+
+      expect(find.text('Integrantes (1)'), findsOneWidget);
+      expect(find.text('Ana Pérez'), findsOneWidget);
+      expect(find.byType(Checkbox), findsNothing);
+
+      final tabla = tester.widget<DataTable>(find.byType(DataTable));
+      expect(tabla.showCheckboxColumn, isFalse);
+      expect(tabla.rows.first.onSelectChanged, isNotNull);
+    },
+  );
+
   group('Empleados', () {
     testWidgets('sin nómina importada lo indica', (tester) async {
       await _mostrar(
@@ -494,13 +515,35 @@ void main() {
         cargas: [_carga(DateTime(_anio, _mes, 10))],
       );
 
-      container.read(filtroAreaCargaProvider.notifier).state = 'Inexistente';
+      container.read(busquedaCargaDeHorasProvider.notifier).state =
+          'Inexistente';
       await tester.pumpAndSettle();
 
       expect(
         find.text('Ninguna carga de horas coincide con los filtros.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('buscar por el área del colaborador encuentra la carga', (
+      tester,
+    ) async {
+      final container = await _mostrar(
+        tester,
+        ruta: '/cursadas',
+        pantalla: (_) => const CursadasScreen(),
+        cargas: [_carga(DateTime(_anio, _mes, 10))],
+      );
+
+      container.read(busquedaCargaDeHorasProvider.notifier).state =
+          'tecnología';
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna carga de horas coincide con los filtros.'),
+        findsNothing,
+      );
+      expect(find.text('Ana Pérez'), findsWidgets);
     });
 
     testWidgets('con muchas cargas pagina los registros', (tester) async {

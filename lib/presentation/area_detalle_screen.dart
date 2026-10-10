@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
@@ -56,57 +56,49 @@ class AreaDetalleScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: areasBackground,
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
+          AppTopBar(title: 'Detalle de área', onBack: () => context.pop()),
           Expanded(
-            child: Column(
-              children: [
-                AppTopBar(
-                  title: 'Detalle de área',
-                  onBack: () => context.pop(),
-                ),
-                Expanded(
-                  child: detalleAsync.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: areasBrand),
-                    ),
-                    error: (error, _) => _ErrorState(message: '$error'),
-                    data: (detalle) {
-                      final periodo = etiquetaPeriodo(alcance, mes, anio);
-                      final hayDatos = hayDatosAsync.value ?? true;
+            child: detalleAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: areasBrand),
+              ),
+              error: (error, _) => _ErrorState(message: '$error'),
+              data: (detalle) => FadeIn(
+                child: (() {
+                  final periodo = etiquetaPeriodo(alcance, mes, anio);
+                  final hayDatos = hayDatosAsync.value ?? true;
 
-                      return ListView(
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-                        children: [
-                          periodControls,
-                          const SizedBox(height: 22),
-                          if (!hayDatos)
-                            EmptyDataState.periodoSinDatos(
-                              icon: Icons.apartment_outlined,
-                              periodo: periodo,
-                            )
-                          else if (detalle == null)
-                            EmptyDataState(
-                              icon: Icons.apartment_outlined,
-                              title:
-                                  'El área $nombreArea no tiene colaboradores elegibles en $periodo.',
-                              message:
-                                  'Probá otro período o verificá la nómina del área.',
-                            )
-                          else
-                            _AreaContent(
-                              detalle: detalle,
-                              periodo: _periodoLabel(alcance, mes, anio),
-                              esAnual: alcance == AlcancePeriodo.anual,
-                              origin: origin,
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                    children: [
+                      periodControls,
+                      const SizedBox(height: 22),
+                      if (!hayDatos)
+                        EmptyDataState.periodoSinDatos(
+                          icon: Icons.apartment_outlined,
+                          periodo: periodo,
+                        )
+                      else if (detalle == null)
+                        EmptyDataState(
+                          icon: Icons.apartment_outlined,
+                          title:
+                              'El área $nombreArea no tiene colaboradores elegibles en $periodo.',
+                          message:
+                              'Probá otro período o verificá la nómina del área.',
+                        )
+                      else
+                        _AreaContent(
+                          detalle: detalle,
+                          periodo: _periodoLabel(alcance, mes, anio),
+                          esAnual: alcance == AlcancePeriodo.anual,
+                          origin: origin,
+                        ),
+                    ],
+                  );
+                })(),
+              ),
             ),
           ),
         ],
