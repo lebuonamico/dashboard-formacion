@@ -94,9 +94,6 @@ final detalleEmpleadoProvider =
       final alcance = ref.watch(alcancePeriodoProvider);
       final mes = ref.watch(filtroMesPeriodoProvider);
       final anio = ref.watch(filtroAnioPeriodoProvider);
-      final soloRegistrosCargados = ref.watch(
-        soloRegistrosCargadosPeriodoProvider,
-      );
       final cumplimientoService = ref.read(cumplimientoServiceProvider);
       final equiposService = ref.read(equiposServiceProvider);
       final esAnual = alcance == AlcancePeriodo.anual;
@@ -146,16 +143,9 @@ final detalleEmpleadoProvider =
           )
           .first;
       if (esAnual) {
-        final mesesObjetivo = soloRegistrosCargados
-            ? equiposService.contarMesesConRegistros(
-                cargas: cargasPeriodo,
-                certificaciones: certificacionesValidasPeriodo,
-                anio: anio,
-              )
-            : 12;
         cumplimiento = equiposService.convertirObjetivoMensualAAnual([
           cumplimiento,
-        ], mesesConRegistros: mesesObjetivo).first;
+        ], mesesConRegistros: 12).first;
       }
 
       final cursosPorNombre = {

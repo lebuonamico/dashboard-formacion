@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_back_button.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 
 class AppTopBar extends StatelessWidget {
@@ -19,13 +20,9 @@ class AppTopBar extends StatelessWidget {
       child: Row(
         children: [
           if (onBack != null) ...[
-            // Leandro: llama a IconButton con onBack para permitir volver a la pantalla anterior.
-            IconButton(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back),
-              tooltip: 'Volver',
-            ),
-            const SizedBox(width: 4),
+            // Flecha para volver a la pantalla anterior.
+            AppBackButton(onPressed: onBack!),
+            const SizedBox(width: 8),
           ],
           Expanded(
             child: Text(

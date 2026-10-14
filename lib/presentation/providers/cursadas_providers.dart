@@ -37,32 +37,12 @@ final busquedaCursadaProvider = busquedaCargaDeHorasProvider;
 // global: filtrar acá no cambia lo que muestran Dashboard o Equipos.
 final filtroAnioCargaProvider = StateProvider<int?>((ref) => null);
 final filtroMesCargaProvider = StateProvider<int?>((ref) => null);
-final filtroAreaCargaProvider = StateProvider<String?>((ref) => null);
 
 /// Años con cargas de horas, del más reciente al más viejo.
 final aniosCargasDisponiblesProvider = Provider<AsyncValue<List<int>>>((ref) {
   return ref.watch(cargasDeHorasCRMProvider).whenData((cargas) {
     return ({for (final carga in cargas) carga.fecha.year}.toList()
       ..sort((a, b) => b.compareTo(a)));
-  });
-});
-
-/// Áreas de los colaboradores que tienen cargas de horas, en orden alfabético.
-final areasCargasDisponiblesProvider = Provider<AsyncValue<List<String>>>((
-  ref,
-) {
-  final cargasAsync = ref.watch(cargasDeHorasCRMProvider);
-  final empleadosAsync = ref.watch(empleadosProvider);
-
-  return cargasAsync.whenData((cargas) {
-    final legajos = {for (final carga in cargas) carga.empleadoLegajo};
-    final areas = {
-      for (final emp in (empleadosAsync.value ?? <Empleado>[]))
-        if (legajos.contains(emp.legajo) && emp.area.trim().isNotEmpty)
-          emp.area.trim(),
-    };
-    return areas.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   });
 });
 
@@ -74,7 +54,6 @@ final cargasDeHorasCompletasProvider =
       final query = ref.watch(busquedaCargaDeHorasProvider).toLowerCase();
       final anioFiltro = ref.watch(filtroAnioCargaProvider);
       final mesFiltro = ref.watch(filtroMesCargaProvider);
-      final areaFiltro = ref.watch(filtroAreaCargaProvider);
 
       if (cargasAsync.isLoading ||
           empleadosAsync.isLoading ||
@@ -119,12 +98,14 @@ final cargasDeHorasCompletasProvider =
             // Si el curso no está en el catálogo se busca por el nombre del CRM.
             final cursoNombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
             final legajo = vm.carga.empleadoLegajo;
+            final area = vm.empleado?.area ?? '';
             final fecha = vm.carga.fecha;
 
             final matchesQuery =
                 empNombre.toLowerCase().contains(query) ||
                 cursoNombre.toLowerCase().contains(query) ||
-                legajo.toLowerCase().contains(query);
+                legajo.toLowerCase().contains(query) ||
+                area.toLowerCase().contains(query);
 
             final matchesAnio = anioFiltro == null || fecha.year == anioFiltro;
             // El mes sólo filtra si hay un año elegido.
@@ -132,10 +113,8 @@ final cargasDeHorasCompletasProvider =
                 anioFiltro == null ||
                 mesFiltro == null ||
                 fecha.month == mesFiltro;
-            final matchesArea =
-                areaFiltro == null || vm.empleado?.area.trim() == areaFiltro;
 
-            return matchesQuery && matchesAnio && matchesMes && matchesArea;
+            return matchesQuery && matchesAnio && matchesMes;
           })
           .toList()
         // Lo más reciente primero.

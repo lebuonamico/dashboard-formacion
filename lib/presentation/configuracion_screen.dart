@@ -26,7 +26,6 @@ import 'package:app_finnegans/presentation/providers/certificaciones_moodle_prov
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
@@ -96,53 +95,44 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Configuración del sistema',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
+                const Text(
+                  'Configuración del sistema',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
+                const UserAvatar(),
+              ],
+            ),
+          ),
 
-                // Contenido de Configuración
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(24.0),
-                    children: [
-                      _buildSeccionImportacion(context),
-                      const SizedBox(height: 24),
-                      _buildSeccionCursos(context),
-                      const SizedBox(height: 24),
-                      _buildSeccionCargaDeHoras(context),
-                      const SizedBox(height: 24),
-                      _buildSeccionCargaLms(context),
-                    ],
-                  ),
-                ),
+          // Contenido de Configuración
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24.0),
+              children: [
+                _buildSeccionImportacion(context),
+                const SizedBox(height: 24),
+                _buildSeccionCursos(context),
+                const SizedBox(height: 24),
+                _buildSeccionCargaDeHoras(context),
+                const SizedBox(height: 24),
+                _buildSeccionCargaLms(context),
               ],
             ),
           ),
@@ -203,10 +193,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               color: const Color(0xFFF0FDF4),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(
-              Icons.school_outlined,
-              color: Color(0xFF15803D),
-            ),
+            child: const Icon(Icons.school_outlined, color: Color(0xFF15803D)),
           ),
           title: const Text(
             'Importar cursos desde Excel / CSV',
@@ -708,9 +695,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       seniorityTexto,
                       ubicacion,
                     ).name;
-                    final fechaIngreso = empleadoData['fechaIngreso']
-                            ?.toString() ??
-                        '';
+                    final fechaIngreso =
+                        empleadoData['fechaIngreso']?.toString() ?? '';
                     final fecha = fechaImportacion(fechaIngreso);
                     if (fecha == null) {
                       throw FormatException(
@@ -913,8 +899,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'horas',
                   'hours',
                 ]);
-                if ([idIndex, nombreIndex, tipoIndex, horasIndex]
-                    .any((index) => index == -1)) {
+                if ([
+                  idIndex,
+                  nombreIndex,
+                  tipoIndex,
+                  horasIndex,
+                ].any((index) => index == -1)) {
                   throw FormatException(
                     'Faltan columnas obligatorias de ID, nombre, tipo o carga horaria en la hoja "${hoja.key}".',
                   );
@@ -925,8 +915,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   if (!_filaConDatos(row)) continue;
                   final ubicacion = 'hoja "${hoja.key}", fila ${fila + 1}';
                   _validarColumnasFila(row, headers, ubicacion);
-                  if ([idIndex, nombreIndex, tipoIndex, horasIndex]
-                      .any((index) => index >= row.length)) {
+                  if ([
+                    idIndex,
+                    nombreIndex,
+                    tipoIndex,
+                    horasIndex,
+                  ].any((index) => index >= row.length)) {
                     throw FormatException(
                       'Faltan datos obligatorios del curso en $ubicacion.',
                     );
@@ -939,7 +933,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                     );
                   }
                   final horasTexto = row[horasIndex].toString().trim();
-                  final horas = double.tryParse(horasTexto.replaceAll(',', '.'));
+                  final horas = double.tryParse(
+                    horasTexto.replaceAll(',', '.'),
+                  );
                   if (horas == null || !horas.isFinite || horas < 0) {
                     throw FormatException(
                       'Carga horaria inválida en $ubicacion: "$horasTexto".',
@@ -1380,7 +1376,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   Seniority _seniorityDesdeTexto(String value, String ubicacion) {
     final normalized = _normalize(value);
     final configurado = Seniority.values.any(
-      (seniority) => _normalize(seniority.name) == normalized ||
+      (seniority) =>
+          _normalize(seniority.name) == normalized ||
           _normalize(seniority.label) == normalized,
     );
     final aliasValido = RegExp(

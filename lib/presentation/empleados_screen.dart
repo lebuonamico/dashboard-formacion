@@ -1,12 +1,14 @@
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
@@ -23,244 +25,143 @@ class EmpleadosScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Directorio de empleados',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
+                const Text(
+                  'Directorio de empleados',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-
-                // Contenido
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _BarraFiltrosEmpleados(),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: empleadosFiltrados.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, _) =>
-                                Center(child: Text('Error: $err')),
-                            data: (empleados) {
-                              if (empleados.isEmpty) {
-                                final hayNomina =
-                                    ref
-                                        .watch(empleadosProvider)
-                                        .value
-                                        ?.isNotEmpty ??
-                                    false;
-                                return SingleChildScrollView(
-                                  child: hayNomina
-                                      ? const EmptyDataState(
-                                          icon: Icons.search_off_outlined,
-                                          title:
-                                              'Ningún empleado coincide con los filtros.',
-                                          message:
-                                              'Probá con otra búsqueda o seniority.',
-                                        )
-                                      : const EmptyDataState(
-                                          icon: Icons.people_outline,
-                                          title: 'No hay empleados cargados.',
-                                          message:
-                                              'Importá la nómina para ver el directorio.',
-                                        ),
-                                );
-                              }
-                              return cumplimientos.when(
-                                loading: () => const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                                error: (_, _) => _TablaEmpleadosPaginada(
-                                  empleados: empleados,
-                                  cumplimientoPorLegajo: const {},
-                                ),
-                                data: (items) {
-                                  final porLegajo = {
-                                    for (final item in items)
-                                      item.empleado.legajo: item,
-                                  };
-                                  return _TablaEmpleadosPaginada(
-                                    empleados: empleados,
-                                    cumplimientoPorLegajo: porLegajo,
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                const UserAvatar(),
               ],
             ),
           ),
+
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _BarraFiltrosEmpleados(),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: empleadosFiltrados.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err')),
+                      data: (empleados) => FadeIn(
+                        child: (() {
+                          if (empleados.isEmpty) {
+                            final hayNomina =
+                                ref
+                                    .watch(empleadosProvider)
+                                    .value
+                                    ?.isNotEmpty ??
+                                false;
+                            return SingleChildScrollView(
+                              child: hayNomina
+                                  ? const EmptyDataState(
+                                      icon: Icons.search_off_outlined,
+                                      title:
+                                          'Ningún empleado coincide con los filtros.',
+                                      message:
+                                          'Probá con otra búsqueda o seniority.',
+                                    )
+                                  : const EmptyDataState(
+                                      icon: Icons.people_outline,
+                                      title: 'No hay empleados cargados.',
+                                      message:
+                                          'Importá la nómina para ver el directorio.',
+                                    ),
+                            );
+                          }
+                          return cumplimientos.when(
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (_, _) => _TablaEmpleadosPaginada(
+                              empleados: empleados,
+                              cumplimientoPorLegajo: const {},
+                            ),
+                            data: (items) {
+                              final porLegajo = {
+                                for (final item in items)
+                                  item.empleado.legajo: item,
+                              };
+                              return _TablaEmpleadosPaginada(
+                                empleados: empleados,
+                                cumplimientoPorLegajo: porLegajo,
+                              );
+                            },
+                          );
+                        })(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Buscador + Seniority. Es stateful para poder vaciar el texto del buscador
-/// desde "Limpiar filtros".
-class _BarraFiltrosEmpleados extends ConsumerStatefulWidget {
+/// Buscador por texto (nombre, legajo, área, equipo, gerente o mail) y
+/// desplegable de seniority.
+class _BarraFiltrosEmpleados extends ConsumerWidget {
   const _BarraFiltrosEmpleados();
 
   @override
-  ConsumerState<_BarraFiltrosEmpleados> createState() =>
-      _BarraFiltrosEmpleadosState();
-}
-
-class _BarraFiltrosEmpleadosState
-    extends ConsumerState<_BarraFiltrosEmpleados> {
-  late final TextEditingController _busqueda;
-
-  @override
-  void initState() {
-    super.initState();
-    // Los filtros persisten al navegar: el texto arranca con la búsqueda vigente.
-    _busqueda = TextEditingController(
-      text: ref.read(busquedaEmpleadoProvider),
-    );
-  }
-
-  @override
-  void dispose() {
-    _busqueda.dispose();
-    super.dispose();
-  }
-
-  void _limpiarFiltros() {
-    _busqueda.clear();
-    ref.read(busquedaEmpleadoProvider.notifier).state = '';
-    ref.read(filtroSeniorityProvider.notifier).state = null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final busqueda = ref.watch(busquedaEmpleadoProvider);
     final seniority = ref.watch(filtroSeniorityProvider);
 
-    final hayFiltros = busqueda.isNotEmpty || seniority != null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _busqueda,
-              onChanged: (val) =>
-                  ref.read(busquedaEmpleadoProvider.notifier).state = val,
-              decoration: const InputDecoration(
-                hintText:
-                    'Buscar por nombre, legajo, área, equipo o gerente...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 20,
-                  color: Color(0xFF64748B),
-                ),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-              ),
+    return FilterBar(
+      searchHint: 'Buscar por nombre, legajo, área, equipo o gerente...',
+      searchText: busqueda,
+      hasActiveFilters: busqueda.isNotEmpty || seniority != null,
+      onSearch: (value) =>
+          ref.read(busquedaEmpleadoProvider.notifier).state = value,
+      filters: [
+        FilterDropdown<Seniority?>(
+          value: seniority,
+          hint: 'Todos los seniorities',
+          icon: Icons.workspace_premium_outlined,
+          width: 250,
+          items: [
+            const DropdownMenuItem<Seniority?>(
+              value: null,
+              child: Text('Todos los seniorities'),
             ),
-          ),
-          const SizedBox(width: 16),
-          _Desplegable<Seniority?>(
-            value: seniority,
-            items: [
-              const DropdownMenuItem<Seniority?>(
-                value: null,
-                child: Text('Todos los seniorities'),
-              ),
-              for (final s in Seniority.values)
-                DropdownMenuItem<Seniority?>(value: s, child: Text(s.label)),
-            ],
-            onChanged: (val) =>
-                ref.read(filtroSeniorityProvider.notifier).state = val,
-          ),
-          if (hayFiltros) ...[
-            const SizedBox(width: 12),
-            TextButton.icon(
-              onPressed: _limpiarFiltros,
-              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-              label: const Text('Limpiar filtros'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0D53C3),
-              ),
-            ),
+            for (final s in Seniority.values)
+              DropdownMenuItem<Seniority?>(value: s, child: Text(s.label)),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Desplegable con el borde de los filtros del resto de las pantallas.
-class _Desplegable<T> extends StatelessWidget {
-  final T value;
-  final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?>? onChanged;
-
-  const _Desplegable({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: onChanged == null ? const Color(0xFFF8FAFC) : null,
-          border: Border.all(color: const Color(0xFFCBD5E1)),
-          borderRadius: BorderRadius.circular(4),
+          onChanged: (value) =>
+              ref.read(filtroSeniorityProvider.notifier).state = value,
         ),
-        child: DropdownButton<T>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
-        ),
-      ),
+      ],
+      onClear: () {
+        ref.read(busquedaEmpleadoProvider.notifier).state = '';
+        ref.read(filtroSeniorityProvider.notifier).state = null;
+      },
     );
   }
 }

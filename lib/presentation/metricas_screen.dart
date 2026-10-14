@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 
 //import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
@@ -18,108 +17,99 @@ class MetricasScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Tablero de métricas y KPI de formación',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const UserAvatar(),
-                    ],
+                const Text(
+                  'Tablero de métricas y KPI de formación',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
+                const UserAvatar(),
+              ],
+            ),
+          ),
 
-                // Contenido
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(24.0),
-                    children: [
-                      // 1. Tarjetas de KPIs Generales
-                      kpisAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (kpis) => _buildKpiRow(kpis),
-                      ),
-                      const SizedBox(height: 24),
+          // Contenido
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24.0),
+              children: [
+                // 1. Tarjetas de KPIs Generales
+                kpisAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error: $err')),
+                  data: (kpis) => _buildKpiRow(kpis),
+                ),
+                const SizedBox(height: 24),
 
-                      // 2. Semáforos por Equipo / Área
-                      const Text(
-                        'Semáforo de cumplimiento por equipo',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      areaAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (areas) => _buildSemaforoAreasGrid(areas),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // 3. Matriz de Cumplimiento y Desvíos por Seniority
-                      const Text(
-                        'Cumplimiento y desvíos por seniority y categoría',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      seniorityAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (seniorities) =>
-                            _buildTablaDesviosSeniority(seniorities),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // 4. Formación Impartida: Variedad y Horas de Dictado
-                      const Text(
-                        'Seguimiento de formadores (variedad y dictado)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      instructoresAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, _) => Center(child: Text('Error: $err')),
-                        data: (instructores) =>
-                            _buildTablaInstructores(context, instructores),
-                      ),
-                    ],
+                // 2. Semáforos por Equipo / Área
+                const Text(
+                  'Semáforo de cumplimiento por equipo',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
+                ),
+                const SizedBox(height: 12),
+                areaAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error: $err')),
+                  data: (areas) => _buildSemaforoAreasGrid(areas),
+                ),
+                const SizedBox(height: 24),
+
+                // 3. Matriz de Cumplimiento y Desvíos por Seniority
+                const Text(
+                  'Cumplimiento y desvíos por seniority y categoría',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                seniorityAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error: $err')),
+                  data: (seniorities) =>
+                      _buildTablaDesviosSeniority(seniorities),
+                ),
+                const SizedBox(height: 24),
+
+                // 4. Formación Impartida: Variedad y Horas de Dictado
+                const Text(
+                  'Seguimiento de formadores (variedad y dictado)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                instructoresAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text('Error: $err')),
+                  data: (instructores) =>
+                      _buildTablaInstructores(context, instructores),
                 ),
               ],
             ),

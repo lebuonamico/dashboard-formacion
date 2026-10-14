@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
@@ -10,7 +11,6 @@ import 'package:app_finnegans/presentation/widgets/admin/admin_dialogs.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_users_table.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_filters.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
@@ -29,35 +29,28 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
+          const AppTopBar(title: 'Panel de administrador'),
           Expanded(
-            child: Column(
-              children: [
-                const AppTopBar(title: 'Panel de administrador'),
-                Expanded(
-                  child: switch (acceso) {
-                    AccesoAdmin.permitido => _contenido(),
-                    AccesoAdmin.denegado => const _EstadoCentrado(
-                      icono: Icons.lock_outline,
-                      titulo: 'No tenés permiso para ver esta sección',
-                      mensaje:
-                          'El panel de administración está reservado para los '
-                          'usuarios con rol Administrador.',
-                    ),
-                    AccesoAdmin.sinSupabase => const _EstadoCentrado(
-                      icono: Icons.cloud_off_outlined,
-                      titulo: 'El panel no está disponible',
-                      mensaje:
-                          'Esta versión de la aplicación no está conectada a '
-                          'la lista de usuarios, así que no hay usuarios para '
-                          'administrar.',
-                    ),
-                  },
-                ),
-              ],
-            ),
+            child: switch (acceso) {
+              AccesoAdmin.permitido => _contenido(),
+              AccesoAdmin.denegado => const _EstadoCentrado(
+                icono: Icons.lock_outline,
+                titulo: 'No tenés permiso para ver esta sección',
+                mensaje:
+                    'El panel de administración está reservado para los '
+                    'usuarios con rol Administrador.',
+              ),
+              AccesoAdmin.sinSupabase => const _EstadoCentrado(
+                icono: Icons.cloud_off_outlined,
+                titulo: 'El panel no está disponible',
+                mensaje:
+                    'Esta versión de la aplicación no está conectada a '
+                    'la lista de usuarios, así que no hay usuarios para '
+                    'administrar.',
+              ),
+            },
           ),
         ],
       ),
@@ -127,21 +120,27 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             mensaje: _mensajeDeError(error),
             color: const Color(0xFFDC2626),
           ),
-          data: (usuarios) => usuarios.isEmpty
-              ? const _EstadoCentrado(
-                  icono: Icons.manage_accounts_outlined,
-                  titulo: 'No hay usuarios para mostrar',
-                  mensaje:
-                      'Probá limpiar los filtros o dar de alta un usuario nuevo.',
-                )
-              : AdminUsuariosTable(
-                  usuarios: usuarios,
-                  emailSeleccionado: ref.watch(emailSeleccionadoAdminProvider),
-                  emailPropio: auth.email,
-                  onSeleccionar: (email) =>
-                      ref.read(emailSeleccionadoAdminProvider.notifier).state =
-                          email,
-                ),
+          data: (usuarios) => FadeIn(
+            child: usuarios.isEmpty
+                ? const _EstadoCentrado(
+                    icono: Icons.manage_accounts_outlined,
+                    titulo: 'No hay usuarios para mostrar',
+                    mensaje:
+                        'Probá limpiar los filtros o dar de alta un usuario nuevo.',
+                  )
+                : AdminUsuariosTable(
+                    usuarios: usuarios,
+                    emailSeleccionado: ref.watch(
+                      emailSeleccionadoAdminProvider,
+                    ),
+                    emailPropio: auth.email,
+                    onSeleccionar: (email) =>
+                        ref
+                                .read(emailSeleccionadoAdminProvider.notifier)
+                                .state =
+                            email,
+                  ),
+          ),
         ),
       ],
     );

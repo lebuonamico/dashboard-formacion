@@ -1,7 +1,7 @@
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_filters.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
@@ -9,7 +9,8 @@ import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dar
 import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,33 +26,27 @@ class EquiposScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: equiposBackground,
-      body: Row(
+      body: Column(
         children: [
-          // Leandro: llama al widget SideMenu para mostrar la navegación de la aplicación.
-          const SideMenu(),
+          // Leandro: llama al widget AppTopBar para mostrar el título de la pantalla de Equipos.
+          const AppTopBar(title: 'Dashboard global de equipos'),
           Expanded(
-            child: Column(
-              children: [
-                // Leandro: llama al widget AppTopBar para mostrar el título de la pantalla de Equipos.
-                const AppTopBar(title: 'Dashboard global de equipos'),
-                Expanded(
-                  // Leandro: llama a AsyncValue.when para mostrar la carga, el error o el contenido del período.
-                  child: resumenAsync.when(
-                    skipLoadingOnRefresh: false,
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: equiposBrand),
-                    ),
-                    error: (error, _) => _ErrorState(message: '$error'),
-                    data: (resumen) {
-                      // Leandro: llama al widget _DashboardContent para presentar el resumen y los equipos filtrados.
-                      return _DashboardContent(
-                        resumen: resumen,
-                        equiposFiltradosAsync: equiposFiltradosAsync,
-                      );
-                    },
-                  ),
-                ),
-              ],
+            // Leandro: llama a AsyncValue.when para mostrar la carga, el error o el contenido del período.
+            child: resumenAsync.when(
+              skipLoadingOnRefresh: false,
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: equiposBrand),
+              ),
+              error: (error, _) => _ErrorState(message: '$error'),
+              data: (resumen) => FadeIn(
+                child: (() {
+                  // Leandro: llama al widget _DashboardContent para presentar el resumen y los equipos filtrados.
+                  return _DashboardContent(
+                    resumen: resumen,
+                    equiposFiltradosAsync: equiposFiltradosAsync,
+                  );
+                })(),
+              ),
             ),
           ),
         ],
@@ -72,9 +67,7 @@ class _DashboardContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final equipos = resumen.equipos;
-    final areas = equipos.map((equipo) => equipo.area).toSet().toList()..sort();
     final busqueda = ref.watch(busquedaEquipoProvider);
-    final areaSeleccionada = ref.watch(filtroAreaEquipoProvider);
     final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
     final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
     final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
@@ -83,9 +76,7 @@ class _DashboardContent extends ConsumerWidget {
         .watch(aniosEquipoDisponiblesProvider)
         .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
     final hayFiltrosActivos =
-        busqueda.trim().isNotEmpty ||
-        areaSeleccionada != null ||
-        estadoSeleccionado != null;
+        busqueda.trim().isNotEmpty || estadoSeleccionado != null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
@@ -114,17 +105,14 @@ class _DashboardContent extends ConsumerWidget {
           availableYears: aniosDisponibles,
           onScopeChanged: (value) {
             ref.read(alcancePeriodoProvider.notifier).state = value;
-            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
           onMonthChanged: (value) {
             if (value == null) return;
             ref.read(filtroMesPeriodoProvider.notifier).state = value;
-            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
           onYearChanged: (value) {
             if (value == null) return;
             ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-            ref.read(filtroAreaEquipoProvider.notifier).state = null;
           },
         ),
         const SizedBox(height: 22),
@@ -178,25 +166,38 @@ class _DashboardContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // Leandro: llama al widget EquiposFilters para actualizar la búsqueda y los filtros de área y estado.
-          EquiposFilters(
-            areas: areas,
+          // Búsqueda por equipo, área o líder (texto) y estado (desplegable).
+          FilterBar(
+            searchHint: 'Buscar por equipo, área o líder',
             searchText: busqueda,
-            selectedArea: areaSeleccionada,
-            selectedStatus: estadoSeleccionado,
             hasActiveFilters: hayFiltrosActivos,
             onSearch: (value) {
               ref.read(busquedaEquipoProvider.notifier).state = value;
             },
-            onArea: (value) {
-              ref.read(filtroAreaEquipoProvider.notifier).state = value;
-            },
-            onStatus: (value) {
-              ref.read(filtroEstadoEquipoProvider.notifier).state = value;
-            },
+            filters: [
+              FilterDropdown<EstadoEquipo?>(
+                value: estadoSeleccionado,
+                hint: 'Todos los estados',
+                icon: Icons.traffic_outlined,
+                width: 250,
+                items: [
+                  const DropdownMenuItem<EstadoEquipo?>(
+                    value: null,
+                    child: Text('Todos los estados'),
+                  ),
+                  for (final estado in EstadoEquipo.values)
+                    DropdownMenuItem<EstadoEquipo?>(
+                      value: estado,
+                      child: Text(estado.label),
+                    ),
+                ],
+                onChanged: (value) {
+                  ref.read(filtroEstadoEquipoProvider.notifier).state = value;
+                },
+              ),
+            ],
             onClear: () {
               ref.read(busquedaEquipoProvider.notifier).state = '';
-              ref.read(filtroAreaEquipoProvider.notifier).state = null;
               ref.read(filtroEstadoEquipoProvider.notifier).state = null;
             },
           ),
@@ -210,8 +211,7 @@ class _DashboardContent extends ConsumerWidget {
             data: (equiposFiltrados) => EquiposResults(
               key: ValueKey(
                 '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
-                '$busqueda-$areaSeleccionada-'
-                '$estadoSeleccionado',
+                '$busqueda-$estadoSeleccionado',
               ),
               equipos: equiposFiltrados,
               totalEquipos: resumen.totalEquipos,

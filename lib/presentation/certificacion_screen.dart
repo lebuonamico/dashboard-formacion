@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
-import 'package:app_finnegans/presentation/widgets/side_menu.dart';
 
 const _avisoCursoFueraDeCatalogo =
     'El curso no está en el catálogo: esta finalización no acredita horas.';
@@ -23,97 +25,89 @@ class CertificacionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
+      body: Column(
         children: [
-          const SideMenu(),
-          Expanded(
-            child: Column(
+          // TopBar
+          Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // TopBar
-                Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Certificaciones LMS',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      UserAvatar(),
-                    ],
+                Text(
+                  'Certificaciones LMS',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-
-                // Contenido
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: completasAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (error, _) => Center(
-                        child: Text(
-                          'No se pudieron cargar las certificaciones LMS: $error',
-                        ),
-                      ),
-                      data: (todas) {
-                        if (todas.isEmpty) {
-                          return const SingleChildScrollView(
-                            child: EmptyDataState(
-                              icon: Icons.menu_book_outlined,
-                              title: 'No hay certificaciones LMS cargadas.',
-                              message:
-                                  'Importá el Excel de finalizaciones del LMS.',
-                            ),
-                          );
-                        }
-
-                        final filtradas =
-                            ref.watch(certificacionesFiltradasProvider).value ??
-                            const <CertificacionViewModel>[];
-                        final totalNomina =
-                            ref.watch(empleadosProvider).value?.length ?? 0;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            KpiGrid(items: _kpis(todas, totalNomina)),
-                            const SizedBox(height: 20),
-                            _buildFilterBar(ref),
-                            const SizedBox(height: 20),
-                            Expanded(
-                              child: filtradas.isEmpty
-                                  ? const SingleChildScrollView(
-                                      child: EmptyDataState(
-                                        icon: Icons.search_off_outlined,
-                                        title:
-                                            'Ninguna certificación coincide con los filtros.',
-                                        message:
-                                            'Probá con otra búsqueda o estado.',
-                                      ),
-                                    )
-                                  : _TablaCertificacionesPaginada(
-                                      certificaciones: filtradas,
-                                    ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                UserAvatar(),
               ],
+            ),
+          ),
+
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: completasAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Text(
+                    'No se pudieron cargar las certificaciones LMS: $error',
+                  ),
+                ),
+                data: (todas) => FadeIn(
+                  child: (() {
+                    if (todas.isEmpty) {
+                      return const SingleChildScrollView(
+                        child: EmptyDataState(
+                          icon: Icons.menu_book_outlined,
+                          title: 'No hay certificaciones LMS cargadas.',
+                          message:
+                              'Importá el Excel de finalizaciones del LMS.',
+                        ),
+                      );
+                    }
+
+                    final filtradas =
+                        ref.watch(certificacionesFiltradasProvider).value ??
+                        const <CertificacionViewModel>[];
+                    final totalNomina =
+                        ref.watch(empleadosProvider).value?.length ?? 0;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        KpiGrid(items: _kpis(todas, totalNomina)),
+                        const SizedBox(height: 20),
+                        _buildFilterBar(ref),
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: filtradas.isEmpty
+                              ? const SingleChildScrollView(
+                                  child: EmptyDataState(
+                                    icon: Icons.search_off_outlined,
+                                    title:
+                                        'Ninguna certificación coincide con los filtros.',
+                                    message:
+                                        'Probá con otra búsqueda o estado.',
+                                  ),
+                                )
+                              : _TablaCertificacionesPaginada(
+                                  certificaciones: filtradas,
+                                ),
+                        ),
+                      ],
+                    );
+                  })(),
+                ),
+              ),
             ),
           ),
         ],
@@ -175,70 +169,37 @@ class CertificacionScreen extends ConsumerWidget {
   }
 
   Widget _buildFilterBar(WidgetRef ref) {
+    final busqueda = ref.watch(busquedaCertificacionMoodleProvider);
     final estadoSeleccionado = ref.watch(filtroEstadoCertificacionProvider);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              onChanged: (val) =>
-                  ref.read(busquedaCertificacionMoodleProvider.notifier).state =
-                      val,
-              decoration: const InputDecoration(
-                hintText:
-                    'Buscar por colaborador, legajo, curso, área o equipo...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 20,
-                  color: Color(0xFF64748B),
-                ),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-              ),
+    return FilterBar(
+      searchHint: 'Buscar por colaborador, legajo, curso, área o equipo...',
+      searchText: busqueda,
+      hasActiveFilters: busqueda.isNotEmpty || estadoSeleccionado != null,
+      onSearch: (value) =>
+          ref.read(busquedaCertificacionMoodleProvider.notifier).state = value,
+      filters: [
+        FilterDropdown<bool?>(
+          value: estadoSeleccionado,
+          hint: 'Todos los estados',
+          icon: Icons.traffic_outlined,
+          items: const [
+            DropdownMenuItem<bool?>(
+              value: null,
+              child: Text('Todos los estados'),
             ),
-          ),
-          const SizedBox(width: 16),
-          DropdownButtonHideUnderline(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFCBD5E1)),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: DropdownButton<bool?>(
-                value: estadoSeleccionado,
-                hint: const Text('Todos los estados'),
-                items: const [
-                  DropdownMenuItem<bool?>(
-                    value: null,
-                    child: Text('Todos los estados'),
-                  ),
-                  DropdownMenuItem<bool?>(
-                    value: true,
-                    child: Text('Finalizado'),
-                  ),
-                  DropdownMenuItem<bool?>(
-                    value: false,
-                    child: Text('Pendiente'),
-                  ),
-                ],
-                onChanged: (val) =>
-                    ref.read(filtroEstadoCertificacionProvider.notifier).state =
-                        val,
-              ),
-            ),
-          ),
-        ],
-      ),
+            DropdownMenuItem<bool?>(value: true, child: Text('Finalizado')),
+            DropdownMenuItem<bool?>(value: false, child: Text('Pendiente')),
+          ],
+          onChanged: (value) =>
+              ref.read(filtroEstadoCertificacionProvider.notifier).state =
+                  value,
+        ),
+      ],
+      onClear: () {
+        ref.read(busquedaCertificacionMoodleProvider.notifier).state = '';
+        ref.read(filtroEstadoCertificacionProvider.notifier).state = null;
+      },
     );
   }
 }

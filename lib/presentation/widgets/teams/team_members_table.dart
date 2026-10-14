@@ -86,6 +86,8 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
                         : constraints.maxWidth,
                   ),
                   child: DataTable(
+                    // La fila entera abre el detalle: no hace falta checkbox.
+                    showCheckboxColumn: false,
                     headingRowColor: const WidgetStatePropertyAll(
                       equiposBackground,
                     ),

@@ -14,25 +14,13 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
-  final soloRegistrosCargados = ref.watch(soloRegistrosCargadosPeriodoProvider);
 
   final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
-  if (soloRegistrosCargados) return repo.getCargasDeHoras();
   final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
   final hasta = alcance == AlcancePeriodo.anual
       ? DateTime(anio + 1)
       : DateTime(anio, mes + 1);
   return repo.getCargasDeHoras(desde: desde, hasta: hasta);
-});
-
-final hayDatosPeriodoProvider = FutureProvider<bool>((ref) async {
-  if (!ref.watch(soloRegistrosCargadosPeriodoProvider)) {
-    return ref.watch(hayDatosEquiposPeriodoProvider.future);
-  }
-  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  return cargas.isNotEmpty ||
-      certificaciones.any((item) => item.fechaFinalizacion != null);
 });
 
 /// Misma base que Equipos y Áreas: nómina elegible del período,
