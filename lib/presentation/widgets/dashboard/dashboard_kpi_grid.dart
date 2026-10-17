@@ -1,5 +1,6 @@
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
+import 'package:app_finnegans/domain/servicios/dashboard_kpis_service.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter/material.dart';
@@ -53,40 +54,20 @@ class DashboardKpiGrid extends StatelessWidget {
     final equipos = equiposAsync.value ?? [];
     if (cumplimientos.isEmpty) return const SizedBox.shrink();
 
-    // Misma base que Equipos y Áreas. En el anual un legajo puede repetirse
-    // si cambió de equipo: se cuenta una sola vez.
-    final legajos = {for (final item in cumplimientos) item.empleado.legajo};
-    final totalEmpleados = legajos.length;
-    final horasRealizadas = cumplimientos.fold<double>(
-      0,
-      (total, item) => total + item.totalHorasCompletadas,
+    final kpis = const DashboardKpisService().calcular(
+      cumplimientos: cumplimientos,
+      cargas: cargas,
+      mesesEvaluados: mesesEvaluados,
     );
-    final horasObjetivo = cumplimientos.fold<double>(
-      0,
-      (total, item) => total + item.totalHorasRequeridas,
-    );
-    // Igual que "Cumplimiento global" de Equipos y Áreas.
-    final cumplimientoGlobal = horasObjetivo == 0
-        ? 0.0
-        : horasRealizadas / horasObjetivo * 100;
-    final mesesDelPeriodo = mesesEvaluados < 1 ? 1 : mesesEvaluados;
-    final ritmoMensual = horasRealizadas / totalEmpleados / mesesDelPeriodo;
-    final proyeccionAnual = ritmoMensual * 12;
-    // Sólo la nómina del período: un legajo del CRM fuera de la nómina no
-    // cuenta como colaborador capacitándose.
-    final cargasNomina = cargas
-        .where((carga) => legajos.contains(carga.empleadoLegajo))
-        .toList();
-    final empleadosTomaronCurso = cargasNomina
-        .where((carga) => !carga.esDictada)
-        .map((carga) => carga.empleadoLegajo)
-        .toSet()
-        .length;
-    final horasDeclaradasPeriodo = cargasNomina.fold<double>(
-      0,
-      (total, carga) => total + carga.horasTotales,
-    );
-    final metaPeriodo = horasObjetivo;
+    final totalEmpleados = kpis.colaboradores;
+    final horasRealizadas = kpis.horasValidas;
+    final cumplimientoGlobal = kpis.cumplimiento;
+    final mesesDelPeriodo = kpis.mesesEvaluados;
+    final ritmoMensual = kpis.ritmoMensual;
+    final proyeccionAnual = kpis.proyeccionAnual;
+    final empleadosTomaronCurso = kpis.capacitandose;
+    final horasDeclaradasPeriodo = kpis.horasDeclaradas;
+    final metaPeriodo = kpis.horasObjetivo;
     const nombresMeses = [
       'ENERO',
       'FEBRERO',
