@@ -12,6 +12,13 @@ const double _anchoSideMenu = 260;
 /// línea bajo el logo continúe exactamente la del top bar.
 const double _altoHeader = 64;
 
+/// Celeste pastel de la sidebar. La pestaña de ocultar/mostrar usa el mismo
+/// color para leerse como parte del menú.
+const Color _fondoSideMenu = Color(0xFFEAF3FE);
+
+/// Bordes y divisores sobre el fondo celeste.
+const Color _bordeSideMenu = Color(0xFFD2E3F8);
+
 const Duration _duracionAnimacion = Duration(milliseconds: 220);
 
 /// Transición de color del ítem activo del menú.
@@ -102,22 +109,19 @@ class _SideMenuState extends ConsumerState<SideMenu>
   /// de la sidebar en coordenadas del overlay, así la pestaña sigue el ancho
   /// animado y las transiciones de página.
   Widget _buildPestana(bool desplegado, OverlayChildLayoutInfo info) {
-    const margenOculta = 8.0;
-    const radio = _PestanaToggle.diametro / 2;
-    final progreso = _animacion.value;
     final borde = MatrixUtils.transformPoint(
       info.childPaintTransform,
       Offset(info.childSize.width, 0),
     );
-    // Desplegada: centrada sobre el borde. Oculta: entera, pegada al margen
-    // izquierdo de la pantalla.
-    final desplazamiento = (margenOculta + radio) * (1 - progreso);
 
+    // Pegada al borde derecho de la sidebar (o al borde de la pantalla cuando
+    // está oculta). Se superpone 1px para tapar la línea del borde y que la
+    // pestaña se vea como una continuación del menú.
     return Positioned(
-      left: borde.dx - radio + desplazamiento,
-      top: borde.dy + _altoHeader - 0.5 - radio,
+      left: math.max(0, borde.dx - 1),
+      top: borde.dy + _altoHeader + 16,
       child: _PestanaToggle(
-        progreso: progreso,
+        progreso: _animacion.value,
         desplegado: desplegado,
         onTap: () =>
             ref.read(sideMenuDesplegadoProvider.notifier).state = !desplegado,
@@ -145,8 +149,8 @@ class _SideMenuState extends ConsumerState<SideMenu>
     return Container(
       width: _anchoSideMenu,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+        color: _fondoSideMenu,
+        border: Border(right: BorderSide(color: _bordeSideMenu)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +160,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
             height: _altoHeader,
             padding: const EdgeInsets.symmetric(horizontal: 24),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              border: Border(bottom: BorderSide(color: _bordeSideMenu)),
             ),
             child: Row(
               children: [
@@ -169,27 +173,32 @@ class _SideMenuState extends ConsumerState<SideMenu>
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Finnegans',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0D53C3),
+                // El padding superior baja el texto sin mover el logo (la
+                // Row centra la columna, así que se desplaza la mitad).
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finnegans',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0D53C3),
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Portal de formación interna',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
-                        letterSpacing: 1.1,
+                      Text(
+                        'Portal de formación interna',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 1.1,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -296,7 +305,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
             ),
           ),
           // Logout
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const Divider(height: 1, color: _bordeSideMenu),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: _MenuItem(
@@ -332,10 +341,12 @@ class _SideMenuState extends ConsumerState<SideMenu>
   }
 }
 
-/// Botón circular montado sobre el borde de la sidebar. La flecha gira junto
-/// con la animación: apunta a la izquierda desplegada y a la derecha oculta.
+/// Pestaña vertical que sale del borde derecho de la sidebar, del mismo color
+/// y sin línea divisoria, como la manija de un cajón. La flecha gira junto con
+/// la animación: apunta a la izquierda desplegada y a la derecha oculta.
 class _PestanaToggle extends StatefulWidget {
-  static const double diametro = 28;
+  static const double ancho = 22;
+  static const double alto = 52;
 
   /// 1 = desplegada, 0 = oculta.
   final double progreso;
@@ -371,31 +382,54 @@ class _PestanaToggleState extends State<_PestanaToggle> {
           child: GestureDetector(
             key: const Key('side_menu_toggle'),
             onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: _PestanaToggle.diametro,
-              height: _PestanaToggle.diametro,
-              decoration: BoxDecoration(
-                color: _hover ? const Color(0xFFF1F5F9) : Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x140F172A),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
+            child: SizedBox(
+              width: _PestanaToggle.ancho,
+              height: _PestanaToggle.alto,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: _hover ? const Color(0xFFD6E7FD) : _fondoSideMenu,
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(10),
+                        ),
+                        border: Border.all(color: _bordeSideMenu),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x120D53C3),
+                            blurRadius: 6,
+                            offset: Offset(2, 1),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Transform.rotate(
+                          angle: (1 - widget.progreso) * math.pi,
+                          child: const Icon(
+                            Icons.chevron_left_rounded,
+                            size: 20,
+                            color: Color(0xFF0D53C3),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Tapa el borde izquierdo de la pestaña y el borde derecho de
+                  // la sidebar justo detrás: sin esa línea, la pestaña se lee
+                  // como parte del menú y no como un botón suelto.
+                  Positioned(
+                    left: 0,
+                    top: 1,
+                    bottom: 1,
+                    width: 2,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      color: _hover ? const Color(0xFFD6E7FD) : _fondoSideMenu,
+                    ),
                   ),
                 ],
-              ),
-              child: Transform.rotate(
-                angle: (1 - widget.progreso) * math.pi,
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  size: 18,
-                  color: _hover
-                      ? const Color(0xFF0D53C3)
-                      : const Color(0xFF64748B),
-                ),
               ),
             ),
           ),
@@ -444,13 +478,15 @@ class _MenuItemState extends State<_MenuItem> {
     // Sin ripple: el feedback es continuo. El fondo del ítem se desvanece entre
     // reposo, hover, presionado y seleccionado, y el texto y el ícono cambian de
     // color con la misma curva. Así nada aparece ni se borra de golpe.
+    // Sobre el fondo celeste, el ítem activo es una "tarjeta" blanca y el hover
+    // un blanco translúcido.
     final colorFondo = _presionado
-        ? _marca.withValues(alpha: seleccionado ? 0.14 : 0.1)
+        ? Colors.white.withValues(alpha: seleccionado ? 0.85 : 0.6)
         : seleccionado
-        ? _marca.withValues(alpha: _hover ? 0.11 : 0.08)
+        ? Colors.white
         : _hover
-        ? const Color(0xFF0F172A).withValues(alpha: 0.05)
-        : Colors.transparent;
+        ? Colors.white.withValues(alpha: 0.55)
+        : Colors.white.withValues(alpha: 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -464,7 +500,19 @@ class _MenuItemState extends State<_MenuItem> {
           child: AnimatedContainer(
             duration: _duracionColor,
             curve: Curves.easeOut,
-            decoration: BoxDecoration(color: colorFondo, borderRadius: _radio),
+            decoration: BoxDecoration(
+              color: colorFondo,
+              borderRadius: _radio,
+              boxShadow: seleccionado
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x140D53C3),
+                        blurRadius: 4,
+                        offset: Offset(0, 1),
+                      ),
+                    ]
+                  : null,
+            ),
             child: Material(
               type: MaterialType.transparency,
               borderRadius: _radio,

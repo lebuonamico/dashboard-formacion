@@ -45,11 +45,19 @@ class _AppBackButtonState extends State<AppBackButton> {
           curve: Curves.easeOut,
           width: 40,
           height: 40,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: colorFondo),
+          // Cuadrado redondeado con borde: se lee como botón "Volver" y se
+          // distingue del toggle circular azul del menú.
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: colorFondo,
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
           child: Material(
             type: MaterialType.transparency,
             child: InkWell(
-              customBorder: const CircleBorder(),
+              customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               // Sin ripple ni resaltado propio: el feedback lo da el fondo de
               // arriba.
               splashFactory: NoSplash.splashFactory,
@@ -65,7 +73,7 @@ class _AppBackButtonState extends State<AppBackButton> {
                   offset: Offset(_hover ? -0.1 : 0, 0),
                   duration: _duracion,
                   curve: Curves.easeOut,
-                  child: Icon(Icons.arrow_back, size: 22, color: widget.color),
+                  child: Icon(Icons.arrow_back, size: 20, color: widget.color),
                 ),
               ),
             ),
