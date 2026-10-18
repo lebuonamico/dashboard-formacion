@@ -4,39 +4,59 @@ import 'package:app_finnegans/domain/modelos/mensaje_chat.dart';
 import 'package:app_finnegans/domain/servicios/asistente_contexto_service.dart';
 import 'package:app_finnegans/presentation/providers/asistente_ia_provider.dart';
 import 'package:app_finnegans/presentation/widgets/asistente_mensaje.dart';
+import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+/// Tamaño del símbolo del botón flotante del asistente.
+const double _tamanoSimbolo = 52;
+
 /// Posición del botón y del panel dentro del área visible.
 class DisposicionAsistente {
-  static const diametroBoton = 68.0;
+  /// Símbolo de [_tamanoSimbolo] más el borde de 2 px de cada lado.
+  static const diametroBoton = 56.0;
+
+  /// El badge de Netlify del deploy mide ~170 px de ancho y está a ~16 px de
+  /// la esquina inferior derecha. El botón va a su izquierda, centrado en su
+  /// misma línea, dentro de la franja libre que dejan las pantallas debajo del
+  /// paginado ([margenInferiorPaginacion]).
+  static const _derechaJuntoAlBadge = 200.0;
+  static const _baseJuntoAlBadge = 8.0;
+
   final double margen;
+  final double derechaBoton;
   final double baseBoton;
   final double basePanel;
 
-  const DisposicionAsistente._(this.margen, this.baseBoton, this.basePanel);
+  const DisposicionAsistente._(
+    this.margen,
+    this.derechaBoton,
+    this.baseBoton,
+    this.basePanel,
+  );
 
-  factory DisposicionAsistente.para(
-    Size disponible, {
-    required bool tienePaginacion,
-  }) {
+  factory DisposicionAsistente.para(Size disponible) {
     final margen = disponible.width < 600 ? 12.0 : 20.0;
     final despeje = math.min(
       (disponible.height * .1).clamp(56.0, 96.0),
       disponible.height * .2,
     );
-    // El paginador ocupa unos 66 px, más 24 px de margen del contenido.
-    // En ventanas angostas puede distribuirse en dos filas.
-    final baseDeseada = tienePaginacion
-        ? (disponible.width < 900 ? 132.0 : 100.0)
-        : margen + 48.0;
-    final baseBoton = math.max(
-      0.0,
-      math.min(baseDeseada, disponible.height - diametroBoton - margen),
+    // En ventanas muy angostas no puede quedar fuera de la pantalla.
+    final derechaBoton = math.max(
+      margen,
+      math.min(
+        _derechaJuntoAlBadge,
+        disponible.width - diametroBoton - margen,
+      ),
     );
-    return DisposicionAsistente._(margen, baseBoton, despeje);
+    return DisposicionAsistente._(
+      margen,
+      derechaBoton,
+      _baseJuntoAlBadge,
+      despeje,
+    );
   }
 }
 
@@ -242,25 +262,12 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     final real = ref.watch(iaContextoRealProvider);
     final uri = GoRouterState.of(context).uri;
     final destino = DestinoAsistente.desdeUri(uri);
-    final tienePaginacion = switch (uri.pathSegments.firstOrNull) {
-      'cursos' ||
-      'cursadas' ||
-      'certificaciones' ||
-      'areas' ||
-      'equipos' ||
-      'admin' => true,
-      'empleados' => uri.pathSegments.length == 1,
-      _ => false,
-    };
     ref.listen(asistenteChatProvider, _actualizarScroll);
     final duracion = _movimiento(context, 220);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final disposicion = DisposicionAsistente.para(
-          constraints.biggest,
-          tienePaginacion: tienePaginacion,
-        );
+        final disposicion = DisposicionAsistente.para(constraints.biggest);
         final margen = disposicion.margen;
         final ancho = math.max(
           0.0,
@@ -314,7 +321,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               ),
             ),
             Positioned(
-              right: margen,
+              right: disposicion.derechaBoton,
               bottom: disposicion.baseBoton,
               child: IgnorePointer(
                 ignoring: estado.abierto,
@@ -944,11 +951,11 @@ class _BotonCopilotoState extends State<_BotonCopiloto> {
         child: Tooltip(
           message: 'Preguntale a la IA',
           child: SizedBox(
-            width: 64,
-            height: 64,
+            width: _tamanoSimbolo,
+            height: _tamanoSimbolo,
             child: Stack(
               children: [
-                const AsistenteSimbolo(size: 64),
+                const AsistenteSimbolo(size: _tamanoSimbolo),
                 Positioned.fill(
                   child: Material(
                     type: MaterialType.transparency,

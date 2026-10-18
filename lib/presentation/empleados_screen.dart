@@ -54,7 +54,12 @@ class EmpleadosScreen extends ConsumerWidget {
           // Contenido
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                24 + margenInferiorPaginacion,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

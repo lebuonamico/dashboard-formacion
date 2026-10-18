@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Espacio libre debajo del paginador en las pantallas con tabla paginada:
+/// en el deploy, el badge flotante de Netlify (abajo a la derecha) tapaba los
+/// botones de página. Las pantallas calculan las filas con el alto restante.
+const double margenInferiorPaginacion = 48;
+
 /// La pantalla calcula las páginas y este widget sólo muestra el estado y botones.
 class PaginacionResultados extends StatelessWidget {
   final int paginaActual;

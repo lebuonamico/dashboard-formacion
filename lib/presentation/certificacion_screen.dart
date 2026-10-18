@@ -54,7 +54,12 @@ class CertificacionScreen extends ConsumerWidget {
           // Contenido
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                24 + margenInferiorPaginacion,
+              ),
               child: completasAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Center(
