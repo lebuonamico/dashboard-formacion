@@ -1,7 +1,7 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 Future<({String email, RolUsuario rol})?> mostrarDialogoAltaUsuario(
   BuildContext context,
@@ -38,9 +38,9 @@ Future<bool> confirmarAccion(
       children: [
         Text(
           mensaje,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            color: Color(0xFF334155),
+            color: context.colores.textoIntermedio,
             height: 1.4,
           ),
         ),
@@ -56,16 +56,7 @@ Future<bool> confirmarAccion(
             FilledButton(
               key: const Key('admin_confirmar'),
               onPressed: () => Navigator.of(ctx).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: color,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-              ),
+              style: FilledButton.styleFrom(backgroundColor: color),
               child: Text(etiquetaConfirmar),
             ),
           ],
@@ -165,16 +156,6 @@ class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
             FilledButton(
               key: const Key('admin_alta_confirmar'),
               onPressed: _confirmar,
-              style: FilledButton.styleFrom(
-                backgroundColor: equiposBrand,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-              ),
               child: const Text('Crear usuario'),
             ),
           ],
@@ -209,18 +190,22 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
   @override
   Widget build(BuildContext context) {
     final sinCambio = _rol == widget.rolActual;
+    final cs = context.colorScheme;
 
     return _MarcoDialogo(
       titulo: 'Cambiar rol',
       subtitulo: widget.email,
       children: [
         if (widget.rolActual == null)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               'Este usuario tiene un rol que ya no se usa. Elegí uno de la '
               'lista para reemplazarlo.',
-              style: TextStyle(fontSize: 13, color: Color(0xFFD97706)),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colores.advertencia.texto,
+              ),
             ),
           ),
         RadioGroup<RolUsuario>(
@@ -234,18 +219,21 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
                     key: Key('admin_rol_${rol.name}'),
                     value: rol,
                     contentPadding: EdgeInsets.zero,
-                    activeColor: equiposBrand,
+                    activeColor: cs.primary,
                     title: Text(
                       rol.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: equiposInk,
+                        color: cs.onSurface,
                       ),
                     ),
                     subtitle: Text(
                       rol.descripcion,
-                      style: const TextStyle(fontSize: 12, color: equiposMuted),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 )
@@ -266,16 +254,6 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
               onPressed: sinCambio
                   ? null
                   : () => Navigator.of(context).pop(_rol),
-              style: FilledButton.styleFrom(
-                backgroundColor: equiposBrand,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-              ),
               child: const Text('Guardar rol'),
             ),
           ],
@@ -319,19 +297,19 @@ class _MarcoDialogo extends StatelessWidget {
                       children: [
                         Text(
                           titulo,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: equiposInk,
+                            color: context.colorScheme.onSurface,
                           ),
                         ),
                         if (subtitulo != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             subtitulo!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: equiposMuted,
+                              color: context.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],

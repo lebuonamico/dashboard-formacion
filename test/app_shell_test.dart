@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
 import 'package:app_finnegans/presentation/widgets/app_shell.dart';
@@ -62,6 +63,7 @@ Future<ProviderContainer> _mostrar(WidgetTester tester) async {
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
@@ -75,6 +77,8 @@ Future<ProviderContainer> _mostrar(WidgetTester tester) async {
   await tester.pumpAndSettle();
   return container;
 }
+
+final _marca = AppTheme.light().colorScheme.primary;
 
 Color? _colorDelItem(WidgetTester tester, String etiqueta) {
   final texto = tester.widget<Text>(
@@ -91,7 +95,7 @@ void main() {
 
     final estadoAntes = tester.state(find.byType(SideMenu));
     expect(find.text('Pantalla Dashboard'), findsOneWidget);
-    expect(_colorDelItem(tester, 'Empleados'), isNot(const Color(0xFF0D53C3)));
+    expect(_colorDelItem(tester, 'Empleados'), isNot(_marca));
 
     // El menú navega con context.push, igual que en la app.
     await tester.tap(
@@ -107,7 +111,7 @@ void main() {
     expect(tester.state(find.byType(SideMenu)), same(estadoAntes));
     expect(find.byType(SideMenu), findsOneWidget);
     // El ítem activo sigue a la ruta.
-    expect(_colorDelItem(tester, 'Empleados'), const Color(0xFF0D53C3));
+    expect(_colorDelItem(tester, 'Empleados'), _marca);
     expect(tester.takeException(), isNull);
   });
 
@@ -128,10 +132,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
     final enTransicion = _colorDelItem(tester, 'Empleados');
     expect(enTransicion, isNot(inicial));
-    expect(enTransicion, isNot(const Color(0xFF0D53C3)));
+    expect(enTransicion, isNot(_marca));
 
     await tester.pumpAndSettle();
-    expect(_colorDelItem(tester, 'Empleados'), const Color(0xFF0D53C3));
+    expect(_colorDelItem(tester, 'Empleados'), _marca);
     expect(tester.takeException(), isNull);
   });
 
@@ -157,7 +161,10 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(home: FadeIn(child: Text('Contenido'))),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: FadeIn(child: Text('Contenido')),
+      ),
     );
 
     // Recién montado: casi transparente.

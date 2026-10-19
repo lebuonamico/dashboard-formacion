@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
@@ -124,24 +125,28 @@ class _ComplianceChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ParColores(texto: verde, fondo: fondoVerde) = context.colores.exito;
+    final ParColores(texto: ambar, fondo: fondoAmbar) =
+        context.colores.advertencia;
+    final ParColores(texto: rojo, fondo: fondoRojo) = context.colores.peligro;
     final legend = [
       _ChartLegendItem(
         label: 'Cumple (>=100%)',
         count: summary.meetsTarget,
-        color: const Color(0xFF009B61),
-        backgroundColor: const Color(0xFFECFDF5),
+        color: verde,
+        backgroundColor: fondoVerde,
       ),
       _ChartLegendItem(
         label: 'Atención (70-84%)',
         count: summary.attention,
-        color: const Color(0xFFF59E0B),
-        backgroundColor: const Color(0xFFFFFBEB),
+        color: ambar,
+        backgroundColor: fondoAmbar,
       ),
       _ChartLegendItem(
         label: 'No cumple (<70%)',
         count: summary.doesNotMeet,
-        color: const Color(0xFFF43F5E),
-        backgroundColor: const Color(0xFFFFF1F2),
+        color: rojo,
+        backgroundColor: fondoRojo,
       ),
     ];
 
@@ -158,15 +163,15 @@ class _ComplianceChartCard extends StatelessWidget {
             segments: [
               DonutChartSegment(
                 value: summary.meetsTarget.toDouble(),
-                color: const Color(0xFF009B61),
+                color: verde,
               ),
               DonutChartSegment(
                 value: summary.attention.toDouble(),
-                color: const Color(0xFFF59E0B),
+                color: ambar,
               ),
               DonutChartSegment(
                 value: summary.doesNotMeet.toDouble(),
-                color: const Color(0xFFF43F5E),
+                color: rojo,
               ),
             ],
             centerText:
@@ -190,11 +195,10 @@ class _CategoryChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const colors = [
-      Color(0xFF2563EB),
-      Color(0xFF009B61),
-      Color(0xFF4F46E5),
-      Color(0xFFF59E0B),
+    // Mismo color por categoría que los chips de tipo de curso.
+    final colors = [
+      for (final tipo in TipoCurso.values)
+        context.colores.categoria(tipo).texto,
     ];
     final labels = ['Negocio', 'Blandas', 'Libres', 'Dictado'];
     final legend = <_ChartLegendItem>[];
@@ -206,7 +210,7 @@ class _CategoryChartCard extends StatelessWidget {
           label: labels[index],
           value: summary.hours[tipo] ?? 0,
           color: colors[index],
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: context.colorScheme.surfaceContainerLow,
         ),
       );
     }
@@ -256,25 +260,32 @@ class _SinDatosCategorias extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.donut_large_outlined, size: 30, color: Color(0xFF64748B)),
+          Icon(
+            Icons.donut_large_outlined,
+            size: 30,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
           SizedBox(height: 8),
           Text(
             'No se encontraron datos.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0F172A),
+              color: context.colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 4),
           Text(
             'No hay horas válidas en ninguna categoría para este período.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            style: TextStyle(
+              fontSize: 12,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -305,18 +316,7 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x060F172A),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: context.panel(sombra: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -328,10 +328,10 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: context.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -339,9 +339,9 @@ class _SummaryCard extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF64748B),
+                        color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -350,15 +350,15 @@ class _SummaryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: context.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   trailing,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2563EB),
+                    color: context.colorScheme.primary,
                   ),
                 ),
               ),
@@ -366,7 +366,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Expanded(child: child),
-          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+          Divider(height: 16, color: context.colorScheme.outlineVariant),
           Row(
             children: [
               Expanded(
@@ -374,22 +374,22 @@ class _SummaryCard extends StatelessWidget {
                   footer,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
               TextButton.icon(
                 onPressed: onAction,
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_forward,
                   size: 13,
-                  color: Color(0xFF2563EB),
+                  color: context.colorScheme.primary,
                 ),
                 label: Text(action),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
+                  foregroundColor: context.colorScheme.primary,
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -461,9 +461,9 @@ class _LegendList extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF334155),
+                      color: context.colores.textoIntermedio,
                     ),
                   ),
                 ),
@@ -471,10 +471,10 @@ class _LegendList extends StatelessWidget {
                   showPercentages
                       ? '${item.value!.toStringAsFixed(1)} h (${((item.value! / total) * 100).toStringAsFixed(0)}%)'
                       : '${item.count} (${((item.count! / total) * 100).toStringAsFixed(0)}%)',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
+                    color: context.colores.textoIntermedio,
                   ),
                 ),
               ],

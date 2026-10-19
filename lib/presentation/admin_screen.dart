@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +13,6 @@ import 'package:app_finnegans/presentation/widgets/admin/admin_dialogs.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_users_table.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_filters.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
@@ -28,7 +29,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final acceso = ref.watch(accesoAdminProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
           const AppTopBar(title: 'Panel de administrador'),
@@ -61,23 +61,24 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final usuariosFiltrados = ref.watch(usuariosAdminFiltradosProvider);
     final seleccionado = ref.watch(usuarioSeleccionadoAdminProvider);
     final auth = ref.watch(authControllerProvider);
+    final cs = context.colorScheme;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: paddingPantalla,
       children: [
-        const Text(
+        Text(
           'Usuarios del sistema',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: equiposInk,
+            color: cs.onSurface,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Quién puede iniciar sesión en la aplicación y con qué rol. '
           'Bloquear y eliminar se pueden deshacer más adelante.',
-          style: TextStyle(fontSize: 13, color: equiposMuted),
+          style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 20),
         AdminFilters(
@@ -110,15 +111,13 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         usuariosFiltrados.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 72),
-            child: Center(
-              child: CircularProgressIndicator(color: equiposBrand),
-            ),
+            child: Center(child: CircularProgressIndicator()),
           ),
           error: (error, _) => _EstadoCentrado(
             icono: Icons.error_outline,
             titulo: 'No pudimos cargar los usuarios',
             mensaje: _mensajeDeError(error),
-            color: const Color(0xFFDC2626),
+            color: cs.error,
           ),
           data: (usuarios) => FadeIn(
             child: usuarios.isEmpty
@@ -209,7 +208,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           '${usuario.email} no va a poder entrar a la aplicación hasta que lo '
           'desbloquees.',
       etiquetaConfirmar: 'Bloquear',
-      color: const Color(0xFFD97706),
+      color: context.colores.advertencia.texto,
     );
     if (!confirmado) return;
     await _guardar(
@@ -239,7 +238,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           '${usuario.email} ya no va a poder entrar a la aplicación. Si más '
           'adelante lo necesitás, lo podés restaurar desde la lista.',
       etiquetaConfirmar: 'Eliminar',
-      color: const Color(0xFFDC2626),
+      color: context.colorScheme.error,
     );
     if (!confirmado) return;
     await _guardar(
@@ -332,16 +331,17 @@ class _EstadoCentrado extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return Center(
       child: Container(
         margin: const EdgeInsets.all(24),
         padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
         constraints: const BoxConstraints(maxWidth: 560),
-        decoration: equiposPanelDecoration(),
+        decoration: context.panel(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icono, size: 34, color: color ?? equiposMuted),
+            Icon(icono, size: 34, color: color ?? cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               titulo,
@@ -349,14 +349,14 @@ class _EstadoCentrado extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: color ?? equiposInk,
+                color: color ?? cs.onSurface,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               mensaje,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: equiposMuted),
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
           ],
         ),

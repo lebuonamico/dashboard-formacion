@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +8,7 @@ import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
-import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
@@ -18,42 +20,14 @@ class CursosScreen extends ConsumerWidget {
     final cursosAsync = ref.watch(cursosConInstructorProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // TopBar
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Catálogo de cursos y formaciones',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const UserAvatar(),
-              ],
-            ),
-          ),
+          const AppTopBar(title: 'Catálogo de cursos y formaciones'),
 
           // Contenido
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                24 + margenInferiorPaginacion,
-              ),
+              padding: paddingPantalla,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,18 +114,6 @@ class CursosScreen extends ConsumerWidget {
     );
   }
 }
-
-/// Gris de los datos secundarios (encabezados y columna ID).
-const _grisSuave = Color(0xFF64748B);
-const _tinta = Color(0xFF0F172A);
-
-/// Encabezados en gris y chicos: el que manda visualmente es el nombre del
-/// curso, no el título de la columna.
-const _estiloEncabezado = TextStyle(
-  fontSize: 13,
-  fontWeight: FontWeight.w600,
-  color: _grisSuave,
-);
 
 /// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
 class _TablaCursosPaginada extends StatefulWidget {
@@ -250,22 +212,19 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
   }
 
   Widget _tabla(List<CursoViewModel> visibles) {
+    final cs = context.colorScheme;
+    // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
-      // Sin fondo propio: el encabezado se apoya sobre el color de la página y
-      // se distingue por la negrita y la línea divisoria de abajo.
-      headingRowColor: WidgetStateProperty.all(Colors.transparent),
-      horizontalMargin: 0,
       columnSpacing: 24,
       // Filas más compactas: entran más cursos sin que se vea apretado.
-      headingRowHeight: 44,
-      dataRowMinHeight: 44,
-      dataRowMaxHeight: 44,
-      dividerThickness: 1,
+      headingRowHeight: _altoEncabezado,
+      dataRowMinHeight: _altoFila,
+      dataRowMaxHeight: _altoFila,
       columns: const [
-        DataColumn(label: Text('ID', style: _estiloEncabezado)),
-        DataColumn(label: Text('Nombre del curso', style: _estiloEncabezado)),
-        DataColumn(label: Text('Tipo', style: _estiloEncabezado)),
-        DataColumn(label: Text('Carga horaria', style: _estiloEncabezado)),
+        DataColumn(label: Text('ID')),
+        DataColumn(label: Text('Nombre del curso')),
+        DataColumn(label: Text('Tipo')),
+        DataColumn(label: Text('Carga horaria')),
       ],
       rows: [
         for (final vm in visibles)
@@ -276,20 +235,20 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
               DataCell(
                 Text(
                   vm.curso.id,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: _grisSuave,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ),
               DataCell(
                 Text(
                   vm.curso.nombre,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: _tinta,
+                    color: cs.onSurface,
                   ),
                 ),
               ),
@@ -297,10 +256,10 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
               DataCell(
                 Text(
                   '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _tinta,
+                    color: cs.onSurface,
                   ),
                 ),
               ),

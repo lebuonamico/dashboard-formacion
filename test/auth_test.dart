@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -401,6 +402,7 @@ void main() {
     late BuildContext routerContext;
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light(),
         home: Builder(
           builder: (context) {
             routerContext = context;

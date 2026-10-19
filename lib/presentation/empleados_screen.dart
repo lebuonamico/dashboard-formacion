@@ -1,8 +1,10 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
@@ -24,42 +26,14 @@ class EmpleadosScreen extends ConsumerWidget {
     final cumplimientos = ref.watch(cumplimientoGlobalProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // TopBar
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Directorio de empleados',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const UserAvatar(),
-              ],
-            ),
-          ),
+          const AppTopBar(title: 'Directorio de empleados'),
 
           // Contenido
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                24 + margenInferiorPaginacion,
-              ),
+              padding: paddingPantalla,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -170,17 +144,6 @@ class _BarraFiltrosEmpleados extends ConsumerWidget {
     );
   }
 }
-
-/// Gris de los datos secundarios (encabezados, mail y equipo).
-const _grisSuave = Color(0xFF64748B);
-const _tinta = Color(0xFF0F172A);
-
-/// Encabezados en gris y chicos, igual que Carga de horas CRM.
-const _estiloEncabezado = TextStyle(
-  fontSize: 13,
-  fontWeight: FontWeight.w600,
-  color: _grisSuave,
-);
 
 /// Tabla del directorio, de a una página por vez y a todo el ancho.
 class _TablaEmpleadosPaginada extends StatefulWidget {
@@ -298,37 +261,26 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
   }
 
   Widget _tabla(List<Empleado> visibles) {
+    // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       showCheckboxColumn: false,
-      headingRowColor: WidgetStateProperty.all(Colors.transparent),
-      horizontalMargin: 0,
       columnSpacing: 24,
       headingRowHeight: _altoEncabezado,
       dataRowMinHeight: _altoFila,
       dataRowMaxHeight: _altoFila,
-      dividerThickness: 1,
       // Proporciones del ancho: el nombre y el área son lo que más se lee,
       // el legajo es un dato corto.
       columns: const [
-        DataColumn(
-          columnWidth: FlexColumnWidth(1),
-          label: Text('Legajo', style: _estiloEncabezado),
-        ),
-        DataColumn(
-          columnWidth: FlexColumnWidth(3),
-          label: Text('Empleado', style: _estiloEncabezado),
-        ),
+        DataColumn(columnWidth: FlexColumnWidth(1), label: Text('Legajo')),
+        DataColumn(columnWidth: FlexColumnWidth(3), label: Text('Empleado')),
         DataColumn(
           columnWidth: FlexColumnWidth(2.5),
-          label: Text('Área / Equipo', style: _estiloEncabezado),
+          label: Text('Área / Equipo'),
         ),
-        DataColumn(
-          columnWidth: FlexColumnWidth(1.6),
-          label: Text('Seniority', style: _estiloEncabezado),
-        ),
+        DataColumn(columnWidth: FlexColumnWidth(1.6), label: Text('Seniority')),
         DataColumn(
           columnWidth: FixedColumnWidth(_anchoProgreso),
-          label: Text('Progreso por categoría', style: _estiloEncabezado),
+          label: Text('Progreso por categoría'),
         ),
       ],
       rows: [
@@ -341,10 +293,10 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
                   emp.legajo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155),
+                    color: context.colores.textoIntermedio,
                   ),
                 ),
               ),
@@ -363,17 +315,18 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
   }
 
   Widget _celdaEmpleado(Empleado emp) {
+    final cs = context.colorScheme;
     return Row(
       children: [
         CircleAvatar(
           radius: 14,
-          backgroundColor: const Color(0xFFE2E8F0),
+          backgroundColor: cs.outlineVariant,
           child: Text(
             emp.nombre.isEmpty ? '?' : emp.nombre.substring(0, 1),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: _tinta,
+              color: cs.onSurface,
             ),
           ),
         ),
@@ -387,17 +340,17 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
                 '${emp.nombre} ${emp.apellido}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: _tinta,
+                  color: cs.onSurface,
                 ),
               ),
               Text(
                 _mostrarDato(emp.mail),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: _grisSuave),
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
               ),
             ],
           ),
@@ -415,13 +368,19 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
           _mostrarDato(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
+          style: TextStyle(
+            fontSize: 13,
+            color: context.colores.textoIntermedio,
+          ),
         ),
         Text(
           _mostrarDato(emp.equipo),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, color: _grisSuave),
+          style: TextStyle(
+            fontSize: 12,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
@@ -92,6 +93,7 @@ Future<ProviderContainer> _mostrarPanel(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
@@ -180,6 +182,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.light(),
           home: Scaffold(
             body: AdminActionsBar(
               seleccionado: seleccionado,

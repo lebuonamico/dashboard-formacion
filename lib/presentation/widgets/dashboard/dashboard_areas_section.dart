@@ -1,8 +1,10 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,13 +32,13 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 'Estado de cumplimiento por áreas',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
+                  color: context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -45,7 +47,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver todas las áreas'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0D53C3),
+                foregroundColor: context.colorScheme.primary,
                 textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -130,8 +132,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
     return FilterBar(
       searchHint: 'Buscar por área',
       searchText: _search,
-      hasActiveFilters:
-          _search.trim().isNotEmpty || _selectedStatus != null,
+      hasActiveFilters: _search.trim().isNotEmpty || _selectedStatus != null,
       onSearch: (value) => setState(() => _search = value),
       filters: [
         FilterDropdown<EstadoSemaforo?>(
@@ -176,7 +177,7 @@ class DashboardAreaCard extends StatelessWidget {
     final progress = (area.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
 
     return Material(
-      color: Colors.white,
+      color: context.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -184,24 +185,13 @@ class DashboardAreaCard extends StatelessWidget {
           '/areas/${Uri.encodeComponent(area.area)}?origen=dashboard',
         ),
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x090F172A),
-                blurRadius: 12,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
+          decoration: context.panel(sombra: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: area.semaforo.colorTexto,
+                  color: area.semaforo.colores(context).texto,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -224,11 +214,11 @@ class DashboardAreaCard extends StatelessWidget {
                                   area.area,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     height: 1.25,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF0F172A),
+                                    color: context.colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 5),
@@ -236,10 +226,10 @@ class DashboardAreaCard extends StatelessWidget {
                                   '${area.cantidadColaboradores} colaboradores',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF0D53C3),
+                                    color: context.colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -252,10 +242,10 @@ class DashboardAreaCard extends StatelessWidget {
                       const SizedBox(height: 13),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.people_outline,
                             size: 16,
-                            color: Color(0xFF64748B),
+                            color: context.colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -263,9 +253,9 @@ class DashboardAreaCard extends StatelessWidget {
                               '${area.cantidadColaboradores} colaboradores · $cantidadEquipos equipos',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF64748B),
+                                color: context.colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -275,11 +265,11 @@ class DashboardAreaCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Cumplimiento del área',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF64748B),
+                              color: context.colorScheme.onSurfaceVariant,
                             ),
                           ),
                           Text(
@@ -287,7 +277,7 @@ class DashboardAreaCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: area.semaforo.colorTexto,
+                              color: area.semaforo.colores(context).texto,
                             ),
                           ),
                         ],
@@ -298,8 +288,8 @@ class DashboardAreaCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 7,
-                          backgroundColor: const Color(0xFFEAECF0),
-                          color: area.semaforo.colorTexto,
+                          backgroundColor: context.colores.graficoPista,
+                          color: area.semaforo.colores(context).texto,
                         ),
                       ),
                       const SizedBox(height: 9),
@@ -307,26 +297,26 @@ class DashboardAreaCard extends StatelessWidget {
                         children: [
                           Text(
                             '${area.horasCompletadas.toStringAsFixed(1)} de ${area.horasRequeridas.toStringAsFixed(1)} hs',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0F172A),
+                              color: context.colorScheme.onSurface,
                             ),
                           ),
                           const Spacer(),
-                          const Text(
+                          Text(
                             'Ver detalle',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0D53C3),
+                              color: context.colorScheme.primary,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.arrow_forward_rounded,
                             size: 15,
-                            color: Color(0xFF0D53C3),
+                            color: context.colorScheme.primary,
                           ),
                         ],
                       ),
@@ -352,7 +342,7 @@ class _AreaStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: status.colorFondo,
+        color: status.colores(context).fondo,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -362,7 +352,7 @@ class _AreaStatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: status.colorTexto,
+              color: status.colores(context).texto,
               shape: BoxShape.circle,
             ),
           ),
@@ -370,7 +360,7 @@ class _AreaStatusBadge extends StatelessWidget {
           Text(
             status.label,
             style: TextStyle(
-              color: status.colorTexto,
+              color: status.colores(context).texto,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -389,11 +379,7 @@ class _EmptyAreasState extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: const Center(child: Text('No hay áreas registradas.')),
     );
   }
@@ -407,11 +393,7 @@ class _EmptyFilteredAreasState extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: const Center(
         child: Text('No hay áreas que coincidan con los filtros.'),
       ),

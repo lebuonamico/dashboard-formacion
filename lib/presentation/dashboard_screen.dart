@@ -1,14 +1,15 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
-import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_header.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_hours.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:flutter/material.dart';
@@ -34,13 +35,12 @@ class DashboardScreen extends ConsumerWidget {
         .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          const DashboardHeader(),
+          const AppTopBar(title: 'Plan Q3 - formación interna'),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: paddingPantalla,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

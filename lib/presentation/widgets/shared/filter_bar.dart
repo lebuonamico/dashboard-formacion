@@ -1,9 +1,6 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
-
-const _bordePanel = Color(0xFFE2E8F0);
-const _marca = Color(0xFF0D53C3);
-const _textoApagado = Color(0xFF94A3B8);
 
 /// Barra de filtros común: buscador de texto, desplegables y "Limpiar".
 /// Cada pantalla le pasa sus textos, desplegables y qué hacer al limpiar.
@@ -56,13 +53,10 @@ class _FilterBarState extends State<FilterBar> {
 
   @override
   Widget build(BuildContext context) {
+    final borde = context.colorScheme.outlineVariant;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _bordePanel),
-      ),
+      decoration: context.panel(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final searchField = TextField(
@@ -74,16 +68,12 @@ class _FilterBarState extends State<FilterBar> {
             onPressed: widget.hasActiveFilters ? widget.onClear : null,
             icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
             label: const Text('Limpiar'),
+            // Colores y forma vienen del outlinedButtonTheme.
             style: OutlinedButton.styleFrom(
-              foregroundColor: _marca,
-              disabledForegroundColor: _textoApagado,
               side: BorderSide(
                 color: widget.hasActiveFilters
-                    ? _bordePanel
-                    : _bordePanel.withValues(alpha: 0.55),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                    ? borde
+                    : borde.withValues(alpha: 0.55),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
             ),

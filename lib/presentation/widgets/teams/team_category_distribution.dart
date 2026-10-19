@@ -1,5 +1,5 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 class EquiposCategoryDistribution extends StatelessWidget {
@@ -24,7 +24,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,11 +35,11 @@ class EquiposCategoryDistribution extends StatelessWidget {
               alignment: Alignment.topLeft,
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Distribución por categoría',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: equiposInk,
+                      color: context.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -50,7 +50,9 @@ class EquiposCategoryDistribution extends StatelessWidget {
                     child: Icon(
                       Icons.info_outline,
                       size: 16,
-                      color: equiposMuted.withValues(alpha: 0.8),
+                      color: context.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
                     ),
                   ),
                 ],
@@ -74,28 +76,28 @@ class EquiposCategoryDistribution extends StatelessWidget {
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: horasNegocio,
-                      color: equiposBrand,
+                      color: context.colores.negocio.texto,
                     ),
                     EquiposDonutSlice(
                       label: 'Blandas',
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: horasBlandas,
-                      color: const Color(0xFF009B61),
+                      color: context.colores.blandas.texto,
                     ),
                     EquiposDonutSlice(
                       label: 'Libres',
                       help:
                           'Horas de formación libre o exploratoria realizadas por los integrantes.',
                       value: horasLibres,
-                      color: const Color(0xFFDB2777),
+                      color: context.colores.exploracion.texto,
                     ),
                     EquiposDonutSlice(
                       label: 'Dictado',
                       help:
                           'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
                       value: horasDictado,
-                      color: const Color(0xFFF59E0B),
+                      color: context.colores.dictado.texto,
                     ),
                   ],
                 ),

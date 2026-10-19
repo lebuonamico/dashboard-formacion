@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class EmptyDataState extends StatelessWidget {
@@ -26,36 +27,30 @@ class EmptyDataState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         vertical: compact ? 24 : 72,
         horizontal: 24,
       ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 34, color: const Color(0xFF64748B)),
+          Icon(icon, size: 34, color: cs.onSurfaceVariant),
           const SizedBox(height: 10),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF0F172A),
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface),
           ),
           if (message != null) ...[
             const SizedBox(height: 4),
             Text(
               message!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF64748B)),
+              style: TextStyle(color: cs.onSurfaceVariant),
             ),
           ],
         ],

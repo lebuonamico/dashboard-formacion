@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
@@ -11,13 +12,6 @@ const double _anchoSideMenu = 260;
 /// Mismo alto que `AppTopBar` y los top bars de cada pantalla, para que la
 /// línea bajo el logo continúe exactamente la del top bar.
 const double _altoHeader = 64;
-
-/// Celeste pastel de la sidebar. La pestaña de ocultar/mostrar usa el mismo
-/// color para leerse como parte del menú.
-const Color _fondoSideMenu = Color(0xFFEAF3FE);
-
-/// Bordes y divisores sobre el fondo celeste.
-const Color _bordeSideMenu = Color(0xFFD2E3F8);
 
 const Duration _duracionAnimacion = Duration(milliseconds: 220);
 
@@ -145,12 +139,15 @@ class _SideMenuState extends ConsumerState<SideMenu>
 
     final auth = ref.watch(authControllerProvider);
     final mostrarAdmin = auth.esAdmin || !auth.enabled;
+    final cs = context.colorScheme;
+    final colores = context.colores;
+    final borde = BorderSide(color: colores.sidebarBorde);
 
     return Container(
       width: _anchoSideMenu,
-      decoration: const BoxDecoration(
-        color: _fondoSideMenu,
-        border: Border(right: BorderSide(color: _bordeSideMenu)),
+      decoration: BoxDecoration(
+        color: colores.sidebarFondo,
+        border: Border(right: borde),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,9 +156,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
           Container(
             height: _altoHeader,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: _bordeSideMenu)),
-            ),
+            decoration: BoxDecoration(border: Border(bottom: borde)),
             child: Row(
               children: [
                 ClipRRect(
@@ -175,8 +170,8 @@ class _SideMenuState extends ConsumerState<SideMenu>
                 const SizedBox(width: 12),
                 // El padding superior baja el texto sin mover el logo (la
                 // Row centra la columna, así que se desplaza la mitad).
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -185,7 +180,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0D53C3),
+                          color: cs.primary,
                         ),
                       ),
                       Text(
@@ -193,7 +188,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
+                          color: cs.onSurfaceVariant,
                           letterSpacing: 1.1,
                         ),
                       ),
@@ -305,15 +300,14 @@ class _SideMenuState extends ConsumerState<SideMenu>
             ),
           ),
           // Logout
-          const Divider(height: 1, color: _bordeSideMenu),
+          Divider(height: 1, color: colores.sidebarBorde),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: _MenuItem(
               icon: Icons.logout_rounded,
               label: 'Cerrar sesión',
               isSelected: false,
-              textColor: const Color(0xFFEF4444),
-              iconColor: const Color(0xFFEF4444),
+              color: cs.error,
               onTap: () async {
                 final auth = ref.read(authControllerProvider);
                 try {
@@ -369,6 +363,9 @@ class _PestanaToggleState extends State<_PestanaToggle> {
   @override
   Widget build(BuildContext context) {
     final mensaje = widget.desplegado ? 'Ocultar menú' : 'Mostrar menú';
+    final colores = context.colores;
+    final fondo = _hover ? colores.sidebarHover : colores.sidebarFondo;
+    final marca = context.colorScheme.primary;
 
     return Tooltip(
       message: mensaje,
@@ -391,26 +388,26 @@ class _PestanaToggleState extends State<_PestanaToggle> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       decoration: BoxDecoration(
-                        color: _hover ? const Color(0xFFD6E7FD) : _fondoSideMenu,
+                        color: fondo,
                         borderRadius: const BorderRadius.horizontal(
                           right: Radius.circular(10),
                         ),
-                        border: Border.all(color: _bordeSideMenu),
-                        boxShadow: const [
+                        border: Border.all(color: colores.sidebarBorde),
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x120D53C3),
+                            color: marca.withValues(alpha: 0.07),
                             blurRadius: 6,
-                            offset: Offset(2, 1),
+                            offset: const Offset(2, 1),
                           ),
                         ],
                       ),
                       child: Center(
                         child: Transform.rotate(
                           angle: (1 - widget.progreso) * math.pi,
-                          child: const Icon(
+                          child: Icon(
                             Icons.chevron_left_rounded,
                             size: 20,
-                            color: Color(0xFF0D53C3),
+                            color: marca,
                           ),
                         ),
                       ),
@@ -426,7 +423,7 @@ class _PestanaToggleState extends State<_PestanaToggle> {
                     width: 2,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      color: _hover ? const Color(0xFFD6E7FD) : _fondoSideMenu,
+                      color: fondo,
                     ),
                   ),
                 ],
@@ -444,16 +441,17 @@ class _MenuItem extends StatefulWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
-  final Color? textColor;
-  final Color? iconColor;
+
+  /// Color fijo de texto e ícono (p. ej. "Cerrar sesión" en rojo); si es
+  /// null se usan los del menú según el estado.
+  final Color? color;
 
   const _MenuItem({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
-    this.textColor,
-    this.iconColor,
+    this.color,
   });
 
   @override
@@ -461,7 +459,6 @@ class _MenuItem extends StatefulWidget {
 }
 
 class _MenuItemState extends State<_MenuItem> {
-  static const _marca = Color(0xFF0D53C3);
   static final _radio = BorderRadius.circular(8);
 
   bool _hover = false;
@@ -469,24 +466,28 @@ class _MenuItemState extends State<_MenuItem> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final colores = context.colores;
+    final marca = cs.primary;
     final seleccionado = widget.isSelected;
     final colorTexto =
-        widget.textColor ?? (seleccionado ? _marca : const Color(0xFF334155));
+        widget.color ?? (seleccionado ? marca : colores.textoIntermedio);
     final colorIcono =
-        widget.iconColor ?? (seleccionado ? _marca : const Color(0xFF64748B));
+        widget.color ?? (seleccionado ? marca : cs.onSurfaceVariant);
 
     // Sin ripple: el feedback es continuo. El fondo del ítem se desvanece entre
     // reposo, hover, presionado y seleccionado, y el texto y el ícono cambian de
     // color con la misma curva. Así nada aparece ni se borra de golpe.
-    // Sobre el fondo celeste, el ítem activo es una "tarjeta" blanca y el hover
-    // un blanco translúcido.
+    // Sobre el fondo del menú, el ítem activo es una "tarjeta" y el hover la
+    // misma tarjeta translúcida.
+    final activo = colores.sidebarActivo;
     final colorFondo = _presionado
-        ? Colors.white.withValues(alpha: seleccionado ? 0.85 : 0.6)
+        ? activo.withValues(alpha: seleccionado ? 0.85 : 0.6)
         : seleccionado
-        ? Colors.white
+        ? activo
         : _hover
-        ? Colors.white.withValues(alpha: 0.55)
-        : Colors.white.withValues(alpha: 0);
+        ? activo.withValues(alpha: 0.55)
+        : activo.withValues(alpha: 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -504,11 +505,11 @@ class _MenuItemState extends State<_MenuItem> {
               color: colorFondo,
               borderRadius: _radio,
               boxShadow: seleccionado
-                  ? const [
+                  ? [
                       BoxShadow(
-                        color: Color(0x140D53C3),
+                        color: marca.withValues(alpha: 0.08),
                         blurRadius: 4,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                       ),
                     ]
                   : null,
@@ -532,7 +533,7 @@ class _MenuItemState extends State<_MenuItem> {
                         // Sin ripple ni resaltados propios del ListTile.
                         splashColor: Colors.transparent,
                         hoverColor: Colors.transparent,
-                        focusColor: _marca.withValues(alpha: 0.08),
+                        focusColor: marca.withValues(alpha: 0.08),
                         enableFeedback: false,
                         leading: Icon(
                           widget.icon,

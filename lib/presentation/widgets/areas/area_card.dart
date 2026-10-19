@@ -1,7 +1,8 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:go_router/go_router.dart';
 
 class AreaCard extends StatelessWidget {
@@ -24,20 +25,20 @@ class AreaCard extends StatelessWidget {
     final destino = '/areas/${Uri.encodeComponent(area.nombre)}';
 
     return Material(
-      color: Colors.white,
+      color: context.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () =>
             context.push(origen == null ? destino : '$destino?origen=$origen'),
         child: Container(
-          decoration: areasPanelDecoration(withShadow: true),
+          decoration: context.panel(sombra: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: area.semaforo.colorTexto,
+                  color: area.semaforo.colores(context).texto,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -92,11 +93,11 @@ class _CardHeader extends StatelessWidget {
                 area.nombre,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   height: 1.25,
                   fontWeight: FontWeight.w700,
-                  color: areasInk,
+                  color: context.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 5),
@@ -104,10 +105,10 @@ class _CardHeader extends StatelessWidget {
                 '$colaboradores ${colaboradores == 1 ? 'colaborador' : 'colaboradores'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: areasBrand,
+                  color: context.colorScheme.primary,
                 ),
               ),
             ],
@@ -134,7 +135,11 @@ class _EquiposRow extends StatelessWidget {
 
     return Row(
       children: [
-        const Icon(Icons.groups_outlined, size: 16, color: areasMuted),
+        Icon(
+          Icons.groups_outlined,
+          size: 16,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Tooltip(
@@ -143,7 +148,10 @@ class _EquiposRow extends StatelessWidget {
               texto,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, color: areasMuted),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -178,7 +186,10 @@ class _ProgressSection extends StatelessWidget {
                       '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: areasMuted),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -189,7 +200,9 @@ class _ProgressSection extends StatelessWidget {
                     child: Icon(
                       Icons.info_outline,
                       size: 14,
-                      color: areasMuted.withValues(alpha: 0.75),
+                      color: context.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.75,
+                      ),
                     ),
                   ),
                 ],
@@ -201,7 +214,7 @@ class _ProgressSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: area.semaforo.colorTexto,
+                color: area.semaforo.colores(context).texto,
               ),
             ),
           ],
@@ -212,8 +225,8 @@ class _ProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: const Color(0xFFEAECF0),
-            color: area.semaforo.colorTexto,
+            backgroundColor: context.colores.graficoPista,
+            color: area.semaforo.colores(context).texto,
           ),
         ),
       ],
@@ -237,10 +250,10 @@ class _CardFooter extends StatelessWidget {
                 child: Text(
                   '${area.horasRealizadas.toStringAsFixed(1)} de ${area.horasObjetivo.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: areasInk,
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -251,24 +264,28 @@ class _CardFooter extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: area.desvioHoras >= 0
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFDC2626),
+                      ? context.colores.exito.texto
+                      : context.colores.peligro.texto,
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(width: 12),
-        const Text(
+        Text(
           'Ver área',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: areasBrand,
+            color: context.colorScheme.primary,
           ),
         ),
         const SizedBox(width: 4),
-        const Icon(Icons.arrow_forward_rounded, size: 15, color: areasBrand),
+        Icon(
+          Icons.arrow_forward_rounded,
+          size: 15,
+          color: context.colorScheme.primary,
+        ),
       ],
     );
   }
@@ -292,7 +309,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: semaforo.colorFondo,
+        color: semaforo.colores(context).fondo,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -302,7 +319,7 @@ class _StatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: semaforo.colorTexto,
+              color: semaforo.colores(context).texto,
               shape: BoxShape.circle,
             ),
           ),
@@ -310,7 +327,7 @@ class _StatusBadge extends StatelessWidget {
           Text(
             semaforo.label,
             style: TextStyle(
-              color: semaforo.colorTexto,
+              color: semaforo.colores(context).texto,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),

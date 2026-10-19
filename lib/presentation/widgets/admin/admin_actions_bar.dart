@@ -1,6 +1,6 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 class AdminActionsBar extends StatelessWidget {
   final UsuarioAutorizado? seleccionado;
@@ -36,21 +36,23 @@ class AdminActionsBar extends StatelessWidget {
     final habilitado = usuario != null && !esPropio && !hayAccion;
     final eliminado = usuario?.estado == EstadoUsuario.eliminado;
     final bloqueado = usuario?.estado == EstadoUsuario.bloqueado;
+    final colores = context.colores;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _encabezado(usuario, esPropio),
+          _encabezado(context, usuario, esPropio),
           const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
               _boton(
+                context,
                 clave: 'admin_crear',
                 etiqueta: 'Nuevo usuario',
                 icono: Icons.person_add_alt_1_outlined,
@@ -58,6 +60,7 @@ class AdminActionsBar extends StatelessWidget {
                 destacado: true,
               ),
               _boton(
+                context,
                 clave: 'admin_cambiar_rol',
                 etiqueta: 'Cambiar rol',
                 icono: Icons.badge_outlined,
@@ -66,6 +69,7 @@ class AdminActionsBar extends StatelessWidget {
               ),
               if (bloqueado)
                 _boton(
+                  context,
                   clave: 'admin_desbloquear',
                   etiqueta: 'Desbloquear',
                   icono: Icons.lock_open_outlined,
@@ -74,6 +78,7 @@ class AdminActionsBar extends StatelessWidget {
                 )
               else
                 _boton(
+                  context,
                   clave: 'admin_bloquear',
                   etiqueta: 'Bloquear',
                   icono: Icons.block_outlined,
@@ -81,10 +86,11 @@ class AdminActionsBar extends StatelessWidget {
                   tooltip: eliminado
                       ? 'El usuario está eliminado: restauralo antes de bloquearlo.'
                       : _motivoDeshabilitado(usuario, esPropio),
-                  color: const Color(0xFFD97706),
+                  color: colores.advertencia.texto,
                 ),
               if (eliminado)
                 _boton(
+                  context,
                   clave: 'admin_restaurar',
                   etiqueta: 'Restaurar',
                   icono: Icons.restore_outlined,
@@ -93,12 +99,13 @@ class AdminActionsBar extends StatelessWidget {
                 )
               else
                 _boton(
+                  context,
                   clave: 'admin_eliminar',
                   etiqueta: 'Eliminar',
                   icono: Icons.person_remove_outlined,
                   onPressed: habilitado ? onEliminar : null,
                   tooltip: _motivoDeshabilitado(usuario, esPropio),
-                  color: const Color(0xFFDC2626),
+                  color: context.colorScheme.error,
                 ),
             ],
           ),
@@ -107,16 +114,21 @@ class AdminActionsBar extends StatelessWidget {
     );
   }
 
-  Widget _encabezado(UsuarioAutorizado? usuario, bool esPropio) {
+  Widget _encabezado(
+    BuildContext context,
+    UsuarioAutorizado? usuario,
+    bool esPropio,
+  ) {
+    final cs = context.colorScheme;
     if (usuario == null) {
-      return const Row(
+      return Row(
         children: [
-          Icon(Icons.touch_app_outlined, size: 18, color: equiposMuted),
-          SizedBox(width: 8),
+          Icon(Icons.touch_app_outlined, size: 18, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Seleccioná un usuario de la lista para habilitar las acciones.',
-              style: TextStyle(fontSize: 13, color: equiposMuted),
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
           ),
         ],
@@ -125,7 +137,7 @@ class AdminActionsBar extends StatelessWidget {
 
     return Row(
       children: [
-        const Icon(Icons.person_outline, size: 18, color: equiposBrand),
+        Icon(Icons.person_outline, size: 18, color: cs.primary),
         const SizedBox(width: 8),
         Expanded(
           child: Wrap(
@@ -134,21 +146,24 @@ class AdminActionsBar extends StatelessWidget {
             children: [
               Text(
                 'Seleccionado: ${usuario.email}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: equiposInk,
+                  color: cs.onSurface,
                 ),
               ),
               if (fueraDelFiltro)
-                const Text(
+                Text(
                   '(no aparece con los filtros actuales)',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFD97706)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colores.advertencia.texto,
+                  ),
                 ),
               if (esPropio)
-                const Text(
+                Text(
                   'Es tu propio usuario: no podés modificarlo desde acá.',
-                  style: TextStyle(fontSize: 12, color: equiposMuted),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
             ],
           ),
@@ -165,7 +180,8 @@ class AdminActionsBar extends StatelessWidget {
     return null;
   }
 
-  Widget _boton({
+  Widget _boton(
+    BuildContext context, {
     required String clave,
     required String etiqueta,
     required IconData icono,
@@ -174,6 +190,7 @@ class AdminActionsBar extends StatelessWidget {
     Color? color,
     bool destacado = false,
   }) {
+    final cs = context.colorScheme;
     final enCurso = accionEnCurso == clave;
     final boton = OutlinedButton.icon(
       key: Key(clave),
@@ -186,22 +203,21 @@ class AdminActionsBar extends StatelessWidget {
             )
           : Icon(icono, size: 18),
       label: Text(etiqueta),
+      // Forma y borde vienen del outlinedButtonTheme.
       style:
           OutlinedButton.styleFrom(
-            foregroundColor: color ?? equiposBrand,
-            backgroundColor: destacado ? equiposBrand : null,
-            disabledForegroundColor: equiposMuted.withValues(alpha: 0.45),
-            side: BorderSide(color: equiposBorder.withValues(alpha: 0.9)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
+            foregroundColor: color,
+            backgroundColor: destacado ? cs.primary : null,
+            disabledForegroundColor: cs.onSurfaceVariant.withValues(
+              alpha: 0.45,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           ).copyWith(
             foregroundColor: destacado
                 ? WidgetStateProperty.resolveWith(
                     (states) => states.contains(WidgetState.disabled)
-                        ? Colors.white.withValues(alpha: 0.6)
-                        : Colors.white,
+                        ? cs.onPrimary.withValues(alpha: 0.6)
+                        : cs.onPrimary,
                   )
                 : null,
           ),

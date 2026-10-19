@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/mensaje_chat.dart';
 import 'package:app_finnegans/domain/servicios/asistente_contexto_service.dart';
 import 'package:app_finnegans/presentation/providers/asistente_ia_provider.dart';
 import 'package:app_finnegans/presentation/widgets/asistente_mensaje.dart';
-import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,8 +21,8 @@ class DisposicionAsistente {
 
   /// El badge de Netlify del deploy mide ~170 px de ancho y está a ~16 px de
   /// la esquina inferior derecha. El botón va a su izquierda, centrado en su
-  /// misma línea, dentro de la franja libre que dejan las pantallas debajo del
-  /// paginado ([margenInferiorPaginacion]).
+  /// misma línea, dentro de la franja libre que dejan todas las pantallas al
+  /// pie ([reservaInferiorFlotantes]).
   static const _derechaJuntoAlBadge = 200.0;
   static const _baseJuntoAlBadge = 8.0;
 
@@ -46,10 +47,7 @@ class DisposicionAsistente {
     // En ventanas muy angostas no puede quedar fuera de la pantalla.
     final derechaBoton = math.max(
       margen,
-      math.min(
-        _derechaJuntoAlBadge,
-        disponible.width - diametroBoton - margen,
-      ),
+      math.min(_derechaJuntoAlBadge, disponible.width - diametroBoton - margen),
     );
     return DisposicionAsistente._(
       margen,
@@ -75,8 +73,6 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
   double _offsetGuardado = 0;
   MensajeChat? _ultimoAlMinimizar;
   String? _errorAlMinimizar;
-  static const _tinta = Color(0xFF17243D);
-  static const _violeta = Color(0xFF6451D8);
 
   @override
   void initState() {
@@ -138,7 +134,10 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        icon: const Icon(Icons.delete_outline_rounded, color: _violeta),
+        icon: Icon(
+          Icons.delete_outline_rounded,
+          color: context.colores.ia.texto,
+        ),
         title: const Text('¿Limpiar esta conversación?'),
         content: const Text(
           'Se eliminarán los mensajes y el borrador del asistente. Los datos del Dashboard se conservan.',
@@ -149,7 +148,9 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _violeta),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.colores.ia.texto,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Limpiar conversación'),
           ),
@@ -178,11 +179,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(aviso),
-        duration: const Duration(seconds: 2),
-        backgroundColor: _tinta,
-      ),
+      SnackBar(content: Text(aviso), duration: const Duration(seconds: 2)),
     );
   }
 
@@ -364,26 +361,27 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     final cabecera = _encabezado(estado, ancho, compacto);
     final conversacion = _conversacion(estado, real);
     final editor = _editor(estado, destino, compacto);
+    final cs = context.colorScheme;
     return Container(
       key: const Key('asistente_panel'),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE0E5F2)),
-        boxShadow: const [
+        border: Border.all(color: cs.outlineVariant),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x26182C58),
+            color: cs.shadow.withValues(alpha: .15),
             blurRadius: 44,
-            offset: Offset(0, 18),
+            offset: const Offset(0, 18),
           ),
           BoxShadow(
-            color: Color(0x145E4ED1),
+            color: context.colores.ia.texto.withValues(alpha: .08),
             blurRadius: 12,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Material(
-        color: const Color(0xFFF8FAFF),
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(25),
         clipBehavior: Clip.antiAlias,
         child: alto < 270 * escala
@@ -432,6 +430,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         _accionHeader(Icons.remove_rounded, 'Minimizar asistente', _minimizar),
       ],
     );
+    final colores = context.colores;
     return Container(
       key: const Key('asistente_encabezado'),
       padding: EdgeInsets.fromLTRB(
@@ -440,11 +439,11 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         12,
         compacto ? 10 : 14,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF122E62), Color(0xFF283574), Color(0xFF514197)],
+          colors: colores.iaGradienteEncabezado,
         ),
       ),
       child: Column(
@@ -464,8 +463,8 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                       'Asistente IA de Formación',
                       maxLines: compacto ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colores.sobreGradiente,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.25,
@@ -474,10 +473,10 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                     ),
                     if (!compacto) ...[
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Tu copiloto de capacitación',
                         style: TextStyle(
-                          color: Color(0xFFD5DFF8),
+                          color: colores.sobreGradiente.withValues(alpha: .8),
                           fontSize: 11.5,
                           height: 1.4,
                         ),
@@ -498,22 +497,22 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     );
   }
 
-  Widget _accionHeader(IconData icono, String tooltip, VoidCallback? accion) =>
-      IconButton(
-        tooltip: tooltip,
-        onPressed: accion,
-        style: IconButton.styleFrom(
-          foregroundColor: Colors.white,
-          disabledForegroundColor: const Color(0xFF8B99BF),
-          hoverColor: const Color(0x22FFFFFF),
-          focusColor: const Color(0x33FFFFFF),
-          minimumSize: const Size(44, 44),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        icon: Icon(icono, size: 20),
-      );
+  Widget _accionHeader(IconData icono, String tooltip, VoidCallback? accion) {
+    final sobreGradiente = context.colores.sobreGradiente;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: accion,
+      style: IconButton.styleFrom(
+        foregroundColor: sobreGradiente,
+        disabledForegroundColor: sobreGradiente.withValues(alpha: .45),
+        hoverColor: sobreGradiente.withValues(alpha: .13),
+        focusColor: sobreGradiente.withValues(alpha: .2),
+        minimumSize: const Size(44, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: Icon(icono, size: 20),
+    );
+  }
 
   Widget _conversacion(EstadoChat estado, bool real) => ClipRect(
     key: const Key('asistente_viewport'),
@@ -531,16 +530,16 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               key: const Key('asistente_aviso'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F3FC),
+                color: context.colores.ia.fondo,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.layers_outlined,
                     size: 16,
-                    color: Color(0xFF647399),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -548,8 +547,8 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                       real
                           ? 'Contexto dinámico · Datos de demostración del proyecto'
                           : 'Ayuda conceptual · Indicadores deshabilitados',
-                      style: const TextStyle(
-                        color: Color(0xFF536180),
+                      style: TextStyle(
+                        color: context.colorScheme.onSurfaceVariant,
                         fontSize: 11.5,
                         height: 1.5,
                       ),
@@ -579,62 +578,65 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     ),
   );
 
-  Widget _error(String error) => Semantics(
-    liveRegion: true,
-    child: Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        border: Border.all(color: const Color(0xFFF2D9B7)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: Color(0xFF986020),
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'No pudimos completar la consulta',
-                  style: TextStyle(
-                    color: Color(0xFF754615),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  error,
-                  style: const TextStyle(
-                    color: Color(0xFF754F29),
-                    fontSize: 12.5,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Podés editar tu consulta y volver a enviarla.',
-                  style: TextStyle(
-                    color: Color(0xFF846343),
-                    fontSize: 11.5,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+  Widget _error(String error) {
+    final advertencia = context.colores.advertencia;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: advertencia.fondo,
+          border: Border.all(color: advertencia.texto.withValues(alpha: .3)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: advertencia.texto,
+              size: 20,
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No pudimos completar la consulta',
+                    style: TextStyle(
+                      color: advertencia.texto,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    error,
+                    style: TextStyle(
+                      color: context.colores.textoIntermedio,
+                      fontSize: 12.5,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Podés editar tu consulta y volver a enviarla.',
+                    style: TextStyle(
+                      color: context.colorScheme.onSurfaceVariant,
+                      fontSize: 11.5,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _editor(
     EstadoChat estado,
@@ -648,6 +650,14 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
           !estado.enviando &&
           valor.text.trim().isNotEmpty &&
           (!valor.composing.isValid || valor.composing.isCollapsed);
+      final cs = context.colorScheme;
+      final colores = context.colores;
+      final acento = colores.ia.texto;
+      final estiloNota = TextStyle(
+        color: cs.onSurfaceVariant,
+        fontSize: 10.5,
+        height: 1.4,
+      );
       return Container(
         key: const Key('asistente_editor'),
         padding: EdgeInsets.fromLTRB(
@@ -656,9 +666,9 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
           14,
           compacto ? 8 : 12,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE6EAF4))),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          border: Border(top: BorderSide(color: cs.outlineVariant)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -666,15 +676,18 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
             AnimatedContainer(
               duration: _movimiento(context, 140),
               decoration: BoxDecoration(
-                color: const Color(0xFFFAFBFF),
+                color: cs.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: _focus.hasFocus ? _violeta : const Color(0xFFDDE3F0),
+                  color: _focus.hasFocus ? acento : cs.outline,
                   width: 1.5,
                 ),
                 boxShadow: [
                   if (_focus.hasFocus)
-                    const BoxShadow(color: Color(0x126451D8), blurRadius: 10),
+                    BoxShadow(
+                      color: acento.withValues(alpha: .07),
+                      blurRadius: 10,
+                    ),
                 ],
               ),
               child: Row(
@@ -694,21 +707,20 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                         textAlignVertical: TextAlignVertical.center,
                         keyboardType: TextInputType.multiline,
                         textInputAction: TextInputAction.newline,
-                        cursorColor: _violeta,
-                        style: const TextStyle(
-                          color: _tinta,
+                        cursorColor: acento,
+                        style: TextStyle(
+                          color: cs.onSurface,
                           fontSize: 14,
                           height: 1.5,
                         ),
+                        // El recuadro lo dibuja el contenedor: el campo va
+                        // sin relleno ni bordes propios del tema.
                         decoration: const InputDecoration(
                           hintText: 'Preguntale algo sobre la formación...',
                           hintMaxLines: 2,
                           constraints: BoxConstraints(minHeight: 56),
-                          hintStyle: TextStyle(
-                            color: Color(0xFF758198),
-                            fontSize: 14,
-                          ),
                           counterText: '',
+                          filled: false,
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -728,11 +740,9 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(13),
                         gradient: puedeEnviar
-                            ? const LinearGradient(
-                                colors: [Color(0xFF3462CE), Color(0xFF7954D6)],
-                              )
+                            ? LinearGradient(colors: colores.iaGradienteEnviar)
                             : null,
-                        color: puedeEnviar ? null : const Color(0xFFEBEEF6),
+                        color: puedeEnviar ? null : cs.surfaceContainer,
                       ),
                       child: IconButton(
                         tooltip: estado.enviando
@@ -740,8 +750,8 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                             : 'Enviar pregunta',
                         onPressed: puedeEnviar ? () => _enviar(destino) : null,
                         style: IconButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          disabledForegroundColor: const Color(0xFF8E99B0),
+                          foregroundColor: colores.sobreGradiente,
+                          disabledForegroundColor: colores.textoTenue,
                           minimumSize: const Size(44, 44),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(13),
@@ -766,31 +776,20 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                         ? 'Podés preparar tu próxima pregunta'
                         : 'Enter para enviar · Shift + Enter para otra línea',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF64728B),
-                      fontSize: 10.5,
-                      height: 1.4,
-                    ),
+                    style: estiloNota,
                   ),
                   if (valor.text.length > 1000)
                     Text(
                       '${valor.text.length}/${AsistenteContextoService.maxPregunta}',
-                      style: const TextStyle(
-                        color: Color(0xFF64728B),
-                        fontSize: 10.5,
-                      ),
+                      style: estiloNota,
                     ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Consultas independientes. No compartas credenciales.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF64728B),
-                  fontSize: 10.5,
-                  height: 1.4,
-                ),
+                style: estiloNota,
               ),
             ],
           ],
@@ -799,102 +798,109 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     },
   );
 
-  Widget _bienvenida(bool enviando) => Padding(
-    padding: const EdgeInsets.only(top: 30, bottom: 12),
-    child: Column(
-      children: [
-        const AsistenteSimbolo(size: 68, halo: true),
-        const SizedBox(height: 22),
-        const Text(
-          '¡Hola! ¿En qué puedo ayudarte?',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: _tinta,
-            fontSize: 23,
-            height: 1.25,
-            letterSpacing: -.6,
-            fontWeight: FontWeight.w700,
+  Widget _bienvenida(bool enviando) {
+    final cs = context.colorScheme;
+    final colores = context.colores;
+    return Padding(
+      padding: const EdgeInsets.only(top: 30, bottom: 12),
+      child: Column(
+        children: [
+          const AsistenteSimbolo(size: 68, halo: true),
+          const SizedBox(height: 22),
+          Text(
+            '¡Hola! ¿En qué puedo ayudarte?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 23,
+              height: 1.25,
+              letterSpacing: -.6,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Analizá indicadores, explorá capacitaciones y encontrá respuestas sobre tu organización.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF62708B), fontSize: 13, height: 1.6),
-        ),
-        const SizedBox(height: 24),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columnas =
-                constraints.maxWidth >= 360 &&
-                MediaQuery.textScalerOf(context).scale(14) < 19;
-            final ancho = columnas
-                ? (constraints.maxWidth - 10) / 2
-                : constraints.maxWidth;
-            const sugerencias = [
-              (Icons.insights_rounded, '¿Cómo viene el cumplimiento?'),
-              (Icons.groups_outlined, '¿Qué equipos necesitan atención?'),
-              (Icons.auto_stories_outlined, '¿Qué cursos hay disponibles?'),
-              (
-                Icons.upload_file_outlined,
-                '¿Cómo funciona la importación de nómina?',
-              ),
-            ];
-            return Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final (icono, pregunta) in sugerencias)
-                  SizedBox(
-                    width: ancho,
-                    child: OutlinedButton(
-                      onPressed: enviando
-                          ? null
-                          : () {
-                              _texto.value = TextEditingValue(
-                                text: pregunta,
-                                selection: TextSelection.collapsed(
-                                  offset: pregunta.length,
-                                ),
-                              );
-                              _focus.requestFocus();
-                            },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF394B70),
-                        backgroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0xFFE0E5F2)),
-                        padding: const EdgeInsets.all(14),
-                        minimumSize: Size(0, columnas ? 100 : 66),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        alignment: Alignment.centerLeft,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(icono, size: 21, color: _violeta),
-                          const SizedBox(height: 9),
-                          Text(
-                            pregunta,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
-                            ),
+          const SizedBox(height: 12),
+          Text(
+            'Analizá indicadores, explorá capacitaciones y encontrá respuestas sobre tu organización.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 13,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columnas =
+                  constraints.maxWidth >= 360 &&
+                  MediaQuery.textScalerOf(context).scale(14) < 19;
+              final ancho = columnas
+                  ? (constraints.maxWidth - 10) / 2
+                  : constraints.maxWidth;
+              const sugerencias = [
+                (Icons.insights_rounded, '¿Cómo viene el cumplimiento?'),
+                (Icons.groups_outlined, '¿Qué equipos necesitan atención?'),
+                (Icons.auto_stories_outlined, '¿Qué cursos hay disponibles?'),
+                (
+                  Icons.upload_file_outlined,
+                  '¿Cómo funciona la importación de nómina?',
+                ),
+              ];
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final (icono, pregunta) in sugerencias)
+                    SizedBox(
+                      width: ancho,
+                      child: OutlinedButton(
+                        onPressed: enviando
+                            ? null
+                            : () {
+                                _texto.value = TextEditingValue(
+                                  text: pregunta,
+                                  selection: TextSelection.collapsed(
+                                    offset: pregunta.length,
+                                  ),
+                                );
+                                _focus.requestFocus();
+                              },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colores.textoIntermedio,
+                          backgroundColor: cs.surface,
+                          padding: const EdgeInsets.all(14),
+                          minimumSize: Size(0, columnas ? 100 : 66),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ],
+                          alignment: Alignment.centerLeft,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(icono, size: 21, color: colores.ia.texto),
+                            const SizedBox(height: 9),
+                            Text(
+                              pregunta,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.45,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
-    ),
-  );
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 Duration _movimiento(BuildContext context, int milisegundos) =>
@@ -916,68 +922,74 @@ class _BotonCopilotoState extends State<_BotonCopiloto> {
   bool _foco = false;
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-    tween: Tween(begin: 0, end: 1),
-    duration: _movimiento(context, 350),
-    curve: Curves.easeOutCubic,
-    builder: (context, valor, child) => Opacity(
-      opacity: valor,
-      child: Transform.scale(scale: .85 + .15 * valor, child: child),
-    ),
-    child: AnimatedScale(
-      scale: _hover || _foco ? 1.05 : 1,
-      duration: _movimiento(context, 160),
-      child: AnimatedContainer(
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final gradiente = context.colores.iaGradienteSimbolo;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: _movimiento(context, 350),
+      curve: Curves.easeOutCubic,
+      builder: (context, valor, child) => Opacity(
+        opacity: valor,
+        child: Transform.scale(scale: .85 + .15 * valor, child: child),
+      ),
+      child: AnimatedScale(
+        scale: _hover || _foco ? 1.05 : 1,
         duration: _movimiento(context, 160),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: _foco ? const Color(0xFF17243D) : Colors.white,
-            width: 2,
+        child: AnimatedContainer(
+          duration: _movimiento(context, 160),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: _foco ? cs.onSurface : cs.surface,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: gradiente[1].withValues(
+                  alpha: _hover || _foco ? .31 : .19,
+                ),
+                blurRadius: 26,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: gradiente[0].withValues(alpha: .19),
+                blurRadius: 16,
+                offset: const Offset(0, 7),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(_hover || _foco ? 0x506F55D8 : 0x306F55D8),
-              blurRadius: 26,
-              spreadRadius: 2,
-            ),
-            const BoxShadow(
-              color: Color(0x301F65BE),
-              blurRadius: 16,
-              offset: Offset(0, 7),
-            ),
-          ],
-        ),
-        child: Tooltip(
-          message: 'Preguntale a la IA',
-          child: SizedBox(
-            width: _tamanoSimbolo,
-            height: _tamanoSimbolo,
-            child: Stack(
-              children: [
-                const AsistenteSimbolo(size: _tamanoSimbolo),
-                Positioned.fill(
-                  child: Material(
-                    type: MaterialType.transparency,
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: widget.onPressed,
-                      onHover: (valor) => setState(() => _hover = valor),
-                      onFocusChange: (valor) => setState(() => _foco = valor),
-                      customBorder: const CircleBorder(),
-                      mouseCursor: SystemMouseCursors.click,
-                      child: const SizedBox.expand(),
+          child: Tooltip(
+            message: 'Preguntale a la IA',
+            child: SizedBox(
+              width: _tamanoSimbolo,
+              height: _tamanoSimbolo,
+              child: Stack(
+                children: [
+                  const AsistenteSimbolo(size: _tamanoSimbolo),
+                  Positioned.fill(
+                    child: Material(
+                      type: MaterialType.transparency,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: widget.onPressed,
+                        onHover: (valor) => setState(() => _hover = valor),
+                        onFocusChange: (valor) => setState(() => _foco = valor),
+                        customBorder: const CircleBorder(),
+                        mouseCursor: SystemMouseCursors.click,
+                        child: const SizedBox.expand(),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AnalizandoConsulta extends StatefulWidget {
@@ -1022,11 +1034,11 @@ class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
           children: [
             const AsistenteSimbolo(size: 28),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Analizando tu consulta...',
                 style: TextStyle(
-                  color: Color(0xFF4C5875),
+                  color: context.colorScheme.onSurfaceVariant,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1049,8 +1061,8 @@ class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
                         child: Container(
                           width: 5,
                           height: 5,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF7364CF),
+                          decoration: BoxDecoration(
+                            color: context.colores.ia.texto,
                             shape: BoxShape.circle,
                           ),
                         ),

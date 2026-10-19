@@ -1,5 +1,5 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
@@ -83,10 +83,10 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
           children: [
             Text(
               'Integrantes ($totalIntegrantes)',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: areasInk,
+                color: context.colorScheme.onSurface,
               ),
             ),
             Row(
@@ -147,7 +147,7 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
           ],
           Container(
             width: double.infinity,
-            decoration: areasPanelDecoration(),
+            decoration: context.panel(),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
@@ -160,8 +160,8 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
                     ),
                     child: DataTable(
                       showCheckboxColumn: false,
-                      headingRowColor: const WidgetStatePropertyAll(
-                        areasBackground,
+                      headingRowColor: WidgetStatePropertyAll(
+                        context.colorScheme.surfaceContainerLow,
                       ),
                       columns: const [
                         DataColumn(label: Text('Legajo')),
@@ -203,7 +203,11 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
         DataCell(
           Text(
             equipo.isEmpty ? 'Sin equipo asignado' : equipo,
-            style: TextStyle(color: equipo.isEmpty ? areasMuted : null),
+            style: TextStyle(
+              color: equipo.isEmpty
+                  ? context.colorScheme.onSurfaceVariant
+                  : null,
+            ),
           ),
         ),
         DataCell(SeniorityChip(seniority: empleado.seniority)),
@@ -217,7 +221,9 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
             '${miembro.porcentajeTotal.toStringAsFixed(0)}%',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: cumple ? const Color(0xFF15803D) : const Color(0xFFB45309),
+              color: cumple
+                  ? context.colores.exito.texto
+                  : context.colores.advertencia.texto,
             ),
           ),
         ),
@@ -251,10 +257,14 @@ class _FiltroChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: seleccionado ? areasBrand : Colors.white,
+          color: seleccionado
+              ? context.colorScheme.primary
+              : context.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: seleccionado ? areasBrand : const Color(0xFFCBD5E1),
+            color: seleccionado
+                ? context.colorScheme.primary
+                : context.colorScheme.outline,
           ),
         ),
         child: Text(
@@ -262,7 +272,9 @@ class _FiltroChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: seleccionado ? Colors.white : areasMuted,
+            color: seleccionado
+                ? context.colorScheme.onPrimary
+                : context.colorScheme.onSurfaceVariant,
           ),
         ),
       ),

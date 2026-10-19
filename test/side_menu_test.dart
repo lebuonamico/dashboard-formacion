@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -48,6 +49,7 @@ Future<ProviderContainer> _mostrarPantalla(WidgetTester tester) async {
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
