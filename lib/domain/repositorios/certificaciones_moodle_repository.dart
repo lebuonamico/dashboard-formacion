@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
+import 'package:app_finnegans/domain/repositorios/eliminacion_por_mes_repository.dart';
 import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
@@ -40,6 +41,28 @@ extension CertificacionesMoodleUpsert on CertificacionesMoodleRepository {
       merged[claveCertificacionMoodle(item, idsPorNombre)] = item;
     }
     await replaceCertificaciones(merged.values.toList());
+  }
+}
+
+extension CertificacionesMoodleEliminacion on CertificacionesMoodleRepository {
+  Future<int> eliminarCertificacionesDelMes({
+    required int anio,
+    required int mes,
+  }) async {
+    if (this is EliminacionPorMesRepository) {
+      return (this as EliminacionPorMesRepository).eliminarMes(
+        anio: anio,
+        mes: mes,
+      );
+    }
+    final periodo = MesConRegistros(anio: anio, mes: mes, cantidad: 0);
+    final certificaciones = await getCertificaciones();
+    final restantes = certificaciones.where((item) {
+      final fecha = item.fechaFinalizacion;
+      return fecha == null || !periodo.contiene(fecha);
+    }).toList();
+    await replaceCertificaciones(restantes);
+    return certificaciones.length - restantes.length;
   }
 }
 

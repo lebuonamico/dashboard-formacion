@@ -16,6 +16,7 @@ import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
+import 'package:app_finnegans/domain/repositorios/eliminacion_por_mes_repository.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
@@ -28,6 +29,8 @@ import 'package:app_finnegans/presentation/providers/certificaciones_moodle_prov
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/presentation/widgets/configuracion/dialogo_eliminar_mes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
@@ -278,8 +281,164 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             label: const Text('Cargar horas'),
           ),
         ),
+        _filaEliminarMes(
+          context,
+          tipo: 'horas',
+          botonKey: const Key('eliminar_mes_horas'),
+          onEliminar: () => _eliminarMes(
+            tipo: 'horas',
+            tipoArchivo: 'horas_crm',
+            descripcion: 'de horas CRM',
+            fechas: (container) async => [
+              for (final carga in await container.read(
+                cargasDeHorasCRMProvider.future,
+              ))
+                carga.fecha,
+            ],
+            eliminar: (container, mes) => container
+                .read(cargaDeHorasCRMRepositoryProvider)
+                .eliminarCargasDelMes(anio: mes.anio, mes: mes.mes),
+            refrescar: (container) async {
+              container.invalidate(cargasDeHorasCRMProvider);
+              container.invalidate(cargasDashboardProvider);
+              await Future.wait([
+                container.read(cargasDeHorasCRMProvider.future),
+                container.read(cargasDashboardProvider.future),
+              ]);
+            },
+          ),
+        ),
       ],
     );
+  }
+
+  /// Segunda fila de las tarjetas de movimientos: borra un mes completo.
+  /// Solo para administradores; en modo local (sin login) queda habilitada.
+  Widget _filaEliminarMes(
+    BuildContext context, {
+    required String tipo,
+    required Key botonKey,
+    required VoidCallback onEliminar,
+  }) {
+    final auth = ref.watch(authControllerProvider);
+    final puedeEliminar = auth.esAdmin || !auth.enabled;
+    final boton = OutlinedButton.icon(
+      key: botonKey,
+      onPressed: puedeEliminar && !_importacionesEnCurso.contains(tipo)
+          ? onEliminar
+          : null,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: context.colorScheme.error,
+      ),
+      icon: const Icon(Icons.delete_outline, size: 18),
+      label: const Text('Eliminar mes'),
+    );
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: _IconoSeccion(
+        icono: Icons.delete_outline,
+        colores: context.colores.peligro,
+      ),
+      title: const Text(
+        'Eliminar registros de un mes',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: const Text(
+        'Borra lo cargado en el mes elegido. No se puede deshacer.',
+      ),
+      trailing: puedeEliminar
+          ? boton
+          : Tooltip(
+              message: 'Solo los administradores pueden eliminar registros.',
+              child: boton,
+            ),
+    );
+  }
+
+  Future<void> _eliminarMes({
+    required String tipo,
+    required String tipoArchivo,
+    required String descripcion,
+    required Future<List<DateTime?>> Function(ProviderContainer) fechas,
+    required Future<int> Function(ProviderContainer, MesConRegistros) eliminar,
+    required Future<void> Function(ProviderContainer) refrescar,
+  }) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    MesConRegistros? mes;
+    try {
+      final meses = mesesConRegistros(await fechas(container));
+      if (!mounted) return;
+      if (meses.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No hay registros para eliminar.')),
+        );
+        return;
+      }
+      mes = await mostrarDialogoEliminarMes(
+        context,
+        meses: meses,
+        descripcion: descripcion,
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudieron leer los registros: $error')),
+      );
+      return;
+    }
+    // The section is locked only once the user confirms a month.
+    final elegido = mes;
+    if (elegido == null || !mounted || !_iniciarImportacion(tipo)) return;
+    final etiqueta = etiquetaMes(elegido);
+    try {
+      var eliminados = 0;
+      await container
+          .read(importacionServiceProvider)
+          .ejecutar(
+            tipoArchivo: tipoArchivo,
+            nombreArchivo: 'Eliminación de $etiqueta',
+            procesar: () async {
+              eliminados = await eliminar(container, elegido);
+              // Only months with data are offered, so 0 means the delete was
+              // blocked; PostgREST reports RLS-filtered deletes as success.
+              if (eliminados == 0) {
+                throw const FormatException(
+                  'No se eliminó ningún registro. Si usás Supabase, revisá que el permiso DELETE (RLS) lo permita.',
+                );
+              }
+              return ResultadoUpsert(
+                registrosProcesados: eliminados,
+                insertados: 0,
+                actualizados: 0,
+              );
+            },
+            refrescar: () => refrescar(container),
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            eliminados == 1
+                ? 'Se eliminó 1 registro de $etiqueta.'
+                : 'Se eliminaron $eliminados registros de $etiqueta.',
+          ),
+        ),
+      );
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudieron eliminar los registros: $error'),
+        ),
+      );
+    } finally {
+      _terminarImportacion(tipo);
+    }
   }
 
   Widget _buildSeccionCargaLms(BuildContext context) {
@@ -307,6 +466,29 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 : _importarCertificacionesMoodle,
             icon: _iconoImportacion('finalizaciones'),
             label: const Text('Cargar Excel'),
+          ),
+        ),
+        _filaEliminarMes(
+          context,
+          tipo: 'finalizaciones',
+          botonKey: const Key('eliminar_mes_finalizaciones'),
+          onEliminar: () => _eliminarMes(
+            tipo: 'finalizaciones',
+            tipoArchivo: 'finalizaciones',
+            descripcion: 'de certificaciones LMS',
+            fechas: (container) async => [
+              for (final certificacion in await container.read(
+                certificacionesMoodleProvider.future,
+              ))
+                certificacion.fechaFinalizacion,
+            ],
+            eliminar: (container, mes) => container
+                .read(certificacionesMoodleRepositoryProvider)
+                .eliminarCertificacionesDelMes(anio: mes.anio, mes: mes.mes),
+            refrescar: (container) async {
+              container.invalidate(certificacionesMoodleProvider);
+              await container.read(certificacionesMoodleProvider.future);
+            },
           ),
         ),
       ],

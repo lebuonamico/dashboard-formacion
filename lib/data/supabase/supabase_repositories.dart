@@ -14,6 +14,7 @@ import 'package:app_finnegans/domain/repositorios/empleados_historial_repository
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
+import 'package:app_finnegans/domain/repositorios/eliminacion_por_mes_repository.dart';
 import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 
 class _Table {
@@ -62,6 +63,31 @@ class _Table {
       if (rows.length < pageSize) break;
     }
     return result;
+  }
+
+  Future<int> eliminarEntre(
+    String campo,
+    DateTime desde,
+    DateTime hasta,
+  ) async {
+    try {
+      // Returning the deleted keys lets callers detect deletes blocked by RLS.
+      final rows = await client
+          .from(mapping.table)
+          .delete()
+          .gte(mapping.column(campo), desde.toIso8601String())
+          .lt(mapping.column(campo), hasta.toIso8601String())
+          .select(mapping.conflictFields.map(mapping.column).join(','));
+      return rows.length;
+    } on PostgrestException catch (error) {
+      // Without a table GRANT, PostgreSQL rejects the delete before RLS runs.
+      if (error.code != '42501') rethrow;
+      throw FormatException(
+        'Supabase no permite eliminar registros de ${mapping.table}: falta el '
+        'permiso DELETE. Pedile a quien administra la base que lo habilite '
+        'para administradores.',
+      );
+    }
   }
 
   String _key(Map<String, dynamic> row) => jsonEncode([
@@ -327,7 +353,8 @@ Future<void> _hydrateCourses(
 class SupabaseCargaDeHorasCRMRepository
     implements
         CargaDeHorasCRMRepository,
-        CountedUpsertRepository<CargaDeHorasCRM> {
+        CountedUpsertRepository<CargaDeHorasCRM>,
+        EliminacionPorMesRepository {
   final _Table _table;
   final CursosRepository cursos;
   SupabaseCargaDeHorasCRMRepository(
@@ -389,6 +416,10 @@ class SupabaseCargaDeHorasCRMRepository
   }
 
   @override
+  Future<int> eliminarMes({required int anio, required int mes}) => _table
+      .eliminarEntre('fecha', DateTime(anio, mes), DateTime(anio, mes + 1));
+
+  @override
   Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) =>
       upsert(cargas);
   @override
@@ -400,7 +431,8 @@ class SupabaseCargaDeHorasCRMRepository
 class SupabaseCertificacionesMoodleRepository
     implements
         CertificacionesMoodleRepository,
-        CountedUpsertRepository<CertificacionMoodle> {
+        CountedUpsertRepository<CertificacionMoodle>,
+        EliminacionPorMesRepository {
   final _Table _table;
   final CursosRepository cursos;
   SupabaseCertificacionesMoodleRepository(
@@ -452,6 +484,14 @@ class SupabaseCertificacionesMoodleRepository
     }
     return _table.upsert(rows);
   }
+
+  @override
+  Future<int> eliminarMes({required int anio, required int mes}) =>
+      _table.eliminarEntre(
+        'fechaFinalizacion',
+        DateTime(anio, mes),
+        DateTime(anio, mes + 1),
+      );
 
   @override
   Future<void> replaceCertificaciones(
