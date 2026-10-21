@@ -1,7 +1,7 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter/material.dart';
 
 class EquipoDetalleHeader extends StatelessWidget {
@@ -27,16 +27,19 @@ class EquipoDetalleHeader extends StatelessWidget {
           children: [
             Text(
               equipo.nombre,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: equiposInk,
+                color: context.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 5),
             Text(
               '${equipo.area} · Líder: ${equipo.lider}',
-              style: const TextStyle(fontSize: 14, color: equiposMuted),
+              style: TextStyle(
+                fontSize: 14,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -46,24 +49,24 @@ class EquipoDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: equiposBorder),
+                color: context.colorScheme.surface,
+                border: Border.all(color: context.colorScheme.outlineVariant),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_month_outlined,
                     size: 16,
-                    color: equiposMuted,
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     periodo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: equiposInk,
+                      color: context.colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -73,7 +76,7 @@ class EquipoDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: equipo.estado.colorFondo,
+                color: equipo.estado.colores(context).fondo,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -81,7 +84,7 @@ class EquipoDetalleHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: equipo.estado.colorTexto,
+                  color: equipo.estado.colores(context).texto,
                 ),
               ),
             ),
@@ -150,13 +153,16 @@ class _TeamProgressPanel extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Avance del equipo',
-            style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: context.colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 18),
           Row(
@@ -167,15 +173,15 @@ class _TeamProgressPanel extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: equipo.estado.colorTexto,
+                  color: equipo.estado.colores(context).texto,
                 ),
               ),
               Text(
                 '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} h',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: equiposMuted,
+                  color: context.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -186,8 +192,8 @@ class _TeamProgressPanel extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 9,
-              backgroundColor: const Color(0xFFEAECF0),
-              color: equipo.estado.colorTexto,
+              backgroundColor: context.colores.graficoPista,
+              color: equipo.estado.colores(context).texto,
             ),
           ),
           const SizedBox(height: 20),
@@ -239,15 +245,18 @@ class _MetricRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 13, color: equiposMuted),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: equiposInk,
+            color: context.colorScheme.onSurface,
           ),
         ),
       ],

@@ -1,5 +1,5 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_donut_chart.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:flutter/material.dart';
 
 class AreasStatusSummary extends StatelessWidget {
@@ -22,7 +22,7 @@ class AreasStatusSummary extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: areasPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,24 +44,24 @@ class AreasStatusSummary extends StatelessWidget {
                     AreasDonutSlice(
                       label: 'En objetivo',
                       value: enObjetivo.toDouble(),
-                      color: const Color(0xFF009B61),
-                      backgroundColor: const Color(0xFFECFDF5),
+                      color: context.colores.exito.texto,
+                      backgroundColor: context.colores.exito.fondo,
                       help:
                           'Áreas con 100% o más de las horas objetivo del período.',
                     ),
                     AreasDonutSlice(
                       label: 'En riesgo',
                       value: enRiesgo.toDouble(),
-                      color: const Color(0xFFF59E0B),
-                      backgroundColor: const Color(0xFFFFFBEB),
+                      color: context.colores.advertencia.texto,
+                      backgroundColor: context.colores.advertencia.fondo,
                       help:
                           'Áreas con al menos 70% de las horas objetivo, pero sin llegar al 100%.',
                     ),
                     AreasDonutSlice(
                       label: 'Críticas',
                       value: criticos.toDouble(),
-                      color: const Color(0xFFF43F5E),
-                      backgroundColor: const Color(0xFFFFF1F2),
+                      color: context.colores.peligro.texto,
+                      backgroundColor: context.colores.peligro.fondo,
                       help:
                           'Áreas por debajo del 70% de las horas objetivo del período.',
                     ),
@@ -88,9 +88,12 @@ class _StatusHeading extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Estado de las áreas',
-              style: TextStyle(fontWeight: FontWeight.w700, color: areasInk),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: context.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(width: 6),
             Tooltip(
@@ -99,7 +102,9 @@ class _StatusHeading extends StatelessWidget {
               child: Icon(
                 Icons.info_outline,
                 size: 16,
-                color: areasMuted.withValues(alpha: 0.8),
+                color: context.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.8,
+                ),
               ),
             ),
           ],
@@ -109,7 +114,10 @@ class _StatusHeading extends StatelessWidget {
           requierenAtencion == 0
               ? 'No hay áreas que requieran atención.'
               : '$requierenAtencion ${requierenAtencion == 1 ? 'área requiere' : 'áreas requieren'} atención.',
-          style: const TextStyle(fontSize: 13, color: areasMuted),
+          style: TextStyle(
+            fontSize: 13,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

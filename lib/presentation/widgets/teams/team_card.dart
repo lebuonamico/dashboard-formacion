@@ -1,6 +1,6 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +15,7 @@ class EquipoCard extends StatelessWidget {
     final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
 
     return Material(
-      color: Colors.white,
+      color: context.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -24,13 +24,13 @@ class EquipoCard extends StatelessWidget {
           '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}?origen=equipos',
         ),
         child: Container(
-          decoration: equiposPanelDecoration(withShadow: true),
+          decoration: context.panel(sombra: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: equipo.estado.colorTexto,
+                  color: equipo.estado.colores(context).texto,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -87,11 +87,11 @@ class _CardHeader extends StatelessWidget {
                 equipo.nombre,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   height: 1.25,
                   fontWeight: FontWeight.w700,
-                  color: equiposInk,
+                  color: context.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 5),
@@ -99,10 +99,10 @@ class _CardHeader extends StatelessWidget {
                 equipo.area,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: equiposBrand,
+                  color: context.colorScheme.primary,
                 ),
               ),
             ],
@@ -125,14 +125,21 @@ class _LeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.person_outline, size: 16, color: equiposMuted),
+        Icon(
+          Icons.person_outline,
+          size: 16,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             'Líder: $lider',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, color: equiposMuted),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],
@@ -166,7 +173,10 @@ class _ProgressSection extends StatelessWidget {
                       '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: equiposMuted),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 5),
@@ -177,7 +187,9 @@ class _ProgressSection extends StatelessWidget {
                     child: Icon(
                       Icons.info_outline,
                       size: 14,
-                      color: equiposMuted.withValues(alpha: 0.75),
+                      color: context.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.75,
+                      ),
                     ),
                   ),
                 ],
@@ -189,7 +201,7 @@ class _ProgressSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: equipo.estado.colorTexto,
+                color: equipo.estado.colores(context).texto,
               ),
             ),
           ],
@@ -200,8 +212,8 @@ class _ProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: const Color(0xFFEAECF0),
-            color: equipo.estado.colorTexto,
+            backgroundColor: context.colores.graficoPista,
+            color: equipo.estado.colores(context).texto,
           ),
         ),
       ],
@@ -225,10 +237,10 @@ class _CardFooter extends StatelessWidget {
                 child: Text(
                   '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: equiposInk,
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -240,24 +252,28 @@ class _CardFooter extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: equipo.desvioHoras >= 0
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFDC2626),
+                      ? context.colores.exito.texto
+                      : context.colores.peligro.texto,
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(width: 12),
-        const Text(
+        Text(
           'Ver detalle',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: equiposBrand,
+            color: context.colorScheme.primary,
           ),
         ),
         const SizedBox(width: 4),
-        const Icon(Icons.arrow_forward_rounded, size: 15, color: equiposBrand),
+        Icon(
+          Icons.arrow_forward_rounded,
+          size: 15,
+          color: context.colorScheme.primary,
+        ),
       ],
     );
   }
@@ -281,7 +297,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: status.colorFondo,
+        color: status.colores(context).fondo,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -291,7 +307,7 @@ class _StatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: status.colorTexto,
+              color: status.colores(context).texto,
               shape: BoxShape.circle,
             ),
           ),
@@ -299,7 +315,7 @@ class _StatusBadge extends StatelessWidget {
           Text(
             status.label,
             style: TextStyle(
-              color: status.colorTexto,
+              color: status.colores(context).texto,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),

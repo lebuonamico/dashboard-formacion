@@ -1,5 +1,5 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 class EquiposStatusSummary extends StatelessWidget {
@@ -22,7 +22,7 @@ class EquiposStatusSummary extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: Builder(
         builder: (context) {
           // Leandro: llama a _StatusHeading para indicar cuántos equipos requieren atención.
@@ -35,24 +35,24 @@ class EquiposStatusSummary extends StatelessWidget {
               EquiposDonutSlice(
                 label: 'En objetivo',
                 value: enObjetivo.toDouble(),
-                color: const Color(0xFF009B61),
-                backgroundColor: const Color(0xFFECFDF5),
+                color: context.colores.exito.texto,
+                backgroundColor: context.colores.exito.fondo,
                 help:
                     'Equipos con 100% o más de horas y todos sus integrantes cumpliendo el objetivo por categoría.',
               ),
               EquiposDonutSlice(
                 label: 'En riesgo',
                 value: enRiesgo.toDouble(),
-                color: const Color(0xFFF59E0B),
-                backgroundColor: const Color(0xFFFFFBEB),
+                color: context.colores.advertencia.texto,
+                backgroundColor: context.colores.advertencia.fondo,
                 help:
                     'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
               ),
               EquiposDonutSlice(
                 label: 'Críticos',
                 value: criticos.toDouble(),
-                color: const Color(0xFFF43F5E),
-                backgroundColor: const Color(0xFFFFF1F2),
+                color: context.colores.peligro.texto,
+                backgroundColor: context.colores.peligro.fondo,
                 help:
                     'Equipos con bajo avance y sin integrantes cumpliendo el objetivo individual.',
               ),
@@ -92,9 +92,12 @@ class _StatusHeading extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Estado de los equipos',
-              style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: context.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(width: 6),
             Tooltip(
@@ -103,7 +106,9 @@ class _StatusHeading extends StatelessWidget {
               child: Icon(
                 Icons.info_outline,
                 size: 16,
-                color: equiposMuted.withValues(alpha: 0.8),
+                color: context.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.8,
+                ),
               ),
             ),
           ],
@@ -113,7 +118,10 @@ class _StatusHeading extends StatelessWidget {
           requierenAtencion == 0
               ? 'No hay equipos que requieran atención.'
               : '$requierenAtencion ${requierenAtencion == 1 ? 'equipo requiere' : 'equipos requieren'} atención.',
-          style: const TextStyle(fontSize: 13, color: equiposMuted),
+          style: TextStyle(
+            fontSize: 13,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

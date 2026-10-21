@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -48,6 +49,7 @@ Future<ProviderContainer> _mostrarPantalla(WidgetTester tester) async {
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
@@ -98,8 +100,9 @@ void main() {
   ) async {
     final container = await _mostrarPantalla(tester);
 
-    // Desplegada: la pestaña queda centrada sobre el borde derecho.
-    expect(tester.getCenter(_toggle).dx, closeTo(260, 0.5));
+    // Desplegada: la pestaña sale pegada al borde derecho (superpuesta 1px
+    // para tapar la línea).
+    expect(tester.getTopLeft(_toggle).dx, closeTo(259, 0.5));
     final altoDesplegada = tester.getCenter(_toggle).dy;
 
     await tester.tap(_toggle);
@@ -108,8 +111,8 @@ void main() {
     expect(container.read(sideMenuDesplegadoProvider), isFalse);
     expect(_anchoSideMenu(tester), 0);
     expect(find.text('Cerrar sesión'), findsNothing);
-    // Oculta: la pestaña sigue entera dentro de la pantalla y a la misma
-    // altura, sobre la línea del top bar (no centrada en la pantalla).
+    // Oculta: la pestaña sigue entera dentro de la pantalla, pegada al borde
+    // izquierdo y a la misma altura (no centrada en la pantalla).
     expect(tester.getTopLeft(_toggle).dx, greaterThanOrEqualTo(0));
     expect(tester.getCenter(_toggle).dy, altoDesplegada);
     expect(tester.getTopLeft(find.byType(AppTopBar)).dx, 0);

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/core/auth/access_rejection.dart';
@@ -31,8 +32,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     }
     final loginMessage = _rejectionMessage ?? auth.error;
+    final cs = context.colorScheme;
+    final colores = context.colores;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -48,11 +50,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   vertical: 40,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cs.surface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cs.outlineVariant),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: cs.shadow.withValues(alpha: 0.06),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -73,43 +76,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
 
                     // Títulos de marca
-                    const Text(
+                    Text(
                       'Finnegans',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0D53C3),
+                        color: cs.primary,
                         letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Plataforma de control de formación interna',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E40AF),
+                        color: cs.onPrimaryContainer,
                         letterSpacing: 1.5,
                       ),
                     ),
                     const SizedBox(height: 28),
 
                     // Bienvenida y descripción
-                    const Text(
+                    Text(
                       'Bienvenido de nuevo',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                        color: cs.onSurface,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'Inicia sesión con tu cuenta corporativa\npara acceder al sistema.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF64748B),
+                        color: cs.onSurfaceVariant,
                         height: 1.4,
                       ),
                     ),
@@ -129,13 +132,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               setState(() => _rejectionMessage = null);
                               await auth.signInWithGoogle();
                             },
+                      // Borde y forma vienen del outlinedButtonTheme.
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        backgroundColor: Colors.white,
+                        backgroundColor: cs.surface,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -152,10 +152,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             auth.isValidatingAuthorization
                                 ? 'Validando autorización...'
                                 : 'Iniciar sesión con Google',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E293B),
+                              color: cs.onSurface,
                             ),
                           ),
                         ],
@@ -166,7 +166,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         loginMessage,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(color: cs.error),
                       ),
                     ],
                     const SizedBox(height: 28),
@@ -174,12 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Separador ENTERPRISE ACCESS
                     Row(
                       children: [
-                        const Expanded(
-                          child: Divider(
-                            color: Color(0xFFF1F5F9),
-                            thickness: 1,
-                          ),
-                        ),
+                        const Expanded(child: Divider()),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
@@ -187,17 +182,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade400,
+                              color: colores.textoTenue,
                               letterSpacing: 1.2,
                             ),
                           ),
                         ),
-                        const Expanded(
-                          child: Divider(
-                            color: Color(0xFFF1F5F9),
-                            thickness: 1,
-                          ),
-                        ),
+                        const Expanded(child: Divider()),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -209,14 +199,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Icon(
                           Icons.lock_outline,
                           size: 14,
-                          color: Colors.grey.shade500,
+                          color: cs.onSurfaceVariant,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           'Conexión segura cifrada',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: cs.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -249,9 +239,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onTap: onTap,
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: Color(0xFF64748B),
+          color: context.colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -259,11 +249,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _footerDivider() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Text(
         '•',
-        style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+        style: TextStyle(fontSize: 10, color: context.colores.textoTenue),
       ),
     );
   }

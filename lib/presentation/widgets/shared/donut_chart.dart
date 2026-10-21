@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class DonutChartSegment {
@@ -27,12 +28,13 @@ class DonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return SizedBox(
       width: 132,
       height: 132,
       // Leandro: llama a CustomPaint con _DonutPainter para dibujar los segmentos del gráfico.
       child: CustomPaint(
-        painter: _DonutPainter(segments),
+        painter: _DonutPainter(segments, context.colores.graficoPista),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -42,7 +44,7 @@ class DonutChart extends StatelessWidget {
                 style: TextStyle(
                   fontSize: centerTextSize,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F172A),
+                  color: cs.onSurface,
                 ),
               ),
               Text(
@@ -50,7 +52,7 @@ class DonutChart extends StatelessWidget {
                 style: TextStyle(
                   fontSize: centerSubtitleSize,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF64748B),
+                  color: cs.onSurfaceVariant,
                 ),
               ),
             ],
@@ -63,8 +65,9 @@ class DonutChart extends StatelessWidget {
 
 class _DonutPainter extends CustomPainter {
   final List<DonutChartSegment> segments;
+  final Color colorPista;
 
-  const _DonutPainter(this.segments);
+  const _DonutPainter(this.segments, this.colorPista);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -76,7 +79,7 @@ class _DonutPainter extends CustomPainter {
       (sum, segment) => sum + segment.value,
     );
     final backgroundPaint = Paint()
-      ..color = const Color(0xFFE8EEF8)
+      ..color = colorPista
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -107,6 +110,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) {
-    return oldDelegate.segments != segments;
+    return oldDelegate.segments != segments ||
+        oldDelegate.colorPista != colorPista;
   }
 }

@@ -1,4 +1,7 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +11,6 @@ import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_detail_summary.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_members_table.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_team_card.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
@@ -55,14 +57,16 @@ class AreaDetalleScreen extends ConsumerWidget {
         : 'areas';
 
     return Scaffold(
-      backgroundColor: areasBackground,
+      backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
           AppTopBar(title: 'Detalle de área', onBack: () => context.pop()),
           Expanded(
             child: detalleAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: areasBrand),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  color: context.colorScheme.primary,
+                ),
               ),
               error: (error, _) => _ErrorState(message: '$error'),
               data: (detalle) => FadeIn(
@@ -71,7 +75,7 @@ class AreaDetalleScreen extends ConsumerWidget {
                   final hayDatos = hayDatosAsync.value ?? true;
 
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                    padding: paddingPantalla,
                     children: [
                       periodControls,
                       const SizedBox(height: 22),
@@ -148,7 +152,7 @@ class _AreaContent extends ConsumerWidget {
                   ? 'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.'
                   : 'Personas de la nómina que pertenecen al área evaluada en el período.',
               icon: Icons.people_outline,
-              color: areasBrand,
+              color: context.colorScheme.primary,
             ),
             KpiData(
               title: 'Horas realizadas',
@@ -158,7 +162,7 @@ class _AreaContent extends ConsumerWidget {
                   ? 'Suma de las horas válidas de los meses con datos del año.'
                   : 'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
               icon: Icons.schedule_outlined,
-              color: const Color(0xFF0E7490),
+              color: context.colores.acentoCian,
             ),
             KpiData(
               title: 'Objetivo del período',
@@ -168,7 +172,7 @@ class _AreaContent extends ConsumerWidget {
                   ? 'Suma de los objetivos mensuales de los integrantes elegibles en los meses con datos del año.'
                   : 'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
               icon: Icons.flag_outlined,
-              color: const Color(0xFF6941C6),
+              color: context.colores.acentoVioleta,
             ),
             KpiData(
               title: 'Cumplimiento',
@@ -179,7 +183,7 @@ class _AreaContent extends ConsumerWidget {
                   ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
                   : 'Horas realizadas sobre horas objetivo. El estado del área sólo mira este porcentaje.',
               icon: Icons.trending_up,
-              color: area.semaforo.colorTexto,
+              color: area.semaforo.colores(context).texto,
             ),
           ],
         ),
@@ -218,7 +222,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'No pudimos cargar el área.\n$message',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFFDC2626)),
+          style: TextStyle(color: context.colorScheme.error),
         ),
       ),
     );

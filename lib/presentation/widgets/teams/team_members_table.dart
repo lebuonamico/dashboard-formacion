@@ -1,7 +1,7 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,10 +46,10 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
       children: [
         Text(
           'Integrantes ($totalIntegrantes)',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: equiposInk,
+            color: context.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -74,7 +74,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
         ],
         Container(
           width: double.infinity,
-          decoration: equiposPanelDecoration(),
+          decoration: context.panel(),
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
@@ -88,8 +88,8 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
                   child: DataTable(
                     // La fila entera abre el detalle: no hace falta checkbox.
                     showCheckboxColumn: false,
-                    headingRowColor: const WidgetStatePropertyAll(
-                      equiposBackground,
+                    headingRowColor: WidgetStatePropertyAll(
+                      context.colorScheme.surfaceContainerLow,
                     ),
                     columns: const [
                       DataColumn(label: Text('Legajo')),
@@ -138,7 +138,9 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
             '${miembro.porcentajeTotal.toStringAsFixed(0)}%',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: cumple ? const Color(0xFF15803D) : const Color(0xFFB45309),
+              color: cumple
+                  ? context.colores.exito.texto
+                  : context.colores.advertencia.texto,
             ),
           ),
         ),

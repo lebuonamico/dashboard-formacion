@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 //import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -12,16 +11,16 @@ import 'package:flutter_riverpod/legacy.dart';
 
 // --- ENUMS Y VIEWMODELS ---
 
+/// Los colores de cada estado los resuelve la UI según el tema activo
+/// (ver `widgets/shared/estado_colores.dart`).
 enum EstadoSemaforo {
-  verde(Color(0xFF16A34A), Color(0xFFDCFCE7), 'En objetivo'),
-  amarillo(Color(0xFFD97706), Color(0xFFFEF3C7), 'En riesgo'),
-  rojo(Color(0xFFDC2626), Color(0xFFFEE2E2), 'Crítico');
+  verde('En objetivo'),
+  amarillo('En riesgo'),
+  rojo('Crítico');
 
-  final Color colorTexto;
-  final Color colorFondo;
   final String label;
 
-  const EstadoSemaforo(this.colorTexto, this.colorFondo, this.label);
+  const EstadoSemaforo(this.label);
 
   static EstadoSemaforo desdePorcentaje(double porcentaje) {
     if (porcentaje >= 100.0) return EstadoSemaforo.verde;

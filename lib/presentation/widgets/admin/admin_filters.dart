@@ -1,8 +1,8 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 class AdminFilters extends StatefulWidget {
   final String busqueda;
@@ -57,7 +57,7 @@ class _AdminFiltersState extends State<AdminFilters> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final campoBusqueda = TextField(
@@ -108,20 +108,17 @@ class _AdminFiltersState extends State<AdminFilters> {
             ],
             onChanged: widget.onEstado,
           );
+          final borde = context.colorScheme.outlineVariant;
+          // Colores y forma vienen del outlinedButtonTheme.
           final botonLimpiar = OutlinedButton.icon(
             onPressed: widget.hayFiltrosActivos ? widget.onLimpiar : null,
             icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
             label: const Text('Limpiar'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: equiposBrand,
-              disabledForegroundColor: equiposMuted.withValues(alpha: 0.45),
               side: BorderSide(
                 color: widget.hayFiltrosActivos
-                    ? equiposBorder
-                    : equiposBorder.withValues(alpha: 0.55),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+                    ? borde
+                    : borde.withValues(alpha: 0.55),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
             ),

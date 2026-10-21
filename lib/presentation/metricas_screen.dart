@@ -1,5 +1,9 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
+import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 
@@ -15,56 +19,35 @@ class MetricasScreen extends ConsumerWidget {
     final areaAsync = ref.watch(semaforoPorAreaProvider);
     final instructoresAsync = ref.watch(metricasInstructoresProvider);
 
+    final estiloSeccion = TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      color: context.colorScheme.onSurface,
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // TopBar
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Tablero de métricas y KPI de formación',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const UserAvatar(),
-              ],
-            ),
-          ),
+          const AppTopBar(title: 'Tablero de métricas y KPI de formación'),
 
           // Contenido
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(24.0),
+              padding: paddingPantalla,
               children: [
                 // 1. Tarjetas de KPIs Generales
                 kpisAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Error: $err')),
-                  data: (kpis) => _buildKpiRow(kpis),
+                  data: (kpis) => _buildKpiRow(context, kpis),
                 ),
                 const SizedBox(height: 24),
 
                 // 2. Semáforos por Equipo / Área
-                const Text(
+                Text(
                   'Semáforo de cumplimiento por equipo',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
+                  style: estiloSeccion,
                 ),
                 const SizedBox(height: 12),
                 areaAsync.when(
@@ -76,13 +59,9 @@ class MetricasScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // 3. Matriz de Cumplimiento y Desvíos por Seniority
-                const Text(
+                Text(
                   'Cumplimiento y desvíos por seniority y categoría',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
+                  style: estiloSeccion,
                 ),
                 const SizedBox(height: 12),
                 seniorityAsync.when(
@@ -90,18 +69,14 @@ class MetricasScreen extends ConsumerWidget {
                       const Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Error: $err')),
                   data: (seniorities) =>
-                      _buildTablaDesviosSeniority(seniorities),
+                      _buildTablaDesviosSeniority(context, seniorities),
                 ),
                 const SizedBox(height: 24),
 
                 // 4. Formación Impartida: Variedad y Horas de Dictado
-                const Text(
+                Text(
                   'Seguimiento de formadores (variedad y dictado)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
+                  style: estiloSeccion,
                 ),
                 const SizedBox(height: 12),
                 instructoresAsync.when(
@@ -119,7 +94,7 @@ class MetricasScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildKpiRow(KpisGeneralesViewModel kpis) {
+  Widget _buildKpiRow(BuildContext context, KpisGeneralesViewModel kpis) {
     return Row(
       children: [
         Expanded(
@@ -129,7 +104,7 @@ class MetricasScreen extends ConsumerWidget {
             subtitle:
                 '${kpis.totalFinnencersAlcanzados} de ${kpis.totalNomina} nómina',
             icon: Icons.groups_outlined,
-            iconColor: const Color(0xFF0D53C3),
+            iconColor: context.colorScheme.primary,
           ),
         ),
         const SizedBox(width: 16),
@@ -142,8 +117,8 @@ class MetricasScreen extends ConsumerWidget {
             icon: Icons.trending_up,
             iconColor:
                 kpis.proyectadoAnualPromedio >= kpis.horasRequeridasAnuales
-                ? const Color(0xFF16A34A)
-                : const Color(0xFFD97706),
+                ? context.colores.exito.texto
+                : context.colores.advertencia.texto,
           ),
         ),
         const SizedBox(width: 16),
@@ -153,7 +128,7 @@ class MetricasScreen extends ConsumerWidget {
             value: '${kpis.totalHorasDictadas.toStringAsFixed(0)} hs',
             subtitle: 'Capacitaciones internas impartidas',
             icon: Icons.record_voice_over_outlined,
-            iconColor: const Color(0xFF7C3AED),
+            iconColor: context.colores.acentoVioleta,
           ),
         ),
       ],
@@ -175,19 +150,15 @@ class MetricasScreen extends ConsumerWidget {
         final area = areas[index];
         return Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
+          decoration: context.panel(),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: area.semaforo.colorFondo,
+                backgroundColor: area.semaforo.colores(context).fondo,
                 child: Icon(
                   Icons.circle,
-                  color: area.semaforo.colorTexto,
+                  color: area.semaforo.colores(context).texto,
                   size: 16,
                 ),
               ),
@@ -199,10 +170,10 @@ class MetricasScreen extends ConsumerWidget {
                   children: [
                     Text(
                       area.area,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        color: Color(0xFF0F172A),
+                        color: context.colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -210,9 +181,9 @@ class MetricasScreen extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${area.horasCompletadas.toStringAsFixed(0)} / ${area.horasRequeridas.toStringAsFixed(0)} hs (${area.porcentajeCumplimiento.toStringAsFixed(0)}%)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -221,7 +192,7 @@ class MetricasScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: area.semaforo.colorTexto,
+                        color: area.semaforo.colores(context).texto,
                       ),
                     ),
                   ],
@@ -235,19 +206,18 @@ class MetricasScreen extends ConsumerWidget {
   }
 
   Widget _buildTablaDesviosSeniority(
+    BuildContext context,
     List<SeniorityMetricaViewModel> seniorities,
   ) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SingleChildScrollView(
           child: DataTable(
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+            headingRowColor: WidgetStatePropertyAll(
+              context.colorScheme.surfaceContainerLow,
+            ),
             columns: const [
               DataColumn(
                 label: Text(
@@ -305,23 +275,9 @@ class MetricasScreen extends ConsumerWidget {
                     Text('${item.porcentajeCumplimiento.toStringAsFixed(1)}%'),
                   ),
                   DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: item.semaforo.colorFondo,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        item.semaforo.label,
-                        style: TextStyle(
-                          color: item.semaforo.colorTexto,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
+                    EtiquetaColor(
+                      texto: item.semaforo.label,
+                      colores: item.semaforo.colores(context),
                     ),
                   ),
                   DataCell(
@@ -337,8 +293,8 @@ class MetricasScreen extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: esNegativo
-                                ? const Color(0xFFFEE2E2)
-                                : const Color(0xFFF1F5F9),
+                                ? context.colores.peligro.fondo
+                                : context.colorScheme.surfaceContainer,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -347,8 +303,8 @@ class MetricasScreen extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                               color: esNegativo
-                                  ? const Color(0xFFDC2626)
-                                  : const Color(0xFF334155),
+                                  ? context.colores.peligro.texto
+                                  : context.colores.textoIntermedio,
                             ),
                           ),
                         );
@@ -371,11 +327,7 @@ class MetricasScreen extends ConsumerWidget {
     if (instructores.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
+        decoration: context.panel(),
         child: const Center(
           child: Text('No hay formadores registrados con horas impartidas.'),
         ),
@@ -383,17 +335,15 @@ class MetricasScreen extends ConsumerWidget {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SingleChildScrollView(
           child: DataTable(
             showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+            headingRowColor: WidgetStatePropertyAll(
+              context.colorScheme.surfaceContainerLow,
+            ),
             columns: const [
               DataColumn(
                 label: Text(
@@ -442,7 +392,7 @@ class MetricasScreen extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 12,
-                          backgroundColor: const Color(0xFFE2E8F0),
+                          backgroundColor: context.colorScheme.outlineVariant,
                           child: Text(
                             inst.nombreCompleto.substring(0, 1),
                             style: const TextStyle(
@@ -462,40 +412,29 @@ class MetricasScreen extends ConsumerWidget {
                   DataCell(Text(inst.area)),
                   DataCell(Text(inst.seniority.label)),
                   DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${inst.variedadCursosDistintos} temas distintos',
-                        style: const TextStyle(
-                          color: Color(0xFF1D4ED8),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
+                    EtiquetaColor(
+                      texto: '${inst.variedadCursosDistintos} temas distintos',
+                      colores: ParColores(
+                        context.colorScheme.onPrimaryContainer,
+                        context.colorScheme.primaryContainer,
                       ),
                     ),
                   ),
                   DataCell(
                     Text(
                       '${inst.totalHorasDictadas.toStringAsFixed(0)} hs',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+                        color: context.colorScheme.onSurface,
                       ),
                     ),
                   ),
                   DataCell(
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.visibility_outlined,
                         size: 18,
-                        color: Color(0xFF0D53C3),
+                        color: context.colorScheme.primary,
                       ),
                       tooltip: 'Ver detalle de cursos',
                       onPressed: () =>
@@ -537,18 +476,18 @@ class MetricasScreen extends ConsumerWidget {
                         children: [
                           Text(
                             inst.nombreCompleto,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
+                              color: context.colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${inst.area} · ${inst.seniority.label} (Legajo: ${inst.legajo})',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF64748B),
+                              color: context.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -566,15 +505,17 @@ class MetricasScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Total impartido: ${inst.totalHorasDictadas.toStringAsFixed(0)} hs',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                          color: context.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         '(${inst.variedadCursosDistintos} formaciones distintas)',
-                        style: const TextStyle(color: Color(0xFF64748B)),
+                        style: TextStyle(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -588,10 +529,8 @@ class MetricasScreen extends ConsumerWidget {
                         final c = inst.cursosDictados[i];
                         return Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          decoration: context.panel().copyWith(
+                            color: context.colorScheme.surfaceContainerLow,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -602,39 +541,28 @@ class MetricasScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       c.nombre,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0F172A),
+                                        color: context.colorScheme.onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       '${c.tipo.label} · Área: ${c.areaCurso}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF64748B),
+                                        color: context
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF7ED),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
-                                  style: const TextStyle(
-                                    color: Color(0xFFC2410C),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                              EtiquetaColor(
+                                texto:
+                                    '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
+                                colores: context.colores.dictado,
                               ),
                             ],
                           ),
@@ -671,11 +599,7 @@ class _KpiMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: Row(
         children: [
           Container(
@@ -693,27 +617,27 @@ class _KpiMetricCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155),
+                    color: context.colores.textoIntermedio,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],

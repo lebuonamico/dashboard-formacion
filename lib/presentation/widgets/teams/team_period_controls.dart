@@ -1,8 +1,9 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/period_segmented_control.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 
 class EquiposPeriodControls extends StatelessWidget {
   final AlcancePeriodo alcance;
@@ -31,7 +32,7 @@ class EquiposPeriodControls extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: equiposPanelDecoration(),
+      decoration: context.panel(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final title = _PeriodTitle(esAnual: alcance == AlcancePeriodo.anual);
@@ -41,10 +42,10 @@ class EquiposPeriodControls extends StatelessWidget {
             options: AlcancePeriodo.values,
             labelBuilder: (scope) => scope.label,
             onChanged: onScopeChanged,
-            selectedColor: equiposBrand,
-            unselectedColor: Colors.white,
-            selectedForegroundColor: Colors.white,
-            unselectedForegroundColor: equiposInk,
+            selectedColor: context.colorScheme.primary,
+            unselectedColor: context.colorScheme.surface,
+            selectedForegroundColor: context.colorScheme.onPrimary,
+            unselectedForegroundColor: context.colorScheme.onSurface,
           );
           // Leandro: llama a _MonthField para seleccionar el mes del período.
           final monthField = _MonthField(
@@ -99,9 +100,12 @@ class _PeriodTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Text(
+        Text(
           'Período de análisis',
-          style: TextStyle(fontWeight: FontWeight.w700, color: equiposInk),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: context.colorScheme.onSurface,
+          ),
         ),
         const SizedBox(width: 6),
         Tooltip(
@@ -111,7 +115,7 @@ class _PeriodTitle extends StatelessWidget {
           child: Icon(
             Icons.info_outline,
             size: 16,
-            color: equiposMuted.withValues(alpha: 0.8),
+            color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -135,7 +139,7 @@ class _MonthField extends StatelessWidget {
     return DropdownButtonFormField<int>(
       initialValue: selectedMonth,
       isExpanded: true,
-      decoration: _periodInputDecoration('Mes', Icons.calendar_month_outlined),
+      decoration: filtroInputDecoration('Mes', Icons.calendar_month_outlined),
       items: List.generate(12, (index) => index + 1)
           .map(
             (month) => DropdownMenuItem<int>(
@@ -165,7 +169,7 @@ class _YearField extends StatelessWidget {
     return DropdownButtonFormField<int>(
       initialValue: selectedYear,
       isExpanded: true,
-      decoration: _periodInputDecoration('Año', Icons.event_outlined),
+      decoration: filtroInputDecoration('Año', Icons.event_outlined),
       items: yearOptions
           .map(
             (year) => DropdownMenuItem<int>(
@@ -177,28 +181,4 @@ class _YearField extends StatelessWidget {
       onChanged: onChanged,
     );
   }
-}
-
-InputDecoration _periodInputDecoration(String hint, IconData icon) {
-  final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(6),
-    borderSide: const BorderSide(color: equiposBorder),
-  );
-
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(fontSize: 14, color: equiposMuted),
-    prefixIcon: Icon(icon, size: 19, color: equiposMuted),
-    prefixIconConstraints: const BoxConstraints(minWidth: 42),
-    filled: true,
-    fillColor: const Color(0xFFF9FAFB),
-    contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-    border: border,
-    enabledBorder: border,
-    disabledBorder: border,
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: equiposBrand, width: 1.5),
-    ),
-  );
 }

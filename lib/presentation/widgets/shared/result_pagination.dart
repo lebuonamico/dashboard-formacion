@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// La pantalla calcula las páginas y este widget sólo muestra el estado y botones.
@@ -27,14 +28,16 @@ class PaginacionResultados extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final estiloTexto = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: cs.onSurface,
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: context.panel().copyWith(color: cs.surfaceContainer),
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -44,15 +47,11 @@ class PaginacionResultados extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icono, size: 20, color: const Color(0xFF0D53C3)),
+              Icon(icono, size: 20, color: cs.primary),
               const SizedBox(width: 9),
               Text(
                 'Mostrando $desde-$hasta de $totalResultados $etiquetaResultados',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F172A),
-                ),
+                style: estiloTexto,
               ),
             ],
           ),
@@ -68,11 +67,7 @@ class PaginacionResultados extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 'Página ${paginaActual + 1} de $cantidadPaginas',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
+                style: estiloTexto.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 12),
               // Leandro: llama a IconButton.filledTonal con onNext para solicitar la página siguiente.

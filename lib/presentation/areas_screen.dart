@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +13,6 @@ import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_results.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_status_summary.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
@@ -33,15 +34,17 @@ class AreasScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: areasBackground,
+      backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
           const AppTopBar(title: 'Áreas y equipos generales'),
           Expanded(
             child: resumenAsync.when(
               skipLoadingOnRefresh: false,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: areasBrand),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  color: context.colorScheme.primary,
+                ),
               ),
               error: (error, _) => _ErrorState(message: '$error'),
               data: (resumen) => FadeIn(
@@ -86,14 +89,14 @@ class _AreasContent extends ConsumerWidget {
         busqueda.trim().isNotEmpty || estadoSeleccionado != null;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: paddingPantalla,
       children: [
-        const Text(
+        Text(
           'Vista general',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: areasInk,
+            color: context.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 5),
@@ -101,7 +104,10 @@ class _AreasContent extends ConsumerWidget {
           resumen.tieneDatos
               ? 'Seguimiento del avance de ${areas.length} áreas de formación.'
               : 'Seleccioná un período con datos cargados.',
-          style: const TextStyle(fontSize: 14, color: areasMuted),
+          style: TextStyle(
+            fontSize: 14,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 18),
         AreasPeriodControls(
@@ -201,8 +207,10 @@ class _AreasContent extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           areasFiltradasAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: areasBrand),
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                color: context.colorScheme.primary,
+              ),
             ),
             error: (error, _) => _ErrorState(message: '$error'),
             data: (areasFiltradas) => AreasResults(
@@ -267,7 +275,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'No pudimos cargar las áreas.\n$message',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFFDC2626)),
+          style: TextStyle(color: context.colorScheme.error),
         ),
       ),
     );

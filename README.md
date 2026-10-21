@@ -13,6 +13,7 @@ El sistema reúne la nómina de empleados, el catálogo de cursos, las horas dec
 - [Importación de datos](#importación-de-datos)
 - [Referencias QA](#referencias-qa)
 - [Arquitectura y estructura](#arquitectura-y-estructura)
+- [Asistente de IA](#asistente-de-ia)
 - [Mejora futura](#mejora-futura)
 
 ## Tecnologías y módulos
@@ -203,6 +204,16 @@ web/                            # Entrada y recursos de Flutter Web
 ```
 
 La selección del backend y los mappings físicos están en `core_providers.dart`; `USE_SUPABASE` determina qué implementaciones se utilizan.
+
+## Asistente de IA
+
+Las pantallas internas incluyen un chat flotante conectado a la Edge Function
+existente `asistente-ia`. Utiliza la sesión de Supabase; la clave de Gemini permanece
+en el servidor. En modo local se puede inspeccionar la interfaz, pero no consultar IA.
+
+La primera versión usa **contexto ficticio identificado**, con respuestas generadas
+por el servicio real. Dashboard y Equipos tienen un adaptador para agregados,
+deshabilitado por defecto; los demás módulos ofrecen ayuda conceptual.
 
 ## Mejora futura
 
