@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class KpiData {
@@ -62,20 +63,10 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x090F172A),
-            blurRadius: 12,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
+      decoration: context.panel(sombra: true),
       child: Row(
         children: [
           Container(
@@ -100,10 +91,10 @@ class _KpiCard extends StatelessWidget {
                         data.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -112,10 +103,10 @@ class _KpiCard extends StatelessWidget {
                       // Leandro: llama a Tooltip para mostrar la ayuda asociada al indicador.
                       Tooltip(
                         message: data.help!,
-                        child: const Icon(
+                        child: Icon(
                           Icons.info_outline,
                           size: 15,
-                          color: Color(0xFF94A3B8),
+                          color: context.colores.textoTenue,
                         ),
                       ),
                     ],
@@ -126,11 +117,11 @@ class _KpiCard extends StatelessWidget {
                   data.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 25,
                     height: 1,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: cs.onSurface,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -138,10 +129,7 @@ class _KpiCard extends StatelessWidget {
                   data.detail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                  ),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],
             ),

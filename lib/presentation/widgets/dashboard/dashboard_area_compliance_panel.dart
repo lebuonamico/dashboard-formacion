@@ -1,5 +1,7 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,24 +39,13 @@ class _AreaComplianceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x060F172A),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: context.panel(sombra: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -63,13 +54,16 @@ class _AreaComplianceCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: context.colorScheme.onSurface,
                       ),
                     ),
                     SizedBox(height: 2),
                     Text(
                       'Progreso relativo respecto a la meta institucional de 8 h',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -77,15 +71,15 @@ class _AreaComplianceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: context.colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '${areas.length} áreas',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -96,7 +90,7 @@ class _AreaComplianceCard extends StatelessWidget {
             _AreaProgressRow(area: areas[index]),
             if (index != areas.length - 1) const SizedBox(height: 12),
           ],
-          const Divider(height: 22, color: Color(0xFFE2E8F0)),
+          Divider(height: 22, color: context.colorScheme.outlineVariant),
           Row(
             children: [
               Expanded(
@@ -104,9 +98,9 @@ class _AreaComplianceCard extends StatelessWidget {
                   _panelMessage(areas),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -115,7 +109,7 @@ class _AreaComplianceCard extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward, size: 13),
                 label: const Text('Ver áreas'),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
+                  foregroundColor: context.colorScheme.primary,
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -149,7 +143,7 @@ class _AreaProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = (area.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
-    final color = area.semaforo.colorTexto;
+    final color = area.semaforo.colores(context).texto;
     final label =
         '${area.porcentajeCumplimiento.toStringAsFixed(0)}% · ${area.horasCompletadas.toStringAsFixed(1)} h';
 
@@ -164,18 +158,18 @@ class _AreaProgressRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 text: TextSpan(
                   text: area.area,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    color: context.colorScheme.onSurface,
                   ),
                   children: [
                     TextSpan(
                       text: ' (${area.cantidadColaboradores} p.)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF64748B),
+                        color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -186,7 +180,7 @@ class _AreaProgressRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: area.semaforo.colorFondo,
+                color: area.semaforo.colores(context).fondo,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -206,7 +200,7 @@ class _AreaProgressRow extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: const Color(0xFFE5ECFA),
+            backgroundColor: context.colores.graficoPista,
             color: color,
           ),
         ),

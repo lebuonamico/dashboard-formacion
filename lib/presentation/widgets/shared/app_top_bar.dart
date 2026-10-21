@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_back_button.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
@@ -10,12 +11,13 @@ class AppTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return Container(
       height: 64,
       padding: EdgeInsets.symmetric(horizontal: onBack == null ? 24 : 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
       child: Row(
         children: [
@@ -29,10 +31,10 @@ class AppTopBar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0F172A),
+                color: cs.onSurface,
               ),
             ),
           ),

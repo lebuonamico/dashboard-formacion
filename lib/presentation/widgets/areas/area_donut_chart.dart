@@ -1,4 +1,4 @@
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -6,14 +6,16 @@ class AreasDonutSlice {
   final String label;
   final double value;
   final Color color;
-  final Color backgroundColor;
+
+  /// Fondo de la fila de la leyenda; por defecto el de la página.
+  final Color? backgroundColor;
   final String help;
 
   const AreasDonutSlice({
     required this.label,
     required this.value,
     required this.color,
-    this.backgroundColor = const Color(0xFFF8FAFC),
+    this.backgroundColor,
     required this.help,
   });
 }
@@ -90,7 +92,7 @@ class _DonutLegendItem extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: slice.backgroundColor,
+        color: slice.backgroundColor ?? context.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -109,10 +111,10 @@ class _DonutLegendItem extends StatelessWidget {
               slice.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF334155),
+                color: context.colores.textoIntermedio,
               ),
             ),
           ),
@@ -121,16 +123,18 @@ class _DonutLegendItem extends StatelessWidget {
             child: Icon(
               Icons.info_outline,
               size: 15,
-              color: areasMuted.withValues(alpha: 0.75),
+              color: context.colorScheme.onSurfaceVariant.withValues(
+                alpha: 0.75,
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             '${_formatValue(slice.value)}$valueSuffix ($percentage%)',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF475569),
+              color: context.colores.textoIntermedio,
             ),
           ),
         ],

@@ -1,33 +1,9 @@
 import 'package:flutter/material.dart';
 
-const _bordeFiltro = Color(0xFFE2E8F0);
-const _textoSecundario = Color(0xFF64748B);
-const _marcaFiltro = Color(0xFF0D53C3);
-
 /// Decoración de los campos de la barra de filtros (buscador y desplegables).
-InputDecoration filtroInputDecoration(String hint, IconData icon) {
-  final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(6),
-    borderSide: const BorderSide(color: _bordeFiltro),
-  );
-
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(fontSize: 14, color: _textoSecundario),
-    prefixIcon: Icon(icon, size: 19, color: _textoSecundario),
-    prefixIconConstraints: const BoxConstraints(minWidth: 42),
-    filled: true,
-    fillColor: const Color(0xFFF9FAFB),
-    contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
-    border: border,
-    enabledBorder: border,
-    disabledBorder: border,
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: _marcaFiltro, width: 1.5),
-    ),
-  );
-}
+/// Bordes, relleno y colores salen del `inputDecorationTheme` de `AppTheme`.
+InputDecoration filtroInputDecoration(String hint, IconData icon) =>
+    InputDecoration(hintText: hint, prefixIcon: Icon(icon, size: 19));
 
 /// Desplegable de una [FilterBar]. Sirve para listas cerradas y chicas
 /// (estado, seniority, tipo, año, mes); lo demás se filtra por texto.

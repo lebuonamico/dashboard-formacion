@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:flutter/material.dart';
@@ -15,11 +16,11 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cumplimiento == null) {
-      return const SizedBox(
+      return SizedBox(
         width: 256,
         child: Text(
           'Sin datos de cumplimiento',
-          style: TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: context.colorScheme.onSurfaceVariant),
         ),
       );
     }
@@ -29,12 +30,15 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
       child: Wrap(
         spacing: 6,
         runSpacing: 4,
-        children: TipoCurso.values.map(_buildFicha).toList(),
+        children: [
+          for (final tipo in TipoCurso.values) _buildFicha(context, tipo),
+        ],
       ),
     );
   }
 
-  Widget _buildFicha(TipoCurso tipo) {
+  Widget _buildFicha(BuildContext context, TipoCurso tipo) {
+    final colores = context.colores;
     final horasRegistradas = cumplimiento!.horasCompletadas[tipo] ?? 0.0;
     final horasRealizadas = mostrarSoloHorasAplicables
         ? cumplimiento!.horasAplicablesAlObjetivo(tipo)
@@ -42,16 +46,11 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
     final horasRequeridas = cumplimiento!.horasRequeridas[tipo] ?? 0.0;
     final requerida = horasRequeridas > 0;
     final cumple = requerida && horasRealizadas >= horasRequeridas;
-    final color = !requerida
-        ? const Color(0xFF64748B)
+    final ParColores(texto: color, :fondo) = !requerida
+        ? colores.neutro
         : cumple
-        ? const Color(0xFF15803D)
-        : const Color(0xFFB45309);
-    final fondo = !requerida
-        ? const Color(0xFFF1F5F9)
-        : cumple
-        ? const Color(0xFFF0FDF4)
-        : const Color(0xFFFFFBEB);
+        ? colores.exito
+        : colores.advertencia;
 
     return Tooltip(
       message: requerida
@@ -75,7 +74,7 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
                 _nombreCorto(tipo),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF475569)),
+                style: TextStyle(fontSize: 10, color: colores.textoIntermedio),
               ),
             ),
             const SizedBox(width: 6),

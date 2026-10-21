@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
@@ -6,7 +8,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
@@ -25,7 +26,7 @@ class EquiposScreen extends ConsumerWidget {
     final equiposFiltradosAsync = ref.watch(equiposGlobalFiltradosProvider);
 
     return Scaffold(
-      backgroundColor: equiposBackground,
+      backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
           // Leandro: llama al widget AppTopBar para mostrar el título de la pantalla de Equipos.
@@ -34,8 +35,10 @@ class EquiposScreen extends ConsumerWidget {
             // Leandro: llama a AsyncValue.when para mostrar la carga, el error o el contenido del período.
             child: resumenAsync.when(
               skipLoadingOnRefresh: false,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: equiposBrand),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  color: context.colorScheme.primary,
+                ),
               ),
               error: (error, _) => _ErrorState(message: '$error'),
               data: (resumen) => FadeIn(
@@ -79,14 +82,14 @@ class _DashboardContent extends ConsumerWidget {
         busqueda.trim().isNotEmpty || estadoSeleccionado != null;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: paddingPantalla,
       children: [
-        const Text(
+        Text(
           'Vista general',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: equiposInk,
+            color: context.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 5),
@@ -94,7 +97,10 @@ class _DashboardContent extends ConsumerWidget {
           resumen.tieneDatos
               ? 'Seguimiento del avance de ${equipos.length} equipos de formación.'
               : 'Seleccioná un período con datos cargados.',
-          style: const TextStyle(fontSize: 14, color: equiposMuted),
+          style: TextStyle(
+            fontSize: 14,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 18),
         // Leandro: llama al widget EquiposPeriodControls para elegir el mes, el año y el alcance de los indicadores.
@@ -203,8 +209,10 @@ class _DashboardContent extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           equiposFiltradosAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: equiposBrand),
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                color: context.colorScheme.primary,
+              ),
             ),
             error: (error, _) => _ErrorState(message: '$error'),
             // Leandro: llama al widget EquiposResults para mostrar y paginar las tarjetas de los equipos filtrados.
@@ -271,7 +279,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'No pudimos cargar los equipos.\n$message',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFFDC2626)),
+          style: TextStyle(color: context.colorScheme.error),
         ),
       ),
     );

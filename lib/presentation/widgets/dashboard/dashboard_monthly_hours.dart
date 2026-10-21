@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,24 +81,13 @@ class _MonthlyHoursCard extends StatelessWidget {
     return Container(
       height: 280,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x060F172A),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: context.panel(sombra: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -106,13 +96,16 @@ class _MonthlyHoursCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: context.colorScheme.onSurface,
                       ),
                     ),
                     SizedBox(height: 2),
                     Text(
                       'Comparativa mensual de horas promedio vs meta (8,0 h)',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -120,15 +113,15 @@ class _MonthlyHoursCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: context.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   'Meta: ${summary.target.toStringAsFixed(1)} h',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2563EB),
+                    color: context.colorScheme.primary,
                   ),
                 ),
               ),
@@ -141,19 +134,22 @@ class _MonthlyHoursCard extends StatelessWidget {
               target: summary.target,
             ),
           ),
-          const Divider(height: 16, color: Color(0xFFE2E8F0)),
+          Divider(height: 16, color: context.colorScheme.outlineVariant),
           Row(
             children: [
-              const Text(
+              Text(
                 'Último mes: ',
-                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
               Text(
                 '${current.toStringAsFixed(1)} h promedio',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2563EB),
+                  color: context.colorScheme.primary,
                 ),
               ),
             ],
@@ -173,7 +169,12 @@ class _MonthlyHoursChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _MonthlyHoursPainter(points: points, target: target),
+      painter: _MonthlyHoursPainter(
+        points: points,
+        target: target,
+        cs: context.colorScheme,
+        colores: context.colores,
+      ),
       child: const SizedBox.expand(),
     );
   }
@@ -183,7 +184,16 @@ class _MonthlyHoursPainter extends CustomPainter {
   final List<_MonthlyHoursPoint> points;
   final double target;
 
-  const _MonthlyHoursPainter({required this.points, required this.target});
+  /// El painter no tiene BuildContext: recibe los colores del tema activo.
+  final ColorScheme cs;
+  final AppColors colores;
+
+  const _MonthlyHoursPainter({
+    required this.points,
+    required this.target,
+    required this.cs,
+    required this.colores,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -200,10 +210,10 @@ class _MonthlyHoursPainter extends CustomPainter {
         1.2;
 
     final gridPaint = Paint()
-      ..color = const Color(0xFFE2E8F0)
+      ..color = cs.outlineVariant
       ..strokeWidth = 1;
     final targetPaint = Paint()
-      ..color = const Color(0xFF94A3B8)
+      ..color = colores.textoTenue
       ..strokeWidth = 1;
 
     for (var index = 0; index <= 2; index++) {
@@ -225,7 +235,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       canvas,
       'Meta ${target.toStringAsFixed(1)} h',
       Offset(size.width - 66, targetY - 14),
-      const TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+      TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
     );
 
     final barWidth = chartWidth / (points.length * 2.2);
@@ -234,9 +244,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       final centerX = sidePadding + chartWidth * (index + 0.5) / points.length;
       final barHeight = chartHeight * point.hours / maxHours;
       final barTop = topPadding + chartHeight - barHeight;
-      final color = index == points.length - 1
-          ? const Color(0xFF2563EB)
-          : const Color(0xFFCBD5E1);
+      final color = index == points.length - 1 ? cs.primary : cs.outline;
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(centerX - barWidth / 2, barTop, barWidth, barHeight),
         const Radius.circular(6),
@@ -246,10 +254,10 @@ class _MonthlyHoursPainter extends CustomPainter {
         canvas,
         '${point.hours.toStringAsFixed(1)} h',
         Offset(centerX, barTop - 14),
-        const TextStyle(
+        TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF475569),
+          color: colores.textoIntermedio,
         ),
       );
       _drawCenteredText(
@@ -261,9 +269,7 @@ class _MonthlyHoursPainter extends CustomPainter {
           fontWeight: index == points.length - 1
               ? FontWeight.w700
               : FontWeight.w400,
-          color: index == points.length - 1
-              ? const Color(0xFF2563EB)
-              : const Color(0xFF64748B),
+          color: index == points.length - 1 ? cs.primary : cs.onSurfaceVariant,
         ),
       );
     }
@@ -292,7 +298,10 @@ class _MonthlyHoursPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MonthlyHoursPainter oldDelegate) =>
-      oldDelegate.points != points || oldDelegate.target != target;
+      oldDelegate.points != points ||
+      oldDelegate.target != target ||
+      oldDelegate.cs != cs ||
+      oldDelegate.colores != colores;
 }
 
 String _monthLabel(int month) {

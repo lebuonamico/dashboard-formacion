@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
@@ -7,7 +9,7 @@ import 'package:csv/csv.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
@@ -94,37 +96,14 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // TopBar
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Configuración del sistema',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const UserAvatar(),
-              ],
-            ),
-          ),
+          const AppTopBar(title: 'Configuración del sistema'),
 
           // Contenido de Configuración
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(24.0),
+              padding: paddingPantalla,
               children: [
                 _buildSeccionImportacion(context),
                 const SizedBox(height: 24),
@@ -149,15 +128,11 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.table_chart_outlined,
-              color: Color(0xFF1D4ED8),
+          leading: _IconoSeccion(
+            icono: Icons.table_chart_outlined,
+            colores: ParColores(
+              context.colorScheme.onPrimaryContainer,
+              context.colorScheme.primaryContainer,
             ),
           ),
           title: const Text(
@@ -187,13 +162,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(Icons.school_outlined, color: Color(0xFF15803D)),
+          leading: _IconoSeccion(
+            icono: Icons.school_outlined,
+            colores: context.colores.exito,
           ),
           title: const Text(
             'Importar cursos desde Excel / CSV',
@@ -287,13 +258,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(Icons.schedule, color: Color(0xFFC2410C)),
+          leading: _IconoSeccion(
+            icono: Icons.schedule,
+            colores: context.colores.dictado,
           ),
           title: const Text(
             'Importar carga de horas desde Excel / CSV',
@@ -322,16 +289,9 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.verified_outlined,
-              color: Color(0xFF15803D),
-            ),
+          leading: _IconoSeccion(
+            icono: Icons.verified_outlined,
+            colores: context.colores.exito,
           ),
           title: const Text(
             'Importar certificaciones LMS desde Excel',
@@ -1493,31 +1453,50 @@ class _ConfigCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             titulo,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0F172A),
+              color: context.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitulo,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           ...children,
         ],
       ),
+    );
+  }
+}
+
+/// Ícono de cada sección de importación sobre un fondo suave de su color.
+class _IconoSeccion extends StatelessWidget {
+  final IconData icono;
+  final ParColores colores;
+
+  const _IconoSeccion({required this.icono, required this.colores});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: colores.fondo,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(icono, color: colores.texto),
     );
   }
 }

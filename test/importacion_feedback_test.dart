@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -311,6 +312,7 @@ Future<ProviderContainer> _mostrarConfiguracion(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        theme: AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => MediaQuery(
           // Ahem has unusually wide glyphs; keep the existing sidebar intact.

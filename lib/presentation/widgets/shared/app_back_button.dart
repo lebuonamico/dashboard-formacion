@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Flecha para volver atrás. En lugar del ripple de Material (un círculo que
@@ -6,13 +7,11 @@ import 'package:flutter/material.dart';
 /// achique al presionar.
 class AppBackButton extends StatefulWidget {
   final VoidCallback onPressed;
-  final Color color;
   final String tooltip;
 
   const AppBackButton({
     super.key,
     required this.onPressed,
-    this.color = const Color(0xFF0F172A),
     this.tooltip = 'Volver',
   });
 
@@ -28,10 +27,11 @@ class _AppBackButtonState extends State<AppBackButton> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     final colorFondo = _presionado
-        ? const Color(0x1A0F172A)
+        ? cs.onSurface.withValues(alpha: 0.1)
         : _hover
-        ? const Color(0x0F0F172A)
+        ? cs.onSurface.withValues(alpha: 0.06)
         : Colors.transparent;
 
     return Tooltip(
@@ -45,11 +45,19 @@ class _AppBackButtonState extends State<AppBackButton> {
           curve: Curves.easeOut,
           width: 40,
           height: 40,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: colorFondo),
+          // Cuadrado redondeado con borde: se lee como botón "Volver" y se
+          // distingue del toggle circular azul del menú.
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: colorFondo,
+            border: Border.all(color: cs.outline),
+          ),
           child: Material(
             type: MaterialType.transparency,
             child: InkWell(
-              customBorder: const CircleBorder(),
+              customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               // Sin ripple ni resaltado propio: el feedback lo da el fondo de
               // arriba.
               splashFactory: NoSplash.splashFactory,
@@ -65,7 +73,7 @@ class _AppBackButtonState extends State<AppBackButton> {
                   offset: Offset(_hover ? -0.1 : 0, 0),
                   duration: _duracion,
                   curve: Curves.easeOut,
-                  child: Icon(Icons.arrow_back, size: 22, color: widget.color),
+                  child: Icon(Icons.arrow_back, size: 20, color: cs.onSurface),
                 ),
               ),
             ),

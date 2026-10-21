@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/widgets/side_menu.dart';
+import 'package:app_finnegans/presentation/widgets/asistente_chat.dart';
 import 'package:flutter/material.dart';
 
 /// Marco de todas las pantallas autenticadas: el menú lateral queda fijo y
@@ -12,12 +13,18 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
-        children: [
-          const SideMenu(),
-          Expanded(child: child),
-        ],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                const SideMenu(),
+                Expanded(child: child),
+              ],
+            ),
+            const Positioned.fill(child: AsistenteChat()),
+          ],
+        ),
       ),
     );
   }
