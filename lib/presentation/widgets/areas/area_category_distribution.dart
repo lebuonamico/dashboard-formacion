@@ -1,5 +1,5 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_donut_chart.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:flutter/material.dart';
 
 class AreasCategoryDistribution extends StatelessWidget {
@@ -24,7 +24,7 @@ class AreasCategoryDistribution extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: areasPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,11 +35,11 @@ class AreasCategoryDistribution extends StatelessWidget {
               alignment: Alignment.topLeft,
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Distribución por categoría',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: areasInk,
+                      color: context.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -50,7 +50,9 @@ class AreasCategoryDistribution extends StatelessWidget {
                     child: Icon(
                       Icons.info_outline,
                       size: 16,
-                      color: areasMuted.withValues(alpha: 0.8),
+                      color: context.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
                     ),
                   ),
                 ],
@@ -73,28 +75,28 @@ class AreasCategoryDistribution extends StatelessWidget {
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: horasNegocio,
-                      color: areasBrand,
+                      color: context.colores.negocio.texto,
                     ),
                     AreasDonutSlice(
                       label: 'Blandas',
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: horasBlandas,
-                      color: const Color(0xFF009B61),
+                      color: context.colores.blandas.texto,
                     ),
                     AreasDonutSlice(
                       label: 'Libres',
                       help:
                           'Horas de formación libre o exploratoria realizadas por los colaboradores de las áreas.',
                       value: horasLibres,
-                      color: const Color(0xFFDB2777),
+                      color: context.colores.exploracion.texto,
                     ),
                     AreasDonutSlice(
                       label: 'Dictado',
                       help:
                           'Horas cargadas como dictado de capacitaciones por colaboradores de las áreas.',
                       value: horasDictado,
-                      color: const Color(0xFFF59E0B),
+                      color: context.colores.dictado.texto,
                     ),
                   ],
                 ),

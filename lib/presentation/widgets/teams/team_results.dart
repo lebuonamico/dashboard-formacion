@@ -1,7 +1,7 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_card.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 import 'package:flutter/material.dart';
 
 const _maxCardWidth = 410.0;
@@ -74,12 +74,12 @@ class _EquiposResultsState extends State<EquiposResults> {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   'Equipos',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: equiposInk,
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -90,7 +90,10 @@ class _EquiposResultsState extends State<EquiposResults> {
                   widget.equipos.length == widget.totalEquipos
                       ? '${widget.totalEquipos} equipos en el período'
                       : '${widget.equipos.length} de ${widget.totalEquipos} equipos',
-                  style: const TextStyle(fontSize: 13, color: equiposMuted),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -138,15 +141,15 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF4FF),
+        color: context.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         '$count',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: equiposBrand,
+          color: context.colorScheme.primary,
         ),
       ),
     );
@@ -187,19 +190,29 @@ class _EmptySearch extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 24),
-      decoration: equiposPanelDecoration(),
-      child: const Column(
+      decoration: context.panel(),
+      child: Column(
         children: [
-          Icon(Icons.search_off_outlined, size: 30, color: equiposMuted),
+          Icon(
+            Icons.search_off_outlined,
+            size: 30,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
           SizedBox(height: 10),
           Text(
             'No encontramos equipos con esos filtros.',
-            style: TextStyle(fontWeight: FontWeight.w600, color: equiposInk),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface,
+            ),
           ),
           SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda, área o estado.',
-            style: TextStyle(fontSize: 13, color: equiposMuted),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ class _AnfitrionState extends State<_Anfitrion> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: AppTheme.light(),
       home: Scaffold(
         body: Align(
           alignment: Alignment.topLeft,
@@ -114,30 +116,33 @@ void main() {
       expect(_limpiar(tester).onPressed, isNotNull);
     });
 
-    testWidgets('"Limpiar" vacía el buscador y vuelve los desplegables a todos', (
-      tester,
-    ) async {
-      await tester.pumpWidget(const _Anfitrion());
+    testWidgets(
+      '"Limpiar" vacía el buscador y vuelve los desplegables a todos',
+      (tester) async {
+        await tester.pumpWidget(const _Anfitrion());
 
-      await tester.enterText(find.byType(TextField), 'ventas');
-      await tester.tap(find.text('Todos los estados'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Estado A').last);
-      await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'ventas');
+        await tester.tap(find.text('Todos los estados'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Estado A').last);
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Limpiar'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Limpiar'));
+        await tester.pumpAndSettle();
 
-      final estado = tester.state<_AnfitrionState>(find.byType(_Anfitrion));
-      expect(estado.busqueda, isEmpty);
-      expect(estado.estado, isNull);
-      // El campo de texto y el desplegable reflejan el vaciado.
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          isEmpty);
-      expect(find.text('Estado A'), findsNothing);
-      expect(find.text('Todos los estados'), findsOneWidget);
-      expect(_limpiar(tester).onPressed, isNull);
-    });
+        final estado = tester.state<_AnfitrionState>(find.byType(_Anfitrion));
+        expect(estado.busqueda, isEmpty);
+        expect(estado.estado, isNull);
+        // El campo de texto y el desplegable reflejan el vaciado.
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty,
+        );
+        expect(find.text('Estado A'), findsNothing);
+        expect(find.text('Todos los estados'), findsOneWidget);
+        expect(_limpiar(tester).onPressed, isNull);
+      },
+    );
 
     testWidgets('un desplegable con onChanged nulo queda deshabilitado', (
       tester,
@@ -155,7 +160,8 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          theme: AppTheme.light(),
           home: Scaffold(
             body: FilterBar(
               searchHint: 'Buscar...',

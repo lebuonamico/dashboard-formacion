@@ -1,4 +1,4 @@
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
 import 'package:flutter/material.dart';
 
@@ -34,7 +34,7 @@ class AreasKpiSection extends StatelessWidget {
               ? 'Áreas con colaboradores elegibles en al menos uno de los meses con datos del año.'
               : 'Áreas con colaboradores elegibles en el período seleccionado.',
           icon: Icons.apartment_outlined,
-          color: areasBrand,
+          color: context.colorScheme.primary,
         ),
         KpiData(
           title: 'Colaboradores',
@@ -44,7 +44,7 @@ class AreasKpiSection extends StatelessWidget {
               ? 'Colaboradores únicos que fueron elegibles en al menos uno de los meses con datos del año.'
               : 'Colaboradores elegibles en el período seleccionado.',
           icon: Icons.people_outline,
-          color: const Color(0xFF0E7490),
+          color: context.colores.acentoCian,
         ),
         KpiData(
           title: 'Horas realizadas',
@@ -55,8 +55,8 @@ class AreasKpiSection extends StatelessWidget {
               : 'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',
           icon: Icons.schedule_outlined,
           color: desvioHoras >= 0
-              ? const Color(0xFF16A34A)
-              : const Color(0xFF6941C6),
+              ? context.colores.exito.texto
+              : context.colores.acentoVioleta,
         ),
         KpiData(
           title: 'Cumplimiento global',
@@ -69,8 +69,8 @@ class AreasKpiSection extends StatelessWidget {
               : 'Porcentaje de horas válidas realizadas sobre las horas objetivo del período.',
           icon: Icons.trending_up,
           color: cumplimientoGlobal >= 100
-              ? const Color(0xFF16A34A)
-              : const Color(0xFFD97706),
+              ? context.colores.exito.texto
+              : context.colores.advertencia.texto,
         ),
       ],
     );

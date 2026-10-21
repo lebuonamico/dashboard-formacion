@@ -1,10 +1,13 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/presentation/providers/tema_provider.dart';
 
 /// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
-/// tarjeta con el detalle de la cuenta, incluido el rol.
+/// tarjeta con el detalle de la cuenta, incluido el rol, y el selector de
+/// apariencia (sistema, claro u oscuro).
 ///
 /// Cuando la app corre sin Supabase (modo local) no hay sesión, así que cae en
 /// la 'U' genérica y en el texto "Modo local".
@@ -14,6 +17,8 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
+    final apariencia = ref.watch(temaProvider);
+    final cs = context.colorScheme;
     final datos = _DatosUsuario(
       email: auth.email,
       nombre: auth.nombre,
@@ -22,21 +27,23 @@ class UserAvatar extends ConsumerWidget {
       modoLocal: !auth.enabled,
     );
 
-    return PopupMenuButton<void>(
+    return PopupMenuButton<ThemeMode>(
       tooltip: 'Mi cuenta',
       offset: const Offset(0, 52),
-      color: Colors.white,
-      surfaceTintColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
+      onSelected: ref.read(temaProvider.notifier).cambiar,
       itemBuilder: (_) => [
-        PopupMenuItem<void>(
+        PopupMenuItem<ThemeMode>(
           enabled: false,
           padding: EdgeInsets.zero,
           child: _TarjetaUsuario(datos: datos),
         ),
+        const PopupMenuDivider(),
+        for (final opcion in _OpcionApariencia.values)
+          _EntradaApariencia(
+            key: Key('apariencia_${opcion.modo.name}'),
+            opcion: opcion,
+            seleccionada: opcion.modo == apariencia,
+          ),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -55,10 +62,10 @@ class UserAvatar extends ConsumerWidget {
                     datos.titulo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0F172A),
+                      color: cs.onSurface,
                     ),
                   ),
                   if (datos.subtitulo != null)
@@ -66,21 +73,166 @@ class UserAvatar extends ConsumerWidget {
                       datos.subtitulo!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                 ],
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 20,
-              color: Color(0xFF64748B),
+              color: cs.onSurfaceVariant,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _OpcionApariencia {
+  sistema(
+    ThemeMode.system,
+    'Usar tema del sistema',
+    Icons.brightness_auto_outlined,
+  ),
+  claro(ThemeMode.light, 'Tema claro', Icons.light_mode_outlined),
+  oscuro(ThemeMode.dark, 'Tema oscuro', Icons.dark_mode_outlined);
+
+  final ThemeMode modo;
+  final String label;
+  final IconData icono;
+
+  const _OpcionApariencia(this.modo, this.label, this.icono);
+}
+
+/// Opción de apariencia del menú de la cuenta. Es una entrada propia (y no un
+/// `PopupMenuItem`) para tener el mismo feedback que los ítems del side menu:
+/// sin ripple, con un fondo que se desvanece entre reposo, hover, presionado y
+/// seleccionado, y texto e ícono que cambian de color con la misma curva.
+class _EntradaApariencia extends PopupMenuEntry<ThemeMode> {
+  final _OpcionApariencia opcion;
+  final bool seleccionada;
+
+  const _EntradaApariencia({
+    super.key,
+    required this.opcion,
+    required this.seleccionada,
+  });
+
+  @override
+  double get height => 44;
+
+  @override
+  bool represents(ThemeMode? value) => value == opcion.modo;
+
+  @override
+  State<_EntradaApariencia> createState() => _EntradaAparienciaState();
+}
+
+class _EntradaAparienciaState extends State<_EntradaApariencia> {
+  /// Igual que la transición de color de los ítems del side menu.
+  static const _duracion = Duration(milliseconds: 200);
+  static final _radio = BorderRadius.circular(8);
+
+  bool _hover = false;
+  bool _presionado = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final marca = cs.primary;
+    final seleccionada = widget.seleccionada;
+    final colorTexto = seleccionada ? marca : cs.onSurface;
+    final colorIcono = seleccionada ? marca : cs.onSurfaceVariant;
+    final colorFondo = _presionado
+        ? marca.withValues(alpha: seleccionada ? 0.14 : 0.1)
+        : seleccionada
+        ? marca.withValues(alpha: _hover ? 0.11 : 0.08)
+        : _hover
+        ? cs.onSurface.withValues(alpha: 0.05)
+        : cs.onSurface.withValues(alpha: 0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Listener(
+          onPointerDown: (_) => setState(() => _presionado = true),
+          onPointerUp: (_) => setState(() => _presionado = false),
+          onPointerCancel: (_) => setState(() => _presionado = false),
+          child: AnimatedContainer(
+            duration: _duracion,
+            curve: Curves.easeOut,
+            height: widget.height - 4,
+            decoration: BoxDecoration(color: colorFondo, borderRadius: _radio),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: _radio,
+                // Sin ripple ni resaltados propios: el feedback lo da el fondo.
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                focusColor: marca.withValues(alpha: 0.08),
+                onTap: () => Navigator.of(context).pop(widget.opcion.modo),
+                child: Semantics(
+                  selected: seleccionada,
+                  child: TweenAnimationBuilder<Color?>(
+                    tween: ColorTween(end: colorIcono),
+                    duration: _duracion,
+                    curve: Curves.easeOut,
+                    builder: (context, icono, _) =>
+                        TweenAnimationBuilder<Color?>(
+                          tween: ColorTween(end: colorTexto),
+                          duration: _duracion,
+                          curve: Curves.easeOut,
+                          builder: (context, texto, _) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  widget.opcion.icono,
+                                  size: 18,
+                                  color: icono,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    widget.opcion.label,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: seleccionada
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: texto,
+                                    ),
+                                  ),
+                                ),
+                                AnimatedOpacity(
+                                  opacity: seleccionada ? 1 : 0,
+                                  duration: _duracion,
+                                  curve: Curves.easeOut,
+                                  child: Icon(
+                                    Icons.check_rounded,
+                                    size: 18,
+                                    color: texto,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -131,12 +283,13 @@ class _FotoUsuario extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     final inicial = CircleAvatar(
       radius: radio,
-      backgroundColor: const Color(0xFF0D53C3),
+      backgroundColor: cs.primary,
       child: Text(
         datos.inicial,
-        style: TextStyle(color: Colors.white, fontSize: radio * 0.85),
+        style: TextStyle(color: cs.onPrimary, fontSize: radio * 0.85),
       ),
     );
     final url = datos.fotoUrl;
@@ -161,6 +314,7 @@ class _TarjetaUsuario extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.colorScheme;
     return SizedBox(
       width: 280,
       child: Padding(
@@ -181,10 +335,10 @@ class _TarjetaUsuario extends StatelessWidget {
                             (datos.modoLocal ? 'Modo local' : 'Usuario'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                          color: cs.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -192,9 +346,9 @@ class _TarjetaUsuario extends StatelessWidget {
                         datos.email ?? 'Sin sesión iniciada',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF64748B),
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -203,14 +357,14 @@ class _TarjetaUsuario extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            const Divider(height: 1),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Rol',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: cs.onSurfaceVariant,
                 letterSpacing: 0.5,
               ),
             ),
@@ -234,18 +388,21 @@ class _BadgeRol extends StatelessWidget {
     final conocido = RolUsuario.fromString(rol);
     final crudo = rol?.trim() ?? '';
 
+    final cs = context.colorScheme;
+    final advertencia = context.colores.advertencia;
+
     // Un rol irreconocible se muestra tal cual, en ámbar, como en el panel admin.
     final (texto, color, fondo, descripcion) = conocido != null
         ? (
             conocido.label,
-            const Color(0xFF0D53C3),
-            const Color(0xFFE8F0FC),
+            cs.primary,
+            cs.primaryContainer,
             conocido.descripcion,
           )
         : (
             modoLocal ? 'Sin rol' : (crudo.isEmpty ? 'Sin rol' : crudo),
-            const Color(0xFFD97706),
-            const Color(0xFFFEF3C7),
+            advertencia.texto,
+            advertencia.fondo,
             modoLocal
                 ? 'La app corre sin Supabase, no hay usuario autenticado.'
                 : 'Rol no reconocido por el sistema.',
@@ -272,7 +429,10 @@ class _BadgeRol extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           descripcion,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+          style: TextStyle(
+            fontSize: 12,
+            color: context.colores.textoIntermedio,
+          ),
         ),
       ],
     );

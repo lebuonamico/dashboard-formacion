@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/mensaje_chat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -12,10 +13,12 @@ class AsistenteMensaje extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const texto = TextStyle(
+    final cs = context.colorScheme;
+    final colores = context.colores;
+    final texto = TextStyle(
       fontSize: 14,
       height: 1.65,
-      color: Color(0xFF263651),
+      color: colores.textoIntermedio,
     );
     final reducirMovimiento =
         MediaQuery.disableAnimationsOf(context) ||
@@ -46,18 +49,14 @@ class AsistenteMensaje extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: mensaje.esUsuario
-                  ? const LinearGradient(
+                  ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFFEDF3FF), Color(0xFFEEEDFD)],
+                      colors: colores.iaBurbujaUsuario,
                     )
                   : null,
-              color: mensaje.esUsuario ? null : Colors.white,
-              border: Border.all(
-                color: mensaje.esUsuario
-                    ? const Color(0xFFDCE4F8)
-                    : const Color(0xFFE4E9F3),
-              ),
+              color: mensaje.esUsuario ? null : cs.surface,
+              border: Border.all(color: cs.outlineVariant),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(mensaje.esUsuario ? 20 : 6),
                 topRight: Radius.circular(mensaje.esUsuario ? 6 : 20),
@@ -73,10 +72,10 @@ class AsistenteMensaje extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (mensaje.esUsuario)
-                      const Icon(
+                      Icon(
                         Icons.person_outline_rounded,
                         size: 17,
-                        color: Color(0xFF5D6392),
+                        color: cs.onSurfaceVariant,
                       )
                     else
                       const AsistenteSimbolo(size: 23),
@@ -85,8 +84,8 @@ class AsistenteMensaje extends StatelessWidget {
                       child: Text(
                         // La pantalla visible no prueba la fuente de la respuesta.
                         mensaje.esUsuario ? 'Vos' : 'Asistente IA',
-                        style: const TextStyle(
-                          color: Color(0xFF596386),
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
                           fontSize: 11.5,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
@@ -132,33 +131,31 @@ class AsistenteMensaje extends StatelessWidget {
                           h6: texto.copyWith(fontWeight: FontWeight.w700),
                           blockSpacing: 12,
                           listIndent: 20,
-                          listBullet: texto.copyWith(
-                            color: const Color(0xFF6B5ECB),
-                          ),
-                          a: const TextStyle(
-                            color: Color(0xFF245BA9),
+                          listBullet: texto.copyWith(color: colores.ia.texto),
+                          a: TextStyle(
+                            color: cs.primary,
                             decoration: TextDecoration.underline,
                           ),
-                          code: const TextStyle(
+                          code: TextStyle(
                             fontSize: 12.5,
                             height: 1.5,
                             fontFamily: 'monospace',
-                            color: Color(0xFF55429D),
+                            color: colores.ia.texto,
                           ),
                           codeblockDecoration: BoxDecoration(
-                            color: const Color(0xFFF1F2FA),
-                            border: Border.all(color: const Color(0xFFE2E5F3)),
+                            color: colores.ia.fondo,
+                            border: Border.all(color: cs.outlineVariant),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           codeblockPadding: const EdgeInsets.all(12),
                           blockquote: texto.copyWith(
-                            color: const Color(0xFF546381),
+                            color: cs.onSurfaceVariant,
                           ),
-                          blockquoteDecoration: const BoxDecoration(
-                            color: Color(0xFFF0F3FB),
+                          blockquoteDecoration: BoxDecoration(
+                            color: colores.ia.fondo,
                             border: Border(
                               left: BorderSide(
-                                color: Color(0xFF7B6ACF),
+                                color: colores.ia.texto,
                                 width: 3,
                               ),
                             ),
@@ -183,11 +180,11 @@ class AsistenteMensaje extends StatelessWidget {
                           tableScrollbarThumbVisibility: true,
                           tablePadding: const EdgeInsets.only(bottom: 12),
                           tableCellsPadding: const EdgeInsets.all(10),
-                          tableHeadCellsDecoration: const BoxDecoration(
-                            color: Color(0xFFEEF1FB),
+                          tableHeadCellsDecoration: BoxDecoration(
+                            color: colores.ia.fondo,
                           ),
                           tableBorder: TableBorder.all(
-                            color: const Color(0xFFDFE5F0),
+                            color: cs.outlineVariant,
                             width: .7,
                           ),
                         ),
@@ -211,48 +208,57 @@ class AsistenteSimbolo extends StatelessWidget {
   const AsistenteSimbolo({super.key, this.size = 40, this.halo = false});
 
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2463CC), Color(0xFF7755CC), Color(0xFF37B8CB)],
-          stops: [0, .63, 1],
+  Widget build(BuildContext context) {
+    final colores = context.colores;
+    final gradiente = colores.iaGradienteSimbolo;
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradiente,
+            stops: const [0, .63, 1],
+          ),
+          border: Border.all(
+            color: colores.sobreGradiente.withValues(alpha: .33),
+          ),
+          boxShadow: halo
+              ? [
+                  BoxShadow(
+                    color: gradiente[1].withValues(alpha: .16),
+                    blurRadius: 28,
+                    spreadRadius: 7,
+                  ),
+                  BoxShadow(
+                    color: gradiente[2].withValues(alpha: .12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : null,
         ),
-        border: Border.all(color: const Color(0x55FFFFFF)),
-        boxShadow: halo
-            ? const [
-                BoxShadow(
-                  color: Color(0x296B59D1),
-                  blurRadius: 28,
-                  spreadRadius: 7,
-                ),
-                BoxShadow(
-                  color: Color(0x1F3C9CD2),
-                  blurRadius: 14,
-                  offset: Offset(0, 5),
-                ),
-              ]
-            : null,
+        child: CustomPaint(painter: _NucleoIaPainter(colores.sobreGradiente)),
       ),
-      child: CustomPaint(painter: const _NucleoIaPainter()),
-    ),
-  );
+    );
+  }
 }
 
 class _NucleoIaPainter extends CustomPainter {
-  const _NucleoIaPainter();
+  /// Color de la órbita y los destellos, que se dibujan sobre el gradiente.
+  final Color luz;
+
+  const _NucleoIaPainter(this.luz);
 
   @override
   void paint(Canvas canvas, Size size) {
     final lado = size.shortestSide;
     final centro = Offset(size.width * .48, size.height * .5);
     final orbita = Paint()
-      ..color = const Color(0x99DBF8FF)
+      ..color = luz.withValues(alpha: .6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = math.max(.8, lado * .018)
       ..strokeCap = StrokeCap.round;
@@ -271,7 +277,7 @@ class _NucleoIaPainter extends CustomPainter {
       orbita,
     );
     canvas.restore();
-    final luz = Paint()..color = const Color(0xFFF5FDFF);
+    final pintura = Paint()..color = luz;
     void destello(Offset c, double r) {
       final path = Path()
         ..moveTo(c.dx, c.dy - r)
@@ -280,14 +286,14 @@ class _NucleoIaPainter extends CustomPainter {
         ..quadraticBezierTo(c.dx - r * .14, c.dy + r * .14, c.dx - r, c.dy)
         ..quadraticBezierTo(c.dx - r * .14, c.dy - r * .14, c.dx, c.dy - r)
         ..close();
-      canvas.drawPath(path, luz);
+      canvas.drawPath(path, pintura);
     }
 
     destello(centro, lado * .245);
     destello(Offset(lado * .76, lado * .25), lado * .09);
-    canvas.drawCircle(Offset(lado * .23, lado * .74), lado * .035, luz);
+    canvas.drawCircle(Offset(lado * .23, lado * .74), lado * .035, pintura);
   }
 
   @override
-  bool shouldRepaint(_NucleoIaPainter oldDelegate) => false;
+  bool shouldRepaint(_NucleoIaPainter oldDelegate) => oldDelegate.luz != luz;
 }

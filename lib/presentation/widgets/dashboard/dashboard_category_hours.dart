@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:flutter/material.dart';
@@ -34,25 +35,14 @@ class DashboardCategoryHours extends StatelessWidget {
 
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x060F172A),
-                blurRadius: 10,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: context.panel(sombra: true),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -61,7 +51,7 @@ class DashboardCategoryHours extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: context.colorScheme.onSurface,
                           ),
                         ),
                         SizedBox(height: 3),
@@ -69,7 +59,7 @@ class DashboardCategoryHours extends StatelessWidget {
                           'Distribución por categorías prioritarias de aprendizaje.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF64748B),
+                            color: context.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -78,7 +68,10 @@ class DashboardCategoryHours extends StatelessWidget {
                   const SizedBox(width: 16),
                   Text(
                     'Referencia sobre las horas esperadas',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -139,19 +132,17 @@ class _CategoryHoursCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = summary.meetsTarget
-        ? const Color(0xFF008542)
-        : const Color(0xFFF59E0B);
+        ? context.colores.exito.texto
+        : context.colores.advertencia.texto;
     final background = summary.meetsTarget
-        ? const Color(0xFFECFDF5)
-        : const Color(0xFFFFFBEB);
+        ? context.colores.exito.fondo
+        : context.colores.advertencia.fondo;
     final difference = summary.expected - summary.completed;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAFBFF),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFD8DFEF)),
+      decoration: context.panel().copyWith(
+        color: context.colorScheme.surfaceContainerLow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,10 +154,10 @@ class _CategoryHoursCard extends StatelessWidget {
                   tipo.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -199,16 +190,16 @@ class _CategoryHoursCard extends StatelessWidget {
               RichText(
                 text: TextSpan(
                   text: '${summary.completed.toStringAsFixed(1)} h',
-                  style: const TextStyle(
-                    color: Color(0xFF0F172A),
+                  style: TextStyle(
+                    color: context.colorScheme.onSurface,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
-                  children: const [
+                  children: [
                     TextSpan(
                       text: ' alcanzadas',
                       style: TextStyle(
-                        color: Color(0xFF64748B),
+                        color: context.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -217,7 +208,10 @@ class _CategoryHoursCard extends StatelessWidget {
               ),
               Text(
                 'Esperadas: ${summary.expected.toStringAsFixed(1)} h',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -227,7 +221,7 @@ class _CategoryHoursCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: summary.progress,
               minHeight: 6,
-              backgroundColor: const Color(0xFFE5ECFA),
+              backgroundColor: context.colores.graficoPista,
               color: color,
             ),
           ),

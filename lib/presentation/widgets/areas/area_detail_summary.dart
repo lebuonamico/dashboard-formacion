@@ -1,7 +1,8 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 
 class AreaDetalleHeader extends StatelessWidget {
   final AreaGlobalViewModel area;
@@ -29,17 +30,20 @@ class AreaDetalleHeader extends StatelessWidget {
           children: [
             Text(
               area.nombre,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: areasInk,
+                color: context.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 5),
             Text(
               '$colaboradores ${colaboradores == 1 ? 'colaborador' : 'colaboradores'}'
               ' · $equipos ${equipos == 1 ? 'equipo general' : 'equipos generales'}',
-              style: const TextStyle(fontSize: 14, color: areasMuted),
+              style: TextStyle(
+                fontSize: 14,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -49,24 +53,24 @@ class AreaDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: areasBorder),
+                color: context.colorScheme.surface,
+                border: Border.all(color: context.colorScheme.outlineVariant),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_month_outlined,
                     size: 16,
-                    color: areasMuted,
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     periodo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: areasInk,
+                      color: context.colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -76,7 +80,7 @@ class AreaDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: area.semaforo.colorFondo,
+                color: area.semaforo.colores(context).fondo,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -84,7 +88,7 @@ class AreaDetalleHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: area.semaforo.colorTexto,
+                  color: area.semaforo.colores(context).texto,
                 ),
               ),
             ),
@@ -158,13 +162,16 @@ class _AreaProgressPanel extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: areasPanelDecoration(),
+      decoration: context.panel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Avance del área',
-            style: TextStyle(fontWeight: FontWeight.w700, color: areasInk),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: context.colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 18),
           Row(
@@ -175,15 +182,15 @@ class _AreaProgressPanel extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: area.semaforo.colorTexto,
+                  color: area.semaforo.colores(context).texto,
                 ),
               ),
               Text(
                 '${area.horasRealizadas.toStringAsFixed(1)} de ${area.horasObjetivo.toStringAsFixed(1)} h',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: areasMuted,
+                  color: context.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -194,8 +201,8 @@ class _AreaProgressPanel extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 9,
-              backgroundColor: const Color(0xFFEAECF0),
-              color: area.semaforo.colorTexto,
+              backgroundColor: context.colores.graficoPista,
+              color: area.semaforo.colores(context).texto,
             ),
           ),
           const SizedBox(height: 20),
@@ -238,15 +245,18 @@ class _MetricRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 13, color: areasMuted),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: areasInk,
+            color: context.colorScheme.onSurface,
           ),
         ),
       ],

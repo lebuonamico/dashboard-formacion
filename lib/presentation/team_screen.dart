@@ -1,10 +1,11 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_detail_summary.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_members_table.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_status_style.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
@@ -32,7 +33,7 @@ class EquipoScreen extends ConsumerWidget {
     final periodo = _periodoLabel(alcance, mes, anio);
 
     return Scaffold(
-      backgroundColor: equiposBackground,
+      backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
           // Leandro: llama al widget AppTopBar para mostrar el título del detalle y permitir volver a la pantalla anterior.
@@ -40,8 +41,10 @@ class EquipoScreen extends ConsumerWidget {
           Expanded(
             // Leandro: llama a AsyncValue.when para mostrar la carga, el error o los datos del equipo.
             child: detalleAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: equiposBrand),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  color: context.colorScheme.primary,
+                ),
               ),
               error: (error, _) => _ErrorState(message: '$error'),
               data: (detalle) => FadeIn(
@@ -105,7 +108,7 @@ class _EquipoContent extends StatelessWidget {
     final equipo = detalle.resumen;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: paddingPantalla,
       children: [
         // Leandro: llama al widget EquipoDetalleHeader para mostrar el nombre, el período y el estado del equipo.
         EquipoDetalleHeader(equipo: equipo, periodo: periodo),
@@ -122,7 +125,7 @@ class _EquipoContent extends StatelessWidget {
                   ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
                   : 'Personas de la nómina que pertenecen al equipo evaluado en el período.',
               icon: Icons.people_outline,
-              color: equiposBrand,
+              color: context.colorScheme.primary,
             ),
             KpiData(
               title: 'Horas realizadas',
@@ -132,7 +135,7 @@ class _EquipoContent extends StatelessWidget {
                   ? 'Suma de las horas válidas de los meses con datos del año.'
                   : 'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
               icon: Icons.schedule_outlined,
-              color: const Color(0xFF0E7490),
+              color: context.colores.acentoCian,
             ),
             KpiData(
               title: 'Objetivo del período',
@@ -142,7 +145,7 @@ class _EquipoContent extends StatelessWidget {
                   ? 'Suma de los objetivos mensuales de los integrantes elegibles en los meses con datos del año.'
                   : 'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
               icon: Icons.flag_outlined,
-              color: const Color(0xFF6941C6),
+              color: context.colores.acentoVioleta,
             ),
             KpiData(
               title: 'Cumplimiento',
@@ -153,7 +156,7 @@ class _EquipoContent extends StatelessWidget {
                   ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
                   : 'Horas realizadas sobre horas objetivo; el estado final también considera cuántos integrantes cumplieron.',
               icon: Icons.trending_up,
-              color: equipo.estado.colorTexto,
+              color: equipo.estado.colores(context).texto,
             ),
           ],
         ),
@@ -177,10 +180,7 @@ class _EmptyContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-      children: [child],
-    );
+    return ListView(padding: paddingPantalla, children: [child]);
   }
 }
 
@@ -197,7 +197,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           'No pudimos cargar el equipo.\n$message',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFFDC2626)),
+          style: TextStyle(color: context.colorScheme.error),
         ),
       ),
     );

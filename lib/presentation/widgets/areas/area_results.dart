@@ -1,6 +1,6 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_card.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:flutter/material.dart';
 
@@ -76,12 +76,12 @@ class _AreasResultsState extends State<AreasResults> {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   'Áreas',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: areasInk,
+                    color: context.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -91,7 +91,10 @@ class _AreasResultsState extends State<AreasResults> {
                   widget.areas.length == widget.totalAreas
                       ? '${widget.totalAreas} áreas en el período'
                       : '${widget.areas.length} de ${widget.totalAreas} áreas',
-                  style: const TextStyle(fontSize: 13, color: areasMuted),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -140,15 +143,15 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF4FF),
+        color: context.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         '$count',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: areasBrand,
+          color: context.colorScheme.primary,
         ),
       ),
     );
@@ -192,19 +195,29 @@ class _EmptySearch extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 24),
-      decoration: areasPanelDecoration(),
-      child: const Column(
+      decoration: context.panel(),
+      child: Column(
         children: [
-          Icon(Icons.search_off_outlined, size: 30, color: areasMuted),
+          Icon(
+            Icons.search_off_outlined,
+            size: 30,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
           SizedBox(height: 10),
           Text(
             'No hay áreas que coincidan con la búsqueda.',
-            style: TextStyle(fontWeight: FontWeight.w600, color: areasInk),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface,
+            ),
           ),
           SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda o estado.',
-            style: TextStyle(fontSize: 13, color: areasMuted),
+            style: TextStyle(
+              fontSize: 13,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

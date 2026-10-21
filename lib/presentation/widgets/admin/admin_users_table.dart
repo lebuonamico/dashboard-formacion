@@ -1,8 +1,9 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
+import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_styles.dart';
 
 class AdminUsuariosTable extends StatefulWidget {
   static const usuariosPorPagina = 8;
@@ -69,7 +70,7 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
         ],
         Container(
           width: double.infinity,
-          decoration: equiposPanelDecoration(),
+          decoration: context.panel(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LayoutBuilder(
@@ -84,8 +85,8 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
                     ),
                     child: DataTable(
                       showCheckboxColumn: false,
-                      headingRowColor: const WidgetStatePropertyAll(
-                        equiposBackground,
+                      headingRowColor: WidgetStatePropertyAll(
+                        context.colorScheme.surfaceContainerLow,
                       ),
                       dataRowMinHeight: 56,
                       dataRowMaxHeight: 64,
@@ -142,16 +143,18 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
   }
 
   DataRow _buildRow(UsuarioAutorizado usuario) {
+    final cs = context.colorScheme;
+    final colores = context.colores;
     final seleccionado = usuario.email == widget.emailSeleccionado;
     final esPropio = usuario.esMismoUsuario(widget.emailPropio);
-    final estado = coloresEstadoUsuario(usuario.estado);
     final rol = usuario.rolConocido;
+    final marca = ParColores(cs.onPrimaryContainer, cs.primaryContainer);
 
     return DataRow(
       selected: seleccionado,
       color: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
-            ? equiposBrand.withValues(alpha: 0.06)
+            ? cs.primary.withValues(alpha: 0.06)
             : null,
       ),
       onSelectChanged: (valor) =>
@@ -162,41 +165,31 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
             children: [
               Text(
                 usuario.email,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: equiposInk,
+                  color: cs.onSurface,
                 ),
               ),
               if (esPropio) ...[
                 const SizedBox(width: 8),
-                const AdminChip(
-                  label: 'Vos',
-                  texto: Color(0xFF1D4ED8),
-                  fondo: Color(0xFFEFF6FF),
-                ),
+                EtiquetaColor(texto: 'Vos', colores: marca),
               ],
             ],
           ),
         ),
         DataCell(
           rol == null
-              ? AdminChip(
-                  label: usuario.rol.isEmpty ? 'Sin rol' : usuario.rol,
-                  texto: const Color(0xFFD97706),
-                  fondo: const Color(0xFFFEF3C7),
+              ? EtiquetaColor(
+                  texto: usuario.rol.isEmpty ? 'Sin rol' : usuario.rol,
+                  colores: colores.advertencia,
                   icono: Icons.help_outline,
                 )
-              : AdminChip(
-                  label: rol.label,
-                  texto: const Color(0xFF1D4ED8),
-                  fondo: const Color(0xFFEFF6FF),
-                ),
+              : EtiquetaColor(texto: rol.label, colores: marca),
         ),
         DataCell(
-          AdminChip(
-            label: usuario.estado.label,
-            texto: estado.texto,
-            fondo: estado.fondo,
+          EtiquetaColor(
+            texto: usuario.estado.label,
+            colores: coloresEstadoUsuario(colores, usuario.estado),
           ),
         ),
         DataCell(_sello(usuario.ffAlta)),
@@ -210,7 +203,9 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
     formatearSello(fecha),
     style: TextStyle(
       fontSize: 13,
-      color: fecha == null ? const Color(0xFF94A3B8) : const Color(0xFF334155),
+      color: fecha == null
+          ? context.colores.textoTenue
+          : context.colores.textoIntermedio,
     ),
   );
 }

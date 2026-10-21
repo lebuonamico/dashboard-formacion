@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -403,6 +404,7 @@ void main() {
         ProviderScope(
           overrides: [authControllerProvider.overrideWith((ref) => auth)],
           child: MaterialApp.router(
+            theme: AppTheme.light(),
             routerConfig: router,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(

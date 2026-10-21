@@ -1,10 +1,14 @@
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
-import 'package:app_finnegans/presentation/widgets/shared/app_back_button.dart';
+import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
+import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,32 +37,18 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     final hayDatosPeriodo =
         ref.watch(hayDatosEquiposPeriodoProvider).value ?? true;
 
+    final estiloSeccion = TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      color: context.colorScheme.onSurface,
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // TopBar con botón Volver
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              children: [
-                AppBackButton(onPressed: () => context.pop()),
-                const SizedBox(width: 8),
-                const Text(
-                  'Perfil del colaborador',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-            ),
+          AppTopBar(
+            title: 'Perfil del colaborador',
+            onBack: () => context.pop(),
           ),
 
           // Contenido
@@ -78,10 +68,11 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                   final cump = detalle.cumplimiento;
 
                   return ListView(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: paddingPantalla,
                     children: [
                       // Cabecera con datos del empleado
                       _buildHeaderEmpleado(
+                        context,
                         emp,
                         cump,
                         mostrarCumplimiento: hayDatosPeriodo,
@@ -101,27 +92,19 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         // Desglose de cumplimiento por categoría
                         Text(
                           'Desglose del plan de formación ($periodoTexto)',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
-                          ),
+                          style: estiloSeccion,
                         ),
                         const SizedBox(height: 12),
-                        _buildGridCategorias(cump),
+                        _buildGridCategorias(context, cump),
                         const SizedBox(height: 24),
 
                         // Cursos del período: Moodle y CRM
                         Text(
                           'Cursos del período ($periodoTexto)',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
-                          ),
+                          style: estiloSeccion,
                         ),
                         const SizedBox(height: 12),
-                        _buildColumnasCursos(detalle),
+                        _buildColumnasCursos(context, detalle),
                         const SizedBox(height: 24),
                       ],
 
@@ -131,16 +114,12 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                                   0) >
                               0 ||
                           detalle.cursosDictados.isNotEmpty) ...[
-                        const Text(
+                        Text(
                           'Cursos dictados como instructor',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
-                          ),
+                          style: estiloSeccion,
                         ),
                         const SizedBox(height: 12),
-                        _buildTablaDictados(detalle.cursosDictados),
+                        _buildTablaDictados(context, detalle.cursosDictados),
                       ],
                     ],
                   );
@@ -154,30 +133,31 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
   }
 
   Widget _buildHeaderEmpleado(
+    BuildContext context,
     Empleado emp,
     CumplimientoEmpleado cump, {
     required bool mostrarCumplimiento,
   }) {
+    final cs = context.colorScheme;
+    final estadoCumplimiento = cump.cumpleObjetivo
+        ? context.colores.exito
+        : context.colores.advertencia;
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 36,
-            backgroundColor: const Color(0xFF0D53C3),
+            backgroundColor: cs.primary,
             child: Text(
               emp.nombre.trim().isEmpty
                   ? '?'
                   : emp.nombre.trim().substring(0, 1).toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 28,
-                color: Colors.white,
+                color: cs.onPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -191,48 +171,25 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                   children: [
                     Text(
                       '${emp.nombre} ${emp.apellido}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: cs.onSurface,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        emp.seniority.label,
-                        style: const TextStyle(
-                          color: Color(0xFF1D4ED8),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
+                    SeniorityChip(seniority: emp.seniority),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Área de ${emp.area} · Legajo: ${emp.legajo}',
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   emp.mail,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -257,9 +214,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: cump.cumpleObjetivo
-                    ? const Color(0xFFDCFCE7)
-                    : const Color(0xFFFEF3C7),
+                color: estadoCumplimiento.fondo,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -269,9 +224,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: cump.cumpleObjetivo
-                          ? const Color(0xFF16A34A)
-                          : const Color(0xFFD97706),
+                      color: estadoCumplimiento.texto,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -280,18 +233,13 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: cump.cumpleObjetivo
-                          ? const Color(0xFF16A34A)
-                          : const Color(0xFFD97706),
+                      color: estadoCumplimiento.texto,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'CRM declaró ${cump.totalHorasDeclaradas.toStringAsFixed(0)} hs',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -303,7 +251,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
   String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
 
-  Widget _buildGridCategorias(CumplimientoEmpleado cump) {
+  Widget _buildGridCategorias(BuildContext context, CumplimientoEmpleado cump) {
     return Row(
       children: TipoCurso.values.map((tipo) {
         final completadas = cump.horasValidas[tipo] ?? 0.0;
@@ -316,19 +264,15 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           child: Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
+            decoration: context.panel(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   tipo.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -343,18 +287,18 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: !requerida
-                        ? const Color(0xFF64748B)
+                        ? context.colorScheme.onSurfaceVariant
                         : cumple
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFDC2626),
+                        ? context.colores.exito.texto
+                        : context.colores.peligro.texto,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'CRM declaró ${declaradas.toStringAsFixed(0)} hs',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF64748B),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -365,12 +309,12 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         ? 0.0
                         : (completadas / requeridas).clamp(0.0, 1.0),
                     minHeight: 4,
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: context.colorScheme.surfaceContainer,
                     color: !requerida
-                        ? const Color(0xFFE2E8F0)
+                        ? context.colorScheme.outlineVariant
                         : cumple
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFF59E0B),
+                        ? context.colores.exito.texto
+                        : context.colores.advertencia.texto,
                   ),
                 ),
               ],
@@ -382,7 +326,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
   }
 
   /// Muestra Moodle y CRM lado a lado; en pantallas angostas los apila.
-  Widget _buildColumnasCursos(DetalleEmpleadoViewModel detalle) {
+  Widget _buildColumnasCursos(
+    BuildContext context,
+    DetalleEmpleadoViewModel detalle,
+  ) {
     final horasCrm = detalle.cargasCrm.fold<double>(
       0,
       (total, item) => total + item.carga.horasTotales,
@@ -391,6 +338,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildEncabezadoColumna(
+          context,
           icono: Icons.school_outlined,
           titulo: 'Moodle (LMS)',
           detalle:
@@ -398,19 +346,24 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
               '${detalle.certificacionesMoodle.length == 1 ? 'certificación' : 'certificaciones'}',
         ),
         const SizedBox(height: 8),
-        _buildColumnaMoodle(detalle),
+        _buildColumnaMoodle(context, detalle),
       ],
     );
     final columnaCrm = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildEncabezadoColumna(
+          context,
           icono: Icons.schedule_outlined,
           titulo: 'CRM (horas declaradas)',
           detalle: '${_formatearHoras(horasCrm)} hs',
         ),
         const SizedBox(height: 8),
-        _buildTablaCursadas(detalle.cargasCrm, detalle.cursosFinalizados),
+        _buildTablaCursadas(
+          context,
+          detalle.cargasCrm,
+          detalle.cursosFinalizados,
+        ),
       ],
     );
 
@@ -434,50 +387,54 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEncabezadoColumna({
+  Widget _buildEncabezadoColumna(
+    BuildContext context, {
     required IconData icono,
     required String titulo,
     required String detalle,
   }) {
+    final cs = context.colorScheme;
     return Row(
       children: [
-        Icon(icono, size: 18, color: const Color(0xFF0D53C3)),
+        Icon(icono, size: 18, color: cs.primary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             titulo,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0F172A),
+              color: cs.onSurface,
             ),
           ),
         ),
         Text(
           detalle,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
         ),
       ],
     );
   }
 
-  Widget _buildEstadoVacio(String mensaje) {
+  Widget _buildEstadoVacio(BuildContext context, String mensaje) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: Center(
-        child: Text(mensaje, style: const TextStyle(color: Color(0xFF64748B))),
+        child: Text(
+          mensaje,
+          style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }
 
-  Widget _buildColumnaMoodle(DetalleEmpleadoViewModel detalle) {
+  Widget _buildColumnaMoodle(
+    BuildContext context,
+    DetalleEmpleadoViewModel detalle,
+  ) {
     if (detalle.certificacionesMoodle.isEmpty) {
-      return _buildEstadoVacio('Sin certificaciones en el período.');
+      return _buildEstadoVacio(context, 'Sin certificaciones en el período.');
     }
 
     return Column(
@@ -496,12 +453,15 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
   }
 
   Widget _buildTablaCursadas(
+    BuildContext context,
     List<CargaDeHorasCRMViewModel> cursadas,
     Set<String> cursosFinalizados,
   ) {
     if (cursadas.isEmpty) {
-      return _buildEstadoVacio('Sin cargas CRM en el período.');
+      return _buildEstadoVacio(context, 'Sin cargas CRM en el período.');
     }
+    final cs = context.colorScheme;
+    final colores = context.colores;
 
     final grupos = <String, List<CargaDeHorasCRMViewModel>>{};
     for (final cursada in cursadas) {
@@ -532,20 +492,16 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
+          decoration: context.panel(radio: 6),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: ExpansionTile(
               key: PageStorageKey<String>('curso-${grupo.key}'),
               tilePadding: const EdgeInsets.symmetric(horizontal: 16),
               childrenPadding: EdgeInsets.zero,
-              leading: const Icon(
+              leading: Icon(
                 Icons.menu_book_outlined,
-                color: Color(0xFF64748B),
+                color: cs.onSurfaceVariant,
                 size: 20,
               ),
               title: Row(
@@ -555,20 +511,16 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                       nombreCurso,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A),
+                        color: cs.onSurface,
                       ),
                     ),
                   ),
                   if (cursoFinalizado) ...[
                     const SizedBox(width: 8),
-                    const _Badge(
-                      texto: 'Finalizado',
-                      fondo: Color(0xFFDCFCE7),
-                      color: Color(0xFF15803D),
-                    ),
+                    EtiquetaColor(texto: 'Finalizado', colores: colores.exito),
                   ],
                 ],
               ),
@@ -576,10 +528,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 '${primeraCursada.curso?.tipo.label ?? 'Tipo sin especificar'} · '
                 '${registros.length} ${registros.length == 1 ? 'registro' : 'registros'} · '
                 '${_formatearHoras(horasDeclaradas)} hs declaradas',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
               ),
               children: [
-                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                const Divider(height: 1),
                 ...registros.map((registro) {
                   final fechaTexto = _formatearFecha(registro.cursada.fecha);
 
@@ -590,35 +542,34 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.event_outlined,
                           size: 16,
-                          color: Color(0xFF64748B),
+                          color: cs.onSurfaceVariant,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             fechaTexto,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF475569),
+                              color: colores.textoIntermedio,
                             ),
                           ),
                         ),
                         if (registro.cursada.esDictada) ...[
-                          const _Badge(
+                          EtiquetaColor(
                             texto: 'Dictada',
-                            fondo: Color(0xFFFFEDD5),
-                            color: Color(0xFFC2410C),
+                            colores: colores.dictado,
                           ),
                           const SizedBox(width: 8),
                         ],
                         Text(
                           '${_formatearHoras(registro.cursada.horasTotales)} hs',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F172A),
+                            color: cs.onSurface,
                           ),
                         ),
                       ],
@@ -647,15 +598,11 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
       '${fecha.month.toString().padLeft(2, '0')}/'
       '${fecha.year}';
 
-  Widget _buildTablaDictados(List<Curso> dictados) {
+  Widget _buildTablaDictados(BuildContext context, List<Curso> dictados) {
     if (dictados.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
+        decoration: context.panel(),
         child: const Center(
           child: Text('No registra cursos dictados como instructor.'),
         ),
@@ -663,13 +610,11 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(),
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+        headingRowColor: WidgetStatePropertyAll(
+          context.colorScheme.surfaceContainerLow,
+        ),
         columns: const [
           DataColumn(
             label: Text(
@@ -712,9 +657,9 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
               DataCell(
                 Text(
                   '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFC2410C),
+                    color: context.colores.dictado.texto,
                   ),
                 ),
               ),
@@ -737,17 +682,18 @@ class _DatoEmpleado extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minWidth: 150),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context
+          .panel(radio: 6)
+          .copyWith(color: context.colorScheme.surfaceContainerLow),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            style: TextStyle(
+              fontSize: 11,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -755,33 +701,6 @@ class _DatoEmpleado extends StatelessWidget {
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String texto;
-  final Color fondo;
-  final Color color;
-
-  const _Badge({required this.texto, required this.fondo, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: fondo,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -803,20 +722,17 @@ class _CertificacionMoodleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final finalizado = certificacion.finalizoCurso;
+    final cs = context.colorScheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
+      decoration: context.panel(radio: 6),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.workspace_premium_outlined,
-            color: Color(0xFF64748B),
+            color: cs.onSurfaceVariant,
             size: 20,
           ),
           const SizedBox(width: 16),
@@ -831,34 +747,26 @@ class _CertificacionMoodleCard extends StatelessWidget {
                         nombreCurso,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F172A),
+                          color: cs.onSurface,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    finalizado
-                        ? const _Badge(
-                            texto: 'Finalizado',
-                            fondo: Color(0xFFDCFCE7),
-                            color: Color(0xFF15803D),
-                          )
-                        : const _Badge(
-                            texto: 'En curso',
-                            fondo: Color(0xFFFEF3C7),
-                            color: Color(0xFFB45309),
-                          ),
+                    EtiquetaColor(
+                      texto: finalizado ? 'Finalizado' : 'En curso',
+                      colores: finalizado
+                          ? context.colores.exito
+                          : context.colores.advertencia,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '$infoCurso · ${finalizado ? 'Finalizó' : 'Fecha'} $fechaTexto',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                  ),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],
             ),
