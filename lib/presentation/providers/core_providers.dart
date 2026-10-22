@@ -5,6 +5,8 @@ import 'package:app_finnegans/data/supabase/supabase_mapping.dart';
 import 'package:app_finnegans/data/supabase/supabase_importaciones_repository.dart';
 import 'package:app_finnegans/data/supabase/supabase_repositories.dart';
 import 'package:app_finnegans/data/supabase/supabase_usuarios_autorizados_repository.dart';
+import 'package:app_finnegans/data/supabase/supabase_estructura_repository.dart';
+import 'package:app_finnegans/domain/repositorios/estructura_repository.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,3 +142,11 @@ final usuariosAutorizadosRepositoryProvider =
             )
           : null,
     );
+
+/// Áreas, equipos y líderes. `null` en modo local: ahí no hay estructura y
+/// las pantallas muestran el Sector y el Equipo tal como vienen en la nómina.
+final estructuraRepositoryProvider = Provider<EstructuraRepository?>(
+  (ref) => SupabaseConfig.enabled
+      ? SupabaseEstructuraRepository(ref.watch(supabaseClientProvider))
+      : null,
+);

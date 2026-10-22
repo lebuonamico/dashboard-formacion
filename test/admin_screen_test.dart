@@ -1,11 +1,17 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
+import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
+import 'package:app_finnegans/domain/repositorios/estructura_repository.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:app_finnegans/presentation/admin_screen.dart';
 import 'package:app_finnegans/presentation/providers/admin_providers.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_actions_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,10 +65,87 @@ UsuarioAutorizado _usuario({
   ffEliminar: ffEliminar,
 );
 
+/// Estructura en memoria que registra cada llamada como texto.
+class _EstructuraFake implements EstructuraRepository {
+  EstructuraOrganizacional estructura;
+  final llamadas = <String>[];
+
+  _EstructuraFake(this.estructura);
+
+  @override
+  Future<EstructuraOrganizacional> getEstructura() async => estructura;
+
+  @override
+  Future<void> registrarFaltantes(FaltantesNomina faltantes) async =>
+      llamadas.add('faltantes');
+
+  @override
+  Future<void> asignarLideresArea(String areaId, Set<String> emails) async =>
+      llamadas.add(
+        'lideresArea $areaId ${(emails.toList()..sort()).join(',')}',
+      );
+
+  @override
+  Future<void> asignarLideresEquipo(
+    String equipoId,
+    Set<String> emails,
+  ) async => llamadas.add(
+    'lideresEquipo $equipoId ${(emails.toList()..sort()).join(',')}',
+  );
+}
+
+/// PRODUCTOS TECNOLÓGICOS con PLATAFORMA CORE y un equipo que la nómina ya
+/// no trae (INFRA), y SERVICIOS sin equipos.
+EstructuraOrganizacional _estructuraPanel() => EstructuraOrganizacional(
+  areas: [
+    Area(
+      id: '1',
+      nombre: 'PRODUCTOS TECNOLÓGICOS',
+      lideres: {'area@finnegans.com'},
+    ),
+    Area(id: '2', nombre: 'SERVICIOS'),
+  ],
+  equipos: [
+    Equipo(
+      id: '10',
+      areaId: '1',
+      nombre: 'PLATAFORMA CORE',
+      lideres: {'lider@finnegans.com'},
+    ),
+    Equipo(id: '11', areaId: '1', nombre: 'INFRA'),
+  ],
+);
+
+Empleado _empleado(
+  String legajo,
+  String area,
+  String equipo, {
+  String? mail,
+  bool activo = true,
+}) => Empleado(
+  legajo: legajo,
+  nombre: 'Persona',
+  apellido: legajo,
+  seniority: Seniority.junior1,
+  area: area,
+  mail: mail ?? 'persona$legajo@finnegans.com',
+  equipo: equipo,
+  activo: activo,
+);
+
+class _AuthGestor extends AuthController {
+  _AuthGestor() : super(null);
+
+  @override
+  bool get esGestor => true;
+}
+
 Future<ProviderContainer> _mostrarPanel(
   WidgetTester tester, {
   required AccesoAdmin acceso,
   _UsuariosFake? repositorio,
+  _EstructuraFake? estructura,
+  List<Empleado> empleados = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
@@ -75,6 +158,16 @@ Future<ProviderContainer> _mostrarPanel(
       authControllerProvider.overrideWith((ref) => AuthController(null)),
       accesoAdminProvider.overrideWithValue(acceso),
       usuariosAutorizadosRepositoryProvider.overrideWithValue(repositorio),
+      if (estructura != null) ...[
+        sesionDatosProvider.overrideWithValue((
+          habilitada: true,
+          email: 'admin@finnegans.com',
+          rol: 'admin',
+        )),
+        estructuraRepositoryProvider.overrideWithValue(estructura),
+        // Los conteos y Pertenece a salen de la nómina.
+        empleadosProvider.overrideWith((ref) async => empleados),
+      ],
     ],
     retry: (_, _) => null,
   );
@@ -445,5 +538,191 @@ void main() {
 
     expect(find.text('usuario'), findsOneWidget);
     expect(find.byIcon(Icons.help_outline), findsOneWidget);
+  });
+
+  test('Academia y Administrador tienen acceso al panel', () {
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith((ref) => _AuthGestor()),
+        usuariosAutorizadosRepositoryProvider.overrideWithValue(
+          _UsuariosFake([]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    expect(container.read(accesoAdminProvider), AccesoAdmin.permitido);
+  });
+
+  group('Áreas y equipos', () {
+    final usuarios = [
+      _usuario(email: 'lider@finnegans.com'),
+      _usuario(email: 'otro.lider@finnegans.com'),
+      _usuario(email: 'bloqueado@finnegans.com', ffBloqueo: _sello),
+      _usuario(email: 'area@finnegans.com', rol: 'area'),
+    ];
+    final nomina = [
+      _empleado('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
+      _empleado('2', 'productos tecnológicos', 'plataforma core'),
+      _empleado(
+        '3',
+        'PRODUCTOS TECNOLÓGICOS',
+        'PLATAFORMA CORE',
+        activo: false,
+      ),
+      _empleado('4', 'SERVICIOS', ''),
+      // El líder de PLATAFORMA CORE figura en la nómina en SERVICIOS.
+      _empleado(
+        '5',
+        'SERVICIOS',
+        'IMPLEMENTACIONES',
+        mail: 'Lider@finnegans.com',
+      ),
+      _empleado('6', 'SERVICIOS', '', mail: 'area@finnegans.com'),
+    ];
+
+    Future<_EstructuraFake> abrirPestana(WidgetTester tester) async {
+      final estructura = _EstructuraFake(_estructuraPanel());
+      await _mostrarPanel(
+        tester,
+        acceso: AccesoAdmin.permitido,
+        repositorio: _UsuariosFake(usuarios),
+        estructura: estructura,
+        empleados: nomina,
+      );
+      await tester.tap(find.text('Áreas y equipos'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      return estructura;
+    }
+
+    testWidgets('Lista las áreas y equipos de la nómina con sus conteos', (
+      tester,
+    ) async {
+      await abrirPestana(tester);
+
+      expect(find.text('PRODUCTOS TECNOLÓGICOS'), findsOneWidget);
+      // 1 y 2 son el mismo equipo escrito distinto; 3 está dado de baja.
+      expect(find.text('2 equipos · 2 colaboradores'), findsOneWidget);
+      expect(find.text('PLATAFORMA CORE'), findsOneWidget);
+      expect(find.text('2 colaboradores'), findsOneWidget);
+      // Un equipo que la nómina ya no trae sigue listado, sin borrarse.
+      expect(find.text('INFRA'), findsOneWidget);
+      expect(
+        find.text('Sin colaboradores activos en la nómina'),
+        findsOneWidget,
+      );
+      expect(find.text('SERVICIOS'), findsOneWidget);
+      expect(
+        find.text('La nómina no trae equipos para esta área.'),
+        findsOneWidget,
+      );
+      // Los chips usan el nombre de la nómina cuando el email figura.
+      expect(find.text('Persona 5'), findsOneWidget);
+      expect(find.text('Persona 6'), findsOneWidget);
+    });
+
+    testWidgets('No ofrece crear, renombrar ni eliminar', (tester) async {
+      await abrirPestana(tester);
+
+      expect(find.byKey(const Key('estructura_nueva_area')), findsNothing);
+      expect(find.byKey(const Key('estructura_nuevo_equipo_1')), findsNothing);
+      expect(find.byKey(const Key('estructura_menu_area_1')), findsNothing);
+      expect(find.byKey(const Key('estructura_menu_equipo_10')), findsNothing);
+      expect(find.text('Renombrar'), findsNothing);
+      expect(find.byIcon(Icons.more_vert), findsNothing);
+      expect(
+        find.byKey(const Key('estructura_lideres_equipo_10')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('estructura_lideres_area_1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Los líderes de equipo se eligen entre los líderes activos', (
+      tester,
+    ) async {
+      final estructura = await abrirPestana(tester);
+
+      await tester.tap(find.byKey(const Key('estructura_lideres_equipo_10')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('admin_lider_lider@finnegans.com')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('admin_lider_otro.lider@finnegans.com')),
+        findsOneWidget,
+      );
+      // Ni bloqueados ni usuarios con otro rol.
+      expect(
+        find.byKey(const Key('admin_lider_bloqueado@finnegans.com')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('admin_lider_area@finnegans.com')),
+        findsNothing,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('admin_lider_otro.lider@finnegans.com')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_lideres_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(estructura.llamadas, [
+        'lideresEquipo 10 lider@finnegans.com,otro.lider@finnegans.com',
+      ]);
+    });
+
+    testWidgets('Los líderes de área se eligen entre los usuarios de área', (
+      tester,
+    ) async {
+      final estructura = await abrirPestana(tester);
+
+      await tester.tap(find.byKey(const Key('estructura_lideres_area_2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_lider_area@finnegans.com')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_lideres_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(estructura.llamadas, ['lideresArea 2 area@finnegans.com']);
+    });
+
+    testWidgets(
+      'La tabla de usuarios muestra lo que lidera y a qué pertenece',
+      (tester) async {
+        await _mostrarPanel(
+          tester,
+          acceso: AccesoAdmin.permitido,
+          repositorio: _UsuariosFake([
+            ...usuarios,
+            _usuario(email: 'academia@finnegans.com', rol: 'academia'),
+          ]),
+          estructura: _EstructuraFake(_estructuraPanel()),
+          empleados: nomina,
+        );
+
+        expect(find.text('Lidera'), findsOneWidget);
+        expect(find.text('Pertenece a'), findsOneWidget);
+        // lider@ lidera PLATAFORMA CORE pero en la nómina está en SERVICIOS.
+        expect(find.text('PLATAFORMA CORE'), findsOneWidget);
+        expect(find.text('IMPLEMENTACIONES · SERVICIOS'), findsOneWidget);
+        // area@ lidera PRODUCTOS TECNOLÓGICOS y en la nómina no tiene equipo.
+        expect(find.text('PRODUCTOS TECNOLÓGICOS'), findsOneWidget);
+        expect(find.text('Sin equipo · SERVICIOS'), findsOneWidget);
+        expect(find.text('Toda la empresa'), findsOneWidget);
+        // otro.lider y bloqueado tienen rol Líder, ningún equipo y no figuran.
+        expect(find.text('Sin equipos asignados'), findsNWidgets(2));
+        expect(
+          find.text(EstructuraOrganizacional.noFiguraEnNomina),
+          findsNWidgets(2),
+        );
+      },
+    );
   });
 }

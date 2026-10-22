@@ -8,6 +8,7 @@ import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -109,6 +110,12 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final anio = ref.watch(filtroAnioPeriodoProvider);
   final cumplimientoService = ref.read(cumplimientoServiceProvider);
   final equiposService = ref.read(equiposServiceProvider);
+  // El alcance se vuelve a aplicar sobre el equipo vigente en cada mes: un
+  // líder no ve los meses en que la persona estaba en otro equipo.
+  final alcanceUsuario = await ref.watch(alcanceUsuarioProvider.future);
+  final incluir = alcanceUsuario.esTotal
+      ? null
+      : alcanceUsuario.incluyeEmpleado;
 
   if (alcance == AlcancePeriodo.anual) {
     // Leandro: llama a calcularCumplimientoAnual para sumar los resultados mensuales de los períodos con datos.
@@ -120,6 +127,7 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
       certificaciones: certificaciones,
       anio: anio,
       cumplimientoService: cumplimientoService,
+      incluir: incluir,
     );
   }
 
@@ -145,6 +153,7 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     anio: anio,
     mes: mes,
     esAnual: alcance == AlcancePeriodo.anual,
+    incluir: incluir,
   );
 
   // Leandro: llama a calcularCumplimientoGlobal para obtener las horas válidas y los objetivos de los colaboradores elegibles.
@@ -167,6 +176,7 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   }
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
+  final lideres = await ref.watch(etiquetasLideresProvider.future);
   // Leandro: llama a toSet para contar una sola vez cada legajo elegible en los meses con datos del año.
   final colaboradoresUnicosAnuales =
       ref.watch(alcancePeriodoProvider) == AlcancePeriodo.anual
@@ -176,6 +186,7 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   return equiposService.calcularResumenPeriodo(
     cumplimientos,
     colaboradoresAlCierre: colaboradoresUnicosAnuales,
+    liderDe: lideres?.deEquipo,
   );
 });
 
@@ -315,10 +326,12 @@ final detalleEquipoGeneralProvider =
     >((ref, params) async {
       final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
       final equiposService = ref.read(equiposServiceProvider);
+      final lideres = await ref.watch(etiquetasLideresProvider.future);
       // Leandro: llama a obtenerDetalleEquipo para recuperar los integrantes y el resumen del equipo solicitado.
       return equiposService.obtenerDetalleEquipo(
         cumplimientos: cumplimientos,
         area: params.area,
         equipo: params.equipo,
+        liderDe: lideres?.deEquipo,
       );
     });

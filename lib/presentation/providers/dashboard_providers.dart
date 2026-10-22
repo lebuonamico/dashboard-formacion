@@ -16,11 +16,17 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   final anio = ref.watch(filtroAnioPeriodoProvider);
 
   final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
+  final legajos = await ref.watch(legajosVisiblesProvider.future);
   final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
   final hasta = alcance == AlcancePeriodo.anual
       ? DateTime(anio + 1)
       : DateTime(anio, mes + 1);
-  return repo.getCargasDeHoras(desde: desde, hasta: hasta);
+  final cargas = await repo.getCargasDeHoras(desde: desde, hasta: hasta);
+  // Mismo alcance que el resto de las pantallas.
+  if (legajos == null) return cargas;
+  return cargas
+      .where((carga) => legajos.contains(carga.empleadoLegajo))
+      .toList();
 });
 
 /// Misma base que Equipos y Áreas: nómina elegible del período,

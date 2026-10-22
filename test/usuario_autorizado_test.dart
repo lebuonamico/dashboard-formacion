@@ -32,6 +32,13 @@ void main() {
       expect(RolUsuario.fromString('Líder de equipo'), RolUsuario.lider);
     });
 
+    test('Solo Administrador y Academia son gestores', () {
+      expect(RolUsuario.admin.esGestor, isTrue);
+      expect(RolUsuario.academia.esGestor, isTrue);
+      expect(RolUsuario.area.esGestor, isFalse);
+      expect(RolUsuario.lider.esGestor, isFalse);
+    });
+
     test('Devuelve null ante lo irreconocible, sin caer en un rol', () {
       for (final crudo in ['', '   ', 'usuario', 'superadmin', 'xyz']) {
         expect(RolUsuario.fromString(crudo), isNull, reason: crudo);

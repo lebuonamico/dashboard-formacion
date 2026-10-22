@@ -1,8 +1,11 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/tema_provider.dart';
 
 /// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
@@ -19,12 +22,25 @@ class UserAvatar extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
     final apariencia = ref.watch(temaProvider);
     final cs = context.colorScheme;
+    final rol = RolUsuario.fromString(auth.rol);
+    final esLider = rol == RolUsuario.lider || rol == RolUsuario.area;
     final datos = _DatosUsuario(
       email: auth.email,
       nombre: auth.nombre,
       fotoUrl: auth.fotoUrl,
       rol: auth.rol,
       modoLocal: !auth.enabled,
+      // Lo que lidera (asignado en el panel) y a qué equipo y área pertenece
+      // según la nómina: pueden no coincidir, por eso se muestran los dos.
+      lidera: esLider
+          ? ref
+                .watch(estructuraProvider)
+                .whenData(
+                  (estructura) =>
+                      estructura?.lidera(rol: rol, email: auth.email ?? ''),
+                )
+          : null,
+      pertenece: esLider ? ref.watch(empleadoDeSesionProvider) : null,
     );
 
     return PopupMenuButton<ThemeMode>(
@@ -246,12 +262,18 @@ class _DatosUsuario {
   final String? rol;
   final bool modoLocal;
 
+  /// Solo para Líder de equipo y Área; `null` para el resto.
+  final AsyncValue<String?>? lidera;
+  final AsyncValue<Empleado?>? pertenece;
+
   const _DatosUsuario({
     required this.email,
     required this.nombre,
     required this.fotoUrl,
     required this.rol,
     required this.modoLocal,
+    this.lidera,
+    this.pertenece,
   });
 
   /// Primera línea del chip: el nombre si Google lo informa, si no el mail.
@@ -370,9 +392,81 @@ class _TarjetaUsuario extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             _BadgeRol(rol: datos.rol, modoLocal: datos.modoLocal),
+            if (datos.lidera case final lidera?) ...[
+              const SizedBox(height: 12),
+              _DatoCuenta(
+                clave: 'cuenta_lidera',
+                titulo: 'Lidera',
+                valor: lidera.whenData((texto) => (texto ?? '—', false)),
+              ),
+            ],
+            if (datos.pertenece case final pertenece?) ...[
+              const SizedBox(height: 10),
+              _DatoCuenta(
+                clave: 'cuenta_pertenece',
+                titulo: 'Pertenece a',
+                valor: pertenece.whenData(
+                  (empleado) => (
+                    EstructuraOrganizacional.pertenencia(empleado),
+                    empleado == null,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Un dato de la cuenta con su título chico, como el del rol. El valor es el
+/// texto y si va en ámbar.
+class _DatoCuenta extends StatelessWidget {
+  final String clave;
+  final String titulo;
+  final AsyncValue<(String, bool)> valor;
+
+  const _DatoCuenta({
+    required this.clave,
+    required this.titulo,
+    required this.valor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final colores = context.colores;
+    final (texto, advertencia) = valor.when(
+      data: (dato) => dato,
+      error: (_, _) => ('No disponible', true),
+      loading: () => ('Cargando…', false),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: cs.onSurfaceVariant,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          texto,
+          key: Key(clave),
+          style: TextStyle(
+            fontSize: 13,
+            color: advertencia
+                ? colores.advertencia.texto
+                : colores.textoIntermedio,
+          ),
+        ),
+      ],
     );
   }
 }

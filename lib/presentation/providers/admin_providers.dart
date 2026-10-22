@@ -12,7 +12,7 @@ final accesoAdminProvider = Provider<AccesoAdmin>((ref) {
   if (ref.watch(usuariosAutorizadosRepositoryProvider) == null) {
     return AccesoAdmin.sinSupabase;
   }
-  return auth.esAdmin ? AccesoAdmin.permitido : AccesoAdmin.denegado;
+  return auth.esGestor ? AccesoAdmin.permitido : AccesoAdmin.denegado;
 });
 
 final usuariosAutorizadosProvider =
@@ -77,6 +77,11 @@ final usuarioSeleccionadoAdminProvider =
       }
       return null;
     });
+
+/// Búsqueda de la pestaña "Áreas y equipos". Se descarta al salir del panel.
+final busquedaEstructuraAdminProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
 
 final seleccionFueraDelFiltroAdminProvider = Provider.autoDispose<bool>((ref) {
   final seleccionado = ref.watch(usuarioSeleccionadoAdminProvider);

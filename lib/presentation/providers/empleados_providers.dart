@@ -12,11 +12,26 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+/// Nómina que ve el usuario de la sesión, según su rol y las áreas o equipos
+/// que lidera.
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
   final repo = ref.watch(empleadosRepositoryProvider);
-  return repo.getEmpleados();
+  // La nómina va primero: si falla, ese es el error que tiene que verse.
+  final empleados = await repo.getEmpleados();
+  final alcance = await ref.watch(alcanceUsuarioProvider.future);
+  return empleados.where(alcance.incluyeEmpleado).toList();
+});
+
+/// Legajos que ve el usuario, o `null` si ve toda la empresa. Filtra las
+/// horas y las finalizaciones con el mismo criterio que la nómina.
+final legajosVisiblesProvider = FutureProvider<Set<String>?>((ref) async {
+  final alcance = await ref.watch(alcanceUsuarioProvider.future);
+  if (alcance.esTotal) return null;
+  final empleados = await ref.watch(empleadosProvider.future);
+  return {for (final empleado in empleados) empleado.legajo};
 });
 
 final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
@@ -24,6 +39,9 @@ final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
 ) async {
   final repo = ref.watch(empleadosRepositoryProvider);
   if (repo is! EmpleadosHistorialRepository) return null;
+  // Con RLS cada usuario recibe vigencias distintas: se vuelve a consultar
+  // cuando entra otro en la misma pestaña.
+  ref.watch(sesionDatosProvider);
   // Leandro: llama a getHistorialEmpleados para consultar las vigencias sin escribir un historial paralelo.
   return (repo as EmpleadosHistorialRepository).getHistorialEmpleados();
 });

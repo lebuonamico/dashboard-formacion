@@ -28,6 +28,20 @@ class Empleado {
 
   String get nombreCompleto => '$nombre $apellido';
 
+  /// El empleado de la nómina con ese mail, comparado sin espacios ni
+  /// mayúsculas. Si hubiera dos filas, prefiere la activa.
+  static Empleado? porMail(Iterable<Empleado> empleados, String? mail) {
+    final buscado = mail?.trim().toLowerCase() ?? '';
+    if (buscado.isEmpty) return null;
+    Empleado? encontrado;
+    for (final empleado in empleados) {
+      if (empleado.mail.trim().toLowerCase() != buscado) continue;
+      if (empleado.activo) return empleado;
+      encontrado ??= empleado;
+    }
+    return encontrado;
+  }
+
   Empleado copyWith({
     Seniority? seniority,
     String? area,

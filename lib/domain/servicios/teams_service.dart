@@ -9,6 +9,10 @@ import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
+/// Líderes para mostrar de un equipo, por el Sector y el Equipo de la
+/// nómina. `null` cuando no tiene líderes asignados.
+typedef ResolverLider = String? Function(String area, String equipo);
+
 class EquiposService {
   bool tieneDatosEnPeriodo({
     required List<CargaDeHorasCRM> cargas,
@@ -57,12 +61,16 @@ class EquiposService {
     }).toList();
   }
 
+  /// Colaboradores elegibles al cierre del período. [incluir] se aplica sobre
+  /// el estado vigente en ese mes, así un líder ve a alguien solo en los
+  /// meses en que estuvo en su equipo.
   List<Empleado> filtrarEmpleadosPorPeriodo({
     required List<Empleado> empleados,
     List<EmpleadoHistorial>? historial,
     required int anio,
     required int mes,
     required bool esAnual,
+    bool Function(Empleado)? incluir,
   }) {
     final inicioSiguiente = DateTime(anio, esAnual ? 13 : mes + 1);
     final ultimoDia = DateTime(anio, esAnual ? 13 : mes + 1, 0);
@@ -78,7 +86,9 @@ class EquiposService {
       final fechaIngreso = DateTime(ingreso.year, ingreso.month, ingreso.day);
       if (fechaIngreso.isAfter(ultimoDia)) continue;
       if (historial == null) {
-        if (empleado.activo) elegibles.add(empleado);
+        if (empleado.activo && (incluir?.call(empleado) ?? true)) {
+          elegibles.add(empleado);
+        }
         continue;
       }
 
@@ -114,7 +124,8 @@ class EquiposService {
       final vigente = vigentes.single;
       if (vigente.activo) {
         // Leandro: llama a reconstruir para usar el estado, seniority y equipo vigentes al cierre del mes.
-        elegibles.add(vigente.reconstruir(empleado));
+        final reconstruido = vigente.reconstruir(empleado);
+        if (incluir?.call(reconstruido) ?? true) elegibles.add(reconstruido);
       }
     }
     return elegibles;
@@ -147,6 +158,7 @@ class EquiposService {
     required List<CertificacionMoodle> certificaciones,
     required int anio,
     required CumplimientoService cumplimientoService,
+    bool Function(Empleado)? incluir,
   }) {
     final acumulados = <String, CumplimientoEmpleado>{};
 
@@ -171,6 +183,7 @@ class EquiposService {
               anio: anio,
               mes: mes,
               esAnual: false,
+              incluir: incluir,
             ),
             cursos: cursos,
             cargasDeHoras: filtrarCargasPorPeriodo(
@@ -241,8 +254,9 @@ class EquiposService {
   }
 
   List<EquipoGlobalViewModel> calcularEquiposGlobales(
-    List<CumplimientoEmpleado> cumplimientos,
-  ) {
+    List<CumplimientoEmpleado> cumplimientos, {
+    ResolverLider? liderDe,
+  }) {
     final agrupadoPorEquipo = <String, List<CumplimientoEmpleado>>{};
 
     for (final cumplimiento in cumplimientos) {
@@ -256,7 +270,7 @@ class EquiposService {
     final equipos = <EquipoGlobalViewModel>[];
     for (final miembros in agrupadoPorEquipo.values) {
       // Leandro: llama a _crearResumenEquipo para obtener los indicadores de cada grupo de integrantes.
-      equipos.add(_crearResumenEquipo(miembros));
+      equipos.add(_crearResumenEquipo(miembros, liderDe));
     }
 
     // Leandro: llama a _compararEquiposPorPrioridad para mostrar primero los equipos que requieren atención.
@@ -268,6 +282,7 @@ class EquiposService {
     required List<CumplimientoEmpleado> cumplimientos,
     required String area,
     required String equipo,
+    ResolverLider? liderDe,
   }) {
     final areaBuscada = _normalizarComparacion(area);
     final equipoBuscado = _normalizarComparacion(
@@ -283,7 +298,7 @@ class EquiposService {
     if (miembros.isEmpty) return null;
 
     // Leandro: llama a _crearResumenEquipo antes de ordenar la tabla para conservar la misma fuente de líder que la vista global.
-    final resumen = _crearResumenEquipo(miembros);
+    final resumen = _crearResumenEquipo(miembros, liderDe);
     miembros.sort(
       (a, b) => a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
     );
@@ -294,9 +309,10 @@ class EquiposService {
   ResumenEquiposPeriodo calcularResumenPeriodo(
     List<CumplimientoEmpleado> cumplimientos, {
     int? colaboradoresAlCierre,
+    ResolverLider? liderDe,
   }) {
     // Leandro: llama a calcularEquiposGlobales para obtener los equipos que se suman en los indicadores del período.
-    final equipos = calcularEquiposGlobales(cumplimientos);
+    final equipos = calcularEquiposGlobales(cumplimientos, liderDe: liderDe);
     var colaboradores = 0;
     var horasRealizadas = 0.0;
     var horasObjetivo = 0.0;
@@ -346,9 +362,13 @@ class EquiposService {
 
   EquipoGlobalViewModel _crearResumenEquipo(
     List<CumplimientoEmpleado> miembros,
+    ResolverLider? liderDe,
   ) {
     final primerMiembro = miembros.first.empleado;
     final nombreEquipo = _nombreEquipoNormalizado(primerMiembro.equipo);
+    // Los líderes asignados en el panel tienen prioridad. Sin asignación se
+    // muestra el Gerente de la nómina, como antes de que existieran.
+    final lideresAsignados = liderDe?.call(primerMiembro.area, nombreEquipo);
     final horasRealizadas = miembros.fold<double>(
       0,
       (total, miembro) => total + miembro.totalHorasCompletadas,
@@ -369,7 +389,9 @@ class EquiposService {
       id: _crearTeamId(primerMiembro.area, nombreEquipo),
       nombre: nombreEquipo,
       area: primerMiembro.area,
-      lider: primerMiembro.gerente.trim().isEmpty
+      lider: lideresAsignados != null && lideresAsignados.isNotEmpty
+          ? lideresAsignados
+          : primerMiembro.gerente.trim().isEmpty
           ? 'Sin líder asignado'
           : primerMiembro.gerente,
       cantidadIntegrantes: cantidadIntegrantes,

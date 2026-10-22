@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
@@ -23,6 +24,9 @@ class AreaGlobalViewModel {
   /// Dashboard. No exige que todos los integrantes cumplan, como en Equipos.
   final EstadoSemaforo semaforo;
 
+  /// Líderes de área asignados en el panel, o `null` si no tiene.
+  final String? lideres;
+
   const AreaGlobalViewModel({
     required this.nombre,
     required this.equiposGenerales,
@@ -36,6 +40,7 @@ class AreaGlobalViewModel {
     required this.horasDictado,
     required this.porcentajeCumplimiento,
     required this.semaforo,
+    this.lideres,
   });
 
   double get desvioHoras => horasRealizadas - horasObjetivo;
@@ -105,6 +110,7 @@ final resumenAreasPeriodoProvider = FutureProvider<ResumenAreasPeriodo>((
   }
   // Mismo cálculo que Equipos: el período global y la nómina elegible.
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
+  final lideres = await ref.watch(etiquetasLideresProvider.future);
 
   final agrupado = <String, List<CumplimientoEmpleado>>{};
   for (final item in cumplimientos) {
@@ -112,7 +118,8 @@ final resumenAreasPeriodoProvider = FutureProvider<ResumenAreasPeriodo>((
   }
 
   final areas = [
-    for (final entry in agrupado.entries) _resumirArea(entry.key, entry.value),
+    for (final entry in agrupado.entries)
+      _resumirArea(entry.key, entry.value, lideres: lideres?.deArea(entry.key)),
   ]..sort(_compararAreasPorPrioridad);
 
   var horasRealizadas = 0.0;
@@ -222,8 +229,11 @@ final detalleAreaProvider =
           .where((equipo) => equipo.area.trim().toLowerCase() == buscada)
           .toList();
 
+      final lideres = await ref.watch(etiquetasLideresProvider.future);
+      final nombre = miembros.first.empleado.area;
+
       return DetalleAreaViewModel(
-        area: _resumirArea(miembros.first.empleado.area, miembros),
+        area: _resumirArea(nombre, miembros, lideres: lideres?.deArea(nombre)),
         equipos: equipos,
         miembros: miembros,
       );
@@ -231,8 +241,9 @@ final detalleAreaProvider =
 
 AreaGlobalViewModel _resumirArea(
   String area,
-  List<CumplimientoEmpleado> miembros,
-) {
+  List<CumplimientoEmpleado> miembros, {
+  String? lideres,
+}) {
   final legajos = miembros.map((m) => m.empleado.legajo).toSet();
   // Un legajo con alguna entrada pendiente no cuenta como en objetivo.
   final legajosPendientes = miembros
@@ -277,6 +288,7 @@ AreaGlobalViewModel _resumirArea(
     ),
     porcentajeCumplimiento: porcentaje,
     semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
+    lideres: lideres,
   );
 }
 
