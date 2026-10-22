@@ -17,7 +17,6 @@ import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
 class EmpleadoDetalleScreen extends ConsumerWidget {
@@ -259,6 +258,12 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
         final requeridas = cump.horasRequeridas[tipo] ?? 0.0;
         final requerida = requeridas > 0;
         final cumple = requerida && completadas >= requeridas;
+        // Libres y Dictado no existen en el LMS: se cumplen con horas CRM.
+        final fuente =
+            tipo == TipoCurso.libresExploracion ||
+                tipo == TipoCurso.dictadoCapacitaciones
+            ? 'CRM'
+            : 'LMS';
 
         return Expanded(
           child: Container(
@@ -281,7 +286,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   requerida
-                      ? '${completadas.toStringAsFixed(0)} / ${requeridas.toStringAsFixed(0)} hs LMS'
+                      ? '${completadas.toStringAsFixed(0)} / ${requeridas.toStringAsFixed(0)} hs $fuente'
                       : 'No requerida',
                   style: TextStyle(
                     fontSize: 18,
@@ -598,7 +603,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
       '${fecha.month.toString().padLeft(2, '0')}/'
       '${fecha.year}';
 
-  Widget _buildTablaDictados(BuildContext context, List<Curso> dictados) {
+  Widget _buildTablaDictados(
+    BuildContext context,
+    List<CursoDictadoViewModel> dictados,
+  ) {
     if (dictados.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -645,7 +653,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           return DataRow(
             cells: [
               DataCell(
-                Text(c.id, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  c.codigo,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
               DataCell(
                 Text(
@@ -653,10 +664,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
-              DataCell(Text(c.areaCurso)),
+              DataCell(Text(c.area)),
               DataCell(
                 Text(
-                  '${c.cargaHorariaHs.toStringAsFixed(0)} hs',
+                  '${_formatearHoras(c.horas)} hs',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: context.colores.dictado.texto,

@@ -150,6 +150,44 @@ class EquiposService {
     return null;
   }
 
+  /// Cumplimiento de un mes: nómina elegible al cierre del mes, horas CRM y
+  /// finalizaciones LMS de ese mes.
+  List<CumplimientoEmpleado> calcularCumplimientoMensual({
+    required List<Empleado> empleados,
+    List<EmpleadoHistorial>? historial,
+    required List<Curso> cursos,
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    required int mes,
+    required CumplimientoService cumplimientoService,
+    bool Function(Empleado)? incluir,
+  }) {
+    return cumplimientoService.calcularCumplimientoGlobal(
+      empleados: filtrarEmpleadosPorPeriodo(
+        empleados: empleados,
+        historial: historial,
+        anio: anio,
+        mes: mes,
+        esAnual: false,
+        incluir: incluir,
+      ),
+      cursos: cursos,
+      cargasDeHoras: filtrarCargasPorPeriodo(
+        cargas: cargas,
+        anio: anio,
+        mes: mes,
+        esAnual: false,
+      ),
+      certificacionesMoodle: filtrarCertificacionesPorPeriodo(
+        certificaciones: certificaciones,
+        anio: anio,
+        mes: mes,
+        esAnual: false,
+      ),
+    );
+  }
+
   List<CumplimientoEmpleado> calcularCumplimientoAnual({
     required List<Empleado> empleados,
     List<EmpleadoHistorial>? historial,
@@ -174,31 +212,18 @@ class EquiposService {
         continue;
       }
 
-      // Leandro: llama a calcularCumplimientoGlobal para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
-      final cumplimientosMensuales = cumplimientoService
-          .calcularCumplimientoGlobal(
-            empleados: filtrarEmpleadosPorPeriodo(
-              empleados: empleados,
-              historial: historial,
-              anio: anio,
-              mes: mes,
-              esAnual: false,
-              incluir: incluir,
-            ),
-            cursos: cursos,
-            cargasDeHoras: filtrarCargasPorPeriodo(
-              cargas: cargas,
-              anio: anio,
-              mes: mes,
-              esAnual: false,
-            ),
-            certificacionesMoodle: filtrarCertificacionesPorPeriodo(
-              certificaciones: certificaciones,
-              anio: anio,
-              mes: mes,
-              esAnual: false,
-            ),
-          );
+      // Leandro: llama a calcularCumplimientoMensual para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
+      final cumplimientosMensuales = calcularCumplimientoMensual(
+        empleados: empleados,
+        historial: historial,
+        cursos: cursos,
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        mes: mes,
+        cumplimientoService: cumplimientoService,
+        incluir: incluir,
+      );
 
       for (final mensual in cumplimientosMensuales) {
         final empleado = mensual.empleado;

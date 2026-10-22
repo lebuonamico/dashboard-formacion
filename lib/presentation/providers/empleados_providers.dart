@@ -73,13 +73,28 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
   });
 });
 
+/// Curso que el empleado cargó en el CRM como dictado, con las horas del período.
+class CursoDictadoViewModel {
+  final String codigo;
+  final String nombre;
+  final String area;
+  final double horas;
+
+  const CursoDictadoViewModel({
+    required this.codigo,
+    required this.nombre,
+    required this.area,
+    required this.horas,
+  });
+}
+
 class DetalleEmpleadoViewModel {
   final Empleado empleado;
   final CumplimientoEmpleado cumplimiento;
   final List<CargaDeHorasCRMViewModel> cargasCrm;
   final List<CertificacionMoodle> certificacionesMoodle;
   final Map<String, Curso> cursosPorNombre;
-  final List<Curso> cursosDictados;
+  final List<CursoDictadoViewModel> cursosDictados;
   final Set<String> cursosFinalizados;
 
   DetalleEmpleadoViewModel({
@@ -183,9 +198,29 @@ final detalleEmpleadoProvider =
           )
           .toList();
 
-      final dictados = cursos
-          .where((cur) => cur.instructorLegajo == legajo)
-          .toList();
+      // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
+      final dictadosPorCurso = <String, List<CargaDeHorasCRMViewModel>>{};
+      for (final item in cargasCrm.where((item) => item.carga.esDictada)) {
+        final cursoId = item.curso?.id.trim() ?? item.carga.cursoId?.trim();
+        final clave = cursoId != null && cursoId.isNotEmpty
+            ? 'id:$cursoId'
+            : 'nombre:${CumplimientoService.normalizarNombreCurso(item.carga.cursoNombre)}';
+        dictadosPorCurso.putIfAbsent(clave, () => []).add(item);
+      }
+      final dictados =
+          dictadosPorCurso.values.map((items) {
+            final primero = items.first;
+            final curso = primero.curso;
+            return CursoDictadoViewModel(
+              codigo: curso?.id ?? primero.carga.cursoId ?? '',
+              nombre: curso?.nombre ?? primero.carga.cursoNombre,
+              area: curso?.areaCurso ?? primero.carga.descripcionCurso ?? '',
+              horas: items.fold<double>(
+                0,
+                (total, item) => total + item.carga.horasTotales,
+              ),
+            );
+          }).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
       final cursosFinalizados = certificacionesEmpleado
           .where((item) => item.finalizoCurso)
           .map(

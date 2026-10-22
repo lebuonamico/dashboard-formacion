@@ -131,40 +131,18 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
     );
   }
 
-  // Leandro: llama a filtrarCargasPorPeriodo para seleccionar las horas CRM del mes elegido.
-  final cargasFiltradas = equiposService.filtrarCargasPorPeriodo(
-    cargas: cargasDeHoras,
-    anio: anio,
-    mes: mes,
-    esAnual: alcance == AlcancePeriodo.anual,
-  );
-  // Leandro: llama a filtrarCertificacionesPorPeriodo para seleccionar las finalizaciones LMS del período.
-  final certificacionesFiltradas = equiposService
-      .filtrarCertificacionesPorPeriodo(
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        esAnual: alcance == AlcancePeriodo.anual,
-      );
-  // Leandro: llama a filtrarEmpleadosPorPeriodo para incluir los ingresos y estados activos vigentes al cierre del mes.
-  final empleadosElegibles = equiposService.filtrarEmpleadosPorPeriodo(
+  // Leandro: llama a calcularCumplimientoMensual para obtener las horas válidas y los objetivos de los colaboradores elegibles del mes.
+  return equiposService.calcularCumplimientoMensual(
     empleados: empleados,
     historial: historial,
+    cursos: cursos,
+    cargas: cargasDeHoras,
+    certificaciones: certificaciones,
     anio: anio,
     mes: mes,
-    esAnual: alcance == AlcancePeriodo.anual,
+    cumplimientoService: cumplimientoService,
     incluir: incluir,
   );
-
-  // Leandro: llama a calcularCumplimientoGlobal para obtener las horas válidas y los objetivos de los colaboradores elegibles.
-  final cumplimientos = cumplimientoService.calcularCumplimientoGlobal(
-    empleados: empleadosElegibles,
-    cursos: cursos,
-    cargasDeHoras: cargasFiltradas,
-    certificacionesMoodle: certificacionesFiltradas,
-  );
-
-  return cumplimientos;
 });
 
 final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((

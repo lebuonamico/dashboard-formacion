@@ -31,14 +31,16 @@ class CumplimientoService {
       final horasValidas = _horasPorCategoriaEnCero();
       final horasDeclaradas = _horasPorCategoriaEnCero();
 
-      final horasCrmPorCurso = <String, double>{};
       final cargasEmpleado =
           cargasPorLegajo[empleado.legajo] ?? const <CargaDeHorasCRM>[];
       for (final carga in cargasEmpleado) {
-        if (carga.esDictada) {
-          horasDeclaradas[TipoCurso.dictadoCapacitaciones] =
-              (horasDeclaradas[TipoCurso.dictadoCapacitaciones] ?? 0) +
-              carga.horasTotales;
+        // Libres y Dictado no pasan por el LMS: la Clasificación CRM las acredita.
+        final categoriaSoloCrm = carga.categoriaSoloCrm;
+        if (categoriaSoloCrm != null) {
+          horasDeclaradas[categoriaSoloCrm] =
+              (horasDeclaradas[categoriaSoloCrm] ?? 0) + carga.horasTotales;
+          horasValidas[categoriaSoloCrm] =
+              (horasValidas[categoriaSoloCrm] ?? 0) + carga.horasTotales;
           continue;
         }
 
@@ -48,21 +50,16 @@ class CumplimientoService {
         if (curso != null) {
           horasDeclaradas[curso.tipo] =
               (horasDeclaradas[curso.tipo] ?? 0) + carga.horasTotales;
-          horasCrmPorCurso.update(
-            cursoNormalizado,
-            (horas) => horas + carga.horasTotales,
-            ifAbsent: () => carga.horasTotales,
-          );
         }
       }
 
-      // LMS confirma la finalización; CRM aporta las horas y Cursos fija el máximo.
+      // Negocio y Blandas: cada curso finalizado en el LMS acredita su carga horaria.
       final cursosValidados = <String>{};
       final certificacionesEmpleado =
           certificacionesPorLegajo[empleado.legajo] ??
           const <CertificacionMoodle>[];
       for (final certificacion in certificacionesEmpleado) {
-        // Leandro: llama a normalizarNombreCurso para relacionar la finalización LMS con las horas CRM del mismo curso.
+        // Leandro: llama a normalizarNombreCurso para buscar el curso finalizado en el catálogo.
         final cursoNormalizado = normalizarNombreCurso(
           certificacion.cursoNombre,
         );
@@ -72,15 +69,16 @@ class CumplimientoService {
         }
 
         final curso = cursosMap[cursoNormalizado];
-        if (curso == null) continue;
+        // Libres y Dictado se acreditan solo por CRM.
+        if (curso == null ||
+            curso.tipo == TipoCurso.libresExploracion ||
+            curso.tipo == TipoCurso.dictadoCapacitaciones) {
+          continue;
+        }
 
-        final horasRegistradas = horasCrmPorCurso[cursoNormalizado] ?? 0;
-        final cargaMaxima = curso.cargaHorariaHs < 0
+        final horasAcreditadas = curso.cargaHorariaHs < 0
             ? 0.0
             : curso.cargaHorariaHs;
-        final horasAcreditadas = horasRegistradas
-            .clamp(0.0, cargaMaxima)
-            .toDouble();
         horasValidas[curso.tipo] =
             (horasValidas[curso.tipo] ?? 0) + horasAcreditadas;
       }
