@@ -127,7 +127,9 @@ final detalleEmpleadoProvider =
       final alcance = ref.watch(alcancePeriodoProvider);
       final mes = ref.watch(filtroMesPeriodoProvider);
       final anio = ref.watch(filtroAnioPeriodoProvider);
-      final cumplimientoService = ref.read(cumplimientoServiceProvider);
+      final cumplimientoService = await ref.watch(
+        cumplimientoServiceProvider.future,
+      );
       final equiposService = ref.read(equiposServiceProvider);
       final esAnual = alcance == AlcancePeriodo.anual;
 
@@ -173,12 +175,21 @@ final detalleEmpleadoProvider =
             cursos: cursos,
             cargasDeHoras: cargasPeriodo,
             certificacionesMoodle: certificacionesValidasPeriodo,
+            anio: anio,
+            mes: mes,
           )
           .first;
       if (esAnual) {
-        cumplimiento = equiposService.convertirObjetivoMensualAAnual([
-          cumplimiento,
-        ], mesesConRegistros: 12).first;
+        // Objetivo del año: los 12 meses, cada uno con su versión del plan.
+        cumplimiento = CumplimientoEmpleado(
+          empleado: cumplimiento.empleado,
+          horasValidas: cumplimiento.horasValidas,
+          horasDeclaradas: cumplimiento.horasDeclaradas,
+          horasRequeridas: cumplimientoService.planes.requeridasDelAnio(
+            empleado.seniority,
+            anio,
+          ),
+        );
       }
 
       final cursosPorNombre = {

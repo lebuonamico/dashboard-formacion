@@ -185,6 +185,9 @@ class EquiposService {
         mes: mes,
         esAnual: false,
       ),
+      // El objetivo es el del plan vigente en este mes.
+      anio: anio,
+      mes: mes,
     );
   }
 

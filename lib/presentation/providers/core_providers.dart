@@ -6,7 +6,10 @@ import 'package:app_finnegans/data/supabase/supabase_importaciones_repository.da
 import 'package:app_finnegans/data/supabase/supabase_repositories.dart';
 import 'package:app_finnegans/data/supabase/supabase_usuarios_autorizados_repository.dart';
 import 'package:app_finnegans/data/supabase/supabase_estructura_repository.dart';
+import 'package:app_finnegans/data/supabase/supabase_plan_formacion_repository.dart';
+import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/repositorios/estructura_repository.dart';
+import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,8 +123,25 @@ final certificacionesMoodleRepositoryProvider =
           : LocalCertificacionesMoodleRepository();
     });
 
-final cumplimientoServiceProvider = Provider<CumplimientoService>((ref) {
-  return CumplimientoService();
+final planFormacionRepositoryProvider = Provider<PlanFormacionRepository>((
+  ref,
+) {
+  return SupabaseConfig.enabled
+      ? SupabasePlanFormacionRepository(ref.watch(supabaseClientProvider))
+      : LocalPlanFormacionRepository();
+});
+
+/// Versiones del plan de formación por seniority. Al guardar una se invalida
+/// y todo el cumplimiento se recalcula.
+final planesFormacionProvider = FutureProvider<PlanesFormacion>((ref) {
+  return ref.watch(planFormacionRepositoryProvider).getPlanes();
+});
+
+final cumplimientoServiceProvider = FutureProvider<CumplimientoService>((
+  ref,
+) async {
+  final planes = await ref.watch(planesFormacionProvider.future);
+  return CumplimientoService(planes: planes);
 });
 
 final importacionesRepositoryProvider = Provider<ImportacionesRepository?>(

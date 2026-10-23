@@ -128,7 +128,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
     final uri = GoRouterState.of(context).uri;
     final currentPath = uri.path;
     final requestedOrigin = uri.queryParameters['origen'];
-    const validOrigins = {'dashboard', 'areas', 'equipos'};
+    const validOrigins = {'dashboard', 'areas', 'equipos', 'certificaciones'};
     final origin = validOrigins.contains(requestedOrigin)
         ? requestedOrigin
         : null;

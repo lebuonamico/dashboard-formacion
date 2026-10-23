@@ -3,15 +3,31 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class CumplimientoService {
+  /// Versiones del plan de formación. Sin versiones rige el plan por defecto.
+  final PlanesFormacion planes;
+
+  const CumplimientoService({
+    this.planes = const PlanesFormacion.sinVersiones(),
+  });
+
+  /// [anio] y [mes] eligen la versión del plan que fija el objetivo. Sin
+  /// período se usa la vigente hoy.
   List<CumplimientoEmpleado> calcularCumplimientoGlobal({
     required List<Empleado> empleados,
     required List<Curso> cursos,
     required List<CargaDeHorasCRM> cargasDeHoras,
     required List<CertificacionMoodle> certificacionesMoodle,
+    int? anio,
+    int? mes,
   }) {
+    assert((anio == null) == (mes == null), 'anio y mes van juntos');
+    final plan = anio != null && mes != null
+        ? planes.vigenteEn(anio, mes)
+        : planes.actual;
     final cursosMap = {
       for (final curso in cursos) normalizarNombreCurso(curso.nombre): curso,
     };
@@ -84,7 +100,7 @@ class CumplimientoService {
       }
 
       // Requerimientos mensuales según el seniority del empleado.
-      final horasRequeridas = empleado.seniority.planFormacion;
+      final horasRequeridas = Map.of(plan.horasRequeridas(empleado.seniority));
 
       // Leandro: llama a CumplimientoEmpleado para entregar las horas validadas, declaradas y requeridas de cada persona.
       return CumplimientoEmpleado(

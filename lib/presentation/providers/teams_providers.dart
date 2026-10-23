@@ -108,7 +108,9 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
-  final cumplimientoService = ref.read(cumplimientoServiceProvider);
+  final cumplimientoService = await ref.watch(
+    cumplimientoServiceProvider.future,
+  );
   final equiposService = ref.read(equiposServiceProvider);
   // El alcance se vuelve a aplicar sobre el equipo vigente en cada mes: un
   // líder no ve los meses en que la persona estaba en otro equipo.

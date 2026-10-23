@@ -491,7 +491,7 @@ Future<ProviderContainer> _snapshot(
   final estructuraF = ref.read(estructuraProvider.future);
   final alcanceF = ref.read(alcanceUsuarioProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
-  final cumplimientoService = ref.read(cumplimientoServiceProvider);
+  final cumplimientoServiceF = ref.read(cumplimientoServiceProvider.future);
   final sesion = ref.read(sesionDatosProvider);
   final (
     empleados,
@@ -501,6 +501,7 @@ Future<ProviderContainer> _snapshot(
     certificaciones,
     estructura,
     alcanceUsuario,
+    cumplimientoService,
   ) = await (
     empleadosF,
     historialF,
@@ -509,6 +510,7 @@ Future<ProviderContainer> _snapshot(
     certificacionesF,
     estructuraF,
     alcanceF,
+    cumplimientoServiceF,
   ).wait;
   return ProviderContainer(
     retry: (_, _) => null,
@@ -524,7 +526,9 @@ Future<ProviderContainer> _snapshot(
       cargasDeHorasCRMProvider.overrideWith((_) async => cargas),
       certificacionesMoodleProvider.overrideWith((_) async => certificaciones),
       equiposServiceProvider.overrideWithValue(equiposService),
-      cumplimientoServiceProvider.overrideWithValue(cumplimientoService),
+      cumplimientoServiceProvider.overrideWith(
+        (_) async => cumplimientoService,
+      ),
       alcancePeriodoProvider.overrideWith(
         (_) => periodo.anual ? AlcancePeriodo.anual : AlcancePeriodo.mensual,
       ),

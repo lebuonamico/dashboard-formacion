@@ -3,6 +3,7 @@ import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
@@ -154,5 +155,106 @@ void main() {
     );
 
     expect(resultado.horasValidas[TipoCurso.libresExploracion], 1);
+  });
+
+  group('Plan de formación configurable', () {
+    // Senior 1 por defecto: 0 negocio, 2 blandas, 2 libres, 4 dictado.
+    final seisDeDictado = PlanFormacion({
+      for (final seniority in Seniority.values)
+        seniority: seniority == Seniority.senior1
+            ? {
+                TipoCurso.habilidadesDeNegocio: 0,
+                TipoCurso.habilidadesBlandas: 2,
+                TipoCurso.libresExploracion: 2,
+                TipoCurso.dictadoCapacitaciones: 6,
+              }
+            : seniority.planFormacion,
+    });
+    final desdeJunio = PlanesFormacion([
+      VersionPlanFormacion(
+        vigenteDesde: DateTime(2026, 6),
+        plan: seisDeDictado,
+      ),
+    ]);
+    final servicio = CumplimientoService(planes: desdeJunio);
+
+    test('el objetivo sale de la versión vigente en el mes evaluado', () {
+      List<CumplimientoEmpleado> mes(int numero) =>
+          EquiposService().calcularCumplimientoMensual(
+            empleados: [empleado],
+            cursos: const [],
+            cargas: [carga('Taller', 5, clasif: 'Dictado de capacitaciones')],
+            certificaciones: const [],
+            anio: 2026,
+            mes: numero,
+            cumplimientoService: servicio,
+          );
+
+      // Mayo es anterior al cambio: el dictado pedido sigue siendo 4 h.
+      final mayo = mes(5).single;
+      expect(mayo.horasRequeridas[TipoCurso.dictadoCapacitaciones], 4);
+      expect(mayo.totalHorasRequeridas, 8);
+      expect(
+        mayo.horasAplicablesAlObjetivo(TipoCurso.dictadoCapacitaciones),
+        4,
+      );
+
+      // Junio ya usa el plan nuevo: 10 h en total.
+      final junio = mes(6).single;
+      expect(junio.horasRequeridas[TipoCurso.dictadoCapacitaciones], 6);
+      expect(junio.totalHorasRequeridas, 10);
+    });
+
+    test('el anual suma los objetivos de cada mes con su versión', () {
+      final anual = EquiposService()
+          .calcularCumplimientoAnual(
+            empleados: [empleado],
+            cursos: const [],
+            cargas: [
+              carga('Taller', 5, clasif: 'Dictado de capacitaciones'),
+              CargaDeHorasCRM(
+                id: 'junio',
+                cursoNombre: 'Taller',
+                empleadoLegajo: '100',
+                fecha: DateTime(2026, 6, 10),
+                horasTotales: 5,
+                tipo: TipoCargaDeHoras.tomada,
+                clasificacion: 'Dictado de capacitaciones',
+              ),
+            ],
+            certificaciones: const [],
+            anio: 2026,
+            cumplimientoService: servicio,
+          )
+          .single;
+
+      // Mayo (8 h) + junio (10 h): los dos meses con datos.
+      expect(anual.totalHorasRequeridas, 18);
+      expect(anual.horasRequeridas[TipoCurso.dictadoCapacitaciones], 10);
+      // Mayo topea en 4 y junio acredita las 5.
+      expect(anual.horasValidas[TipoCurso.dictadoCapacitaciones], 9);
+    });
+
+    test('sin período usa la versión vigente hoy', () {
+      final hoy = DateTime.now();
+      final resultado =
+          CumplimientoService(
+                planes: PlanesFormacion([
+                  VersionPlanFormacion(
+                    vigenteDesde: DateTime(hoy.year, hoy.month),
+                    plan: seisDeDictado,
+                  ),
+                ]),
+              )
+              .calcularCumplimientoGlobal(
+                empleados: [empleado],
+                cursos: const [],
+                cargasDeHoras: const [],
+                certificacionesMoodle: const [],
+              )
+              .single;
+
+      expect(resultado.horasRequeridas[TipoCurso.dictadoCapacitaciones], 6);
+    });
   });
 }

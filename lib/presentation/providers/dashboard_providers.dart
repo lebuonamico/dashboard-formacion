@@ -82,7 +82,9 @@ final evolucionMensualDashboardProvider =
       final incluir = alcanceUsuario.esTotal
           ? null
           : alcanceUsuario.incluyeEmpleado;
-      final cumplimientoService = ref.read(cumplimientoServiceProvider);
+      final cumplimientoService = await ref.watch(
+        cumplimientoServiceProvider.future,
+      );
       final equiposService = ref.read(equiposServiceProvider);
 
       bool tieneDatos(DateTime fecha) => equiposService.tieneDatosEnPeriodo(
@@ -135,7 +137,7 @@ final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  final service = ref.read(cumplimientoServiceProvider);
+  final service = await ref.watch(cumplimientoServiceProvider.future);
 
   return service.calcularCumplimientoGlobal(
     empleados: empleados,

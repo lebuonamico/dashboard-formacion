@@ -29,6 +29,7 @@ import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
+import 'package:app_finnegans/presentation/widgets/configuracion/plan_formacion_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
@@ -113,6 +114,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 _buildSeccionCargaDeHoras(context),
                 const SizedBox(height: 24),
                 _buildSeccionCargaLms(context),
+                const SizedBox(height: 24),
+                _buildSeccionPlanFormacion(),
               ],
             ),
           ),
@@ -311,6 +314,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSeccionPlanFormacion() {
+    return const _ConfigCard(
+      titulo: 'Objetivo de formación por seniority',
+      subtitulo:
+          'Horas mensuales requeridas por categoría. Cada cambio rige desde '
+          'el mes que elijas: los meses anteriores conservan su objetivo.',
+      children: [PlanFormacionEditor()],
     );
   }
 

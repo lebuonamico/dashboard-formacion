@@ -5,6 +5,7 @@ import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
 import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
+import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
@@ -13,6 +14,7 @@ import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_historial_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/repositorios/estructura_repository.dart';
+import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/asistente_datos_provider.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
@@ -201,6 +203,16 @@ List<CertificacionMoodle> _finalizaciones(Iterable<String> legajos, int mes) =>
         ),
     ];
 
+/// Sin versiones: rige el plan por defecto, como antes de poder editarlo.
+class _PlanFake implements PlanFormacionRepository {
+  @override
+  Future<PlanesFormacion> getPlanes() async =>
+      const PlanesFormacion.sinVersiones();
+
+  @override
+  Future<void> guardarVersion(VersionPlanFormacion version) async {}
+}
+
 ProviderContainer _container({
   required bool habilitada,
   String? email,
@@ -231,6 +243,7 @@ ProviderContainer _container({
             : _EmpleadosConHistorialFake(nomina, historial),
       ),
       cursosRepositoryProvider.overrideWithValue(_CursosFake()),
+      planFormacionRepositoryProvider.overrideWithValue(_PlanFake()),
       cargaDeHorasCRMRepositoryProvider.overrideWithValue(
         _CargasFake(cargas ?? _cargas(legajos, 6)),
       ),
