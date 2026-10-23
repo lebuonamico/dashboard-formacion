@@ -88,11 +88,11 @@ class DashboardScreen extends ConsumerWidget {
                               mesesEvaluados: mesesEvaluados,
                             ),
                             const SizedBox(height: 28),
-                            DashboardCategoryHours(
+                            DashboardSummaryCharts(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),
-                            DashboardSummaryCharts(
+                            DashboardCategoryHours(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),

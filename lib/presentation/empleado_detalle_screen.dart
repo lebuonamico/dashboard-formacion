@@ -339,6 +339,15 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
       0,
       (total, item) => total + item.carga.horasTotales,
     );
+    // Horas del catálogo de los cursos Moodle finalizados en el período.
+    final horasMoodle = detalle.certificacionesMoodle
+        .where((item) => item.finalizoCurso)
+        .fold<double>(
+          0,
+          (total, item) =>
+              total +
+              (detalle.cursoPorNombre(item.cursoNombre)?.cargaHorariaHs ?? 0),
+        );
     final columnaMoodle = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -346,9 +355,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           context,
           icono: Icons.school_outlined,
           titulo: 'Moodle (LMS)',
-          detalle:
-              '${detalle.certificacionesMoodle.length} '
-              '${detalle.certificacionesMoodle.length == 1 ? 'certificación' : 'certificaciones'}',
+          detalle: '${_formatearHoras(horasMoodle)} hs',
         ),
         const SizedBox(height: 8),
         _buildColumnaMoodle(context, detalle),

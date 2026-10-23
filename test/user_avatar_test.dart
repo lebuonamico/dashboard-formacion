@@ -48,12 +48,12 @@ void main() {
 
     await tester.tap(find.byType(UserAvatar));
     await tester.pumpAndSettle();
-    // Las tres opciones están en el menú, con la actual marcada.
-    expect(find.text('Usar tema del sistema'), findsOneWidget);
-    expect(find.text('Tema claro'), findsOneWidget);
+    // El switch refleja el tema actual (claro).
+    final interruptor = find.byKey(const Key('apariencia_switch'));
     expect(find.text('Tema oscuro'), findsOneWidget);
+    expect(tester.widget<Switch>(interruptor).value, isFalse);
 
-    await tester.tap(find.byKey(const Key('apariencia_dark')));
+    await tester.tap(interruptor);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
@@ -66,6 +66,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RawImage), findsNothing);
     expect(await TemaController.leerGuardado(), ThemeMode.dark);
+
+    // El menú sigue abierto y el switch quedó encendido; apagarlo vuelve al
+    // tema claro.
+    expect(tester.widget<Switch>(interruptor).value, isTrue);
+    await tester.tap(interruptor);
+    await tester.pumpAndSettle();
+    expect(container.read(temaProvider), ThemeMode.light);
+    expect(await TemaController.leerGuardado(), ThemeMode.light);
     expect(tester.takeException(), isNull);
   });
 

@@ -9,8 +9,8 @@ import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/tema_provider.dart';
 
 /// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
-/// tarjeta con el detalle de la cuenta, incluido el rol, y el selector de
-/// apariencia (sistema, claro u oscuro).
+/// tarjeta con el detalle de la cuenta, incluido el rol, y el switch de tema
+/// oscuro.
 ///
 /// Cuando la app corre sin Supabase (modo local) no hay sesión, así que cae en
 /// la 'U' genérica y en el texto "Modo local".
@@ -20,7 +20,6 @@ class UserAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
-    final apariencia = ref.watch(temaProvider);
     final cs = context.colorScheme;
     final rol = RolUsuario.fromString(auth.rol);
     final esLider = rol == RolUsuario.lider || rol == RolUsuario.area;
@@ -43,23 +42,17 @@ class UserAvatar extends ConsumerWidget {
       pertenece: esLider ? ref.watch(empleadoDeSesionProvider) : null,
     );
 
-    return PopupMenuButton<ThemeMode>(
+    return PopupMenuButton<Never>(
       tooltip: 'Mi cuenta',
       offset: const Offset(0, 52),
-      onSelected: ref.read(temaProvider.notifier).cambiar,
       itemBuilder: (_) => [
-        PopupMenuItem<ThemeMode>(
+        PopupMenuItem<Never>(
           enabled: false,
           padding: EdgeInsets.zero,
           child: _TarjetaUsuario(datos: datos),
         ),
         const PopupMenuDivider(),
-        for (final opcion in _OpcionApariencia.values)
-          _EntradaApariencia(
-            key: Key('apariencia_${opcion.modo.name}'),
-            opcion: opcion,
-            seleccionada: opcion.modo == apariencia,
-          ),
+        const _EntradaTemaOscuro(),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -110,47 +103,27 @@ class UserAvatar extends ConsumerWidget {
   }
 }
 
-enum _OpcionApariencia {
-  sistema(
-    ThemeMode.system,
-    'Usar tema del sistema',
-    Icons.brightness_auto_outlined,
-  ),
-  claro(ThemeMode.light, 'Tema claro', Icons.light_mode_outlined),
-  oscuro(ThemeMode.dark, 'Tema oscuro', Icons.dark_mode_outlined);
-
-  final ThemeMode modo;
-  final String label;
-  final IconData icono;
-
-  const _OpcionApariencia(this.modo, this.label, this.icono);
-}
-
-/// Opción de apariencia del menú de la cuenta. Es una entrada propia (y no un
+/// Switch de tema oscuro del menú de la cuenta. Es una entrada propia (y no un
 /// `PopupMenuItem`) para tener el mismo feedback que los ítems del side menu:
-/// sin ripple, con un fondo que se desvanece entre reposo, hover, presionado y
-/// seleccionado, y texto e ícono que cambian de color con la misma curva.
-class _EntradaApariencia extends PopupMenuEntry<ThemeMode> {
-  final _OpcionApariencia opcion;
-  final bool seleccionada;
-
-  const _EntradaApariencia({
-    super.key,
-    required this.opcion,
-    required this.seleccionada,
-  });
+/// sin ripple, con un fondo que se desvanece entre reposo, hover y presionado.
+/// Cambiar el tema no cierra el menú, así se ve el resultado al instante.
+///
+/// Mientras el usuario no elija, la app sigue al sistema operativo y el switch
+/// refleja el tema que se está viendo.
+class _EntradaTemaOscuro extends PopupMenuEntry<Never> {
+  const _EntradaTemaOscuro();
 
   @override
   double get height => 44;
 
   @override
-  bool represents(ThemeMode? value) => value == opcion.modo;
+  bool represents(Object? value) => false;
 
   @override
-  State<_EntradaApariencia> createState() => _EntradaAparienciaState();
+  State<_EntradaTemaOscuro> createState() => _EntradaTemaOscuroState();
 }
 
-class _EntradaAparienciaState extends State<_EntradaApariencia> {
+class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
   /// Igual que la transición de color de los ítems del side menu.
   static const _duracion = Duration(milliseconds: 200);
   static final _radio = BorderRadius.circular(8);
@@ -161,96 +134,87 @@ class _EntradaAparienciaState extends State<_EntradaApariencia> {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final marca = cs.primary;
-    final seleccionada = widget.seleccionada;
-    final colorTexto = seleccionada ? marca : cs.onSurface;
-    final colorIcono = seleccionada ? marca : cs.onSurfaceVariant;
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
     final colorFondo = _presionado
-        ? marca.withValues(alpha: seleccionada ? 0.14 : 0.1)
-        : seleccionada
-        ? marca.withValues(alpha: _hover ? 0.11 : 0.08)
+        ? cs.primary.withValues(alpha: 0.1)
         : _hover
         ? cs.onSurface.withValues(alpha: 0.05)
         : cs.onSurface.withValues(alpha: 0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: Listener(
-          onPointerDown: (_) => setState(() => _presionado = true),
-          onPointerUp: (_) => setState(() => _presionado = false),
-          onPointerCancel: (_) => setState(() => _presionado = false),
-          child: AnimatedContainer(
-            duration: _duracion,
-            curve: Curves.easeOut,
-            height: widget.height - 4,
-            decoration: BoxDecoration(color: colorFondo, borderRadius: _radio),
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                borderRadius: _radio,
-                // Sin ripple ni resaltados propios: el feedback lo da el fondo.
-                splashFactory: NoSplash.splashFactory,
-                highlightColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                focusColor: marca.withValues(alpha: 0.08),
-                onTap: () => Navigator.of(context).pop(widget.opcion.modo),
-                child: Semantics(
-                  selected: seleccionada,
-                  child: TweenAnimationBuilder<Color?>(
-                    tween: ColorTween(end: colorIcono),
-                    duration: _duracion,
-                    curve: Curves.easeOut,
-                    builder: (context, icono, _) =>
-                        TweenAnimationBuilder<Color?>(
-                          tween: ColorTween(end: colorTexto),
-                          duration: _duracion,
-                          curve: Curves.easeOut,
-                          builder: (context, texto, _) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  widget.opcion.icono,
-                                  size: 18,
-                                  color: icono,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    widget.opcion.label,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: seleccionada
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                      color: texto,
-                                    ),
-                                  ),
-                                ),
-                                AnimatedOpacity(
-                                  opacity: seleccionada ? 1 : 0,
-                                  duration: _duracion,
-                                  curve: Curves.easeOut,
-                                  child: Icon(
-                                    Icons.check_rounded,
-                                    size: 18,
-                                    color: texto,
-                                  ),
-                                ),
-                              ],
+    return Consumer(
+      builder: (context, ref, _) {
+        void cambiar(bool valor) => ref
+            .read(temaProvider.notifier)
+            .cambiar(valor ? ThemeMode.dark : ThemeMode.light);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
+            child: Listener(
+              onPointerDown: (_) => setState(() => _presionado = true),
+              onPointerUp: (_) => setState(() => _presionado = false),
+              onPointerCancel: (_) => setState(() => _presionado = false),
+              child: AnimatedContainer(
+                duration: _duracion,
+                curve: Curves.easeOut,
+                height: widget.height - 4,
+                decoration: BoxDecoration(
+                  color: colorFondo,
+                  borderRadius: _radio,
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    borderRadius: _radio,
+                    // Sin ripple ni resaltados propios: el feedback lo da el
+                    // fondo.
+                    splashFactory: NoSplash.splashFactory,
+                    highlightColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
+                    focusColor: cs.primary.withValues(alpha: 0.08),
+                    onTap: () => cambiar(!oscuro),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12, right: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            oscuro
+                                ? Icons.dark_mode_outlined
+                                : Icons.light_mode_outlined,
+                            size: 18,
+                            color: cs.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Tema oscuro',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: cs.onSurface,
+                              ),
                             ),
                           ),
-                        ),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Switch(
+                              key: const Key('apariencia_switch'),
+                              value: oscuro,
+                              onChanged: cambiar,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
