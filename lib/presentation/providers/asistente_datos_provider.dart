@@ -322,7 +322,7 @@ Future<ContextoAsistente> _preparar(
               : destino.legajo;
           if (legajo == null) {
             notas.add(
-              'No hay una persona identificada de forma inequívoca. Seleccioná su perfil o indicá el nombre ficticio completo. No usar la cuenta autenticada como perfil.',
+              'No hay una persona identificada de forma inequívoca. Seleccioná su perfil o indicá el nombre completo. No usar la cuenta autenticada como perfil.',
             );
           } else {
             final detalle = await scope.read(

@@ -4,6 +4,7 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/mensaje_chat.dart';
 import 'package:app_finnegans/domain/servicios/asistente_contexto_service.dart';
 import 'package:app_finnegans/presentation/providers/asistente_ia_provider.dart';
+import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/widgets/asistente_mensaje.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:flutter/material.dart';
@@ -260,6 +261,18 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     final uri = GoRouterState.of(context).uri;
     final destino = DestinoAsistente.desdeUri(uri);
     ref.listen(asistenteChatProvider, _actualizarScroll);
+    ref.listen(authControllerProvider.select((auth) => auth.email), (
+      prev,
+      next,
+    ) {
+      if (prev != next) {
+        _texto.clear();
+        _focus.unfocus();
+        _offsetGuardado = 0;
+        _ultimoAlMinimizar = null;
+        _errorAlMinimizar = null;
+      }
+    });
     final duracion = _movimiento(context, 220);
 
     return LayoutBuilder(
@@ -545,7 +558,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   Expanded(
                     child: Text(
                       real
-                          ? 'Contexto dinámico · Datos de demostración del proyecto'
+                          ? 'Contexto dinámico · Datos disponibles en la aplicación'
                           : 'Ayuda conceptual · Indicadores deshabilitados',
                       style: TextStyle(
                         color: context.colorScheme.onSurfaceVariant,
@@ -571,14 +584,14 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 ),
             ],
             if (estado.enviando) const _AnalizandoConsulta(),
-            if (estado.error != null) _error(estado.error!),
+            if (estado.error != null) _error(estado),
           ],
         ),
       ),
     ),
   );
 
-  Widget _error(String error) {
+  Widget _error(EstadoChat estado) {
     final advertencia = context.colores.advertencia;
     return Semantics(
       liveRegion: true,
@@ -604,7 +617,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'No pudimos completar la consulta',
+                    'Tu consulta sigue disponible',
                     style: TextStyle(
                       color: advertencia.texto,
                       fontSize: 12.5,
@@ -613,22 +626,35 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    error,
+                    estado.error!,
                     style: TextStyle(
                       color: context.colores.textoIntermedio,
                       fontSize: 12.5,
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Podés editar tu consulta y volver a enviarla.',
-                    style: TextStyle(
-                      color: context.colorScheme.onSurfaceVariant,
-                      fontSize: 11.5,
-                      height: 1.4,
+                  if (estado.puedeReintentar) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      key: const Key('asistente_reintentar'),
+                      onPressed: estado.enviando
+                          ? null
+                          : () => ref
+                                .read(asistenteChatProvider.notifier)
+                                .reintentar(),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Reintentar'),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Se conserva la misma pregunta. Tu borrador actual no se modifica.',
+                      style: TextStyle(
+                        color: context.colorScheme.onSurfaceVariant,
+                        fontSize: 11.5,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
