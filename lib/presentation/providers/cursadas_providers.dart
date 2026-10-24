@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
+import 'package:app_finnegans/presentation/utils/period_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -117,17 +118,14 @@ final cargasDeHorasCompletasProvider =
                     legajo.toLowerCase().contains(query) ||
                     area.toLowerCase().contains(query);
 
-                final matchesAnio =
-                    anioFiltro == null || fecha.year == anioFiltro;
-                // El mes sólo filtra si hay un año elegido.
-                final matchesMes =
-                    anioFiltro == null ||
-                    mesFiltro == null ||
-                    fecha.month == mesFiltro;
+                final matchesPeriodo = coincidePeriodo(
+                  fecha,
+                  anio: anioFiltro,
+                  mes: mesFiltro,
+                );
 
                 return matchesQuery &&
-                    matchesAnio &&
-                    matchesMes &&
+                    matchesPeriodo &&
                     matchesDataFilters(
                       selection,
                       crmFilterRow(vm, cursoIdsPorNombre: cursoIds),

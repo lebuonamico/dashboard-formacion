@@ -6,6 +6,7 @@ import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -74,101 +75,65 @@ class CursosScreen extends ConsumerWidget {
     );
   }
 
- Widget _buildFilterBar(WidgetRef ref) {
-  final busqueda = ref.watch(busquedaCursoProvider);
-  final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
-  final anio = ref.watch(filtroAnioCursosProvider);
-  final mes = ref.watch(filtroMesCursosProvider);
-  final anios = ref.watch(aniosCursosDisponiblesProvider).value ?? <int>[];
+  Widget _buildFilterBar(WidgetRef ref) {
+    final busqueda = ref.watch(busquedaCursoProvider);
+    final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
+    final anio = ref.watch(filtroAnioCursosProvider);
+    final mes = ref.watch(filtroMesCursosProvider);
+    final anios = ref.watch(aniosCursosDisponiblesProvider).value ?? <int>[];
 
-  final aniosOrdenados = <int>{
-    ...anios,
-    if (anio != null) anio,
-  }.toList()..sort((a, b) => b.compareTo(a));
+    final aniosOrdenados = <int>{...anios, ?anio}.toList()
+      ..sort((a, b) => b.compareTo(a));
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      FilterBar(
-        scope: 'cursos',
-        hasActiveFilters:
-            busqueda.isNotEmpty ||
-            tipoSeleccionado != null ||
-            anio != null ||
-            mes != null,
-        onClear: () {
-          ref.read(busquedaCursoProvider.notifier).state = '';
-          ref.read(filtroTipoCursoProvider.notifier).state = null;
-          ref.read(filtroAnioCursosProvider.notifier).state = null;
-          ref.read(filtroMesCursosProvider.notifier).state = null;
-        },
-      ),
-      const SizedBox(height: 12),
-      Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        children: [
-          SizedBox(
-            width: 220,
-            child: DropdownButtonFormField<int?>(
-              key: ValueKey('cursos-anio-$anio'),
-              initialValue: anio,
-              decoration: const InputDecoration(
-                labelText: 'Año (métricas)',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Todos los años'),
-                ),
-                for (final a in aniosOrdenados)
-                  DropdownMenuItem<int?>(
-                    value: a,
-                    child: Text('$a'),
-                  ),
-              ],
-              onChanged: (value) {
-                ref.read(filtroAnioCursosProvider.notifier).state = value;
-                if (value == null) {
-                  ref.read(filtroMesCursosProvider.notifier).state = null;
-                }
-              },
+    return FilterBar(
+      scope: 'cursos',
+      hasActiveFilters:
+          busqueda.isNotEmpty ||
+          tipoSeleccionado != null ||
+          anio != null ||
+          mes != null,
+      filters: [
+        FilterDropdown<int?>(
+          value: anio,
+          hint: 'Año (métricas)',
+          icon: Icons.event_outlined,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Todos los años'),
             ),
-          ),
-          SizedBox(
-            width: 220,
-            child: DropdownButtonFormField<int?>(
-              key: ValueKey('cursos-mes-$anio-$mes'),
-              initialValue: anio == null ? null : mes,
-              decoration: const InputDecoration(
-                labelText: 'Mes (métricas)',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Todos los meses'),
-                ),
-                for (var m = 1; m <= 12; m++)
-                  DropdownMenuItem<int?>(
-                    value: m,
-                    child: Text(nombreMes(m)),
-                  ),
-              ],
-              onChanged: anio == null
-                  ? null
-                  : (value) {
-                      ref.read(filtroMesCursosProvider.notifier).state = value;
-                    },
+            for (final a in aniosOrdenados)
+              DropdownMenuItem<int?>(value: a, child: Text('$a')),
+          ],
+          onChanged: (value) {
+            ref.read(filtroAnioCursosProvider.notifier).state = value;
+          },
+        ),
+        FilterDropdown<int?>(
+          value: mes,
+          hint: 'Mes (métricas)',
+          icon: Icons.calendar_month_outlined,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Todos los meses'),
             ),
-          ),
-        ],
-      ),
-    ],
-  );
+            for (var m = 1; m <= 12; m++)
+              DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
+          ],
+          onChanged: (value) {
+            ref.read(filtroMesCursosProvider.notifier).state = value;
+          },
+        ),
+      ],
+      onClear: () {
+        ref.read(busquedaCursoProvider.notifier).state = '';
+        ref.read(filtroTipoCursoProvider.notifier).state = null;
+        ref.read(filtroAnioCursosProvider.notifier).state = null;
+        ref.read(filtroMesCursosProvider.notifier).state = null;
+      },
+    );
+  }
 }
 
 /// Tabla del catálogo, de a una página por vez, para no tener que scrollear.

@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:app_finnegans/presentation/utils/period_filter.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
@@ -323,9 +324,7 @@ final dataFilterRowsProvider =
                 (items) => items
                     .where(
                       (carga) =>
-                          anio == null ||
-                          (carga.fecha.year == anio &&
-                              (mes == null || carga.fecha.month == mes)),
+                          coincidePeriodo(carga.fecha, anio: anio, mes: mes),
                     )
                     .map(
                       (c) => crmFilterRow(
