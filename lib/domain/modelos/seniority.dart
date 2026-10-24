@@ -1,5 +1,8 @@
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
+/// Las horas de cada nivel son los valores por defecto del plan de formación.
+/// El objetivo que se evalúa sale de `PlanesFormacion`, que se edita en
+/// Configuración y puede cambiar mes a mes.
 enum Seniority {
   trainee('Trainee', negocio: 4, blandas: 4, libres: 0, dictado: 0),
   junior1('Junior 1', negocio: 4, blandas: 4, libres: 0, dictado: 0),
@@ -167,6 +170,7 @@ enum Seniority {
     }
   }
 
+  /// Plan por defecto de este nivel; ver `PlanFormacion.porDefecto`.
   Map<TipoCurso, double> get planFormacion => {
     TipoCurso.habilidadesDeNegocio: negocio,
     TipoCurso.habilidadesBlandas: blandas,

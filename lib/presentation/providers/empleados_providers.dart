@@ -13,11 +13,26 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+/// Nómina que ve el usuario de la sesión, según su rol y las áreas o equipos
+/// que lidera.
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
   final repo = ref.watch(empleadosRepositoryProvider);
-  return repo.getEmpleados();
+  // La nómina va primero: si falla, ese es el error que tiene que verse.
+  final empleados = await repo.getEmpleados();
+  final alcance = await ref.watch(alcanceUsuarioProvider.future);
+  return empleados.where(alcance.incluyeEmpleado).toList();
+});
+
+/// Legajos que ve el usuario, o `null` si ve toda la empresa. Filtra las
+/// horas y las finalizaciones con el mismo criterio que la nómina.
+final legajosVisiblesProvider = FutureProvider<Set<String>?>((ref) async {
+  final alcance = await ref.watch(alcanceUsuarioProvider.future);
+  if (alcance.esTotal) return null;
+  final empleados = await ref.watch(empleadosProvider.future);
+  return {for (final empleado in empleados) empleado.legajo};
 });
 
 final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
@@ -25,6 +40,9 @@ final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
 ) async {
   final repo = ref.watch(empleadosRepositoryProvider);
   if (repo is! EmpleadosHistorialRepository) return null;
+  // Con RLS cada usuario recibe vigencias distintas: se vuelve a consultar
+  // cuando entra otro en la misma pestaña.
+  ref.watch(sesionDatosProvider);
   // Leandro: llama a getHistorialEmpleados para consultar las vigencias sin escribir un historial paralelo.
   return (repo as EmpleadosHistorialRepository).getHistorialEmpleados();
 });
@@ -59,13 +77,28 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
   });
 });
 
+/// Curso que el empleado cargó en el CRM como dictado, con las horas del período.
+class CursoDictadoViewModel {
+  final String codigo;
+  final String nombre;
+  final String area;
+  final double horas;
+
+  const CursoDictadoViewModel({
+    required this.codigo,
+    required this.nombre,
+    required this.area,
+    required this.horas,
+  });
+}
+
 class DetalleEmpleadoViewModel {
   final Empleado empleado;
   final CumplimientoEmpleado cumplimiento;
   final List<CargaDeHorasCRMViewModel> cargasCrm;
   final List<CertificacionMoodle> certificacionesMoodle;
   final Map<String, Curso> cursosPorNombre;
-  final List<Curso> cursosDictados;
+  final List<CursoDictadoViewModel> cursosDictados;
   final Set<String> cursosFinalizados;
 
   DetalleEmpleadoViewModel({
@@ -98,7 +131,9 @@ final detalleEmpleadoProvider =
       final alcance = ref.watch(alcancePeriodoProvider);
       final mes = ref.watch(filtroMesPeriodoProvider);
       final anio = ref.watch(filtroAnioPeriodoProvider);
-      final cumplimientoService = ref.read(cumplimientoServiceProvider);
+      final cumplimientoService = await ref.watch(
+        cumplimientoServiceProvider.future,
+      );
       final equiposService = ref.read(equiposServiceProvider);
       final esAnual = alcance == AlcancePeriodo.anual;
 
@@ -144,12 +179,21 @@ final detalleEmpleadoProvider =
             cursos: cursos,
             cargasDeHoras: cargasPeriodo,
             certificacionesMoodle: certificacionesValidasPeriodo,
+            anio: anio,
+            mes: mes,
           )
           .first;
       if (esAnual) {
-        cumplimiento = equiposService.convertirObjetivoMensualAAnual([
-          cumplimiento,
-        ], mesesConRegistros: 12).first;
+        // Objetivo del año: los 12 meses, cada uno con su versión del plan.
+        cumplimiento = CumplimientoEmpleado(
+          empleado: cumplimiento.empleado,
+          horasValidas: cumplimiento.horasValidas,
+          horasDeclaradas: cumplimiento.horasDeclaradas,
+          horasRequeridas: cumplimientoService.planes.requeridasDelAnio(
+            empleado.seniority,
+            anio,
+          ),
+        );
       }
 
       final cursosPorNombre = {
@@ -169,9 +213,29 @@ final detalleEmpleadoProvider =
           )
           .toList();
 
-      final dictados = cursos
-          .where((cur) => cur.instructorLegajo == legajo)
-          .toList();
+      // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
+      final dictadosPorCurso = <String, List<CargaDeHorasCRMViewModel>>{};
+      for (final item in cargasCrm.where((item) => item.carga.esDictada)) {
+        final cursoId = item.curso?.id.trim() ?? item.carga.cursoId?.trim();
+        final clave = cursoId != null && cursoId.isNotEmpty
+            ? 'id:$cursoId'
+            : 'nombre:${CumplimientoService.normalizarNombreCurso(item.carga.cursoNombre)}';
+        dictadosPorCurso.putIfAbsent(clave, () => []).add(item);
+      }
+      final dictados =
+          dictadosPorCurso.values.map((items) {
+            final primero = items.first;
+            final curso = primero.curso;
+            return CursoDictadoViewModel(
+              codigo: curso?.id ?? primero.carga.cursoId ?? '',
+              nombre: curso?.nombre ?? primero.carga.cursoNombre,
+              area: curso?.areaCurso ?? primero.carga.descripcionCurso ?? '',
+              horas: items.fold<double>(
+                0,
+                (total, item) => total + item.carga.horasTotales,
+              ),
+            );
+          }).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
       final cursosFinalizados = certificacionesEmpleado
           .where((item) => item.finalizoCurso)
           .map(

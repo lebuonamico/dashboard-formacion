@@ -159,10 +159,32 @@ void main() {
     },
   );
 
-  test('Un usuario autorizado sin rol admin no entra a /admin', () async {
+  test(
+    'Academia entra al panel y a Configuración como el Administrador',
+    () async {
+      final fixture = _AuthFixture(
+        authorization: (request) async => _rows(request, [
+          {'email': 'test@example.com', 'activo': true, 'rol': 'academia'},
+        ]),
+      );
+      final auth = _controller(fixture.client);
+
+      await fixture.signIn();
+      await _waitUntil(() => auth.isAuthorized);
+
+      expect(auth.esAdmin, isFalse);
+      expect(auth.esGestor, isTrue);
+      expect(auth.redirect('/admin'), isNull);
+      expect(auth.redirect('/dashboard'), isNull);
+      expect(auth.redirect('/configuracion'), isNull);
+      expect(auth.redirect('/areas'), isNull);
+    },
+  );
+
+  test('Un usuario de área no entra al panel ni a Configuración', () async {
     final fixture = _AuthFixture(
       authorization: (request) async => _rows(request, [
-        {'email': 'test@example.com', 'activo': true, 'rol': 'academia'},
+        {'email': 'test@example.com', 'activo': true, 'rol': 'area'},
       ]),
     );
     final auth = _controller(fixture.client);
@@ -170,10 +192,33 @@ void main() {
     await fixture.signIn();
     await _waitUntil(() => auth.isAuthorized);
 
-    expect(auth.esAdmin, isFalse);
+    expect(auth.esGestor, isFalse);
     expect(auth.redirect('/admin'), '/dashboard');
-    expect(auth.redirect('/dashboard'), isNull);
-    expect(auth.redirect('/configuracion'), isNull);
+    expect(auth.redirect('/configuracion'), '/dashboard');
+    expect(auth.redirect('/areas'), isNull);
+    expect(auth.redirect('/areas/SERVICIOS'), isNull);
+    expect(auth.redirect('/equipos'), isNull);
+  });
+
+  test('Un líder no ve Áreas pero sí el detalle de sus equipos', () async {
+    final fixture = _AuthFixture(
+      authorization: (request) async => _rows(request, [
+        {'email': 'test@example.com', 'activo': true, 'rol': 'lider'},
+      ]),
+    );
+    final auth = _controller(fixture.client);
+
+    await fixture.signIn();
+    await _waitUntil(() => auth.isAuthorized);
+
+    expect(auth.esGestor, isFalse);
+    expect(auth.redirect('/admin'), '/dashboard');
+    expect(auth.redirect('/configuracion'), '/dashboard');
+    expect(auth.redirect('/areas'), '/equipos');
+    expect(auth.redirect('/areas/SERVICIOS'), '/equipos');
+    expect(auth.redirect('/areas/SERVICIOS/equipos/SOPORTE'), isNull);
+    expect(auth.redirect('/equipos'), isNull);
+    expect(auth.redirect('/empleados/2001'), isNull);
   });
 
   test('Un rol desconocido no concede el panel de administración', () async {
@@ -189,7 +234,9 @@ void main() {
 
     expect(auth.rol, 'superadmin');
     expect(auth.esAdmin, isFalse);
+    expect(auth.esGestor, isFalse);
     expect(auth.redirect('/admin'), '/dashboard');
+    expect(auth.redirect('/configuracion'), '/dashboard');
   });
 
   for (final entry in <String, List<Map<String, dynamic>>>{

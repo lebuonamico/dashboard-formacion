@@ -1,4 +1,5 @@
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 enum TipoCargaDeHoras { tomada, dictada }
 
@@ -33,7 +34,21 @@ class CargaDeHorasCRM {
     required this.tipo,
   });
 
-  bool get esDictada => tipo == TipoCargaDeHoras.dictada;
+  /// Categoría indicada en la columna Clasificación del CRM, si se reconoce.
+  TipoCurso? get categoriaClasificacion => TipoCurso.desdeTexto(clasificacion);
+
+  bool get esDictada =>
+      tipo == TipoCargaDeHoras.dictada ||
+      categoriaClasificacion == TipoCurso.dictadoCapacitaciones;
+
+  /// Libres y Dictado nunca llegan por el LMS: se acreditan solo con el CRM.
+  TipoCurso? get categoriaSoloCrm {
+    if (esDictada) return TipoCurso.dictadoCapacitaciones;
+    if (categoriaClasificacion == TipoCurso.libresExploracion) {
+      return TipoCurso.libresExploracion;
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
     'cursoId': cursoId,

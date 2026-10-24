@@ -1,5 +1,9 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
+import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/tema_provider.dart';
 import 'package:app_finnegans/presentation/widgets/shared/user_avatar.dart';
 import 'package:app_finnegans/presentation/widgets/transicion_tema.dart';
@@ -44,12 +48,12 @@ void main() {
 
     await tester.tap(find.byType(UserAvatar));
     await tester.pumpAndSettle();
-    // Las tres opciones están en el menú, con la actual marcada.
-    expect(find.text('Usar tema del sistema'), findsOneWidget);
-    expect(find.text('Tema claro'), findsOneWidget);
+    // El switch refleja el tema actual (claro).
+    final interruptor = find.byKey(const Key('apariencia_switch'));
     expect(find.text('Tema oscuro'), findsOneWidget);
+    expect(tester.widget<Switch>(interruptor).value, isFalse);
 
-    await tester.tap(find.byKey(const Key('apariencia_dark')));
+    await tester.tap(interruptor);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
@@ -62,6 +66,104 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RawImage), findsNothing);
     expect(await TemaController.leerGuardado(), ThemeMode.dark);
+
+    // El menú sigue abierto y el switch quedó encendido; apagarlo vuelve al
+    // tema claro.
+    expect(tester.widget<Switch>(interruptor).value, isTrue);
+    await tester.tap(interruptor);
+    await tester.pumpAndSettle();
+    expect(container.read(temaProvider), ThemeMode.light);
+    expect(await TemaController.leerGuardado(), ThemeMode.light);
     expect(tester.takeException(), isNull);
   });
+
+  group('Lidera y Pertenece a', () {
+    final estructura = EstructuraOrganizacional(
+      areas: [Area(id: '1', nombre: 'PRODUCTOS TECNOLÓGICOS')],
+      equipos: [
+        Equipo(
+          id: '10',
+          areaId: '1',
+          nombre: 'PLATAFORMA CORE',
+          lideres: {'lider@finnegans.com'},
+        ),
+      ],
+    );
+    final propio = Empleado(
+      legajo: '5',
+      nombre: 'Lía',
+      apellido: 'Líder',
+      seniority: Seniority.senior1,
+      area: 'SERVICIOS',
+      mail: 'lider@finnegans.com',
+      equipo: 'IMPLEMENTACIONES',
+    );
+
+    Future<void> abrirMenu(
+      WidgetTester tester, {
+      required String rol,
+      Empleado? empleado,
+    }) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(
+            (ref) => _AuthConRol('lider@finnegans.com', rol),
+          ),
+          temaProvider.overrideWith(() => TemaController(ThemeMode.light)),
+          estructuraProvider.overrideWith((ref) async => estructura),
+          empleadoDeSesionProvider.overrideWith((ref) async => empleado),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const _App()),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(UserAvatar));
+      await tester.pumpAndSettle();
+    }
+
+    String texto(WidgetTester tester, String clave) =>
+        tester.widget<Text>(find.byKey(Key(clave))).data!;
+
+    testWidgets('Un líder ve lo que lidera y a qué pertenece', (tester) async {
+      await abrirMenu(tester, rol: 'lider', empleado: propio);
+
+      expect(texto(tester, 'cuenta_lidera'), 'PLATAFORMA CORE');
+      expect(texto(tester, 'cuenta_pertenece'), 'IMPLEMENTACIONES · SERVICIOS');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Un líder que no figura en la nómina lo dice', (tester) async {
+      await abrirMenu(tester, rol: 'lider');
+
+      expect(
+        texto(tester, 'cuenta_pertenece'),
+        EstructuraOrganizacional.noFiguraEnNomina,
+      );
+    });
+
+    testWidgets('Un administrador no ve esos datos', (tester) async {
+      await abrirMenu(tester, rol: 'admin', empleado: propio);
+
+      expect(find.byKey(const Key('cuenta_lidera')), findsNothing);
+      expect(find.byKey(const Key('cuenta_pertenece')), findsNothing);
+    });
+  });
+}
+
+/// Sesión con Supabase habilitado, un email y un rol fijos, sin cliente real.
+class _AuthConRol extends AuthController {
+  final String _email;
+
+  _AuthConRol(this._email, String rol) : super(null) {
+    this.rol = rol;
+  }
+
+  @override
+  bool get enabled => true;
+
+  @override
+  String? get email => _email;
 }

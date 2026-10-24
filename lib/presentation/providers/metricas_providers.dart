@@ -143,7 +143,7 @@ final kpisGeneralesMetricasProvider = FutureProvider<KpisGeneralesViewModel>((
       totalFinnencersAlcanzados: 0,
       totalNomina: 0,
       proyectadoAnualPromedio: 0,
-      horasRequeridasAnuales: 96.0,
+      horasRequeridasAnuales: 0,
       totalHorasDictadas: 0,
     );
   }
@@ -163,6 +163,14 @@ final kpisGeneralesMetricasProvider = FutureProvider<KpisGeneralesViewModel>((
   final mesesTranscurridos = mesCorte.clamp(1, 12);
   final proyectadoAnual = (promedioActualPorPersona / mesesTranscurridos) * 12;
 
+  // El objetivo mensual sale del plan de cada seniority: el promedio de la
+  // nómina, llevado a un año.
+  final sumaHorasRequeridas = cumplimientos.fold<double>(
+    0.0,
+    (acc, c) => acc + c.totalHorasRequeridas,
+  );
+  final horasRequeridasAnuales = sumaHorasRequeridas / totalNomina * 12;
+
   final horasDictadas = cursos.fold<double>(
     0.0,
     (acc, cur) => acc + cur.cargaHorariaHs,
@@ -173,7 +181,7 @@ final kpisGeneralesMetricasProvider = FutureProvider<KpisGeneralesViewModel>((
     totalFinnencersAlcanzados: totalAlcanzados,
     totalNomina: totalNomina,
     proyectadoAnualPromedio: proyectadoAnual,
-    horasRequeridasAnuales: 96.0,
+    horasRequeridasAnuales: horasRequeridasAnuales,
     totalHorasDictadas: horasDictadas,
   );
 });

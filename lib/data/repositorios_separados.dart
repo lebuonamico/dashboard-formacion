@@ -6,11 +6,13 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
+import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockEmpleadosRepository implements EmpleadosRepository {
@@ -390,6 +392,29 @@ class LocalCertificacionesMoodleRepository
     await (await _storage).setString(
       _key,
       jsonEncode(certificaciones.map((item) => item.toJson()).toList()),
+    );
+  }
+}
+
+/// Sin versiones guardadas rige el plan por defecto de cada seniority.
+class LocalPlanFormacionRepository implements PlanFormacionRepository {
+  static const _key = 'formacion_plan_formacion';
+
+  Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
+
+  @override
+  Future<PlanesFormacion> getPlanes() async {
+    final raw = (await _storage).getString(_key);
+    if (raw == null) return const PlanesFormacion.sinVersiones();
+    return PlanesFormacion(_decodeList(raw, VersionPlanFormacion.fromJson));
+  }
+
+  @override
+  Future<void> guardarVersion(VersionPlanFormacion version) async {
+    final planes = (await getPlanes()).conVersion(version);
+    await (await _storage).setString(
+      _key,
+      jsonEncode(planes.versiones.map((item) => item.toJson()).toList()),
     );
   }
 }

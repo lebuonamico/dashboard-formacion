@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
@@ -127,7 +128,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
     final uri = GoRouterState.of(context).uri;
     final currentPath = uri.path;
     final requestedOrigin = uri.queryParameters['origen'];
-    const validOrigins = {'dashboard', 'areas', 'equipos'};
+    const validOrigins = {'dashboard', 'areas', 'equipos', 'certificaciones'};
     final origin = validOrigins.contains(requestedOrigin)
         ? requestedOrigin
         : null;
@@ -138,7 +139,9 @@ class _SideMenuState extends ConsumerState<SideMenu>
     }
 
     final auth = ref.watch(authControllerProvider);
-    final mostrarAdmin = auth.esAdmin || !auth.enabled;
+    // En modo local no hay roles: se ve todo, para poder probarlo.
+    final gestiona = auth.esGestor || !auth.enabled;
+    final verAreas = !auth.enabled || auth.rolConocido != RolUsuario.lider;
     final cs = context.colorScheme;
     final colores = context.colores;
     final borde = BorderSide(color: colores.sidebarBorde);
@@ -214,14 +217,15 @@ class _SideMenuState extends ConsumerState<SideMenu>
                     ); // Navega a la pantalla de dashboard
                   },
                 ),
-                _MenuItem(
-                  icon: Icons.account_tree_outlined,
-                  label: 'Áreas',
-                  isSelected: isSelected('areas', '/areas'),
-                  onTap: () {
-                    context.push('/areas'); // Navega a la pantalla de áreas
-                  },
-                ),
+                if (verAreas)
+                  _MenuItem(
+                    icon: Icons.account_tree_outlined,
+                    label: 'Áreas',
+                    isSelected: isSelected('areas', '/areas'),
+                    onTap: () {
+                      context.push('/areas'); // Navega a la pantalla de áreas
+                    },
+                  ),
                 _MenuItem(
                   icon: Icons.group_work,
                   label: 'Equipos',
@@ -277,17 +281,18 @@ class _SideMenuState extends ConsumerState<SideMenu>
                   },
                 ),
                 */
-                _MenuItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Configuración',
-                  isSelected: isSelected('configuracion', '/configuracion'),
-                  onTap: () {
-                    context.push(
-                      '/configuracion',
-                    ); // Navega a la pantalla de configuración
-                  },
-                ),
-                if (mostrarAdmin)
+                if (gestiona)
+                  _MenuItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Configuración',
+                    isSelected: isSelected('configuracion', '/configuracion'),
+                    onTap: () {
+                      context.push(
+                        '/configuracion',
+                      ); // Navega a la pantalla de configuración
+                    },
+                  ),
+                if (gestiona)
                   _MenuItem(
                     icon: Icons.admin_panel_settings_outlined,
                     label: 'Panel de administrador',
