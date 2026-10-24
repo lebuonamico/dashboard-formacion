@@ -274,6 +274,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
     );
     final field = MenuAnchor(
       controller: _menu,
+      useRootOverlay: true,
       onOpen: () {
         setState(() => _search.clear());
         if (_scroll.hasClients) _scroll.jumpTo(0);
@@ -332,11 +333,16 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
           decoration: filtroInputDecoration(widget.hint, widget.icon).copyWith(
             labelText: widget.hint,
             enabled: _enabled,
-            helperText: incompatible.isEmpty
-                ? null
-                : '${incompatible.length} sin coincidencias',
-            helperStyle: TextStyle(color: Theme.of(context).colorScheme.error),
-            suffixIcon: const Icon(Icons.arrow_drop_down),
+            suffixIcon: incompatible.isEmpty
+                ? const Icon(Icons.arrow_drop_down)
+                : Tooltip(
+                    message:
+                        '${incompatible.length} sin coincidencias con los demás filtros o el período actual.',
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -347,11 +353,26 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                 textScaler: MediaQuery.textScalerOf(context),
                 maxLines: 1,
               )..layout(maxWidth: constraints.maxWidth);
-              final summary = selected.length > 1 && painter.didExceedMaxLines
+              var summary = selected.length > 1 && painter.didExceedMaxLines
                   ? '${selected.length} seleccionados'
                   : fullSummary;
+              if (selected.length > 1 && painter.didExceedMaxLines) {
+                painter.text = TextSpan(text: summary, style: style);
+                painter.layout(maxWidth: constraints.maxWidth);
+                if (painter.didExceedMaxLines) {
+                  summary = '${selected.length} selec.';
+                }
+              }
               painter.dispose();
-              return Tooltip(message: fullSummary, child: Text(summary));
+              return Tooltip(
+                message: fullSummary,
+                child: Text(
+                  summary,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
             },
           ),
         ),
