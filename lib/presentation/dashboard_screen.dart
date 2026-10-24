@@ -7,7 +7,6 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
-import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_hours.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -111,10 +110,6 @@ class DashboardScreen extends ConsumerWidget {
                               ComparacionMoodleCrmCards(cumplimientos: items),
                               const SizedBox(height: 28),
                             ],
-                            DashboardCategoryHours(
-                              cumplimientosAsync: cumplimientoAsync,
-                            ),
-                            const SizedBox(height: 28),
                             // DashboardAreaCompliancePanel(areasAsync: areasAsync),
                             // const SizedBox(height: 28),
                             DashboardMonthlyHours(

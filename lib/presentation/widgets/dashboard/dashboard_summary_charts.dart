@@ -236,7 +236,7 @@ class _CategoryChartCard extends StatelessWidget {
       title: 'Distribución por categorías',
       subtitle:
           '${summary.totalHours.toStringAsFixed(0)} de '
-          '${summary.totalTarget.toStringAsFixed(0)} h en total',
+          '${summary.totalTarget.toStringAsFixed(0)} h válidas',
       trailing: '4 Pilares',
       footer: 'Capacitaciones distribuidas entre los 4 pilares',
       action: 'Ver cursos',

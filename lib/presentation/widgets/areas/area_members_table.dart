@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
+import 'package:app_finnegans/presentation/utils/orden_miembros.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -32,6 +33,18 @@ class AreaMiembrosTable extends StatefulWidget {
 class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
   static const _integrantesPorPagina = 8;
   int _paginaActual = 0;
+  var _orden = const EstadoOrdenMiembros();
+
+  /// Columnas en el orden en que se muestran; null = no ordenable.
+  static const _columnas = <(String, OrdenMiembros?)>[
+    ('Legajo', OrdenMiembros.legajo),
+    ('Colaborador', OrdenMiembros.colaborador),
+    ('Equipo', OrdenMiembros.equipo),
+    ('Seniority', OrdenMiembros.seniority),
+    ('Horas realizadas / objetivo', OrdenMiembros.horas),
+    ('Cumplimiento', OrdenMiembros.cumplimiento),
+    ('Por categoría', null),
+  ];
 
   @override
   void didUpdateWidget(covariant AreaMiembrosTable oldWidget) {
@@ -72,7 +85,10 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
       'riesgo': 'En riesgo',
       'critico': 'Críticos',
     };
-    final visiblesFiltrados = _miembrosFiltrados;
+    final visiblesFiltrados = _orden.aplicar(_miembrosFiltrados);
+    final indiceOrden = _columnas.indexWhere(
+      (columna) => columna.$2 != null && columna.$2 == _orden.columna,
+    );
     final totalIntegrantes = visiblesFiltrados.length;
     final totalPaginas = totalIntegrantes == 0
         ? 1
@@ -167,14 +183,19 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
                       headingRowColor: WidgetStatePropertyAll(
                         context.colorScheme.surfaceContainerLow,
                       ),
-                      columns: const [
-                        DataColumn(label: Text('Legajo')),
-                        DataColumn(label: Text('Colaborador')),
-                        DataColumn(label: Text('Equipo')),
-                        DataColumn(label: Text('Seniority')),
-                        DataColumn(label: Text('Horas realizadas / objetivo')),
-                        DataColumn(label: Text('Cumplimiento')),
-                        DataColumn(label: Text('Por categoría')),
+                      sortColumnIndex: indiceOrden < 0 ? null : indiceOrden,
+                      sortAscending: _orden.ascendente,
+                      columns: [
+                        for (final (titulo, orden) in _columnas)
+                          DataColumn(
+                            label: Text(titulo),
+                            onSort: orden == null
+                                ? null
+                                : (_, _) => setState(() {
+                                    _orden = _orden.alternar(orden);
+                                    _paginaActual = 0;
+                                  }),
+                          ),
                       ],
                       rows: miembrosVisibles.map(_buildRow).toList(),
                     ),

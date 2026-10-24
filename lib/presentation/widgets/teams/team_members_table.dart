@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/orden_miembros.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
@@ -18,6 +19,17 @@ class EquipoMiembrosTable extends StatefulWidget {
 class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
   static const _integrantesPorPagina = 8;
   int _paginaActual = 0;
+  var _orden = const EstadoOrdenMiembros();
+
+  /// Columnas en el orden en que se muestran; null = no ordenable.
+  static const _columnas = <(String, OrdenMiembros?)>[
+    ('Legajo', OrdenMiembros.legajo),
+    ('Colaborador', OrdenMiembros.colaborador),
+    ('Seniority', OrdenMiembros.seniority),
+    ('Horas realizadas / objetivo', OrdenMiembros.horas),
+    ('Cumplimiento', OrdenMiembros.cumplimiento),
+    ('Por categoría', null),
+  ];
 
   @override
   void didUpdateWidget(covariant EquipoMiembrosTable oldWidget) {
@@ -40,7 +52,12 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
     final fin = finCalculado > totalIntegrantes
         ? totalIntegrantes
         : finCalculado;
-    final miembrosVisibles = widget.miembros.sublist(inicio, fin);
+    final miembrosVisibles = _orden
+        .aplicar(widget.miembros)
+        .sublist(inicio, fin);
+    final indiceOrden = _columnas.indexWhere(
+      (columna) => columna.$2 != null && columna.$2 == _orden.columna,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,13 +109,19 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
                     headingRowColor: WidgetStatePropertyAll(
                       context.colorScheme.surfaceContainerLow,
                     ),
-                    columns: const [
-                      DataColumn(label: Text('Legajo')),
-                      DataColumn(label: Text('Colaborador')),
-                      DataColumn(label: Text('Seniority')),
-                      DataColumn(label: Text('Horas realizadas / objetivo')),
-                      DataColumn(label: Text('Cumplimiento')),
-                      DataColumn(label: Text('Por categoría')),
+                    sortColumnIndex: indiceOrden < 0 ? null : indiceOrden,
+                    sortAscending: _orden.ascendente,
+                    columns: [
+                      for (final (titulo, orden) in _columnas)
+                        DataColumn(
+                          label: Text(titulo),
+                          onSort: orden == null
+                              ? null
+                              : (_, _) => setState(() {
+                                  _orden = _orden.alternar(orden);
+                                  _paginaActual = 0;
+                                }),
+                        ),
                     ],
                     // Leandro: llama a _buildRow para convertir cada integrante visible en una fila.
                     rows: miembrosVisibles.map(_buildRow).toList(),
