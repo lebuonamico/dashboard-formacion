@@ -112,13 +112,10 @@ class _BarraFiltrosCrm extends ConsumerWidget {
           ],
           onChanged: (value) {
             ref.read(filtroAnioCargaProvider.notifier).state = value;
-            if (value == null) {
-              ref.read(filtroMesCargaProvider.notifier).state = null;
-            }
           },
         ),
         FilterDropdown<int?>(
-          value: anio == null ? null : mes,
+          value: mes,
           hint: 'Todos los meses',
           icon: Icons.calendar_month_outlined,
           width: 240,
@@ -130,12 +127,8 @@ class _BarraFiltrosCrm extends ConsumerWidget {
             for (var m = 1; m <= 12; m++)
               DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
           ],
-          // Sin año elegido el mes no filtra: queda deshabilitado.
-          onChanged: anio == null
-              ? null
-              : (value) =>
-                    ref.read(filtroMesCargaProvider.notifier).state = value,
-          tooltip: anio == null ? 'Elegí un año para filtrar por mes' : null,
+          onChanged: (value) =>
+              ref.read(filtroMesCargaProvider.notifier).state = value,
         ),
       ],
       onClear: () {

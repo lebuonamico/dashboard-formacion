@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
+import 'package:app_finnegans/presentation/utils/period_filter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
@@ -97,10 +98,8 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
     for (var e in empleados) e.legajo: '${e.nombre} ${e.apellido}',
   };
 
-  // El mes sólo filtra si hay un año elegido, igual que en el listado CRM.
   bool enPeriodo(DateTime fecha) =>
-      (anioFiltro == null || fecha.year == anioFiltro) &&
-      (anioFiltro == null || mesFiltro == null || fecha.month == mesFiltro);
+      coincidePeriodo(fecha, anio: anioFiltro, mes: mesFiltro);
 
   // Mismo cruce por nombre normalizado que el cálculo de cumplimiento.
   final legajosCrm = <String, Set<String>>{};

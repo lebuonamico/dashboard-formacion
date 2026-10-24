@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
@@ -109,44 +111,119 @@ class FilterBar extends ConsumerWidget {
         hasActiveFilters ||
         activeSelection.values.any((values) => values.isNotEmpty);
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: context.panel(),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+      child: _FilterBarLayout(
+        fields: fields,
+        onClear: active
+            ? () {
+                if (scope != null) {
+                  ref
+                      .read(dataFilterSelectionProvider(scope!).notifier)
+                      .clear();
+                }
+                onClear();
+              }
+            : null,
       ),
-      child: SingleChildScrollView(
-        child: LayoutBuilder(
-          builder: (context, constraints) => Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (final field in fields)
-                SizedBox(
-                  width: constraints.maxWidth < 600
-                      ? constraints.maxWidth
-                      : field.width,
-                  child: field,
-                ),
-              OutlinedButton.icon(
-                onPressed: active
-                    ? () {
-                        if (scope != null) {
-                          ref
-                              .read(
-                                dataFilterSelectionProvider(scope!).notifier,
-                              )
-                              .clear();
-                        }
-                        onClear();
-                      }
-                    : null,
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                label: const Text('Limpiar'),
-              ),
-            ],
+    );
+  }
+}
+
+class _FilterBarLayout extends StatefulWidget {
+  final List<FilterDropdown<Object?>> fields;
+  final VoidCallback? onClear;
+
+  const _FilterBarLayout({required this.fields, required this.onClear});
+
+  @override
+  State<_FilterBarLayout> createState() => _FilterBarLayoutState();
+}
+
+class _FilterBarLayoutState extends State<_FilterBarLayout> {
+  static const _spacing = 12.0;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = math.max(
+      1.0,
+      MediaQuery.textScalerOf(context).scale(14) / 14,
+    );
+    final controlHeight = 56.0 * textScale;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = widget.fields.length;
+                if (count == 0) {
+                  return SizedBox(height: controlHeight + 16);
+                }
+                final minWidth =
+                    count * 200.0 * textScale + (count - 1) * _spacing;
+                final needsScroll = minWidth > constraints.maxWidth;
+
+                return ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(
+                    context,
+                  ).copyWith(scrollbars: false),
+                  child: Scrollbar(
+                    controller: _scroll,
+                    thumbVisibility: needsScroll,
+                    interactive: true,
+                    thickness: 6,
+                    radius: const Radius.circular(3),
+                    child: SingleChildScrollView(
+                      controller: _scroll,
+                      primary: false,
+                      scrollDirection: Axis.horizontal,
+                      // Espacio para la etiqueta flotante y la barra de scroll.
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: SizedBox(
+                        width: math.max(minWidth, constraints.maxWidth),
+                        height: controlHeight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (var i = 0; i < count; i++) ...[
+                              if (i > 0) const SizedBox(width: _spacing),
+                              Expanded(child: widget.fields[i]),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+          const SizedBox(width: _spacing),
+          SizedBox(
+            height: controlHeight,
+            child: constraints.maxWidth < 400 * textScale
+                ? IconButton.outlined(
+                    onPressed: widget.onClear,
+                    tooltip: 'Limpiar',
+                    icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: widget.onClear,
+                    icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                    label: const Text('Limpiar'),
+                  ),
+          ),
+        ],
       ),
     );
   }
