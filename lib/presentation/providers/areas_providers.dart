@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
@@ -163,6 +164,7 @@ final areasFiltradasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
   final resumenAsync = ref.watch(resumenAreasPeriodoProvider);
   final query = ref.watch(busquedaAreaProvider).trim().toLowerCase();
   final estado = ref.watch(filtroEstadoAreaProvider);
+  final selection = ref.watch(dataFilterSelectionProvider('areas'));
 
   return resumenAsync.whenData((resumen) {
     return resumen.areas.where((area) {
@@ -174,7 +176,15 @@ final areasFiltradasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
           );
       final coincideEstado = estado == null || area.semaforo == estado;
 
-      return coincideBusqueda && coincideEstado;
+      return coincideBusqueda &&
+          coincideEstado &&
+          (area.equiposGenerales.isEmpty ? [''] : area.equiposGenerales).any(
+            (equipo) => matchesDataFilters(selection, {
+              'Área': area.nombre,
+              'Equipo': equipo,
+              'Estado': area.semaforo.label,
+            }),
+          );
     }).toList();
   });
 });
@@ -193,10 +203,10 @@ class DetalleAreaViewModel {
   });
 }
 
-/// Chips de la tabla de integrantes del detalle: `cumplido`, `riesgo`,
-/// `critico` o null (todos). Se descarta al salir de la pantalla.
-final filtroEstadoMiembroAreaProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
+/// Estados de la tabla de integrantes del detalle: `cumplido`, `riesgo`,
+/// `critico`; conjunto vacío = todos. Se descarta al salir de la pantalla.
+final filtroEstadoMiembroAreaProvider = StateProvider.autoDispose<Set<String>>(
+  (ref) => {},
 );
 
 final detalleAreaProvider =

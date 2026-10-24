@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
@@ -76,6 +77,7 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
   final tipoFiltro = ref.watch(filtroTipoCursoProvider);
   final anioFiltro = ref.watch(filtroAnioCursosProvider);
   final mesFiltro = ref.watch(filtroMesCursosProvider);
+  final selection = ref.watch(dataFilterSelectionProvider('cursos'));
 
   final asyncValues = [
     cursosAsync,
@@ -145,7 +147,12 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
 
         final matchesTipo = tipoFiltro == null || vm.curso.tipo == tipoFiltro;
 
-        return matchesQuery && matchesTipo;
+        return matchesQuery &&
+            matchesTipo &&
+            matchesDataFilters(
+              selection,
+              cursoFilterRow(vm.curso, vm.nombreInstructor),
+            );
       })
       .toList();
 

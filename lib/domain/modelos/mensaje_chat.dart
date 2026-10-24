@@ -15,12 +15,14 @@ class EstadoChat {
   final bool enviando;
   final List<MensajeChat> mensajes;
   final String? error;
+  final bool puedeReintentar;
 
   const EstadoChat({
     this.abierto = false,
     this.enviando = false,
     this.mensajes = const [],
     this.error,
+    this.puedeReintentar = false,
   });
 
   EstadoChat copyWith({
@@ -28,10 +30,12 @@ class EstadoChat {
     bool? enviando,
     List<MensajeChat>? mensajes,
     String? error,
+    bool? puedeReintentar,
   }) => EstadoChat(
     abierto: abierto ?? this.abierto,
     enviando: enviando ?? this.enviando,
     mensajes: mensajes ?? this.mensajes,
     error: error,
+    puedeReintentar: puedeReintentar ?? this.puedeReintentar,
   );
 }

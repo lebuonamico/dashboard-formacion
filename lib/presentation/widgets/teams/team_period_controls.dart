@@ -136,10 +136,10 @@ class _MonthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<int>(
-      initialValue: selectedMonth,
-      isExpanded: true,
-      decoration: filtroInputDecoration('Mes', Icons.calendar_month_outlined),
+    return FilterDropdown<int>(
+      value: selectedMonth,
+      hint: 'Mes',
+      icon: Icons.calendar_month_outlined,
       items: List.generate(12, (index) => index + 1)
           .map(
             (month) => DropdownMenuItem<int>(
@@ -166,10 +166,10 @@ class _YearField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<int>(
-      initialValue: selectedYear,
-      isExpanded: true,
-      decoration: filtroInputDecoration('Año', Icons.event_outlined),
+    return FilterDropdown<int>(
+      value: selectedYear,
+      hint: 'Año',
+      icon: Icons.event_outlined,
       items: yearOptions
           .map(
             (year) => DropdownMenuItem<int>(

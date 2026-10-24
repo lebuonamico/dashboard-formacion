@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -126,6 +127,8 @@ final certificacionesFiltradasProvider =
           .trim()
           .toLowerCase();
       final estadoFiltro = ref.watch(filtroEstadoCertificacionProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('lms'));
+      final cursoIds = ref.watch(courseFilterIdentifiersProvider);
 
       return completasAsync.whenData((items) {
         return items.where((vm) {
@@ -145,7 +148,12 @@ final certificacionesFiltradasProvider =
               estadoFiltro == null ||
               vm.certificacion.finalizoCurso == estadoFiltro;
 
-          return matchesQuery && matchesEstado;
+          return matchesQuery &&
+              matchesEstado &&
+              matchesDataFilters(
+                selection,
+                certificacionFilterRow(vm, cursoIdsPorNombre: cursoIds),
+              );
         }).toList();
       });
     });

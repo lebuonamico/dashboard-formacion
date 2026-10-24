@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
@@ -53,6 +54,7 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
   final empleadosAsync = ref.watch(empleadosProvider);
   final query = ref.watch(busquedaEmpleadoProvider).toLowerCase();
   final seniorityFiltro = ref.watch(filtroSeniorityProvider);
+  final selection = ref.watch(dataFilterSelectionProvider('personas'));
 
   return empleadosAsync.whenData((empleados) {
     return empleados.where((emp) {
@@ -68,7 +70,9 @@ final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
       final matchesSeniority =
           seniorityFiltro == null || emp.seniority == seniorityFiltro;
 
-      return matchesQuery && matchesSeniority;
+      return matchesQuery &&
+          matchesSeniority &&
+          matchesDataFilters(selection, empleadoFilterRow(emp));
     }).toList();
   });
 });
