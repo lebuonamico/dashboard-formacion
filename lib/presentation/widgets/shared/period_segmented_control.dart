@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 
 class PeriodoSegmentedControl<T> extends StatelessWidget {
@@ -24,32 +25,19 @@ class PeriodoSegmentedControl<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<T>(
-      segments: options
-          .map(
-            (option) => ButtonSegment<T>(
-              value: option,
-              label: Text(labelBuilder(option)),
-            ),
-          )
-          .toList(),
-      selected: {selected},
-      showSelectedIcon: false,
-      onSelectionChanged: (selection) {
-        onChanged(selection.first);
-      },
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? selectedForegroundColor
-              : unselectedForegroundColor;
-        }),
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          return states.contains(WidgetState.selected)
-              ? selectedColor
-              : unselectedColor;
-        }),
+    return SizedBox(
+      width: 180,
+      child: FilterDropdown<T>(
+        value: selected,
+        hint: 'Período',
+        icon: Icons.date_range,
+        items: [
+          for (final option in options)
+            DropdownMenuItem(value: option, child: Text(labelBuilder(option))),
+        ],
+        onChanged: (value) {
+          if (value != null) onChanged(value);
+        },
       ),
     );
   }

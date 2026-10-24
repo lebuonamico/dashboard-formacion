@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -9,7 +10,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Future<ProviderContainer> _mostrarPantalla(WidgetTester tester) async {
+/// Sesión con Supabase habilitado y un rol fijo, sin cliente real.
+class _AuthConRol extends AuthController {
+  final RolUsuario _rol;
+
+  _AuthConRol(this._rol) : super(null);
+
+  @override
+  bool get enabled => true;
+
+  @override
+  RolUsuario? get rolConocido => _rol;
+
+  @override
+  bool get esGestor => _rol.esGestor;
+}
+
+Future<ProviderContainer> _mostrarPantalla(
+  WidgetTester tester, {
+  RolUsuario? rol,
+}) async {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -17,7 +37,9 @@ Future<ProviderContainer> _mostrarPantalla(WidgetTester tester) async {
 
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
+      authControllerProvider.overrideWith(
+        (ref) => rol == null ? AuthController(null) : _AuthConRol(rol),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -157,5 +179,44 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(_anchoSideMenu(tester), 260);
+  });
+
+  group('Ítems según el rol', () {
+    const areas = 'Áreas';
+    const configuracion = 'Configuración';
+    const panel = 'Panel de administrador';
+
+    testWidgets('En modo local se ve todo', (tester) async {
+      await _mostrarPantalla(tester);
+      for (final item in [areas, configuracion, panel]) {
+        expect(find.text(item), findsOneWidget, reason: item);
+      }
+    });
+
+    testWidgets('Academia ve Configuración y el panel', (tester) async {
+      await _mostrarPantalla(tester, rol: RolUsuario.academia);
+      for (final item in [areas, configuracion, panel]) {
+        expect(find.text(item), findsOneWidget, reason: item);
+      }
+    });
+
+    testWidgets('Un usuario de área ve Áreas pero no lo administrativo', (
+      tester,
+    ) async {
+      await _mostrarPantalla(tester, rol: RolUsuario.area);
+      expect(find.text(areas), findsOneWidget);
+      expect(find.text(configuracion), findsNothing);
+      expect(find.text(panel), findsNothing);
+      expect(find.text('Equipos'), findsOneWidget);
+    });
+
+    testWidgets('Un líder no ve Áreas ni lo administrativo', (tester) async {
+      await _mostrarPantalla(tester, rol: RolUsuario.lider);
+      expect(find.text(areas), findsNothing);
+      expect(find.text(configuracion), findsNothing);
+      expect(find.text(panel), findsNothing);
+      expect(find.text('Equipos'), findsOneWidget);
+      expect(find.text('Empleados'), findsOneWidget);
+    });
   });
 }

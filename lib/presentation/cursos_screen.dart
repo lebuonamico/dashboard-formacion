@@ -2,15 +2,14 @@ import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class CursosScreen extends ConsumerWidget {
   const CursosScreen({super.key});
@@ -75,44 +74,101 @@ class CursosScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterBar(WidgetRef ref) {
-    final busqueda = ref.watch(busquedaCursoProvider);
-    final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
+ Widget _buildFilterBar(WidgetRef ref) {
+  final busqueda = ref.watch(busquedaCursoProvider);
+  final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
+  final anio = ref.watch(filtroAnioCursosProvider);
+  final mes = ref.watch(filtroMesCursosProvider);
+  final anios = ref.watch(aniosCursosDisponiblesProvider).value ?? <int>[];
 
-    return FilterBar(
-      searchHint: 'Buscar por nombre o ID...',
-      searchText: busqueda,
-      hasActiveFilters: busqueda.isNotEmpty || tipoSeleccionado != null,
-      onSearch: (value) =>
-          ref.read(busquedaCursoProvider.notifier).state = value,
-      filters: [
-        FilterDropdown<TipoCurso?>(
-          value: tipoSeleccionado,
-          hint: 'Todos los tipos',
-          icon: Icons.category_outlined,
-          // "Dictado de capacitaciones" es la opción más larga.
-          width: 300,
-          items: [
-            const DropdownMenuItem<TipoCurso?>(
-              value: null,
-              child: Text('Todos los tipos'),
-            ),
-            for (final tipo in TipoCurso.values)
-              DropdownMenuItem<TipoCurso?>(
-                value: tipo,
-                child: Text(tipo.label),
+  final aniosOrdenados = <int>{
+    ...anios,
+    if (anio != null) anio,
+  }.toList()..sort((a, b) => b.compareTo(a));
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      FilterBar(
+        scope: 'cursos',
+        hasActiveFilters:
+            busqueda.isNotEmpty ||
+            tipoSeleccionado != null ||
+            anio != null ||
+            mes != null,
+        onClear: () {
+          ref.read(busquedaCursoProvider.notifier).state = '';
+          ref.read(filtroTipoCursoProvider.notifier).state = null;
+          ref.read(filtroAnioCursosProvider.notifier).state = null;
+          ref.read(filtroMesCursosProvider.notifier).state = null;
+        },
+      ),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          SizedBox(
+            width: 220,
+            child: DropdownButtonFormField<int?>(
+              key: ValueKey('cursos-anio-$anio'),
+              initialValue: anio,
+              decoration: const InputDecoration(
+                labelText: 'Año (métricas)',
+                border: OutlineInputBorder(),
+                isDense: true,
               ),
-          ],
-          onChanged: (value) =>
-              ref.read(filtroTipoCursoProvider.notifier).state = value,
-        ),
-      ],
-      onClear: () {
-        ref.read(busquedaCursoProvider.notifier).state = '';
-        ref.read(filtroTipoCursoProvider.notifier).state = null;
-      },
-    );
-  }
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Todos los años'),
+                ),
+                for (final a in aniosOrdenados)
+                  DropdownMenuItem<int?>(
+                    value: a,
+                    child: Text('$a'),
+                  ),
+              ],
+              onChanged: (value) {
+                ref.read(filtroAnioCursosProvider.notifier).state = value;
+                if (value == null) {
+                  ref.read(filtroMesCursosProvider.notifier).state = null;
+                }
+              },
+            ),
+          ),
+          SizedBox(
+            width: 220,
+            child: DropdownButtonFormField<int?>(
+              key: ValueKey('cursos-mes-$anio-$mes'),
+              initialValue: anio == null ? null : mes,
+              decoration: const InputDecoration(
+                labelText: 'Mes (métricas)',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Todos los meses'),
+                ),
+                for (var m = 1; m <= 12; m++)
+                  DropdownMenuItem<int?>(
+                    value: m,
+                    child: Text(nombreMes(m)),
+                  ),
+              ],
+              onChanged: anio == null
+                  ? null
+                  : (value) {
+                      ref.read(filtroMesCursosProvider.notifier).state = value;
+                    },
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 /// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
@@ -225,6 +281,28 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
         DataColumn(label: Text('Nombre del curso')),
         DataColumn(label: Text('Tipo')),
         DataColumn(label: Text('Carga horaria')),
+        DataColumn(
+          numeric: true,
+          label: Text('Personas'),
+          tooltip:
+              'Colaboradores distintos que cargaron horas en el CRM '
+              '(en los cursos de dictado, quienes lo dictaron)',
+        ),
+        DataColumn(
+          numeric: true,
+          label: Text('Horas CRM'),
+          tooltip: 'Horas cargadas en el CRM para el curso',
+        ),
+        DataColumn(
+          numeric: true,
+          label: Text('Promedio por persona'),
+          tooltip: 'Horas CRM / personas. Comparalo con la carga horaria',
+        ),
+        DataColumn(
+          numeric: true,
+          label: Text('Finalizaron (LMS)'),
+          tooltip: 'Colaboradores distintos con la finalización en el LMS',
+        ),
       ],
       rows: [
         for (final vm in visibles)
@@ -252,7 +330,11 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                   ),
                 ),
               ),
-              DataCell(TipoCursoChip(tipo: vm.curso.tipo)),
+              DataCell(
+                vm.curso.tipoLms == null
+                    ? const Text('-')
+                    : TipoCursoChip(tipo: vm.curso.tipoLms!),
+              ),
               DataCell(
                 Text(
                   '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',
@@ -263,9 +345,43 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                   ),
                 ),
               ),
+              DataCell(_celdaMetrica('${vm.personas}', vm.personas == 0)),
+              DataCell(
+                _celdaMetrica(
+                  '${_formatoHoras(vm.horasCrm)} hs',
+                  vm.personas == 0,
+                ),
+              ),
+              DataCell(
+                _celdaMetrica(
+                  vm.promedioHorasPorPersona == null
+                      ? '—'
+                      : '${_formatoHoras(vm.promedioHorasPorPersona!)} hs',
+                  vm.promedioHorasPorPersona == null,
+                ),
+              ),
+              DataCell(_celdaMetrica('${vm.finalizaron}', vm.finalizaron == 0)),
             ],
           ),
       ],
     );
   }
+
+  /// Los ceros van en gris: así se ve de un vistazo qué cursos no tomó nadie.
+  Widget _celdaMetrica(String texto, bool vacia) {
+    final cs = context.colorScheme;
+    return Text(
+      texto,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: vacia ? FontWeight.w400 : FontWeight.w600,
+        color: vacia ? cs.onSurfaceVariant : cs.onSurface,
+      ),
+    );
+  }
+
+  /// Sin decimales si son horas enteras, con uno si no.
+  static String _formatoHoras(double horas) => horas == horas.roundToDouble()
+      ? horas.toStringAsFixed(0)
+      : horas.toStringAsFixed(1);
 }

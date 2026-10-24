@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -11,7 +12,13 @@ final cargasDeHorasCRMProvider = FutureProvider<List<CargaDeHorasCRM>>((
   ref,
 ) async {
   final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
-  return repo.getCargasDeHoras();
+  // Solo las horas de los colaboradores que ve el usuario de la sesión.
+  final legajos = await ref.watch(legajosVisiblesProvider.future);
+  final cargas = await repo.getCargasDeHoras();
+  if (legajos == null) return cargas;
+  return cargas
+      .where((carga) => legajos.contains(carga.empleadoLegajo))
+      .toList();
 });
 
 class CargaDeHorasCRMViewModel {
@@ -54,6 +61,8 @@ final cargasDeHorasCompletasProvider =
       final query = ref.watch(busquedaCargaDeHorasProvider).toLowerCase();
       final anioFiltro = ref.watch(filtroAnioCargaProvider);
       final mesFiltro = ref.watch(filtroMesCargaProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('crm'));
+      final cursoIds = ref.watch(courseFilterIdentifiersProvider);
 
       if (cargasAsync.isLoading ||
           empleadosAsync.isLoading ||
@@ -83,42 +92,50 @@ final cargasDeHorasCompletasProvider =
           curso.nombre.trim().toLowerCase(): curso,
       };
 
-      final viewModels = cargas
-          .map((carga) {
-            return CargaDeHorasCRMViewModel(
-              carga: carga,
-              empleado: empMap[carga.empleadoLegajo],
-              curso: cursoMap[carga.cursoNombre.trim().toLowerCase()],
-            );
-          })
-          .where((vm) {
-            final empNombre = vm.empleado != null
-                ? '${vm.empleado!.nombre} ${vm.empleado!.apellido}'
-                : '';
-            // Si el curso no está en el catálogo se busca por el nombre del CRM.
-            final cursoNombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
-            final legajo = vm.carga.empleadoLegajo;
-            final area = vm.empleado?.area ?? '';
-            final fecha = vm.carga.fecha;
+      final viewModels =
+          cargas
+              .map((carga) {
+                return CargaDeHorasCRMViewModel(
+                  carga: carga,
+                  empleado: empMap[carga.empleadoLegajo],
+                  curso: cursoMap[carga.cursoNombre.trim().toLowerCase()],
+                );
+              })
+              .where((vm) {
+                final empNombre = vm.empleado != null
+                    ? '${vm.empleado!.nombre} ${vm.empleado!.apellido}'
+                    : '';
+                // Si el curso no está en el catálogo se busca por el nombre del CRM.
+                final cursoNombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
+                final legajo = vm.carga.empleadoLegajo;
+                final area = vm.empleado?.area ?? '';
+                final fecha = vm.carga.fecha;
 
-            final matchesQuery =
-                empNombre.toLowerCase().contains(query) ||
-                cursoNombre.toLowerCase().contains(query) ||
-                legajo.toLowerCase().contains(query) ||
-                area.toLowerCase().contains(query);
+                final matchesQuery =
+                    empNombre.toLowerCase().contains(query) ||
+                    cursoNombre.toLowerCase().contains(query) ||
+                    legajo.toLowerCase().contains(query) ||
+                    area.toLowerCase().contains(query);
 
-            final matchesAnio = anioFiltro == null || fecha.year == anioFiltro;
-            // El mes sólo filtra si hay un año elegido.
-            final matchesMes =
-                anioFiltro == null ||
-                mesFiltro == null ||
-                fecha.month == mesFiltro;
+                final matchesAnio =
+                    anioFiltro == null || fecha.year == anioFiltro;
+                // El mes sólo filtra si hay un año elegido.
+                final matchesMes =
+                    anioFiltro == null ||
+                    mesFiltro == null ||
+                    fecha.month == mesFiltro;
 
-            return matchesQuery && matchesAnio && matchesMes;
-          })
-          .toList()
-        // Lo más reciente primero.
-        ..sort((a, b) => b.carga.fecha.compareTo(a.carga.fecha));
+                return matchesQuery &&
+                    matchesAnio &&
+                    matchesMes &&
+                    matchesDataFilters(
+                      selection,
+                      crmFilterRow(vm, cursoIdsPorNombre: cursoIds),
+                    );
+              })
+              .toList()
+            // Lo más reciente primero.
+            ..sort((a, b) => b.carga.fecha.compareTo(a.carga.fecha));
 
       return AsyncValue.data(viewModels);
     });

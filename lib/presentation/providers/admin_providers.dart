@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
@@ -12,7 +13,7 @@ final accesoAdminProvider = Provider<AccesoAdmin>((ref) {
   if (ref.watch(usuariosAutorizadosRepositoryProvider) == null) {
     return AccesoAdmin.sinSupabase;
   }
-  return auth.esAdmin ? AccesoAdmin.permitido : AccesoAdmin.denegado;
+  return auth.esGestor ? AccesoAdmin.permitido : AccesoAdmin.denegado;
 });
 
 final usuariosAutorizadosProvider =
@@ -44,7 +45,8 @@ final filtrosAdminActivosProvider = Provider.autoDispose<bool>(
   (ref) =>
       ref.watch(busquedaUsuarioAdminProvider).trim().isNotEmpty ||
       ref.watch(filtroRolAdminProvider) != null ||
-      ref.watch(filtroEstadoAdminProvider) != null,
+      ref.watch(filtroEstadoAdminProvider) != null ||
+      ref.watch(dataFilterSelectionProvider('admin')).isNotEmpty,
 );
 
 final usuariosAdminFiltradosProvider =
@@ -53,15 +55,19 @@ final usuariosAdminFiltradosProvider =
       final busqueda = ref.watch(busquedaUsuarioAdminProvider).trim();
       final rol = ref.watch(filtroRolAdminProvider);
       final estado = ref.watch(filtroEstadoAdminProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('admin'));
 
       return usuarios.whenData((lista) {
         final consulta = busqueda.toLowerCase();
         return lista.where((usuario) {
           final coincideTexto =
-              consulta.isEmpty || usuario.email.contains(consulta);
+              consulta.isEmpty || usuario.email.toLowerCase() == consulta;
           final coincideRol = rol == null || usuario.rolConocido == rol;
           final coincideEstado = estado == null || usuario.estado == estado;
-          return coincideTexto && coincideRol && coincideEstado;
+          return coincideTexto &&
+              coincideRol &&
+              coincideEstado &&
+              matchesDataFilters(selection, adminFilterRow(usuario));
         }).toList();
       });
     });
@@ -77,6 +83,11 @@ final usuarioSeleccionadoAdminProvider =
       }
       return null;
     });
+
+/// Búsqueda de la pestaña "Áreas y equipos". Se descarta al salir del panel.
+final busquedaEstructuraAdminProvider = StateProvider.autoDispose<String>(
+  (ref) => '',
+);
 
 final seleccionFueraDelFiltroAdminProvider = Provider.autoDispose<bool>((ref) {
   final seleccionado = ref.watch(usuarioSeleccionadoAdminProvider);

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
@@ -8,6 +9,7 @@ import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -107,8 +109,16 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final alcance = ref.watch(alcancePeriodoProvider);
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
-  final cumplimientoService = ref.read(cumplimientoServiceProvider);
+  final cumplimientoService = await ref.watch(
+    cumplimientoServiceProvider.future,
+  );
   final equiposService = ref.read(equiposServiceProvider);
+  // El alcance se vuelve a aplicar sobre el equipo vigente en cada mes: un
+  // líder no ve los meses en que la persona estaba en otro equipo.
+  final alcanceUsuario = await ref.watch(alcanceUsuarioProvider.future);
+  final incluir = alcanceUsuario.esTotal
+      ? null
+      : alcanceUsuario.incluyeEmpleado;
 
   if (alcance == AlcancePeriodo.anual) {
     // Leandro: llama a calcularCumplimientoAnual para sumar los resultados mensuales de los períodos con datos.
@@ -120,42 +130,22 @@ final cumplimientoEquiposProvider = FutureProvider<List<CumplimientoEmpleado>>((
       certificaciones: certificaciones,
       anio: anio,
       cumplimientoService: cumplimientoService,
+      incluir: incluir,
     );
   }
 
-  // Leandro: llama a filtrarCargasPorPeriodo para seleccionar las horas CRM del mes elegido.
-  final cargasFiltradas = equiposService.filtrarCargasPorPeriodo(
-    cargas: cargasDeHoras,
-    anio: anio,
-    mes: mes,
-    esAnual: alcance == AlcancePeriodo.anual,
-  );
-  // Leandro: llama a filtrarCertificacionesPorPeriodo para seleccionar las finalizaciones LMS del período.
-  final certificacionesFiltradas = equiposService
-      .filtrarCertificacionesPorPeriodo(
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        esAnual: alcance == AlcancePeriodo.anual,
-      );
-  // Leandro: llama a filtrarEmpleadosPorPeriodo para incluir los ingresos y estados activos vigentes al cierre del mes.
-  final empleadosElegibles = equiposService.filtrarEmpleadosPorPeriodo(
+  // Leandro: llama a calcularCumplimientoMensual para obtener las horas válidas y los objetivos de los colaboradores elegibles del mes.
+  return equiposService.calcularCumplimientoMensual(
     empleados: empleados,
     historial: historial,
+    cursos: cursos,
+    cargas: cargasDeHoras,
+    certificaciones: certificaciones,
     anio: anio,
     mes: mes,
-    esAnual: alcance == AlcancePeriodo.anual,
+    cumplimientoService: cumplimientoService,
+    incluir: incluir,
   );
-
-  // Leandro: llama a calcularCumplimientoGlobal para obtener las horas válidas y los objetivos de los colaboradores elegibles.
-  final cumplimientos = cumplimientoService.calcularCumplimientoGlobal(
-    empleados: empleadosElegibles,
-    cursos: cursos,
-    cargasDeHoras: cargasFiltradas,
-    certificacionesMoodle: certificacionesFiltradas,
-  );
-
-  return cumplimientos;
 });
 
 final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
@@ -167,6 +157,7 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   }
   final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
+  final lideres = await ref.watch(etiquetasLideresProvider.future);
   // Leandro: llama a toSet para contar una sola vez cada legajo elegible en los meses con datos del año.
   final colaboradoresUnicosAnuales =
       ref.watch(alcancePeriodoProvider) == AlcancePeriodo.anual
@@ -176,6 +167,7 @@ final resumenEquiposPeriodoProvider = FutureProvider<ResumenEquiposPeriodo>((
   return equiposService.calcularResumenPeriodo(
     cumplimientos,
     colaboradoresAlCierre: colaboradoresUnicosAnuales,
+    liderDe: lideres?.deEquipo,
   );
 });
 
@@ -190,6 +182,7 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
 final equiposGlobalFiltradosProvider =
     Provider<AsyncValue<List<EquipoGlobalViewModel>>>((ref) {
       final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('equipos'));
       final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
       final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
 
@@ -205,7 +198,9 @@ final equiposGlobalFiltradosProvider =
           final coincideEstado =
               estadoSeleccionado == null || equipo.estado == estadoSeleccionado;
 
-          return coincideBusqueda && coincideEstado;
+          return coincideBusqueda &&
+              coincideEstado &&
+              matchesDataFilters(selection, equipoFilterRow(equipo));
         }).toList();
       });
     });
@@ -315,10 +310,12 @@ final detalleEquipoGeneralProvider =
     >((ref, params) async {
       final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
       final equiposService = ref.read(equiposServiceProvider);
+      final lideres = await ref.watch(etiquetasLideresProvider.future);
       // Leandro: llama a obtenerDetalleEquipo para recuperar los integrantes y el resumen del equipo solicitado.
       return equiposService.obtenerDetalleEquipo(
         cumplimientos: cumplimientos,
         area: params.area,
         equipo: params.equipo,
+        liderDe: lideres?.deEquipo,
       );
     });

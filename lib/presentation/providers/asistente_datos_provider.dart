@@ -9,6 +9,7 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -322,7 +323,7 @@ Future<ContextoAsistente> _preparar(
               : destino.legajo;
           if (legajo == null) {
             notas.add(
-              'No hay una persona identificada de forma inequívoca. Seleccioná su perfil o indicá el nombre ficticio completo. No usar la cuenta autenticada como perfil.',
+              'No hay una persona identificada de forma inequívoca. Seleccioná su perfil o indicá el nombre completo. No usar la cuenta autenticada como perfil.',
             );
           } else {
             final detalle = await scope.read(
@@ -487,25 +488,47 @@ Future<ProviderContainer> _snapshot(
   final cursosF = ref.read(cursosProvider.future);
   final cargasF = ref.read(cargasDeHorasCRMProvider.future);
   final certificacionesF = ref.read(certificacionesMoodleProvider.future);
+  final estructuraF = ref.read(estructuraProvider.future);
+  final alcanceF = ref.read(alcanceUsuarioProvider.future);
   final equiposService = ref.read(equiposServiceProvider);
-  final cumplimientoService = ref.read(cumplimientoServiceProvider);
-  final (empleados, historial, cursos, cargas, certificaciones) = await (
+  final cumplimientoServiceF = ref.read(cumplimientoServiceProvider.future);
+  final sesion = ref.read(sesionDatosProvider);
+  final (
+    empleados,
+    historial,
+    cursos,
+    cargas,
+    certificaciones,
+    estructura,
+    alcanceUsuario,
+    cumplimientoService,
+  ) = await (
     empleadosF,
     historialF,
     cursosF,
     cargasF,
     certificacionesF,
+    estructuraF,
+    alcanceF,
+    cumplimientoServiceF,
   ).wait;
   return ProviderContainer(
     retry: (_, _) => null,
     overrides: [
+      // El contenedor no tiene padre: sin esto armaría otra sesión sin rol y
+      // el alcance lo dejaría sin colaboradores.
+      sesionDatosProvider.overrideWithValue(sesion),
+      estructuraProvider.overrideWith((_) async => estructura),
+      alcanceUsuarioProvider.overrideWith((_) async => alcanceUsuario),
       empleadosProvider.overrideWith((_) async => empleados),
       empleadoHistorialProvider.overrideWith((_) async => historial),
       cursosProvider.overrideWith((_) async => cursos),
       cargasDeHorasCRMProvider.overrideWith((_) async => cargas),
       certificacionesMoodleProvider.overrideWith((_) async => certificaciones),
       equiposServiceProvider.overrideWithValue(equiposService),
-      cumplimientoServiceProvider.overrideWithValue(cumplimientoService),
+      cumplimientoServiceProvider.overrideWith(
+        (_) async => cumplimientoService,
+      ),
       alcancePeriodoProvider.overrideWith(
         (_) => periodo.anual ? AlcancePeriodo.anual : AlcancePeriodo.mensual,
       ),

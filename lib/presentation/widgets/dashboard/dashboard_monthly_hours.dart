@@ -1,22 +1,22 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardMonthlyHours extends StatelessWidget {
-  final AsyncValue<List<CargaDeHorasCRM>> cargasAsync;
+  /// Horas válidas promedio por colaborador de cada mes.
+  final AsyncValue<List<({DateTime mes, double horas})>> evolucionAsync;
 
-  const DashboardMonthlyHours({super.key, required this.cargasAsync});
+  const DashboardMonthlyHours({super.key, required this.evolucionAsync});
 
   @override
   Widget build(BuildContext context) {
-    return cargasAsync.when(
+    return evolucionAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Text('Error: $error'),
-      data: (cargas) {
-        if (cargas.isEmpty) return const SizedBox.shrink();
+      data: (meses) {
+        if (meses.isEmpty) return const SizedBox.shrink();
 
-        final months = _MonthlyHoursSummary.from(cargas);
+        final months = _MonthlyHoursSummary.from(meses);
         return _MonthlyHoursCard(summary: months);
       },
     );
@@ -36,34 +36,13 @@ class _MonthlyHoursSummary {
 
   const _MonthlyHoursSummary({required this.points, required this.target});
 
-  factory _MonthlyHoursSummary.from(List<CargaDeHorasCRM> cargas) {
-    final latestDate = cargas
-        .map((carga) => carga.fecha)
-        .reduce((latest, date) => date.isAfter(latest) ? date : latest);
-    final monthTotals = <int, double>{};
-    final monthEmployees = <int, Set<String>>{};
-
-    for (final carga in cargas) {
-      final monthKey = carga.fecha.year * 12 + carga.fecha.month;
-      monthTotals[monthKey] = (monthTotals[monthKey] ?? 0) + carga.horasTotales;
-      monthEmployees
-          .putIfAbsent(monthKey, () => <String>{})
-          .add(carga.empleadoLegajo);
-    }
-
-    final points = <_MonthlyHoursPoint>[];
-    for (var offset = 3; offset >= 0; offset--) {
-      final date = DateTime(latestDate.year, latestDate.month - offset);
-      final monthKey = date.year * 12 + date.month;
-      final employees = monthEmployees[monthKey]?.length ?? 0;
-      final total = monthTotals[monthKey] ?? 0;
-      points.add(
-        _MonthlyHoursPoint(
-          label: _monthLabel(date.month),
-          hours: employees == 0 ? 0 : total / employees,
-        ),
-      );
-    }
+  factory _MonthlyHoursSummary.from(
+    List<({DateTime mes, double horas})> meses,
+  ) {
+    final points = [
+      for (final item in meses)
+        _MonthlyHoursPoint(label: _monthLabel(item.mes.month), hours: item.horas),
+    ];
 
     return _MonthlyHoursSummary(points: points, target: 8);
   }
@@ -101,7 +80,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                     ),
                     SizedBox(height: 2),
                     Text(
-                      'Comparativa mensual de horas promedio vs meta (8,0 h)',
+                      'Horas válidas promedio por colaborador vs meta (8,0 h)',
                       style: TextStyle(
                         fontSize: 11,
                         color: context.colorScheme.onSurfaceVariant,

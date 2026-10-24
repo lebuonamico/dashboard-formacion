@@ -1,5 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
+import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
@@ -9,6 +12,12 @@ class AdminUsuariosTable extends StatefulWidget {
   static const usuariosPorPagina = 8;
 
   final List<UsuarioAutorizado> usuarios;
+
+  /// Para la columna Lidera. `null` mientras carga o sin base conectada.
+  final EstructuraOrganizacional? estructura;
+
+  /// Para la columna Pertenece a. `null` mientras carga.
+  final List<Empleado>? nomina;
   final String? emailSeleccionado;
   final String? emailPropio;
   final ValueChanged<String?> onSeleccionar;
@@ -16,6 +25,8 @@ class AdminUsuariosTable extends StatefulWidget {
   const AdminUsuariosTable({
     super.key,
     required this.usuarios,
+    this.estructura,
+    this.nomina,
     required this.emailSeleccionado,
     required this.emailPropio,
     required this.onSeleccionar,
@@ -107,6 +118,18 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
                         ),
                         DataColumn(
                           label: Text(
+                            'Lidera',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Pertenece a',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
                             'Estado',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -186,6 +209,8 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
                 )
               : EtiquetaColor(texto: rol.label, colores: marca),
         ),
+        DataCell(_alcance(usuario)),
+        DataCell(_pertenencia(usuario)),
         DataCell(
           EtiquetaColor(
             texto: usuario.estado.label,
@@ -198,6 +223,51 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
       ],
     );
   }
+
+  /// Qué ve el usuario: toda la empresa, o las áreas o los equipos que
+  /// lidera según su rol.
+  Widget _alcance(UsuarioAutorizado usuario) {
+    final rol = usuario.rolConocido;
+    // Los gestores ven todo aunque la estructura no haya cargado.
+    final texto = rol != null && rol.esGestor
+        ? 'Toda la empresa'
+        : widget.estructura?.lidera(rol: rol, email: usuario.email) ?? '—';
+    return _celdaTexto(texto, advertencia: texto.startsWith('Sin '));
+  }
+
+  /// Equipo y área de su fila en la nómina, buscada por email. Solo para los
+  /// líderes: puede no coincidir con lo que lideran.
+  Widget _pertenencia(UsuarioAutorizado usuario) {
+    final rol = usuario.rolConocido;
+    final nomina = widget.nomina;
+    if (nomina == null || (rol != RolUsuario.lider && rol != RolUsuario.area)) {
+      return _celdaTexto('—');
+    }
+    final empleado = Empleado.porMail(nomina, usuario.email);
+    return _celdaTexto(
+      EstructuraOrganizacional.pertenencia(empleado),
+      advertencia: empleado == null,
+    );
+  }
+
+  Widget _celdaTexto(String texto, {bool advertencia = false}) =>
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 240),
+        child: Tooltip(
+          message: texto,
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              color: advertencia
+                  ? context.colores.advertencia.texto
+                  : context.colores.textoIntermedio,
+            ),
+          ),
+        ),
+      );
 
   Widget _sello(DateTime? fecha) => Text(
     formatearSello(fecha),

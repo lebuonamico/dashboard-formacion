@@ -3,11 +3,11 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
@@ -158,29 +158,9 @@ class CertificacionScreen extends ConsumerWidget {
     final estadoSeleccionado = ref.watch(filtroEstadoCertificacionProvider);
 
     return FilterBar(
-      searchHint: 'Buscar por colaborador, legajo, curso, área o equipo...',
-      searchText: busqueda,
+      scope: 'lms',
       hasActiveFilters: busqueda.isNotEmpty || estadoSeleccionado != null,
-      onSearch: (value) =>
-          ref.read(busquedaCertificacionMoodleProvider.notifier).state = value,
-      filters: [
-        FilterDropdown<bool?>(
-          value: estadoSeleccionado,
-          hint: 'Todos los estados',
-          icon: Icons.traffic_outlined,
-          items: const [
-            DropdownMenuItem<bool?>(
-              value: null,
-              child: Text('Todos los estados'),
-            ),
-            DropdownMenuItem<bool?>(value: true, child: Text('Finalizado')),
-            DropdownMenuItem<bool?>(value: false, child: Text('Pendiente')),
-          ],
-          onChanged: (value) =>
-              ref.read(filtroEstadoCertificacionProvider.notifier).state =
-                  value,
-        ),
-      ],
+
       onClear: () {
         ref.read(busquedaCertificacionMoodleProvider.notifier).state = '';
         ref.read(filtroEstadoCertificacionProvider.notifier).state = null;
@@ -299,6 +279,7 @@ class _TablaCertificacionesPaginadaState
     final cs = context.colorScheme;
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
+      showCheckboxColumn: false,
       columnSpacing: 24,
       headingRowHeight: _altoEncabezado,
       dataRowMinHeight: _altoFila,
@@ -326,14 +307,22 @@ class _TablaCertificacionesPaginadaState
       rows: [
         for (final vm in visibles)
           DataRow(
+            // Abre el perfil del colaborador. Un legajo fuera de la nómina no
+            // tiene perfil: la fila no responde al click.
+            onSelectChanged: vm.legajoFueraDeNomina
+                ? null
+                : (_) => context.push(
+                    '/empleados/${Uri.encodeComponent(vm.certificacion.legajo)}'
+                    '?origen=certificaciones',
+                  ),
             cells: [
               DataCell(_celdaColaborador(vm)),
               DataCell(_celdaAreaEquipo(vm)),
               DataCell(_celdaCurso(vm)),
               DataCell(
-                vm.curso == null
+                vm.curso?.tipoLms == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : TipoCursoChip(tipo: vm.curso!.tipo),
+                    : TipoCursoChip(tipo: vm.curso!.tipoLms!),
               ),
               DataCell(
                 Text(

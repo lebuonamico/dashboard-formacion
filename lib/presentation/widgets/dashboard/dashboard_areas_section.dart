@@ -2,28 +2,21 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class DashboardAreasSection extends ConsumerStatefulWidget {
+class DashboardAreasSection extends ConsumerWidget {
   final AsyncValue<List<SemaforoAreaViewModel>> areasAsync;
 
   const DashboardAreasSection({super.key, required this.areasAsync});
 
   @override
-  ConsumerState<DashboardAreasSection> createState() =>
-      _DashboardAreasSectionState();
-}
-
-class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
-  String _search = '';
-  EstadoSemaforo? _selectedStatus;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Conservar filtros aunque el cambio de período desmonte esta sección.
+    final selection = ref.watch(dataFilterSelectionProvider('dashboard_areas'));
     final equiposAsync = ref.watch(equiposGlobalProvider);
 
     return Column(
@@ -54,20 +47,25 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
           ],
         ),
         const SizedBox(height: 12),
-        widget.areasAsync.when(
+        areasAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Text('Error: $error'),
           data: (areas) {
-            if (areas.isEmpty) return const _EmptyAreasState();
+            if (areas.isEmpty) {
+              return Column(
+                children: [
+                  _buildFilterBar(areas, ref, selection),
+                  const SizedBox(height: 16),
+                  const _EmptyAreasState(),
+                ],
+              );
+            }
 
-            final query = _search.trim().toLowerCase();
-            final areasFiltradas = areas.where((area) {
-              final matchesSearch =
-                  query.isEmpty || area.area.toLowerCase().contains(query);
-              final matchesStatus =
-                  _selectedStatus == null || area.semaforo == _selectedStatus;
-              return matchesSearch && matchesStatus;
-            }).toList();
+            final areasFiltradas = areas
+                .where(
+                  (area) => matchesDataFilters(selection, _filterRow(area)),
+                )
+                .toList();
 
             return equiposAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -84,7 +82,7 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
 
                 return Column(
                   children: [
-                    _buildFilterBar(),
+                    _buildFilterBar(areas, ref, selection),
                     const SizedBox(height: 16),
                     if (areasFiltradas.isEmpty)
                       const _EmptyFilteredAreasState()
@@ -128,38 +126,26 @@ class _DashboardAreasSectionState extends ConsumerState<DashboardAreasSection> {
     );
   }
 
-  Widget _buildFilterBar() {
-    return FilterBar(
-      searchHint: 'Buscar por área',
-      searchText: _search,
-      hasActiveFilters: _search.trim().isNotEmpty || _selectedStatus != null,
-      onSearch: (value) => setState(() => _search = value),
-      filters: [
-        FilterDropdown<EstadoSemaforo?>(
-          value: _selectedStatus,
-          hint: 'Todos los estados',
-          icon: Icons.traffic_outlined,
-          width: 250,
-          items: [
-            const DropdownMenuItem<EstadoSemaforo?>(
-              value: null,
-              child: Text('Todos los estados'),
-            ),
-            for (final estado in EstadoSemaforo.values)
-              DropdownMenuItem<EstadoSemaforo?>(
-                value: estado,
-                child: Text(estado.label),
-              ),
-          ],
-          onChanged: (value) => setState(() => _selectedStatus = value),
-        ),
-      ],
-      onClear: () => setState(() {
-        _search = '';
-        _selectedStatus = null;
-      }),
-    );
-  }
+  FilterRow _filterRow(SemaforoAreaViewModel area) => {
+    'Área': area.area,
+    'Estado': area.semaforo.label,
+  };
+
+  Widget _buildFilterBar(
+    List<SemaforoAreaViewModel> areas,
+    WidgetRef ref,
+    DataFilterValues selection,
+  ) => FilterBar(
+    rows: areas.map(_filterRow).toList(),
+    selection: selection,
+    hasActiveFilters: selection.isNotEmpty,
+    onSelectionChanged: (dimension, values) => ref
+        .read(dataFilterSelectionProvider('dashboard_areas').notifier)
+        .select(dimension, values),
+    onClear: () => ref
+        .read(dataFilterSelectionProvider('dashboard_areas').notifier)
+        .clear(),
+  );
 }
 
 class DashboardAreaCard extends StatelessWidget {

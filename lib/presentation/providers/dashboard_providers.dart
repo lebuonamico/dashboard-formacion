@@ -6,6 +6,7 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
 final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
@@ -16,11 +17,17 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   final anio = ref.watch(filtroAnioPeriodoProvider);
 
   final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
+  final legajos = await ref.watch(legajosVisiblesProvider.future);
   final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
   final hasta = alcance == AlcancePeriodo.anual
       ? DateTime(anio + 1)
       : DateTime(anio, mes + 1);
-  return repo.getCargasDeHoras(desde: desde, hasta: hasta);
+  final cargas = await repo.getCargasDeHoras(desde: desde, hasta: hasta);
+  // Mismo alcance que el resto de las pantallas.
+  if (legajos == null) return cargas;
+  return cargas
+      .where((carga) => legajos.contains(carga.empleadoLegajo))
+      .toList();
 });
 
 /// Misma base que Equipos y Áreas: nómina elegible del período,
@@ -57,6 +64,72 @@ final mesesEvaluadosDashboardProvider = FutureProvider<int>((ref) async {
   return meses == 0 ? 1 : meses;
 });
 
+/// Horas válidas promedio por colaborador elegible en los 4 meses que terminan
+/// en el período elegido (en el anual, el último mes del año con datos).
+final evolucionMensualDashboardProvider =
+    FutureProvider<List<({DateTime mes, double horas})>>((ref) async {
+      final alcance = ref.watch(alcancePeriodoProvider);
+      final mesElegido = ref.watch(filtroMesPeriodoProvider);
+      final anio = ref.watch(filtroAnioPeriodoProvider);
+      final empleados = await ref.watch(empleadosProvider.future);
+      final historial = await ref.watch(empleadoHistorialProvider.future);
+      final cursos = await ref.watch(cursosProvider.future);
+      final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
+      final certificaciones = await ref.watch(
+        certificacionesMoodleProvider.future,
+      );
+      final alcanceUsuario = await ref.watch(alcanceUsuarioProvider.future);
+      final incluir = alcanceUsuario.esTotal
+          ? null
+          : alcanceUsuario.incluyeEmpleado;
+      final cumplimientoService = await ref.watch(
+        cumplimientoServiceProvider.future,
+      );
+      final equiposService = ref.read(equiposServiceProvider);
+
+      bool tieneDatos(DateTime fecha) => equiposService.tieneDatosEnPeriodo(
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: fecha.year,
+        mes: fecha.month,
+        esAnual: false,
+      );
+
+      var mesFinal = DateTime(anio, mesElegido);
+      if (alcance == AlcancePeriodo.anual) {
+        mesFinal = DateTime(anio, 12);
+        while (mesFinal.month > 1 && !tieneDatos(mesFinal)) {
+          mesFinal = DateTime(anio, mesFinal.month - 1);
+        }
+        if (!tieneDatos(mesFinal)) mesFinal = DateTime(anio, 12);
+      }
+
+      return [
+        for (var offset = 3; offset >= 0; offset--)
+          (() {
+            final fecha = DateTime(mesFinal.year, mesFinal.month - offset);
+            if (!tieneDatos(fecha)) return (mes: fecha, horas: 0.0);
+            final cumplimientos = equiposService.calcularCumplimientoMensual(
+              empleados: empleados,
+              historial: historial,
+              cursos: cursos,
+              cargas: cargas,
+              certificaciones: certificaciones,
+              anio: fecha.year,
+              mes: fecha.month,
+              cumplimientoService: cumplimientoService,
+              incluir: incluir,
+            );
+            if (cumplimientos.isEmpty) return (mes: fecha, horas: 0.0);
+            final total = cumplimientos.fold<double>(
+              0,
+              (t, item) => t + item.totalHorasCompletadas,
+            );
+            return (mes: fecha, horas: total / cumplimientos.length);
+          })(),
+      ];
+    });
+
 final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
   ref,
 ) async {
@@ -64,7 +137,7 @@ final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
   final cursos = await ref.watch(cursosProvider.future);
   final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  final service = ref.read(cumplimientoServiceProvider);
+  final service = await ref.watch(cumplimientoServiceProvider.future);
 
   return service.calcularCumplimientoGlobal(
     empleados: empleados,

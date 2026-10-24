@@ -88,17 +88,21 @@ class DashboardScreen extends ConsumerWidget {
                               mesesEvaluados: mesesEvaluados,
                             ),
                             const SizedBox(height: 28),
-                            DashboardCategoryHours(
+                            DashboardSummaryCharts(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),
-                            DashboardSummaryCharts(
+                            DashboardCategoryHours(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),
                             // DashboardAreaCompliancePanel(areasAsync: areasAsync),
                             // const SizedBox(height: 28),
-                            DashboardMonthlyHours(cargasAsync: cargasAsync),
+                            DashboardMonthlyHours(
+                              evolucionAsync: ref.watch(
+                                evolucionMensualDashboardProvider,
+                              ),
+                            ),
                             const SizedBox(height: 28),
                             DashboardAreasSection(areasAsync: areasAsync),
                           ],

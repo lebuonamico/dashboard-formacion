@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
+import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
 
 Future<({String email, RolUsuario rol})?> mostrarDialogoAltaUsuario(
@@ -65,6 +66,152 @@ Future<bool> confirmarAccion(
     ),
   );
   return confirmado ?? false;
+}
+
+/// Elige los líderes de un área o un equipo entre los usuarios activos con
+/// [rol]. Devuelve el conjunto completo de emails, o `null` si se cancela.
+Future<Set<String>?> mostrarDialogoLideres(
+  BuildContext context, {
+  required String titulo,
+  required String subtitulo,
+  required RolUsuario rol,
+  required List<UsuarioAutorizado> usuarios,
+  required Set<String> seleccionados,
+  required Map<String, String> nombrePorEmail,
+}) {
+  return showDialog<Set<String>>(
+    context: context,
+    builder: (_) => _DialogoLideres(
+      titulo: titulo,
+      subtitulo: subtitulo,
+      rol: rol,
+      usuarios: usuarios,
+      seleccionados: seleccionados,
+      nombrePorEmail: nombrePorEmail,
+    ),
+  );
+}
+
+class _DialogoLideres extends StatefulWidget {
+  final String titulo;
+  final String subtitulo;
+  final RolUsuario rol;
+  final List<UsuarioAutorizado> usuarios;
+  final Set<String> seleccionados;
+  final Map<String, String> nombrePorEmail;
+
+  const _DialogoLideres({
+    required this.titulo,
+    required this.subtitulo,
+    required this.rol,
+    required this.usuarios,
+    required this.seleccionados,
+    required this.nombrePorEmail,
+  });
+
+  @override
+  State<_DialogoLideres> createState() => _DialogoLideresState();
+}
+
+class _DialogoLideresState extends State<_DialogoLideres> {
+  late final Set<String> _marcados = {...widget.seleccionados};
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final candidatos = {
+      for (final usuario in widget.usuarios)
+        if (usuario.estado == EstadoUsuario.activo &&
+            usuario.rolConocido == widget.rol)
+          usuario.email,
+    };
+    // Los asignados que perdieron el rol o el acceso se listan igual, para
+    // poder quitarlos.
+    final sinAcceso = widget.seleccionados.difference(candidatos);
+    final emails = [...candidatos, ...sinAcceso]..sort();
+    final sinCambios =
+        _marcados.length == widget.seleccionados.length &&
+        _marcados.containsAll(widget.seleccionados);
+
+    return _MarcoDialogo(
+      titulo: widget.titulo,
+      subtitulo: widget.subtitulo,
+      children: [
+        if (emails.isEmpty)
+          Text(
+            'No hay usuarios activos con el rol ${widget.rol.label}. Dalos de '
+            'alta o cambiales el rol desde la pestaña Usuarios.',
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          )
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 360),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (final email in emails)
+                    CheckboxListTile(
+                      key: Key('admin_lider_$email'),
+                      value: _marcados.contains(email),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: cs.primary,
+                      onChanged: (valor) => setState(() {
+                        if (valor == true) {
+                          _marcados.add(email);
+                        } else {
+                          _marcados.remove(email);
+                        }
+                      }),
+                      title: Text(
+                        email,
+                        style: TextStyle(fontSize: 14, color: cs.onSurface),
+                      ),
+                      subtitle: _subtitulo(email, sinAcceso.contains(email)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              key: const Key('admin_lideres_confirmar'),
+              onPressed: sinCambios
+                  ? null
+                  : () => Navigator.of(context).pop({..._marcados}),
+              child: const Text('Guardar líderes'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget? _subtitulo(String email, bool sinAcceso) {
+    final nombre = widget.nombrePorEmail[email];
+    final partes = [
+      ?nombre,
+      if (sinAcceso) 'Ya no tiene el rol ${widget.rol.label} o está sin acceso',
+    ];
+    if (partes.isEmpty) return null;
+    return Text(
+      partes.join(' · '),
+      style: TextStyle(
+        fontSize: 12,
+        color: sinAcceso
+            ? context.colores.advertencia.texto
+            : context.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
 }
 
 class _DialogoAltaUsuario extends StatefulWidget {

@@ -6,12 +6,14 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/estructura_organizacional.dart';
 import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
+import 'package:app_finnegans/domain/repositorios/estructura_repository.dart';
 import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart';
 import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/servicios/importacion_service.dart';
@@ -22,6 +24,7 @@ import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -251,6 +254,29 @@ bool _diagnosticoListTilePreexistente(FlutterErrorDetails details) {
       }.contains(titulo.data);
 }
 
+/// Estructura fija que registra lo que la importación pide crear.
+class _Estructura implements EstructuraRepository {
+  final EstructuraOrganizacional estructura;
+  final _Empleados empleados;
+  final faltantes = <FaltantesNomina>[];
+  int? guardadosAlRegistrar;
+
+  _Estructura(this.estructura, this.empleados);
+
+  @override
+  Future<EstructuraOrganizacional> getEstructura() async => estructura;
+
+  @override
+  Future<void> registrarFaltantes(FaltantesNomina faltantes) async {
+    guardadosAlRegistrar = empleados.guardados;
+    this.faltantes.add(faltantes);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      fail('La importación no debe llamar a ${invocation.memberName}.');
+}
+
 Future<ProviderContainer> _mostrarConfiguracion(
   WidgetTester tester, {
   required _Cursos cursos,
@@ -258,22 +284,19 @@ Future<ProviderContainer> _mostrarConfiguracion(
   _Empleados? empleados,
   _Horas? horas,
   _Certificaciones? certificaciones,
+  _Estructura? estructura,
 }) async {
   // Flutter now diagnoses existing decorated cards without a Material surface.
   // Recognize only that known diagnostic; unexpected errors still fail tests.
+  // It is no longer required to appear: the Moodle SwitchListTile that always
+  // triggered it was removed with the Moodle sync (04cf827).
   final reportarError = FlutterError.onError;
-  var diagnosticosConocidos = 0;
   FlutterError.onError = (details) {
-    if (_diagnosticoListTilePreexistente(details)) {
-      diagnosticosConocidos++;
-    } else {
+    if (!_diagnosticoListTilePreexistente(details)) {
       reportarError?.call(details);
     }
   };
-  addTearDown(() {
-    FlutterError.onError = reportarError;
-    expect(diagnosticosConocidos, greaterThan(0));
-  });
+  addTearDown(() => FlutterError.onError = reportarError);
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
   tester.view.devicePixelRatio = 1;
@@ -288,6 +311,15 @@ Future<ProviderContainer> _mostrarConfiguracion(
       certificacionesMoodleRepositoryProvider.overrideWithValue(
         certificaciones ?? _Certificaciones(),
       ),
+      // Sin estructura explícita no se toca el cliente de Supabase, aunque
+      // los tests corran con USE_SUPABASE=true.
+      estructuraRepositoryProvider.overrideWithValue(estructura),
+      if (estructura != null)
+        sesionDatosProvider.overrideWithValue((
+          habilitada: true,
+          email: 'admin@finnegans.com',
+          rol: 'admin',
+        )),
       importacionesRepositoryProvider.overrideWithValue(auditoria),
     ],
   );
@@ -956,6 +988,52 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'Nómina crea antes las áreas y equipos nuevos, sin repetir los que ya están',
+      (tester) async {
+        FilePicker.platform = _SelectorArchivo(
+          () async => _csv(
+            'nomina_estructura.csv',
+            'legajo,nombre,apellido,seniority,sector,equipo,correo,fechaIngreso\r\n'
+                '10,Ana,Pérez,Senior,Producto,Web,ana@example.com,01/10/2026\r\n'
+                '11,Beto,Gil,Junior 1,PRODUCTO,Legacy,beto@example.com,01/10/2026\r\n'
+                '12,Caro,Paz,Junior 2,RRHH,Selección,caro@example.com,01/10/2026\r\n',
+          ),
+        );
+        final empleados = _Empleados();
+        final estructura = _Estructura(
+          EstructuraOrganizacional(
+            areas: [Area(id: '1', nombre: 'PRODUCTO')],
+            equipos: [Equipo(id: '10', areaId: '1', nombre: 'LEGACY')],
+          ),
+          empleados,
+        );
+        await _mostrarConfiguracion(
+          tester,
+          cursos: _Cursos(),
+          auditoria: _Auditoria(),
+          empleados: empleados,
+          estructura: estructura,
+        );
+
+        await tester.tap(find.byKey(const Key('importar_nomina')));
+        await tester.pumpAndSettle();
+
+        final faltantes = estructura.faltantes.single;
+        // "Producto" ya existe como PRODUCTO y "Legacy" como LEGACY.
+        expect(faltantes.areas, ['RRHH']);
+        expect(faltantes.equipos, [
+          (area: 'PRODUCTO', equipo: 'Web'),
+          (area: 'RRHH', equipo: 'Selección'),
+        ]);
+        // La estructura se registra antes de escribir la nómina.
+        expect(estructura.guardadosAlRegistrar, 0);
+        expect(empleados.guardados, 1);
+        expect(empleados.empleadosPorLegajo['10']!.area, 'Producto');
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('Fecha inválida de nómina se rechaza, audita y no refresca', (
       tester,

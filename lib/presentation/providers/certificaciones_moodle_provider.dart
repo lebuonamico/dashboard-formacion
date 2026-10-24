@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -9,10 +10,15 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 final certificacionesMoodleProvider = FutureProvider<List<CertificacionMoodle>>(
-  (ref) {
-    return ref
-        .watch(certificacionesMoodleRepositoryProvider)
-        .getCertificaciones();
+  (ref) async {
+    final repo = ref.watch(certificacionesMoodleRepositoryProvider);
+    // Solo las finalizaciones de los colaboradores que ve el usuario.
+    final legajos = await ref.watch(legajosVisiblesProvider.future);
+    final certificaciones = await repo.getCertificaciones();
+    if (legajos == null) return certificaciones;
+    return certificaciones
+        .where((certificacion) => legajos.contains(certificacion.legajo))
+        .toList();
   },
 );
 
@@ -121,6 +127,8 @@ final certificacionesFiltradasProvider =
           .trim()
           .toLowerCase();
       final estadoFiltro = ref.watch(filtroEstadoCertificacionProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('lms'));
+      final cursoIds = ref.watch(courseFilterIdentifiersProvider);
 
       return completasAsync.whenData((items) {
         return items.where((vm) {
@@ -140,7 +148,12 @@ final certificacionesFiltradasProvider =
               estadoFiltro == null ||
               vm.certificacion.finalizoCurso == estadoFiltro;
 
-          return matchesQuery && matchesEstado;
+          return matchesQuery &&
+              matchesEstado &&
+              matchesDataFilters(
+                selection,
+                certificacionFilterRow(vm, cursoIdsPorNombre: cursoIds),
+              );
         }).toList();
       });
     });

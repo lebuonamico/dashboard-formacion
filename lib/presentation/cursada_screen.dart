@@ -92,11 +92,8 @@ class _BarraFiltrosCrm extends ConsumerWidget {
     final anios = ref.watch(aniosCargasDisponiblesProvider).value ?? const [];
 
     return FilterBar(
-      searchHint: 'Buscar por colaborador, legajo, curso o área...',
-      searchText: busqueda,
+      scope: 'crm',
       hasActiveFilters: busqueda.isNotEmpty || anio != null || mes != null,
-      onSearch: (value) =>
-          ref.read(busquedaCargaDeHorasProvider.notifier).state = value,
       filters: [
         FilterDropdown<int?>(
           value: anio,

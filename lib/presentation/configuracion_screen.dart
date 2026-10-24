@@ -28,6 +28,8 @@ import 'package:app_finnegans/presentation/providers/certificaciones_moodle_prov
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
+import 'package:app_finnegans/presentation/widgets/configuracion/plan_formacion_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
@@ -112,6 +114,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 _buildSeccionCargaDeHoras(context),
                 const SizedBox(height: 24),
                 _buildSeccionCargaLms(context),
+                const SizedBox(height: 24),
+                _buildSeccionPlanFormacion(),
               ],
             ),
           ),
@@ -171,7 +175,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: const Text(
-            'El área y el instructor se completan posteriormente desde las cursadas',
+            'Tipos LMS: Habilidades de negocio y Habilidades blandas. El área y el instructor se completan desde las cursadas.',
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_cursos'),
@@ -310,6 +314,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSeccionPlanFormacion() {
+    return const _ConfigCard(
+      titulo: 'Objetivo de formación por seniority',
+      subtitulo:
+          'Horas mensuales requeridas por categoría. Cada cambio rige desde '
+          'el mes que elijas: los meses anteriores conservan su objetivo.',
+      children: [PlanFormacionEditor()],
     );
   }
 
@@ -726,6 +740,19 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 throw const FormatException('El archivo no tiene registros.');
               }
 
+              // Las áreas y los equipos nuevos de la nómina se crean antes de
+              // sincronizarla, así un fallo acá no deja empleados a medio
+              // escribir. Los que ya existen no se repiten.
+              final estructuraRepository = container.read(
+                estructuraRepositoryProvider,
+              );
+              if (estructuraRepository != null) {
+                final estructura = await estructuraRepository.getEstructura();
+                await estructuraRepository.registrarFaltantes(
+                  estructura.faltantesDeNomina(empleadosImportados),
+                );
+              }
+
               var resumen = ResultadoUpsert.empty;
               // Leandro: llama a la sincronización de nómina para actualizar la foto vigente solo después de validar el archivo completo.
               resumen += await empleadosRepository
@@ -742,6 +769,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               );
             },
             refrescar: () async {
+              container.invalidate(estructuraProvider);
               container.invalidate(empleadosProvider);
               container.invalidate(empleadoHistorialProvider);
               container.invalidate(cursosProvider);
@@ -749,6 +777,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               container.invalidate(cargasDashboardProvider);
               container.invalidate(certificacionesMoodleProvider);
               await Future.wait([
+                container.read(estructuraProvider.future),
                 container.read(empleadosProvider.future),
                 container.read(empleadoHistorialProvider.future),
                 container.read(cursosProvider.future),
@@ -1262,6 +1291,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
+  // Compatibilidad con archivos históricos; las nuevas categorías LMS son negocio y blandas.
   TipoCurso _tipoCursoDesdeTexto(String value, String ubicacion) {
     final normalized = _normalize(value);
     for (final tipo in TipoCurso.values) {

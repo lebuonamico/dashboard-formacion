@@ -6,10 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:app_finnegans/presentation/providers/admin_providers.dart';
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
+import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_actions_bar.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_dialogs.dart';
+import 'package:app_finnegans/presentation/widgets/admin/admin_estructura.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_users_table.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_filters.dart';
@@ -34,13 +38,13 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           const AppTopBar(title: 'Panel de administrador'),
           Expanded(
             child: switch (acceso) {
-              AccesoAdmin.permitido => _contenido(),
+              AccesoAdmin.permitido => _pestanas(),
               AccesoAdmin.denegado => const _EstadoCentrado(
                 icono: Icons.lock_outline,
                 titulo: 'No tenés permiso para ver esta sección',
                 mensaje:
                     'El panel de administración está reservado para los '
-                    'usuarios con rol Administrador.',
+                    'usuarios con rol Administrador o Academia.',
               ),
               AccesoAdmin.sinSupabase => const _EstadoCentrado(
                 icono: Icons.cloud_off_outlined,
@@ -51,6 +55,39 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     'administrar.',
               ),
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pestanas() {
+    final cs = context.colorScheme;
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: paddingPantalla.left),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+            ),
+            child: const TabBar(
+              key: Key('admin_pestanas'),
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                Tab(text: 'Usuarios'),
+                Tab(text: 'Áreas y equipos'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [_contenido(), const AdminEstructura()],
+            ),
           ),
         ],
       ),
@@ -82,16 +119,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
         const SizedBox(height: 20),
         AdminFilters(
-          busqueda: ref.watch(busquedaUsuarioAdminProvider),
-          rolSeleccionado: ref.watch(filtroRolAdminProvider),
-          estadoSeleccionado: ref.watch(filtroEstadoAdminProvider),
           hayFiltrosActivos: ref.watch(filtrosAdminActivosProvider),
-          onBuscar: (valor) =>
-              ref.read(busquedaUsuarioAdminProvider.notifier).state = valor,
-          onRol: (valor) =>
-              ref.read(filtroRolAdminProvider.notifier).state = valor,
-          onEstado: (valor) =>
-              ref.read(filtroEstadoAdminProvider.notifier).state = valor,
           onLimpiar: _limpiarFiltros,
         ),
         const SizedBox(height: 16),
@@ -129,6 +157,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   )
                 : AdminUsuariosTable(
                     usuarios: usuarios,
+                    estructura: ref.watch(estructuraProvider).value,
+                    nomina: ref.watch(empleadosProvider).value,
                     emailSeleccionado: ref.watch(
                       emailSeleccionadoAdminProvider,
                     ),
@@ -146,6 +176,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 
   void _limpiarFiltros() {
+    ref.read(dataFilterSelectionProvider('admin').notifier).clear();
     ref.read(busquedaUsuarioAdminProvider.notifier).state = '';
     ref.read(filtroRolAdminProvider.notifier).state = null;
     ref.read(filtroEstadoAdminProvider.notifier).state = null;
@@ -283,6 +314,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     try {
       await accion(_repositorio());
       ref.invalidate(usuariosAutorizadosProvider);
+      // Cambiar un rol borra en la base las asignaciones que dejan de
+      // aplicar: la columna Lidera y los líderes tienen que recargarse.
+      ref.invalidate(estructuraProvider);
       await ref.read(usuariosAutorizadosProvider.future);
       final auth = ref.read(authControllerProvider);
       if (emailAfectado == auth.email) {
