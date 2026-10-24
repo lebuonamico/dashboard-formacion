@@ -4,7 +4,7 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/presentation/reportes/reportes_pantallas.dart';
+import 'package:app_finnegans/presentation/providers/reportes_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
@@ -13,7 +13,8 @@ import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_h
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/shared/boton_imprimir_reporte.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,9 +33,6 @@ class DashboardScreen extends ConsumerWidget {
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
-    final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
 
     return Scaffold(
       body: Column(
@@ -46,52 +44,10 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  EquiposPeriodControls(
-                    alcance: alcance,
-                    selectedMonth: mes,
-                    selectedYear: anio,
-                    availableYears: aniosDisponibles,
-                    onScopeChanged: (value) {
-                      ref.read(alcancePeriodoProvider.notifier).state = value;
-                    },
-                    onMonthChanged: (value) {
-                      if (value == null) return;
-                      ref.read(filtroMesPeriodoProvider.notifier).state = value;
-                    },
-                    onYearChanged: (value) {
-                      if (value == null) return;
-                      ref.read(filtroAnioPeriodoProvider.notifier).state =
-                          value;
-                    },
-                    construirReporte: () {
-                      final cumplimientos = cumplimientoAsync.value;
-                      if (hayDatosAsync.value != true ||
-                          cumplimientos == null ||
-                          cumplimientos.isEmpty) {
-                        return null;
-                      }
-                      return reporteDashboard(
-                        periodo: alcance == AlcancePeriodo.anual
-                            ? 'Año $anio · meses con datos'
-                            : etiquetaPeriodo(alcance, mes, anio),
-                        cumplimientos: cumplimientos,
-                        cargas: cargasAsync.value ?? const [],
-                        mesesEvaluados: mesesEvaluados,
-                        areas: areasAsync.value ?? const [],
-                        cantidadEquipos: equiposAsync.value?.length ?? 0,
-                        evolucion:
-                            ref.read(evolucionMensualDashboardProvider).value ??
-                            const [],
-                        proyeccion: ref
-                            .read(
-                              proyeccionAnualProvider((
-                                area: null,
-                                equipo: null,
-                              )),
-                            )
-                            .value,
-                      );
-                    },
+                  PeriodoFilterPanel(
+                    accion: BotonImprimirReporte(
+                      reporte: reporteDashboardProvider,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   hayDatosAsync.when(

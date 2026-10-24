@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
@@ -61,6 +62,30 @@ void main() {
     expect(comparacion.totalMoodle(ComparacionMoodleCrm.comparables), 14);
     expect(comparacion.totalCrm(ComparacionMoodleCrm.comparables), 16);
     expect(comparacion.totalCrm(TipoCurso.values), 24);
+  });
+
+  test('La diferencia de las comparables es CRM menos Moodle', () {
+    final comparacion = ComparacionMoodleCrm.desde(_items);
+
+    expect(comparacion.diferenciaComparable, 2);
+    expect(comparacion.diferenciaPorcentual, closeTo(14.29, 0.01));
+    expect(comparacion.coinciden, isFalse);
+  });
+
+  test('Sin horas en Moodle no hay porcentaje, y menos de 0.05 h coincide', () {
+    final soloCrm = ComparacionMoodleCrm.desde([
+      _c(moodle: const {}, crm: {TipoCurso.habilidadesBlandas: 3}),
+    ]);
+    expect(soloCrm.diferenciaPorcentual, isNull);
+    expect(soloCrm.coinciden, isFalse);
+
+    final iguales = ComparacionMoodleCrm.desde([
+      _c(
+        moodle: {TipoCurso.habilidadesDeNegocio: 4},
+        crm: {TipoCurso.habilidadesDeNegocio: 4.04},
+      ),
+    ]);
+    expect(iguales.coinciden, isTrue);
   });
 
   for (final ancho in [1200.0, 500.0]) {

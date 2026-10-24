@@ -10,7 +10,7 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
-import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_results.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -81,9 +81,6 @@ class _AreasContent extends ConsumerWidget {
     final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
     final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
     final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
-    final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
     final esAnual = alcanceSeleccionado == AlcancePeriodo.anual;
     final hayFiltrosActivos =
         busqueda.trim().isNotEmpty || estadoSeleccionado != null;
@@ -110,23 +107,7 @@ class _AreasContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 18),
-        AreasPeriodControls(
-          alcance: alcanceSeleccionado,
-          selectedMonth: mesSeleccionado,
-          selectedYear: anioSeleccionado,
-          availableYears: aniosDisponibles,
-          onScopeChanged: (value) {
-            ref.read(alcancePeriodoProvider.notifier).state = value;
-          },
-          onMonthChanged: (value) {
-            if (value == null) return;
-            ref.read(filtroMesPeriodoProvider.notifier).state = value;
-          },
-          onYearChanged: (value) {
-            if (value == null) return;
-            ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-          },
-        ),
+        const PeriodoFilterPanel(incluidos: 'todas las áreas'),
         const SizedBox(height: 22),
         if (!resumen.tieneDatos)
           EmptyDataState.periodoSinDatos(

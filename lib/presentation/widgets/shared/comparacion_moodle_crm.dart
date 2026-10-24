@@ -1,46 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:flutter/material.dart';
-
-/// Horas por categoría de cada fuente para un grupo de colaboradores.
-/// Moodle: cursos finalizados en el LMS por su carga horaria (solo Negocio y
-/// Blandas). CRM: horas declaradas en cada categoría.
-class ComparacionMoodleCrm {
-  final Map<TipoCurso, double> moodle;
-  final Map<TipoCurso, double> crm;
-
-  const ComparacionMoodleCrm({required this.moodle, required this.crm});
-
-  /// Categorías que existen en las dos fuentes.
-  static const comparables = [
-    TipoCurso.habilidadesDeNegocio,
-    TipoCurso.habilidadesBlandas,
-  ];
-
-  factory ComparacionMoodleCrm.desde(List<CumplimientoEmpleado> items) {
-    double suma(
-      Map<TipoCurso, double> Function(CumplimientoEmpleado) horas,
-      TipoCurso tipo,
-    ) => items.fold(0, (t, item) => t + (horas(item)[tipo] ?? 0));
-    return ComparacionMoodleCrm(
-      moodle: {
-        for (final tipo in comparables)
-          tipo: suma((item) => item.horasValidas, tipo),
-      },
-      crm: {
-        for (final tipo in TipoCurso.values)
-          tipo: suma((item) => item.horasDeclaradas, tipo),
-      },
-    );
-  }
-
-  double totalMoodle(Iterable<TipoCurso> tipos) =>
-      tipos.fold(0, (t, tipo) => t + (moodle[tipo] ?? 0));
-
-  double totalCrm(Iterable<TipoCurso> tipos) =>
-      tipos.fold(0, (t, tipo) => t + (crm[tipo] ?? 0));
-}
 
 /// Dos cards lado a lado: Moodle vs CRM en las categorías comparables
 /// (Negocio y Blandas) y el total de cada fuente, con el desglose por
@@ -99,7 +61,6 @@ class _CardComparacion extends StatelessWidget {
     const tipos = ComparacionMoodleCrm.comparables;
     final moodle = comparacion.totalMoodle(tipos);
     final crm = comparacion.totalCrm(tipos);
-    final diferencia = crm - moodle;
 
     return _Panel(
       titulo: 'Moodle vs CRM · Comparables',
@@ -139,7 +100,7 @@ class _CardComparacion extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          _textoDiferencia(diferencia, moodle),
+          _textoDiferencia(),
           style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
@@ -155,14 +116,15 @@ class _CardComparacion extends StatelessWidget {
     );
   }
 
-  String _textoDiferencia(double diferencia, double moodle) {
-    if (diferencia.abs() < 0.05) return 'Las dos fuentes coinciden.';
-    final porcentaje = moodle == 0
-        ? ''
-        : ' (${diferencia > 0 ? '+' : ''}${(diferencia / moodle * 100).toStringAsFixed(0)}%)';
-    return diferencia > 0
-        ? 'CRM registra ${diferencia.toStringAsFixed(1)} h más que Moodle$porcentaje'
-        : 'CRM registra ${diferencia.abs().toStringAsFixed(1)} h menos que Moodle$porcentaje';
+  String _textoDiferencia() {
+    if (comparacion.coinciden) return 'Las dos fuentes coinciden.';
+    final diferencia = comparacion.diferenciaComparable;
+    final porcentaje = switch (comparacion.diferenciaPorcentual) {
+      final p? => ' (${p > 0 ? '+' : ''}${p.toStringAsFixed(0)}%)',
+      null => '',
+    };
+    return 'CRM registra ${diferencia.abs().toStringAsFixed(1)} h '
+        '${diferencia > 0 ? 'más' : 'menos'} que Moodle$porcentaje';
   }
 }
 
@@ -294,13 +256,6 @@ class _GraficoCrm extends StatelessWidget {
 
   const _GraficoCrm({required this.crm, required this.total});
 
-  static const _nombres = {
-    TipoCurso.habilidadesDeNegocio: 'Negocio',
-    TipoCurso.habilidadesBlandas: 'Blandas',
-    TipoCurso.libresExploracion: 'Libres',
-    TipoCurso.dictadoCapacitaciones: 'Dictado',
-  };
-
   @override
   Widget build(BuildContext context) {
     final maximo = TipoCurso.values
@@ -321,7 +276,7 @@ class _GraficoCrm extends StatelessWidget {
                 alto: _GraficoColumnas._altoMaximo,
                 color: context.colores.categoria(tipo).texto,
                 fuente:
-                    '${_nombres[tipo]}\n'
+                    '${tipo.labelCorto}\n'
                     '${(total == 0 ? 0 : (crm[tipo] ?? 0) / total * 100).toStringAsFixed(0)}%',
               ),
             ),

@@ -6,7 +6,7 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -76,9 +76,6 @@ class _DashboardContent extends ConsumerWidget {
     final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
     final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
     final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
-    final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anioSeleccionado]);
     final hayFiltrosActivos =
         busqueda.trim().isNotEmpty || estadoSeleccionado != null;
 
@@ -104,24 +101,8 @@ class _DashboardContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 18),
-        // Leandro: llama al widget EquiposPeriodControls para elegir el mes, el año y el alcance de los indicadores.
-        EquiposPeriodControls(
-          alcance: alcanceSeleccionado,
-          selectedMonth: mesSeleccionado,
-          selectedYear: anioSeleccionado,
-          availableYears: aniosDisponibles,
-          onScopeChanged: (value) {
-            ref.read(alcancePeriodoProvider.notifier).state = value;
-          },
-          onMonthChanged: (value) {
-            if (value == null) return;
-            ref.read(filtroMesPeriodoProvider.notifier).state = value;
-          },
-          onYearChanged: (value) {
-            if (value == null) return;
-            ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-          },
-        ),
+        // Leandro: llama al widget PeriodoFilterPanel para elegir el mes, el año y el alcance de los indicadores.
+        const PeriodoFilterPanel(),
         const SizedBox(height: 22),
         if (!resumen.tieneDatos)
           // Leandro: llama al widget EmptyDataState para informar que el período seleccionado no tiene registros.

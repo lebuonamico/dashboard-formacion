@@ -2,8 +2,9 @@ import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/presentation/reportes/reportes_pantallas.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/providers/reportes_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/boton_imprimir_reporte.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_detail_summary.dart';
@@ -34,44 +35,12 @@ class EquipoScreen extends ConsumerWidget {
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
-    // Leandro: llama a _periodoLabel para armar el nombre del período que aparece en el encabezado.
-    final periodo = _periodoLabel(alcance, mes, anio);
-    final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
+    final periodo = etiquetaPeriodoDetallada(alcance, mes, anio);
     // Mismo panel que el detalle de área: el período es global a la app.
-    final periodControls = EquiposPeriodControls(
-      alcance: alcance,
-      selectedMonth: mes,
-      selectedYear: anio,
-      availableYears: aniosDisponibles,
-      onScopeChanged: (value) {
-        ref.read(alcancePeriodoProvider.notifier).state = value;
-      },
-      onMonthChanged: (value) {
-        if (value == null) return;
-        ref.read(filtroMesPeriodoProvider.notifier).state = value;
-      },
-      onYearChanged: (value) {
-        if (value == null) return;
-        ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-      },
-      construirReporte: () {
-        final detalle = detalleAsync.value;
-        if (detalle == null || hayDatosAsync.value == false) return null;
-        return reporteEquipo(
-          periodo: periodo,
-          detalle: detalle,
-          proyeccion: ref
-              .read(
-                proyeccionAnualProvider((
-                  area: detalle.resumen.area,
-                  equipo: detalle.resumen.nombre,
-                )),
-              )
-              .value,
-        );
-      },
+    final periodControls = PeriodoFilterPanel(
+      accion: BotonImprimirReporte(
+        reporte: reporteEquipoProvider((area: area, equipo: equipo)),
+      ),
     );
 
     return Scaffold(
@@ -127,13 +96,6 @@ class EquipoScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  String _periodoLabel(AlcancePeriodo alcance, int mes, int anio) {
-    if (alcance == AlcancePeriodo.mensual) {
-      return '${nombreMes(mes)} $anio';
-    }
-    return 'Año $anio · meses con datos';
   }
 }
 
