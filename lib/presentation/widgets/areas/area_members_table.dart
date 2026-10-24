@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
@@ -221,7 +222,7 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
         ),
         DataCell(
           Text(
-            '${miembro.porcentajeTotal.toStringAsFixed(0)}%',
+            formatearPorcentaje(miembro.porcentajeTotal),
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: cumple

@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
@@ -259,7 +260,7 @@ class DashboardAreaCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${area.porcentajeCumplimiento.toStringAsFixed(0)}%',
+                            formatearPorcentaje(area.porcentajeCumplimiento),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,

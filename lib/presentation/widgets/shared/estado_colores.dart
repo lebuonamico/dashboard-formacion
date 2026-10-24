@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
+import 'package:app_finnegans/domain/servicios/proyeccion_service.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter/widgets.dart';
 
@@ -24,6 +25,18 @@ extension ColoresEstadoEquipo on EstadoEquipo {
       EstadoEquipo.enObjetivo => colores.exito,
       EstadoEquipo.enRiesgo => colores.advertencia,
       EstadoEquipo.critico => colores.peligro,
+    };
+  }
+}
+
+/// Colores del semáforo de proyección anual, con el mismo verde, ámbar y rojo.
+extension ColoresEstadoProyeccion on EstadoProyeccion {
+  ParColores colores(BuildContext context) {
+    final colores = context.colores;
+    return switch (this) {
+      EstadoProyeccion.enCamino => colores.exito,
+      EstadoProyeccion.alcanzable => colores.advertencia,
+      EstadoProyeccion.enRiesgo => colores.peligro,
     };
   }
 }

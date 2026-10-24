@@ -201,33 +201,39 @@ class EquiposService {
     required CumplimientoService cumplimientoService,
     bool Function(Empleado)? incluir,
   }) {
+    return acumularMeses([
+      for (var mes = 1; mes <= 12; mes++)
+        // Leandro: llama a tieneDatosEnPeriodo para acumular sólo los meses que tienen registros CRM o LMS.
+        if (tieneDatosEnPeriodo(
+          cargas: cargas,
+          certificaciones: certificaciones,
+          anio: anio,
+          mes: mes,
+          esAnual: false,
+        ))
+          // Leandro: llama a calcularCumplimientoMensual para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
+          calcularCumplimientoMensual(
+            empleados: empleados,
+            historial: historial,
+            cursos: cursos,
+            cargas: cargas,
+            certificaciones: certificaciones,
+            anio: anio,
+            mes: mes,
+            cumplimientoService: cumplimientoService,
+            incluir: incluir,
+          ),
+    ]);
+  }
+
+  /// Suma los cumplimientos de varios meses por colaborador, área y equipo,
+  /// como el anual. Sirve también para acumular solo hasta un mes.
+  List<CumplimientoEmpleado> acumularMeses(
+    Iterable<List<CumplimientoEmpleado>> meses,
+  ) {
     final acumulados = <String, CumplimientoEmpleado>{};
 
-    for (var mes = 1; mes <= 12; mes++) {
-      // Leandro: llama a tieneDatosEnPeriodo para acumular sólo los meses que tienen registros CRM o LMS.
-      if (!tieneDatosEnPeriodo(
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        esAnual: false,
-      )) {
-        continue;
-      }
-
-      // Leandro: llama a calcularCumplimientoMensual para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
-      final cumplimientosMensuales = calcularCumplimientoMensual(
-        empleados: empleados,
-        historial: historial,
-        cursos: cursos,
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        cumplimientoService: cumplimientoService,
-        incluir: incluir,
-      );
-
+    for (final cumplimientosMensuales in meses) {
       for (final mensual in cumplimientosMensuales) {
         final empleado = mensual.empleado;
         final clave =
@@ -238,10 +244,16 @@ class EquiposService {
           empleado: mensual.empleado,
           horasValidas: {
             for (final tipo in TipoCurso.values)
-              // Leandro: llama a horasAplicablesAlObjetivo para sumar horas ya limitadas en cada mes.
+              // En el anual las horas de cada mes van sin el tope mensual: un
+              // mes fuerte compensa uno flojo de la misma persona y categoría.
+              // El tope es el objetivo anual de la categoría, que aplica
+              // horasAplicablesAlObjetivo sobre los requeridos sumados. Solo
+              // suman los meses en que la categoría era requerida.
               tipo:
                   (anterior?.horasValidas[tipo] ?? 0) +
-                  mensual.horasAplicablesAlObjetivo(tipo),
+                  ((mensual.horasRequeridas[tipo] ?? 0) > 0
+                      ? mensual.horasValidas[tipo] ?? 0
+                      : 0),
           },
           horasDeclaradas: {
             for (final tipo in TipoCurso.values)
@@ -507,6 +519,18 @@ class EquiposService {
       0,
       (total, miembro) => total + miembro.horasAplicablesAlObjetivo(tipo),
     );
+  }
+
+  /// Si el colaborador es del área y equipo pedidos, con la misma comparación
+  /// que el detalle de área y de equipo. `null` no filtra por ese campo.
+  bool perteneceA(Empleado empleado, {String? area, String? equipo}) {
+    if (area != null &&
+        _normalizarComparacion(empleado.area) != _normalizarComparacion(area)) {
+      return false;
+    }
+    return equipo == null ||
+        _normalizarComparacion(_nombreEquipoNormalizado(empleado.equipo)) ==
+            _normalizarComparacion(_nombreEquipoNormalizado(equipo));
   }
 
   String _nombreEquipoNormalizado(String equipo) {

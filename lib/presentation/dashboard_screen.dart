@@ -2,6 +2,7 @@ import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
@@ -10,6 +11,7 @@ import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:flutter/material.dart';
@@ -86,12 +88,29 @@ class DashboardScreen extends ConsumerWidget {
                               mesSeleccionado: mes,
                               anioSeleccionado: anio,
                               mesesEvaluados: mesesEvaluados,
+                              proyeccionAsync: ref.watch(
+                                proyeccionAnualProvider((
+                                  area: null,
+                                  equipo: null,
+                                )),
+                              ),
+                              variacionAsync: ref.watch(
+                                variacionCumplimientoProvider((
+                                  area: null,
+                                  equipo: null,
+                                )),
+                              ),
                             ),
                             const SizedBox(height: 28),
                             DashboardSummaryCharts(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),
+                            if (cumplimientoAsync.value case final items?
+                                when items.isNotEmpty) ...[
+                              ComparacionMoodleCrmCards(cumplimientos: items),
+                              const SizedBox(height: 28),
+                            ],
                             DashboardCategoryHours(
                               cumplimientosAsync: cumplimientoAsync,
                             ),

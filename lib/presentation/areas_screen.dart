@@ -5,6 +5,7 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
@@ -13,6 +14,7 @@ import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.da
 import 'package:app_finnegans/presentation/widgets/areas/area_results.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 
@@ -151,6 +153,16 @@ class _AreasContent extends ConsumerWidget {
             desvioHoras: resumen.desvioHoras,
             cumplimientoGlobal: resumen.cumplimientoGlobal,
             esAnual: esAnual,
+            anio: anioSeleccionado,
+            mes: mesSeleccionado,
+            variacion: ref
+                .watch(
+                  variacionCumplimientoProvider((area: null, equipo: null)),
+                )
+                .value,
+            proyeccion: ref
+                .watch(proyeccionAnualProvider((area: null, equipo: null)))
+                .value,
           ),
           const SizedBox(height: 16),
           _ChartsRow(
@@ -168,6 +180,13 @@ class _AreasContent extends ConsumerWidget {
               esAnual: esAnual,
             ),
           ),
+          // Moodle vs CRM de todas las áreas, con los mismos colaboradores
+          // del resumen.
+          if (ref.watch(cumplimientoEquiposProvider).value case final items?
+              when items.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ComparacionMoodleCrmCards(cumplimientos: items),
+          ],
           const SizedBox(height: 24),
           FilterBar(
             scope: 'areas',

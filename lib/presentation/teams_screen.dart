@@ -1,5 +1,6 @@
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
@@ -9,6 +10,7 @@ import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.da
 import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 import 'package:flutter/material.dart';
@@ -150,6 +152,16 @@ class _DashboardContent extends ConsumerWidget {
             desvioHoras: resumen.desvioHoras,
             cumplimientoGlobal: resumen.cumplimientoGlobal,
             esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
+            anio: anioSeleccionado,
+            mes: mesSeleccionado,
+            variacion: ref
+                .watch(
+                  variacionCumplimientoProvider((area: null, equipo: null)),
+                )
+                .value,
+            proyeccion: ref
+                .watch(proyeccionAnualProvider((area: null, equipo: null)))
+                .value,
           ),
           const SizedBox(height: 16),
           // Leandro: llama al widget _DashboardChartsRow para organizar los gráficos de estados y categorías.
@@ -170,6 +182,13 @@ class _DashboardContent extends ConsumerWidget {
               esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
             ),
           ),
+          // Moodle vs CRM de todos los equipos, con los mismos colaboradores
+          // del resumen.
+          if (ref.watch(cumplimientoEquiposProvider).value case final items?
+              when items.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ComparacionMoodleCrmCards(cumplimientos: items),
+          ],
           const SizedBox(height: 24),
           // Criterios independientes de equipo, área, líder y estado.
           FilterBar(

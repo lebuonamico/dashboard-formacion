@@ -6,6 +6,7 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_detail_summary.dart';
@@ -13,8 +14,10 @@ import 'package:app_finnegans/presentation/widgets/areas/area_members_table.dart
 import 'package:app_finnegans/presentation/widgets/areas/area_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_team_card.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 
 class AreaDetalleScreen extends ConsumerWidget {
   final String nombreArea;
@@ -139,60 +142,83 @@ class _AreaContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final area = detalle.area;
+    final anio = ref.watch(filtroAnioPeriodoProvider);
+    final mes = ref.watch(filtroMesPeriodoProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AreaDetalleHeader(area: area, periodo: periodo),
         const SizedBox(height: 22),
-        KpiGrid(
-          cardHeight: 112,
-          items: [
-            KpiData(
-              title: 'Integrantes',
+        KpiCardRow(
+          cards: [
+            DashboardKpiCard(
+              title: 'INTEGRANTES',
               value: '${area.cantidadIntegrantes}',
-              detail: 'nómina del área',
-              help: esAnual
-                  ? 'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.'
-                  : 'Personas de la nómina que pertenecen al área evaluada en el período.',
+              suffix: 'nómina del área',
+              progress: area.cantidadIntegrantes == 0
+                  ? 0
+                  : area.integrantesEnObjetivo / area.cantidadIntegrantes,
+              progressLabel:
+                  '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes} en objetivo',
+              footer: '',
               icon: Icons.people_outline,
               color: context.colorScheme.primary,
             ),
-            KpiData(
-              title: 'Horas realizadas',
-              value: _horas(area.horasRealizadas),
-              detail: 'aplicadas al objetivo del período',
-              help: esAnual
-                  ? 'Suma de las horas válidas de los meses con datos del año.'
-                  : 'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
-              icon: Icons.schedule_outlined,
-              color: context.colores.acentoCian,
+            horasValidasKpiCard(
+              context,
+              esAnual: esAnual,
+              anio: anio,
+              mes: mes,
+              horas: area.horasRealizadas,
+              objetivo: area.horasObjetivo,
             ),
-            KpiData(
-              title: 'Objetivo del período',
+            DashboardKpiCard(
+              title: 'OBJETIVO DEL PERÍODO',
               value: _horas(area.horasObjetivo),
-              detail: 'según seniority y período',
-              help: esAnual
-                  ? 'Suma de los objetivos mensuales de los integrantes elegibles en los meses con datos del año.'
-                  : 'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
+              suffix: 'según seniority',
+              progress: 1,
+              progressLabel: esAnual
+                  ? 'Suma de los objetivos del año'
+                  : 'Objetivo del mes',
+              footer: '',
               icon: Icons.flag_outlined,
               color: context.colores.acentoVioleta,
             ),
-            KpiData(
-              title: 'Cumplimiento',
-              value: '${area.porcentajeCumplimiento.toStringAsFixed(1)}%',
-              detail:
-                  '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes} en objetivo',
-              help: esAnual
-                  ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
-                  : 'Horas realizadas sobre horas objetivo. El estado del área sólo mira este porcentaje.',
-              icon: Icons.trending_up,
+            cumplimientoKpiCard(
+              context,
+              esAnual: esAnual,
+              anio: anio,
+              mes: mes,
+              porcentaje: area.porcentajeCumplimiento,
+              variacion: ref
+                  .watch(
+                    variacionCumplimientoProvider((
+                      area: area.nombre,
+                      equipo: null,
+                    )),
+                  )
+                  .value,
               color: area.semaforo.colores(context).texto,
             ),
+            if (ref
+                    .watch(
+                      proyeccionAnualProvider((
+                        area: area.nombre,
+                        equipo: null,
+                      )),
+                    )
+                    .value
+                case final proyeccion?)
+              proyeccionKpiCard(context, proyeccion),
           ],
         ),
         const SizedBox(height: 16),
         AreaDetalleResumen(area: area, esAnual: esAnual),
+        if (detalle.miembros.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ComparacionMoodleCrmCards(cumplimientos: detalle.miembros),
+        ],
         const SizedBox(height: 24),
         AreaEquiposGrid(
           equipos: detalle.equipos,

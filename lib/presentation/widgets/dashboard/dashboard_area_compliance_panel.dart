@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
@@ -145,7 +146,7 @@ class _AreaProgressRow extends StatelessWidget {
     final progress = (area.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
     final color = area.semaforo.colores(context).texto;
     final label =
-        '${area.porcentajeCumplimiento.toStringAsFixed(0)}% · ${area.horasCompletadas.toStringAsFixed(1)} h';
+        '${formatearPorcentaje(area.porcentajeCumplimiento)} · ${area.horasCompletadas.toStringAsFixed(1)} h';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

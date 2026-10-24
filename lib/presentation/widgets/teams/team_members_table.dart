@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
@@ -135,7 +136,7 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
         ),
         DataCell(
           Text(
-            '${miembro.porcentajeTotal.toStringAsFixed(0)}%',
+            formatearPorcentaje(miembro.porcentajeTotal),
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: cumple

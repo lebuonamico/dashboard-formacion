@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:flutter/material.dart';
@@ -251,7 +252,7 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${area.porcentajeCumplimiento.toStringAsFixed(0)}%',
+              formatearPorcentaje(area.porcentajeCumplimiento),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
