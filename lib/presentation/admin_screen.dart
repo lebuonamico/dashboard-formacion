@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:app_finnegans/presentation/providers/admin_providers.dart';
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_actions_bar.dart';
@@ -82,16 +83,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
         const SizedBox(height: 20),
         AdminFilters(
-          busqueda: ref.watch(busquedaUsuarioAdminProvider),
-          rolSeleccionado: ref.watch(filtroRolAdminProvider),
-          estadoSeleccionado: ref.watch(filtroEstadoAdminProvider),
           hayFiltrosActivos: ref.watch(filtrosAdminActivosProvider),
-          onBuscar: (valor) =>
-              ref.read(busquedaUsuarioAdminProvider.notifier).state = valor,
-          onRol: (valor) =>
-              ref.read(filtroRolAdminProvider.notifier).state = valor,
-          onEstado: (valor) =>
-              ref.read(filtroEstadoAdminProvider.notifier).state = valor,
           onLimpiar: _limpiarFiltros,
         ),
         const SizedBox(height: 16),
@@ -146,6 +138,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 
   void _limpiarFiltros() {
+    ref.read(dataFilterSelectionProvider('admin').notifier).clear();
     ref.read(busquedaUsuarioAdminProvider.notifier).state = '';
     ref.read(filtroRolAdminProvider.notifier).state = null;
     ref.read(filtroEstadoAdminProvider.notifier).state = null;

@@ -171,7 +171,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: const Text(
-            'El área y el instructor se completan posteriormente desde las cursadas',
+            'Tipos LMS: Habilidades de negocio y Habilidades blandas. El área y el instructor se completan desde las cursadas.',
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_cursos'),
@@ -1262,6 +1262,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
+  // Compatibilidad con archivos históricos; las nuevas categorías LMS son negocio y blandas.
   TipoCurso _tipoCursoDesdeTexto(String value, String ubicacion) {
     final normalized = _normalize(value);
     for (final tipo in TipoCurso.values) {

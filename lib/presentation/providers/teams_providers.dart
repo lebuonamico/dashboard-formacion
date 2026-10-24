@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
@@ -190,6 +191,7 @@ final equiposGlobalProvider = FutureProvider<List<EquipoGlobalViewModel>>((
 final equiposGlobalFiltradosProvider =
     Provider<AsyncValue<List<EquipoGlobalViewModel>>>((ref) {
       final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
+      final selection = ref.watch(dataFilterSelectionProvider('equipos'));
       final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
       final query = ref.watch(busquedaEquipoProvider).trim().toLowerCase();
 
@@ -205,7 +207,9 @@ final equiposGlobalFiltradosProvider =
           final coincideEstado =
               estadoSeleccionado == null || equipo.estado == estadoSeleccionado;
 
-          return coincideBusqueda && coincideEstado;
+          return coincideBusqueda &&
+              coincideEstado &&
+              matchesDataFilters(selection, equipoFilterRow(equipo));
         }).toList();
       });
     });

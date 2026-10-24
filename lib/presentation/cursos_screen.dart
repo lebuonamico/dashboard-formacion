@@ -5,12 +5,10 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class CursosScreen extends ConsumerWidget {
   const CursosScreen({super.key});
@@ -80,33 +78,9 @@ class CursosScreen extends ConsumerWidget {
     final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
 
     return FilterBar(
-      searchHint: 'Buscar por nombre o ID...',
-      searchText: busqueda,
+      scope: 'cursos',
       hasActiveFilters: busqueda.isNotEmpty || tipoSeleccionado != null,
-      onSearch: (value) =>
-          ref.read(busquedaCursoProvider.notifier).state = value,
-      filters: [
-        FilterDropdown<TipoCurso?>(
-          value: tipoSeleccionado,
-          hint: 'Todos los tipos',
-          icon: Icons.category_outlined,
-          // "Dictado de capacitaciones" es la opción más larga.
-          width: 300,
-          items: [
-            const DropdownMenuItem<TipoCurso?>(
-              value: null,
-              child: Text('Todos los tipos'),
-            ),
-            for (final tipo in TipoCurso.values)
-              DropdownMenuItem<TipoCurso?>(
-                value: tipo,
-                child: Text(tipo.label),
-              ),
-          ],
-          onChanged: (value) =>
-              ref.read(filtroTipoCursoProvider.notifier).state = value,
-        ),
-      ],
+
       onClear: () {
         ref.read(busquedaCursoProvider.notifier).state = '';
         ref.read(filtroTipoCursoProvider.notifier).state = null;
@@ -252,7 +226,11 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                   ),
                 ),
               ),
-              DataCell(TipoCursoChip(tipo: vm.curso.tipo)),
+              DataCell(
+                vm.curso.tipoLms == null
+                    ? const Text('-')
+                    : TipoCursoChip(tipo: vm.curso.tipoLms!),
+              ),
               DataCell(
                 Text(
                   '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',

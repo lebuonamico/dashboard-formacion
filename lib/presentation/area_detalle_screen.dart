@@ -24,6 +24,8 @@ class AreaDetalleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detalleAsync = ref.watch(detalleAreaProvider(nombreArea));
+    // Mantener la selección durante cargas o períodos sin integrantes.
+    final filtroMiembros = ref.watch(filtroEstadoMiembroAreaProvider);
     final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
@@ -95,6 +97,7 @@ class AreaDetalleScreen extends ConsumerWidget {
                       else
                         _AreaContent(
                           detalle: detalle,
+                          filtro: filtroMiembros,
                           periodo: _periodoLabel(alcance, mes, anio),
                           esAnual: alcance == AlcancePeriodo.anual,
                           origin: origin,
@@ -120,12 +123,14 @@ class AreaDetalleScreen extends ConsumerWidget {
 
 class _AreaContent extends ConsumerWidget {
   final DetalleAreaViewModel detalle;
+  final Set<String> filtro;
   final String periodo;
   final bool esAnual;
   final String origin;
 
   const _AreaContent({
     required this.detalle,
+    required this.filtro,
     required this.periodo,
     required this.esAnual,
     required this.origin,
@@ -134,7 +139,6 @@ class _AreaContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final area = detalle.area;
-    final filtro = ref.watch(filtroEstadoMiembroAreaProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

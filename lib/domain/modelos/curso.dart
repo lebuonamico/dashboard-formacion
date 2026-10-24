@@ -19,6 +19,12 @@ class Curso {
     this.activo = true,
   });
 
+  // La clasificación histórica se conserva para CRM y cumplimiento.
+  TipoCurso? get tipoLms => switch (tipo) {
+    TipoCurso.habilidadesDeNegocio || TipoCurso.habilidadesBlandas => tipo,
+    _ => null,
+  };
+
   Curso copyWith({bool? activo}) => Curso(
     id: id,
     nombre: nombre,
