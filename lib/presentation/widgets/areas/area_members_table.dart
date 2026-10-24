@@ -1,3 +1,5 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
@@ -7,13 +9,13 @@ import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Integrantes del área, paginados y con chips para filtrar por avance.
+/// Integrantes del área, paginados y con selector para filtrar por avance.
 class AreaMiembrosTable extends StatefulWidget {
   final List<CumplimientoEmpleado> miembros;
 
-  /// `cumplido`, `riesgo`, `critico` o null (todos).
-  final String? filtro;
-  final ValueChanged<String?> onFiltro;
+  /// `cumplido`, `riesgo`, `critico`; vacío = todos.
+  final Set<String> filtro;
+  final ValueChanged<Set<String>> onFiltro;
 
   const AreaMiembrosTable({
     super.key,
@@ -40,24 +42,35 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
   }
 
   /// Mismos cortes que el semáforo, sobre el porcentaje de cada integrante.
-  List<CumplimientoEmpleado> get _miembrosFiltrados {
-    return widget.miembros.where((miembro) {
-      final porcentaje = miembro.porcentajeTotal;
-      switch (widget.filtro) {
-        case 'cumplido':
-          return porcentaje >= 100.0;
-        case 'riesgo':
-          return porcentaje >= 70.0 && porcentaje < 100.0;
-        case 'critico':
-          return porcentaje < 70.0;
-        default:
-          return true;
-      }
-    }).toList();
-  }
+  String _estadoMiembro(CumplimientoEmpleado miembro) =>
+      miembro.porcentajeTotal >= 100.0
+      ? 'cumplido'
+      : miembro.porcentajeTotal >= 70.0
+      ? 'riesgo'
+      : 'critico';
+
+  List<CumplimientoEmpleado> get _miembrosFiltrados => widget.miembros
+      .where(
+        (miembro) =>
+            widget.filtro.isEmpty ||
+            widget.filtro.contains(_estadoMiembro(miembro)),
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
+    final estadoOptions = cascadeFilterOptions(
+      [
+        for (final miembro in widget.miembros)
+          {'Estado': _estadoMiembro(miembro)},
+      ],
+      {'Estado': widget.filtro},
+    )['Estado'];
+    const etiquetasEstado = {
+      'cumplido': 'Cumplidos',
+      'riesgo': 'En riesgo',
+      'critico': 'Críticos',
+    };
     final visiblesFiltrados = _miembrosFiltrados;
     final totalIntegrantes = visiblesFiltrados.length;
     final totalPaginas = totalIntegrantes == 0
@@ -89,33 +102,23 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
                 color: context.colorScheme.onSurface,
               ),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _FiltroChip(
-                  label: 'Todos',
-                  seleccionado: widget.filtro == null,
-                  onTap: () => widget.onFiltro(null),
-                ),
-                const SizedBox(width: 8),
-                _FiltroChip(
-                  label: 'Cumplidos',
-                  seleccionado: widget.filtro == 'cumplido',
-                  onTap: () => widget.onFiltro('cumplido'),
-                ),
-                const SizedBox(width: 8),
-                _FiltroChip(
-                  label: 'En riesgo',
-                  seleccionado: widget.filtro == 'riesgo',
-                  onTap: () => widget.onFiltro('riesgo'),
-                ),
-                const SizedBox(width: 8),
-                _FiltroChip(
-                  label: 'Críticos',
-                  seleccionado: widget.filtro == 'critico',
-                  onTap: () => widget.onFiltro('critico'),
-                ),
-              ],
+            SizedBox(
+              width: 250,
+              child: FilterDropdown<String>.multiple(
+                selectedValues: widget.filtro,
+                incompatibleValues:
+                    estadoOptions?.incompatibleValues ?? const {},
+                hint: 'Estado',
+                icon: Icons.traffic_outlined,
+                items: [
+                  for (final value in estadoOptions?.values ?? <String>[])
+                    DropdownMenuItem(
+                      value: value,
+                      child: Text(etiquetasEstado[value] ?? value),
+                    ),
+                ],
+                onSelectionChanged: widget.onFiltro,
+              ),
             ),
           ],
         ),
@@ -234,50 +237,6 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _FiltroChip extends StatelessWidget {
-  final String label;
-  final bool seleccionado;
-  final VoidCallback onTap;
-
-  const _FiltroChip({
-    required this.label,
-    required this.seleccionado,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: seleccionado
-              ? context.colorScheme.primary
-              : context.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: seleccionado
-                ? context.colorScheme.primary
-                : context.colorScheme.outline,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: seleccionado
-                ? context.colorScheme.onPrimary
-                : context.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
     );
   }
 }

@@ -11,7 +11,6 @@ import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dar
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -172,36 +171,11 @@ class _DashboardContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // Búsqueda por equipo, área o líder (texto) y estado (desplegable).
+          // Criterios independientes de equipo, área, líder y estado.
           FilterBar(
-            searchHint: 'Buscar por equipo, área o líder',
-            searchText: busqueda,
+            scope: 'equipos',
             hasActiveFilters: hayFiltrosActivos,
-            onSearch: (value) {
-              ref.read(busquedaEquipoProvider.notifier).state = value;
-            },
-            filters: [
-              FilterDropdown<EstadoEquipo?>(
-                value: estadoSeleccionado,
-                hint: 'Todos los estados',
-                icon: Icons.traffic_outlined,
-                width: 250,
-                items: [
-                  const DropdownMenuItem<EstadoEquipo?>(
-                    value: null,
-                    child: Text('Todos los estados'),
-                  ),
-                  for (final estado in EstadoEquipo.values)
-                    DropdownMenuItem<EstadoEquipo?>(
-                      value: estado,
-                      child: Text(estado.label),
-                    ),
-                ],
-                onChanged: (value) {
-                  ref.read(filtroEstadoEquipoProvider.notifier).state = value;
-                },
-              ),
-            ],
+
             onClear: () {
               ref.read(busquedaEquipoProvider.notifier).state = '';
               ref.read(filtroEstadoEquipoProvider.notifier).state = null;

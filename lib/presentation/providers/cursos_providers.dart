@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/providers/data_filters_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
@@ -27,6 +28,7 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
   final empleadosAsync = ref.watch(empleadosProvider);
   final query = ref.watch(busquedaCursoProvider).toLowerCase();
   final tipoFiltro = ref.watch(filtroTipoCursoProvider);
+  final selection = ref.watch(dataFilterSelectionProvider('cursos'));
 
   if (cursosAsync.isLoading || empleadosAsync.isLoading) {
     return const AsyncValue.loading();
@@ -61,7 +63,12 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
 
         final matchesTipo = tipoFiltro == null || vm.curso.tipo == tipoFiltro;
 
-        return matchesQuery && matchesTipo;
+        return matchesQuery &&
+            matchesTipo &&
+            matchesDataFilters(
+              selection,
+              cursoFilterRow(vm.curso, vm.nombreInstructor),
+            );
       })
       .toList();
 

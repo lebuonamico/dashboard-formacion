@@ -10,12 +10,10 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
-import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/domain/modelos/seniority.dart';
 
 class EmpleadosScreen extends ConsumerWidget {
   const EmpleadosScreen({super.key});
@@ -103,8 +101,7 @@ class EmpleadosScreen extends ConsumerWidget {
   }
 }
 
-/// Buscador por texto (nombre, legajo, área, equipo, gerente o mail) y
-/// desplegable de seniority.
+/// Selección múltiple por dimensión, independiente de los indicadores.
 class _BarraFiltrosEmpleados extends ConsumerWidget {
   const _BarraFiltrosEmpleados();
 
@@ -114,29 +111,9 @@ class _BarraFiltrosEmpleados extends ConsumerWidget {
     final seniority = ref.watch(filtroSeniorityProvider);
 
     return FilterBar(
-      searchHint: 'Buscar por nombre, legajo, área, equipo o gerente...',
-      searchText: busqueda,
+      scope: 'personas',
       hasActiveFilters: busqueda.isNotEmpty || seniority != null,
-      onSearch: (value) =>
-          ref.read(busquedaEmpleadoProvider.notifier).state = value,
-      filters: [
-        FilterDropdown<Seniority?>(
-          value: seniority,
-          hint: 'Todos los seniorities',
-          icon: Icons.workspace_premium_outlined,
-          width: 250,
-          items: [
-            const DropdownMenuItem<Seniority?>(
-              value: null,
-              child: Text('Todos los seniorities'),
-            ),
-            for (final s in Seniority.values)
-              DropdownMenuItem<Seniority?>(value: s, child: Text(s.label)),
-          ],
-          onChanged: (value) =>
-              ref.read(filtroSeniorityProvider.notifier).state = value,
-        ),
-      ],
+
       onClear: () {
         ref.read(busquedaEmpleadoProvider.notifier).state = '';
         ref.read(filtroSeniorityProvider.notifier).state = null;
