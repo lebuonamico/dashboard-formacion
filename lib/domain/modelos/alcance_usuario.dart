@@ -52,9 +52,6 @@ class AlcanceUsuario {
     }
   }
 
-  /// Un líder sin equipos o un usuario de área sin áreas asignadas.
-  bool get sinAsignaciones => !esTotal && _areas.isEmpty && _equipos.isEmpty;
-
   /// Si ve a un empleado con ese Sector y ese Equipo de la nómina.
   bool incluye(String sector, String equipo) {
     if (esTotal) return true;

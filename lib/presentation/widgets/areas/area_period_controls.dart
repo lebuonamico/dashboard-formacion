@@ -2,6 +2,8 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/period_segmented_control.dart';
+import 'package:app_finnegans/presentation/reportes/reporte_pdf.dart';
+import 'package:app_finnegans/presentation/widgets/shared/boton_imprimir_reporte.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 
@@ -14,6 +16,9 @@ class AreasPeriodControls extends StatelessWidget {
   final ValueChanged<int?> onMonthChanged;
   final ValueChanged<int?> onYearChanged;
 
+  /// Si está, muestra "Imprimir reporte" junto al título.
+  final ReporteFormacion? Function()? construirReporte;
+
   const AreasPeriodControls({
     super.key,
     required this.alcance,
@@ -23,6 +28,7 @@ class AreasPeriodControls extends StatelessWidget {
     required this.onScopeChanged,
     required this.onMonthChanged,
     required this.onYearChanged,
+    this.construirReporte,
   });
 
   @override
@@ -35,7 +41,10 @@ class AreasPeriodControls extends StatelessWidget {
       decoration: context.panel(),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final title = _PeriodTitle(esAnual: alcance == AlcancePeriodo.anual);
+          final title = _PeriodTitle(
+            esAnual: alcance == AlcancePeriodo.anual,
+            construirReporte: construirReporte,
+          );
           final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
             selected: alcance,
             options: AlcancePeriodo.values,
@@ -92,7 +101,9 @@ class AreasPeriodControls extends StatelessWidget {
 class _PeriodTitle extends StatelessWidget {
   final bool esAnual;
 
-  const _PeriodTitle({this.esAnual = false});
+  final ReporteFormacion? Function()? construirReporte;
+
+  const _PeriodTitle({this.esAnual = false, this.construirReporte});
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +127,10 @@ class _PeriodTitle extends StatelessWidget {
             color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           ),
         ),
+        if (construirReporte case final construir?) ...[
+          const SizedBox(width: 12),
+          BotonImprimirReporte(construirReporte: construir),
+        ],
       ],
     );
   }

@@ -2,6 +2,8 @@ import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/reportes/reportes_pantallas.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_detail_summary.dart';
@@ -34,6 +36,43 @@ class EquipoScreen extends ConsumerWidget {
     final anio = ref.watch(filtroAnioPeriodoProvider);
     // Leandro: llama a _periodoLabel para armar el nombre del período que aparece en el encabezado.
     final periodo = _periodoLabel(alcance, mes, anio);
+    final aniosDisponibles = ref
+        .watch(aniosEquipoDisponiblesProvider)
+        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
+    // Mismo panel que el detalle de área: el período es global a la app.
+    final periodControls = EquiposPeriodControls(
+      alcance: alcance,
+      selectedMonth: mes,
+      selectedYear: anio,
+      availableYears: aniosDisponibles,
+      onScopeChanged: (value) {
+        ref.read(alcancePeriodoProvider.notifier).state = value;
+      },
+      onMonthChanged: (value) {
+        if (value == null) return;
+        ref.read(filtroMesPeriodoProvider.notifier).state = value;
+      },
+      onYearChanged: (value) {
+        if (value == null) return;
+        ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+      },
+      construirReporte: () {
+        final detalle = detalleAsync.value;
+        if (detalle == null || hayDatosAsync.value == false) return null;
+        return reporteEquipo(
+          periodo: periodo,
+          detalle: detalle,
+          proyeccion: ref
+              .read(
+                proyeccionAnualProvider((
+                  area: detalle.resumen.area,
+                  equipo: detalle.resumen.nombre,
+                )),
+              )
+              .value,
+        );
+      },
+    );
 
     return Scaffold(
       backgroundColor: context.colorScheme.surfaceContainerLow,
@@ -55,6 +94,7 @@ class EquipoScreen extends ConsumerWidget {
                   final etiqueta = etiquetaPeriodo(alcance, mes, anio);
                   if (!(hayDatosAsync.value ?? true)) {
                     return _EmptyContent(
+                      periodControls: periodControls,
                       child: EmptyDataState.periodoSinDatos(
                         icon: Icons.groups_outlined,
                         periodo: etiqueta,
@@ -63,6 +103,7 @@ class EquipoScreen extends ConsumerWidget {
                   }
                   if (detalle == null) {
                     return _EmptyContent(
+                      periodControls: periodControls,
                       child: EmptyDataState(
                         icon: Icons.groups_outlined,
                         title:
@@ -77,6 +118,7 @@ class EquipoScreen extends ConsumerWidget {
                     detalle: detalle,
                     periodo: periodo,
                     esAnual: alcance == AlcancePeriodo.anual,
+                    periodControls: periodControls,
                   );
                 })(),
               ),
@@ -99,11 +141,13 @@ class _EquipoContent extends ConsumerWidget {
   final DetalleEquipoGeneral detalle;
   final String periodo;
   final bool esAnual;
+  final Widget periodControls;
 
   const _EquipoContent({
     required this.detalle,
     required this.periodo,
     required this.esAnual,
+    required this.periodControls,
   });
 
   @override
@@ -120,6 +164,8 @@ class _EquipoContent extends ConsumerWidget {
     return ListView(
       padding: paddingPantalla,
       children: [
+        periodControls,
+        const SizedBox(height: 22),
         // Leandro: llama al widget EquipoDetalleHeader para mostrar el nombre, el período y el estado del equipo.
         EquipoDetalleHeader(equipo: equipo, periodo: periodo),
         const SizedBox(height: 22),
@@ -198,13 +244,17 @@ class _EquipoContent extends ConsumerWidget {
 }
 
 class _EmptyContent extends StatelessWidget {
+  final Widget periodControls;
   final Widget child;
 
-  const _EmptyContent({required this.child});
+  const _EmptyContent({required this.periodControls, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(padding: paddingPantalla, children: [child]);
+    return ListView(
+      padding: paddingPantalla,
+      children: [periodControls, const SizedBox(height: 22), child],
+    );
   }
 }
 

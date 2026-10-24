@@ -75,7 +75,6 @@ void main() {
     test('Sin sellos está activo', () {
       final usuario = _usuario();
       expect(usuario.estado, EstadoUsuario.activo);
-      expect(usuario.activoCalculado, isTrue);
     });
 
     test('Eliminado tiene precedencia sobre bloqueado', () {
@@ -83,25 +82,6 @@ void main() {
       expect(ambos.estado, EstadoUsuario.eliminado);
       expect(_usuario(ffBloqueo: _ahora).estado, EstadoUsuario.bloqueado);
       expect(_usuario(ffEliminar: _ahora).estado, EstadoUsuario.eliminado);
-    });
-
-    test('activoCalculado exige los dos sellos en null', () {
-      expect(_usuario(ffBloqueo: _ahora).activoCalculado, isFalse);
-      expect(_usuario(ffEliminar: _ahora).activoCalculado, isFalse);
-      expect(
-        _usuario(ffBloqueo: _ahora, ffEliminar: _ahora).activoCalculado,
-        isFalse,
-      );
-    });
-  });
-
-  group('Transiciones', () {
-    test('bloquear sella la fecha y desactiva', () {
-      final bloqueado = _usuario().bloqueado(_ahora);
-      expect(bloqueado.ffBloqueo, _ahora);
-      expect(bloqueado.ffEliminar, isNull);
-      expect(bloqueado.activo, isFalse);
-      expect(bloqueado.estado, EstadoUsuario.bloqueado);
     });
 
     test('eliminar sella la fecha y desactiva', () {

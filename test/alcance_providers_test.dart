@@ -373,10 +373,6 @@ void main() {
     expect(await container.read(empleadosProvider.future), isEmpty);
     expect(await container.read(cargasDeHorasCRMProvider.future), isEmpty);
     expect(await container.read(certificacionesMoodleProvider.future), isEmpty);
-    expect(
-      (await container.read(alcanceUsuarioProvider.future)).sinAsignaciones,
-      isTrue,
-    );
   });
 
   test(

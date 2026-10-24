@@ -274,25 +274,6 @@ class EquiposService {
     return acumulados.values.toList();
   }
 
-  List<CumplimientoEmpleado> convertirObjetivoMensualAAnual(
-    List<CumplimientoEmpleado> cumplimientos, {
-    int mesesConRegistros = 12,
-  }) {
-    final meses = mesesConRegistros.clamp(1, 12);
-    return cumplimientos.map((cumplimiento) {
-      final horasRequeridasAnuales = cumplimiento.horasRequeridas.map(
-        (tipo, horas) => MapEntry(tipo, horas * meses),
-      );
-
-      return CumplimientoEmpleado(
-        empleado: cumplimiento.empleado,
-        horasValidas: cumplimiento.horasValidas,
-        horasDeclaradas: cumplimiento.horasDeclaradas,
-        horasRequeridas: horasRequeridasAnuales,
-      );
-    }).toList();
-  }
-
   List<EquipoGlobalViewModel> calcularEquiposGlobales(
     List<CumplimientoEmpleado> cumplimientos, {
     ResolverLider? liderDe,

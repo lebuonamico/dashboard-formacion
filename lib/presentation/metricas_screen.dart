@@ -8,7 +8,6 @@ import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 
-//import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class MetricasScreen extends ConsumerWidget {
   const MetricasScreen({super.key});

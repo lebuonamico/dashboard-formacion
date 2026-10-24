@@ -4,6 +4,7 @@ import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/reportes/reportes_pantallas.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
@@ -62,6 +63,35 @@ class DashboardScreen extends ConsumerWidget {
                       ref.read(filtroAnioPeriodoProvider.notifier).state =
                           value;
                     },
+                    construirReporte: () {
+                      final cumplimientos = cumplimientoAsync.value;
+                      if (hayDatosAsync.value != true ||
+                          cumplimientos == null ||
+                          cumplimientos.isEmpty) {
+                        return null;
+                      }
+                      return reporteDashboard(
+                        periodo: alcance == AlcancePeriodo.anual
+                            ? 'Año $anio · meses con datos'
+                            : etiquetaPeriodo(alcance, mes, anio),
+                        cumplimientos: cumplimientos,
+                        cargas: cargasAsync.value ?? const [],
+                        mesesEvaluados: mesesEvaluados,
+                        areas: areasAsync.value ?? const [],
+                        cantidadEquipos: equiposAsync.value?.length ?? 0,
+                        evolucion:
+                            ref.read(evolucionMensualDashboardProvider).value ??
+                            const [],
+                        proyeccion: ref
+                            .read(
+                              proyeccionAnualProvider((
+                                area: null,
+                                equipo: null,
+                              )),
+                            )
+                            .value,
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   hayDatosAsync.when(
@@ -110,8 +140,6 @@ class DashboardScreen extends ConsumerWidget {
                               ComparacionMoodleCrmCards(cumplimientos: items),
                               const SizedBox(height: 28),
                             ],
-                            // DashboardAreaCompliancePanel(areasAsync: areasAsync),
-                            // const SizedBox(height: 28),
                             DashboardMonthlyHours(
                               evolucionAsync: ref.watch(
                                 evolucionMensualDashboardProvider,

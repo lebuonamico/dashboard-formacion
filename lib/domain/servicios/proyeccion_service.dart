@@ -160,14 +160,6 @@ class ProyeccionAnual {
   /// Diferencia de horas por persona contra el mes anterior.
   double? get variacion =>
       ritmoMesAnterior == null ? null : ritmoReciente - ritmoMesAnterior!;
-
-  /// Variación porcentual contra el mes anterior; `null` si no se puede
-  /// comparar.
-  double? get variacionPorcentual {
-    final anterior = ritmoMesAnterior;
-    if (anterior == null || anterior == 0) return null;
-    return (ritmoReciente - anterior) / anterior * 100;
-  }
 }
 
 class ProyeccionService {

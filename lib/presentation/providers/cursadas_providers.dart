@@ -39,7 +39,6 @@ class CargaDeHorasCRMViewModel {
 typedef CursadaViewModel = CargaDeHorasCRMViewModel;
 
 final busquedaCargaDeHorasProvider = StateProvider<String>((ref) => '');
-final busquedaCursadaProvider = busquedaCargaDeHorasProvider;
 
 // Filtros propios del listado del CRM (null = todos). No son el período
 // global: filtrar acá no cambia lo que muestran Dashboard o Equipos.
@@ -138,5 +137,4 @@ final cargasDeHorasCompletasProvider =
       return AsyncValue.data(viewModels);
     });
 
-final cursadasProvider = cargasDeHorasCRMProvider;
 final cursadasCompletasProvider = cargasDeHorasCompletasProvider;

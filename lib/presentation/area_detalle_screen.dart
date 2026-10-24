@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/reportes/reportes_pantallas.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_detail_summary.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_members_table.dart';
@@ -51,6 +52,22 @@ class AreaDetalleScreen extends ConsumerWidget {
       onYearChanged: (value) {
         if (value == null) return;
         ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+      },
+      construirReporte: () {
+        final detalle = detalleAsync.value;
+        if (detalle == null || hayDatosAsync.value == false) return null;
+        return reporteArea(
+          periodo: _periodoLabel(alcance, mes, anio),
+          detalle: detalle,
+          proyeccion: ref
+              .read(
+                proyeccionAnualProvider((
+                  area: detalle.area.nombre,
+                  equipo: null,
+                )),
+              )
+              .value,
+        );
       },
     );
     final requestedOrigin = GoRouterState.of(

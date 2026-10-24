@@ -88,11 +88,19 @@ void main() {
 
   test('Una tendencia creciente proyecta más que un ritmo plano', () {
     final creciente = service.calcular(
-      porMes: {7: [_c(2)], 8: [_c(4)], 9: [_c(6)]},
+      porMes: {
+        7: [_c(2)],
+        8: [_c(4)],
+        9: [_c(6)],
+      },
       mesCorte: 9,
     )!;
     final plano = service.calcular(
-      porMes: {7: [_c(4)], 8: [_c(4)], 9: [_c(4)]},
+      porMes: {
+        7: [_c(4)],
+        8: [_c(4)],
+        9: [_c(4)],
+      },
       mesCorte: 9,
     )!;
 
@@ -108,7 +116,11 @@ void main() {
 
   test('Una tendencia decreciente nunca resta horas', () {
     final proyeccion = service.calcular(
-      porMes: {7: [_c(6)], 8: [_c(4)], 9: [_c(2)]},
+      porMes: {
+        7: [_c(6)],
+        8: [_c(4)],
+        9: [_c(2)],
+      },
       mesCorte: 9,
     )!;
 
@@ -156,7 +168,6 @@ void main() {
     expect(proyeccion.ritmoReciente, 7.5);
     expect(proyeccion.ritmoMesAnterior, 7);
     expect(proyeccion.variacion, 0.5);
-    expect(proyeccion.variacionPorcentual, closeTo(7.14, 0.01));
     expect(proyeccion.cumplimientoMes, closeTo(93.75, 1e-9));
   });
 
@@ -232,7 +243,10 @@ void main() {
   group('Variación contra el mes anterior', () {
     test('Sube si el último mes mejora la proyección', () {
       final proyeccion = service.calcular(
-        porMes: {8: [_c(4)], 9: [_c(8)]},
+        porMes: {
+          8: [_c(4)],
+          9: [_c(8)],
+        },
         mesCorte: 9,
       )!;
       // Agosto: 4 h y 4 meses a 4 h = 20 de 40 (50 %). Septiembre llega.
@@ -243,7 +257,10 @@ void main() {
 
     test('Baja si el último mes empeora la proyección', () {
       final proyeccion = service.calcular(
-        porMes: {8: [_c(8)], 9: [_c(0)]},
+        porMes: {
+          8: [_c(8)],
+          9: [_c(0)],
+        },
         mesCorte: 9,
       )!;
       expect(proyeccion.variacionProyeccion, lessThan(0));
@@ -251,7 +268,9 @@ void main() {
 
     test('Sin mes anterior con datos no hay variación', () {
       final proyeccion = service.calcular(
-        porMes: {9: [_c(8)]},
+        porMes: {
+          9: [_c(8)],
+        },
         mesCorte: 9,
       )!;
       expect(proyeccion.porcentajeAnterior, isNull);

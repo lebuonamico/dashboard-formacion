@@ -10,49 +10,12 @@ import 'package:app_finnegans/presentation/providers/certificaciones_moodle_prov
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
-import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 import 'package:app_finnegans/presentation/providers/period_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 export 'package:app_finnegans/domain/modelos/team_overview.dart';
 export 'package:app_finnegans/domain/modelos/team_status.dart';
 export 'package:app_finnegans/presentation/providers/period_providers.dart';
-
-class ResumenEquipoViewModel {
-  final String nombreArea;
-  final int cantidadIntegrantes;
-  final int integrantesCumplen;
-  final double horasTotalesRealizadas;
-  final double horasTotalesRequeridas;
-  final double porcentajeCumplimiento;
-  final EstadoSemaforo semaforo;
-  final List<String> equiposGenerales;
-
-  ResumenEquipoViewModel({
-    required this.nombreArea,
-    required this.cantidadIntegrantes,
-    required this.integrantesCumplen,
-    required this.horasTotalesRealizadas,
-    required this.horasTotalesRequeridas,
-    required this.porcentajeCumplimiento,
-    required this.semaforo,
-    required this.equiposGenerales,
-  });
-}
-
-class DetalleEquipoViewModel {
-  final String nombreArea;
-  final ResumenEquipoViewModel resumen;
-  final List<CumplimientoEmpleado> miembros;
-  final Map<String, List<CumplimientoEmpleado>> miembrosPorEquipo;
-
-  DetalleEquipoViewModel({
-    required this.nombreArea,
-    required this.resumen,
-    required this.miembros,
-    required this.miembrosPorEquipo,
-  });
-}
 
 final busquedaEquipoProvider = StateProvider<String>((ref) => '');
 final filtroEstadoEquipoProvider = StateProvider<EstadoEquipo?>((ref) => null);
@@ -203,104 +166,6 @@ final equiposGlobalFiltradosProvider =
               matchesDataFilters(selection, equipoFilterRow(equipo));
         }).toList();
       });
-    });
-
-ResumenEquipoViewModel _resumirArea(
-  String area,
-  List<CumplimientoEmpleado> miembros,
-) {
-  final legajos = miembros.map((m) => m.empleado.legajo).toSet();
-  final legajosPendientes = miembros
-      .where((m) => !m.cumpleObjetivo)
-      .map((m) => m.empleado.legajo)
-      .toSet();
-  final horasRealizadas = miembros.fold<double>(
-    0.0,
-    (acc, item) => acc + item.totalHorasCompletadas,
-  );
-  final horasRequeridas = miembros.fold<double>(
-    0.0,
-    (acc, item) => acc + item.totalHorasRequeridas,
-  );
-
-  final porcentaje = horasRequeridas == 0
-      ? 100.0
-      : (horasRealizadas / horasRequeridas) * 100;
-  final equiposGenerales =
-      miembros
-          .map((miembro) => miembro.empleado.equipo.trim())
-          .where((equipo) => equipo.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
-
-  return ResumenEquipoViewModel(
-    nombreArea: area,
-    cantidadIntegrantes: legajos.length,
-    integrantesCumplen: legajos.difference(legajosPendientes).length,
-    horasTotalesRealizadas: horasRealizadas,
-    horasTotalesRequeridas: horasRequeridas,
-    porcentajeCumplimiento: porcentaje,
-    semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
-    equiposGenerales: equiposGenerales,
-  );
-}
-
-final equiposResumenProvider = FutureProvider<List<ResumenEquipoViewModel>>((
-  ref,
-) async {
-  final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
-  final query = ref.watch(busquedaEquipoProvider).toLowerCase();
-
-  final agrupado = <String, List<CumplimientoEmpleado>>{};
-  for (final item in cumplimientos) {
-    agrupado.putIfAbsent(item.empleado.area, () => []).add(item);
-  }
-
-  final lista = [
-    for (final entry in agrupado.entries) _resumirArea(entry.key, entry.value),
-  ];
-
-  return lista
-      .where(
-        (area) =>
-            area.nombreArea.toLowerCase().contains(query) ||
-            area.equiposGenerales.any(
-              (equipo) => equipo.toLowerCase().contains(query),
-            ),
-      )
-      .toList();
-});
-
-// Detalle de un equipo particular por su nombre/área
-final detalleEquipoProvider =
-    FutureProvider.family<DetalleEquipoViewModel?, String>((
-      ref,
-      nombreArea,
-    ) async {
-      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
-
-      final miembros = cumplimientos
-          .where(
-            (c) => c.empleado.area.toLowerCase() == nombreArea.toLowerCase(),
-          )
-          .toList();
-      if (miembros.isEmpty) return null;
-      final resumen = _resumirArea(miembros.first.empleado.area, miembros);
-      final miembrosPorEquipo = <String, List<CumplimientoEmpleado>>{};
-      for (final miembro in miembros) {
-        final equipo = miembro.empleado.equipo.trim().isEmpty
-            ? 'Sin equipo asignado'
-            : miembro.empleado.equipo.trim();
-        miembrosPorEquipo.putIfAbsent(equipo, () => []).add(miembro);
-      }
-
-      return DetalleEquipoViewModel(
-        nombreArea: resumen.nombreArea,
-        resumen: resumen,
-        miembros: miembros,
-        miembrosPorEquipo: miembrosPorEquipo,
-      );
     });
 
 final detalleEquipoGeneralProvider =
