@@ -10,10 +10,15 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 final certificacionesMoodleProvider = FutureProvider<List<CertificacionMoodle>>(
-  (ref) {
-    return ref
-        .watch(certificacionesMoodleRepositoryProvider)
-        .getCertificaciones();
+  (ref) async {
+    final repo = ref.watch(certificacionesMoodleRepositoryProvider);
+    // Solo las finalizaciones de los colaboradores que ve el usuario.
+    final legajos = await ref.watch(legajosVisiblesProvider.future);
+    final certificaciones = await repo.getCertificaciones();
+    if (legajos == null) return certificaciones;
+    return certificaciones
+        .where((certificacion) => legajos.contains(certificacion.legajo))
+        .toList();
   },
 );
 

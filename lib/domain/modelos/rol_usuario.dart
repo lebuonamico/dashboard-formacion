@@ -1,12 +1,15 @@
 enum RolUsuario {
-  admin('Administrador', 'Administra los usuarios del sistema'),
-  academia('Academia', 'Ve la información de toda la empresa'),
-  area('Área', 'Ve los equipos de su área'),
-  lider('Líder de equipo', 'Ve los integrantes de su equipo');
+  admin('Administrador', 'Ve toda la empresa y administra usuarios y líderes'),
+  academia('Academia', 'Ve toda la empresa y administra usuarios y líderes'),
+  area('Área', 'Ve los equipos de las áreas que lidera'),
+  lider('Líder de equipo', 'Ve los integrantes de los equipos que lidera');
 
   final String label;
   final String descripcion;
   const RolUsuario(this.label, this.descripcion);
+
+  /// Ve toda la empresa, importa archivos y entra al panel de administración.
+  bool get esGestor => this == admin || this == academia;
 
   static RolUsuario? fromString(String? raw) {
     if (raw == null) return null;

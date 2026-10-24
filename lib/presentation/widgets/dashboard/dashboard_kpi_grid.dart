@@ -69,6 +69,7 @@ class DashboardKpiGrid extends StatelessWidget {
     final empleadosTomaronCurso = kpis.capacitandose;
     final horasDeclaradasPeriodo = kpis.horasDeclaradas;
     final metaPeriodo = kpis.horasObjetivo;
+    final metaAnual = kpis.metaAnualPorPersona;
     const nombresMeses = [
       'ENERO',
       'FEBRERO',
@@ -129,8 +130,10 @@ class DashboardKpiGrid extends StatelessWidget {
       DashboardKpiCard(
         title: 'PROYECCIÓN ANUAL',
         value: '${proyeccionAnual.toStringAsFixed(0)} h',
-        suffix: '/ Meta: 96 h',
-        progress: (proyeccionAnual / 96).clamp(0.0, 1.0),
+        suffix: '/ Meta: ${metaAnual.toStringAsFixed(0)} h',
+        progress: metaAnual == 0
+            ? 1
+            : (proyeccionAnual / metaAnual).clamp(0.0, 1.0),
         progressLabel: 'Ritmo actual: ${ritmoMensual.toStringAsFixed(1)} h/mes',
         footer: 'Cumplimiento global ${cumplimientoGlobal.toStringAsFixed(0)}%',
         icon: Icons.trending_up,

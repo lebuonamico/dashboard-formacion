@@ -12,7 +12,13 @@ final cargasDeHorasCRMProvider = FutureProvider<List<CargaDeHorasCRM>>((
   ref,
 ) async {
   final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
-  return repo.getCargasDeHoras();
+  // Solo las horas de los colaboradores que ve el usuario de la sesión.
+  final legajos = await ref.watch(legajosVisiblesProvider.future);
+  final cargas = await repo.getCargasDeHoras();
+  if (legajos == null) return cargas;
+  return cargas
+      .where((carga) => legajos.contains(carga.empleadoLegajo))
+      .toList();
 });
 
 class CargaDeHorasCRMViewModel {

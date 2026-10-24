@@ -153,7 +153,7 @@ class _ComplianceChartCard extends StatelessWidget {
     return _SummaryCard(
       title: 'Estado de cumplimiento',
       subtitle: 'Distribución semáforo de las ${summary.total} personas',
-      trailing: 'Meta: 8 h',
+      trailing: 'Meta según seniority',
       footer: '${summary.meetsTarget} personas alcanzaron el 100% de la meta',
       action: 'Ver nómina',
       onAction: () => context.push('/empleados'),

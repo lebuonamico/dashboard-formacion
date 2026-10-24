@@ -83,6 +83,15 @@ class AuthController extends ChangeNotifier {
 
   bool get esAdmin => isAuthorized && rol == RolUsuario.admin.name;
 
+  /// Rol de la sesión autorizada, o `null` si no hay sesión o el rol guardado
+  /// no es uno de los conocidos.
+  RolUsuario? get rolConocido =>
+      isAuthorized ? RolUsuario.fromString(rol) : null;
+
+  /// Administrador o Academia: ven toda la empresa, importan archivos y
+  /// entran al panel de administración.
+  bool get esGestor => rolConocido?.esGestor ?? false;
+
   void _clearAuthorization() {
     _authorizationRevision++;
     _authorizedUser = null;
@@ -182,8 +191,21 @@ class AuthController extends ChangeNotifier {
     if (!enabled) return null;
     final isLogin = path == '/' || path == '/login';
     if (!isAuthorized) return path == '/login' ? null : '/login';
-    if (path.startsWith('/admin') && !esAdmin) return '/dashboard';
-    return isLogin ? '/dashboard' : null;
+    if (isLogin) return '/dashboard';
+    if (!esGestor &&
+        (path.startsWith('/admin') || path.startsWith('/configuracion'))) {
+      return '/dashboard';
+    }
+    // Un líder no ve la pantalla de Áreas ni el detalle de un área, pero sí
+    // el de sus equipos, que cuelga de /areas/:area/equipos/:equipo.
+    final segmentos = path.split('/').where((s) => s.isNotEmpty).toList();
+    if (rolConocido == RolUsuario.lider &&
+        segmentos.isNotEmpty &&
+        segmentos.first == 'areas' &&
+        segmentos.length <= 2) {
+      return '/equipos';
+    }
+    return null;
   }
 
   Future<void> signInWithGoogle() async {

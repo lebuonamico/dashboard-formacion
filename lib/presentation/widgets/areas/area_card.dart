@@ -53,6 +53,10 @@ class AreaCard extends StatelessWidget {
                       _CardHeader(area: area),
                       const SizedBox(height: 13),
                       _EquiposRow(equipos: area.equiposGenerales),
+                      if (area.lideres != null) ...[
+                        const SizedBox(height: 6),
+                        _LideresRow(lideres: area.lideres!),
+                      ],
                       const Spacer(),
                       _ProgressSection(
                         area: area,
@@ -137,6 +141,43 @@ class _EquiposRow extends StatelessWidget {
       children: [
         Icon(
           Icons.groups_outlined,
+          size: 16,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Tooltip(
+            message: texto,
+            child: Text(
+              texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Líderes de área asignados en el panel de administración.
+class _LideresRow extends StatelessWidget {
+  final String lideres;
+
+  const _LideresRow({required this.lideres});
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = 'Líder de área: $lideres';
+
+    return Row(
+      children: [
+        Icon(
+          Icons.person_outline,
           size: 16,
           color: context.colorScheme.onSurfaceVariant,
         ),

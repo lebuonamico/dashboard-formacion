@@ -24,6 +24,10 @@ class DashboardKpis {
   final double cumplimiento;
   final double ritmoMensual;
   final double proyeccionAnual;
+
+  /// Objetivo de un año por colaborador, al ritmo de objetivo del período.
+  /// Sale del plan de cada seniority: no es un valor fijo.
+  final double metaAnualPorPersona;
   const DashboardKpis({
     required this.colaboradores,
     required this.capacitandose,
@@ -34,6 +38,7 @@ class DashboardKpis {
     required this.cumplimiento,
     required this.ritmoMensual,
     required this.proyeccionAnual,
+    required this.metaAnualPorPersona,
   });
 }
 
@@ -81,6 +86,10 @@ class DashboardKpisService {
     final ritmo = totalEmpleados == 0
         ? 0.0
         : horasRealizadas / totalEmpleados / meses;
+    // Mismo denominador que el ritmo, así la proyección y su meta comparan.
+    final objetivoMensual = totalEmpleados == 0
+        ? 0.0
+        : horasObjetivo / totalEmpleados / meses;
     final cargasNomina = cargas
         .where((c) => legajos.contains(c.empleadoLegajo))
         .toList();
@@ -101,6 +110,7 @@ class DashboardKpisService {
       cumplimiento: _cumplimiento(horasRealizadas, horasObjetivo),
       ritmoMensual: ritmo,
       proyeccionAnual: ritmo * 12,
+      metaAnualPorPersona: objetivoMensual * 12,
     );
   }
 }

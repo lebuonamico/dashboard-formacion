@@ -39,7 +39,8 @@ class AreaDetalleHeader extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               '$colaboradores ${colaboradores == 1 ? 'colaborador' : 'colaboradores'}'
-              ' · $equipos ${equipos == 1 ? 'equipo general' : 'equipos generales'}',
+              ' · $equipos ${equipos == 1 ? 'equipo general' : 'equipos generales'}'
+              '${area.lideres == null ? '' : ' · Líder de área: ${area.lideres}'}',
               style: TextStyle(
                 fontSize: 14,
                 color: context.colorScheme.onSurfaceVariant,

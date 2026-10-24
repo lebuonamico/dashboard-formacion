@@ -9,6 +9,7 @@ import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -64,7 +65,16 @@ void _seedLocalData() {
 }
 
 ProviderContainer _remoteContainer(SupabaseClient client) => ProviderContainer(
-  overrides: [supabaseClientProvider.overrideWithValue(client)],
+  overrides: [
+    supabaseClientProvider.overrideWithValue(client),
+    // These tests cover repository errors, not scope: an administrator sees
+    // everything, so hours and completions do not depend on the payroll.
+    sesionDatosProvider.overrideWithValue((
+      habilitada: true,
+      email: 'admin@finnegans.com',
+      rol: 'admin',
+    )),
+  ],
   // Disable Riverpod's retries so each request has one deterministic result.
   retry: (_, _) => null,
 );
