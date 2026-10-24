@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
@@ -64,7 +63,6 @@ class SupabaseUsuariosAutorizadosRepository
   }
 
   String _mensajeDeError(PostgrestException error) {
-    debugPrint('usuarios_autorizados ${error.code}: ${error.message}');
     return switch (error.code) {
       '23505' =>
         'Ya existe un usuario con ese email. '
