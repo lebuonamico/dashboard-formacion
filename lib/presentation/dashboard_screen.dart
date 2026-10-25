@@ -2,16 +2,19 @@ import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/providers/reportes_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_areas_section.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_kpi_grid.dart';
-import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_category_hours.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_summary_charts.dart';
 import 'package:app_finnegans/presentation/widgets/dashboard/dashboard_monthly_hours.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/widgets/shared/boton_imprimir_reporte.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,9 +33,6 @@ class DashboardScreen extends ConsumerWidget {
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
-    final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
 
     return Scaffold(
       body: Column(
@@ -44,23 +44,10 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  EquiposPeriodControls(
-                    alcance: alcance,
-                    selectedMonth: mes,
-                    selectedYear: anio,
-                    availableYears: aniosDisponibles,
-                    onScopeChanged: (value) {
-                      ref.read(alcancePeriodoProvider.notifier).state = value;
-                    },
-                    onMonthChanged: (value) {
-                      if (value == null) return;
-                      ref.read(filtroMesPeriodoProvider.notifier).state = value;
-                    },
-                    onYearChanged: (value) {
-                      if (value == null) return;
-                      ref.read(filtroAnioPeriodoProvider.notifier).state =
-                          value;
-                    },
+                  PeriodoFilterPanel(
+                    accion: BotonImprimirReporte(
+                      reporte: reporteDashboardProvider,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   hayDatosAsync.when(
@@ -86,18 +73,29 @@ class DashboardScreen extends ConsumerWidget {
                               mesSeleccionado: mes,
                               anioSeleccionado: anio,
                               mesesEvaluados: mesesEvaluados,
+                              proyeccionAsync: ref.watch(
+                                proyeccionAnualProvider((
+                                  area: null,
+                                  equipo: null,
+                                )),
+                              ),
+                              variacionAsync: ref.watch(
+                                variacionCumplimientoProvider((
+                                  area: null,
+                                  equipo: null,
+                                )),
+                              ),
                             ),
                             const SizedBox(height: 28),
                             DashboardSummaryCharts(
                               cumplimientosAsync: cumplimientoAsync,
                             ),
                             const SizedBox(height: 28),
-                            DashboardCategoryHours(
-                              cumplimientosAsync: cumplimientoAsync,
-                            ),
-                            const SizedBox(height: 28),
-                            // DashboardAreaCompliancePanel(areasAsync: areasAsync),
-                            // const SizedBox(height: 28),
+                            if (cumplimientoAsync.value case final items?
+                                when items.isNotEmpty) ...[
+                              ComparacionMoodleCrmCards(cumplimientos: items),
+                              const SizedBox(height: 28),
+                            ],
                             DashboardMonthlyHours(
                               evolucionAsync: ref.watch(
                                 evolucionMensualDashboardProvider,

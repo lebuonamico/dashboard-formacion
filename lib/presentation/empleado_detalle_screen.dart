@@ -3,6 +3,8 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/proyeccion_empleado_card.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -96,6 +98,19 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         const SizedBox(height: 12),
                         _buildGridCategorias(context, cump),
                         const SizedBox(height: 24),
+
+                        if (ref
+                                .watch(proyeccionEmpleadoProvider(legajo))
+                                .value
+                            case final proyeccion?) ...[
+                          Text('Proyección a fin de año', style: estiloSeccion),
+                          const SizedBox(height: 12),
+                          ProyeccionEmpleadoCard(
+                            proyeccion: proyeccion,
+                            anio: anio,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
 
                         // Cursos del período: Moodle y CRM
                         Text(

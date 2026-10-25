@@ -13,6 +13,7 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
+import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
@@ -447,21 +448,19 @@ void main() {
     () async {
       final audit = Audit();
       final service = ImportacionService(auditoria: audit);
-      await service.persistir(
+      await service.ejecutar(
         tipoArchivo: 'horas_crm',
         nombreArchivo: 'file.xlsx',
-        registrosProcesados: 1,
-        guardar: () async {},
+        procesar: () async => ResultadoUpsert(registrosProcesados: 1),
       );
       expect(audit.records.single.estado, EstadoImportacion.completada);
       expect(audit.records.single.insertados, isNull);
       expect(audit.records.single.actualizados, isNull);
       await expectLater(
-        service.persistir(
+        service.ejecutar(
           tipoArchivo: 'horas_crm',
           nombreArchivo: 'file.xlsx',
-          registrosProcesados: 1,
-          guardar: () async => throw const FormatException('Invalid data'),
+          procesar: () async => throw const FormatException('Invalid data'),
         ),
         throwsFormatException,
       );
