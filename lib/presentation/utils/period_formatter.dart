@@ -25,3 +25,10 @@ String nombreMes(int mes) {
 
 String etiquetaPeriodo(AlcancePeriodo alcance, int mes, int anio) =>
     alcance == AlcancePeriodo.anual ? '$anio' : '${nombreMes(mes)} $anio';
+
+/// Como [etiquetaPeriodo], pero el anual aclara que solo suma los meses con
+/// datos. Para encabezados de detalle y reportes.
+String etiquetaPeriodoDetallada(AlcancePeriodo alcance, int mes, int anio) =>
+    alcance == AlcancePeriodo.anual
+    ? 'Año $anio · meses con datos'
+    : '${nombreMes(mes)} $anio';

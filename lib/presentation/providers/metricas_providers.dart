@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-//import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
@@ -7,7 +6,6 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 // --- ENUMS Y VIEWMODELS ---
 
@@ -121,7 +119,6 @@ class InstructorMetricaViewModel {
 
 // --- FILTROS DE TIEMPO ---
 
-final filtroMesMetricasProvider = StateProvider<int?>((ref) => null);
 final mesCorteProyeccionProvider = Provider<int>((ref) => 9);
 
 // --- PROVIDERS DE MÉTRICAS CALCULADAS ---

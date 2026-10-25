@@ -42,8 +42,6 @@ class UsuarioAutorizado {
     return EstadoUsuario.activo;
   }
 
-  bool get activoCalculado => ffEliminar == null && ffBloqueo == null;
-
   bool esMismoUsuario(String? emailSesion) =>
       emailSesion != null && emailSesion.trim().toLowerCase() == email;
 

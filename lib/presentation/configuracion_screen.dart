@@ -22,7 +22,6 @@ import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
-import 'package:app_finnegans/data/moodle_cursos_api.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/certificaciones_moodle_provider.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
@@ -30,7 +29,6 @@ import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/widgets/configuracion/plan_formacion_editor.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfiguracionScreen extends ConsumerStatefulWidget {
   const ConfiguracionScreen({super.key});
@@ -41,15 +39,7 @@ class ConfiguracionScreen extends ConsumerStatefulWidget {
 }
 
 class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
-  static const _modoMoodleKey = 'configuracion_cursos_moodle';
-
-  bool _usaMoodle = false;
-  bool _modoCargado = false;
-  bool _sincronizandoCursos = false;
   final _importacionesEnCurso = <String>{};
-
-  bool get _cursosOcupados =>
-      _sincronizandoCursos || _importacionesEnCurso.contains('cursos');
 
   bool _iniciarImportacion(String tipo) {
     if (_importacionesEnCurso.contains(tipo)) return false;
@@ -68,33 +58,6 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           child: const CircularProgressIndicator(strokeWidth: 2),
         )
       : const Icon(Icons.upload_file, size: 18);
-  List<Curso> _cursosMoodle = [];
-  String? _errorCursosMoodle;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarModoCursos();
-  }
-
-  Future<void> _cargarModoCursos() async {
-    final preferences = await SharedPreferences.getInstance();
-    // La sincronización directa está deshabilitada, incluso si estaba guardada.
-    await preferences.setBool(_modoMoodleKey, false);
-    if (!mounted) return;
-    setState(() {
-      _usaMoodle = false;
-      _modoCargado = true;
-    });
-  }
-
-  Future<void> _cambiarModoCursos(bool usaMoodle) async {
-    setState(() => _usaMoodle = usaMoodle);
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool(_modoMoodleKey, usaMoodle);
-    if (usaMoodle) await _sincronizarCursosMoodle();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,80 +142,15 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_cursos'),
-            onPressed: _cursosOcupados ? null : _importarCursosArchivo,
+            onPressed: _importacionesEnCurso.contains('cursos')
+                ? null
+                : _importarCursosArchivo,
             icon: _iconoImportacion('cursos'),
             label: const Text('Cargar cursos'),
           ),
         ),
       ],
     );
-  }
-
-  Future<void> _sincronizarCursosMoodle() async {
-    if (!_usaMoodle || _cursosOcupados) return;
-    setState(() {
-      _sincronizandoCursos = true;
-      _errorCursosMoodle = null;
-    });
-    try {
-      final container = ProviderScope.containerOf(context, listen: false);
-      var cursos = <Curso>[];
-      await container
-          .read(importacionServiceProvider)
-          .ejecutar(
-            tipoArchivo: 'cursos_lms',
-            nombreArchivo: 'Sincronización Moodle',
-            procesar: () async {
-              final repository = container.read(cursosRepositoryProvider);
-              cursos = await MoodleCursosApi().getCursos();
-              if (cursos.isEmpty) {
-                throw const FormatException(
-                  'Moodle no devolvió cursos para importar.',
-                );
-              }
-              return repository.upsertCursosConResultado(cursos);
-            },
-            refrescar: () async {
-              container.invalidate(cursosProvider);
-              container.invalidate(cargasDeHorasCRMProvider);
-              container.invalidate(cargasDashboardProvider);
-              container.invalidate(certificacionesMoodleProvider);
-              await Future.wait([
-                container.read(cursosProvider.future),
-                container.read(cargasDeHorasCRMProvider.future),
-                container.read(cargasDashboardProvider.future),
-                container.read(certificacionesMoodleProvider.future),
-              ]);
-            },
-          );
-      if (!mounted) return;
-      setState(() => _cursosMoodle = cursos);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se sincronizaron ${cursos.length} cursos.')),
-      );
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      setState(() => _errorCursosMoodle = error.message);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on TimeoutException {
-      if (!mounted) return;
-      const message = 'La consulta a Moodle agotó el tiempo.';
-      setState(() => _errorCursosMoodle = message);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    } on Object catch (error) {
-      if (!mounted) return;
-      final message = 'No se pudo completar la sincronización: $error';
-      setState(() => _errorCursosMoodle = message);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    } finally {
-      if (mounted) setState(() => _sincronizandoCursos = false);
-    }
   }
 
   Widget _buildSeccionCargaDeHoras(BuildContext context) {
@@ -811,7 +709,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
   }
 
   Future<void> _importarCursosArchivo() async {
-    if (_cursosOcupados || !_iniciarImportacion('cursos')) return;
+    if (!_iniciarImportacion('cursos')) return;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       await WidgetsBinding.instance.endOfFrame;

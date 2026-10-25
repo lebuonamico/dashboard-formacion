@@ -1,3 +1,4 @@
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
 import 'package:flutter/material.dart';
@@ -72,28 +73,28 @@ class EquiposCategoryDistribution extends StatelessWidget {
                   valueSuffix: ' h',
                   slices: [
                     EquiposDonutSlice(
-                      label: 'Negocio',
+                      label: TipoCurso.habilidadesDeNegocio.labelCorto,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: horasNegocio,
                       color: context.colores.negocio.texto,
                     ),
                     EquiposDonutSlice(
-                      label: 'Blandas',
+                      label: TipoCurso.habilidadesBlandas.labelCorto,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: horasBlandas,
                       color: context.colores.blandas.texto,
                     ),
                     EquiposDonutSlice(
-                      label: 'Libres',
+                      label: TipoCurso.libresExploracion.labelCorto,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los integrantes.',
                       value: horasLibres,
                       color: context.colores.exploracion.texto,
                     ),
                     EquiposDonutSlice(
-                      label: 'Dictado',
+                      label: TipoCurso.dictadoCapacitaciones.labelCorto,
                       help:
                           'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
                       value: horasDictado,

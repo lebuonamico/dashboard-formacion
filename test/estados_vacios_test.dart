@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
@@ -222,7 +223,16 @@ void main() {
       expect(resumenEquipos.colaboradores, 1);
       expect(horasDashboard, resumenEquipos.horasRealizadas);
       expect(horasDashboard, 0);
-      expect(find.text('0.0 h válidas para el objetivo'), findsOneWidget);
+      // La card de horas muestra solo las válidas para el objetivo.
+      final cardHoras = find.ancestor(
+        of: find.textContaining('HORAS VÁLIDAS'),
+        matching: find.byType(DashboardKpiCard),
+      );
+      expect(cardHoras, findsOneWidget);
+      expect(
+        find.descendant(of: cardHoras, matching: find.text('0.0 h')),
+        findsOneWidget,
+      );
     });
   });
 
@@ -274,7 +284,7 @@ void main() {
         cargas: [_carga(DateTime(_anio, _mes, 10))],
       );
 
-      expect(find.text('Áreas activas'), findsOneWidget);
+      expect(find.text('ÁREAS ACTIVAS'), findsOneWidget);
       expect(find.text('Estado de las áreas'), findsOneWidget);
       expect(find.text('Tecnología'), findsOneWidget);
       expect(find.text('Equipos: Plataforma'), findsOneWidget);
@@ -331,7 +341,7 @@ void main() {
         cargas: [_carga(DateTime(_anio, _mes, 10))],
       );
 
-      expect(find.text('Objetivo del período'), findsOneWidget);
+      expect(find.text('OBJETIVO DEL PERÍODO'), findsOneWidget);
       expect(find.text('Avance del área'), findsOneWidget);
       expect(find.text('Equipos del área'), findsOneWidget);
       // Una vez en la tarjeta del equipo y otra en la columna Equipo.

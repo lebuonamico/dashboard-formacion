@@ -71,7 +71,7 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                _nombreCorto(tipo),
+                tipo.labelCorto,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 10, color: colores.textoIntermedio),
@@ -90,19 +90,6 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _nombreCorto(TipoCurso tipo) {
-    switch (tipo) {
-      case TipoCurso.habilidadesDeNegocio:
-        return 'Negocio';
-      case TipoCurso.habilidadesBlandas:
-        return 'Blandas';
-      case TipoCurso.libresExploracion:
-        return 'Exploración';
-      case TipoCurso.dictadoCapacitaciones:
-        return 'Dictado';
-    }
   }
 
   String _formatearHoras(double horas) => horas == horas.roundToDouble()
