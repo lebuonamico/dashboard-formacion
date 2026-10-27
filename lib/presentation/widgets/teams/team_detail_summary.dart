@@ -1,18 +1,18 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
 import 'package:flutter/material.dart';
 
-class EquipoDetalleHeader extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
-  final String periodo;
+class TeamDetailHeader extends StatelessWidget {
+  final TeamOverview team;
+  final String periodLabel;
 
-  const EquipoDetalleHeader({
+  const TeamDetailHeader({
     super.key,
-    required this.equipo,
-    required this.periodo,
+    required this.team,
+    required this.periodLabel,
   });
 
   @override
@@ -27,7 +27,7 @@ class EquipoDetalleHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              equipo.nombre,
+              team.name,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
@@ -36,7 +36,7 @@ class EquipoDetalleHeader extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              '${equipo.area} · Líder: ${equipo.lider}',
+              '${team.area} · Líder: ${team.leader}',
               style: TextStyle(
                 fontSize: 14,
                 color: context.colorScheme.onSurfaceVariant,
@@ -63,7 +63,7 @@ class EquipoDetalleHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    periodo,
+                    periodLabel,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -77,15 +77,15 @@ class EquipoDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: equipo.estado.colores(context).fondo,
+                color: team.status.colores(context).fondo,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                equipo.estado.label,
+                team.status.label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: equipo.estado.colores(context).texto,
+                  color: team.status.colores(context).texto,
                 ),
               ),
             ),
@@ -96,34 +96,37 @@ class EquipoDetalleHeader extends StatelessWidget {
   }
 }
 
-class EquipoDetalleResumen extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
-  final bool esAnual;
+class TeamDetailSummary extends StatelessWidget {
+  static const _horizontalPanelsBreakpoint = 1050.0;
+  final TeamOverview team;
+  final bool isAnnual;
 
-  const EquipoDetalleResumen({
+  const TeamDetailSummary({
     super.key,
-    required this.equipo,
-    this.esAnual = false,
+    required this.team,
+    this.isAnnual = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Leandro: llama a EquiposCategoryDistribution para mostrar las horas del equipo por categoría.
-        final distribucion = EquiposCategoryDistribution(
-          horasNegocio: equipo.horasNegocio,
-          horasBlandas: equipo.horasBlandas,
-          horasLibres: equipo.horasLibres,
-          horasDictado: equipo.horasDictado,
-          esAnual: esAnual,
+        final distribution = TeamCategoryDistribution(
+          businessHours: team.businessHours,
+          softSkillsHours: team.softSkillsHours,
+          explorationHours: team.explorationHours,
+          teachingHours: team.teachingHours,
+          isAnnual: isAnnual,
         );
-        // Leandro: llama a _TeamProgressPanel para mostrar el cumplimiento y desvío del equipo.
-        final avance = _TeamProgressPanel(equipo: equipo, esAnual: esAnual);
 
-        if (constraints.maxWidth < 1050) {
+        final progressPanel = _TeamProgressPanel(
+          team: team,
+          isAnnual: isAnnual,
+        );
+
+        if (constraints.maxWidth < _horizontalPanelsBreakpoint) {
           return Column(
-            children: [distribucion, const SizedBox(height: 16), avance],
+            children: [distribution, const SizedBox(height: 16), progressPanel],
           );
         }
 
@@ -131,9 +134,9 @@ class EquipoDetalleResumen extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: distribucion),
+              Expanded(child: distribution),
               const SizedBox(width: 16),
-              Expanded(child: avance),
+              Expanded(child: progressPanel),
             ],
           ),
         );
@@ -143,14 +146,14 @@ class EquipoDetalleResumen extends StatelessWidget {
 }
 
 class _TeamProgressPanel extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
-  final bool esAnual;
+  final TeamOverview team;
+  final bool isAnnual;
 
-  const _TeamProgressPanel({required this.equipo, required this.esAnual});
+  const _TeamProgressPanel({required this.team, required this.isAnnual});
 
   @override
   Widget build(BuildContext context) {
-    final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
+    final progress = (team.completionPercentage / 100).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -170,15 +173,15 @@ class _TeamProgressPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatearPorcentaje(equipo.porcentajeCumplimiento),
+                formatearPorcentaje(team.completionPercentage),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: equipo.estado.colores(context).texto,
+                  color: team.status.colores(context).texto,
                 ),
               ),
               Text(
-                '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} h',
+                '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} h',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -194,38 +197,35 @@ class _TeamProgressPanel extends StatelessWidget {
               value: progress,
               minHeight: 9,
               backgroundColor: context.colores.graficoPista,
-              color: equipo.estado.colores(context).texto,
+              color: team.status.colores(context).texto,
             ),
           ),
           const SizedBox(height: 20),
-          // Leandro: llama a _MetricRow para mostrar cuántos integrantes cumplen su objetivo.
-          if (esAnual)
+          if (isAnnual)
             Tooltip(
               message:
                   'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.',
               child: _MetricRow(
                 label: 'Integrantes en objetivo',
-                value:
-                    '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes}',
+                value: '${team.membersOnTarget} de ${team.memberCount}',
               ),
             )
           else
             _MetricRow(
               label: 'Integrantes en objetivo',
-              value:
-                  '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes}',
+              value: '${team.membersOnTarget} de ${team.memberCount}',
             ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',
-            value: '${equipo.promedioPorColaborador.toStringAsFixed(1)} h',
+            value: '${team.averageHoursPerMember.toStringAsFixed(1)} h',
           ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: equipo.desvioHoras >= 0
-                ? '+${equipo.desvioHoras.toStringAsFixed(1)} h'
-                : '-${equipo.desvioHoras.abs().toStringAsFixed(1)} h',
+            value: team.hoursDeviation >= 0
+                ? '+${team.hoursDeviation.toStringAsFixed(1)} h'
+                : '-${team.hoursDeviation.abs().toStringAsFixed(1)} h',
           ),
         ],
       ),
