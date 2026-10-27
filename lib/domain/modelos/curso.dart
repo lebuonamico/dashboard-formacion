@@ -3,7 +3,7 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 class Curso {
   final String id;
   final String nombre;
-  final TipoCurso tipo;
+  final TipoCurso clasificacion;
   final String areaCurso;
   final String instructorLegajo; // Empleado que dicta
   final double cargaHorariaHs;
@@ -12,7 +12,7 @@ class Curso {
   Curso({
     required this.id,
     required this.nombre,
-    required this.tipo,
+    required this.clasificacion,
     required this.areaCurso,
     required this.instructorLegajo,
     required this.cargaHorariaHs,
@@ -20,15 +20,16 @@ class Curso {
   });
 
   // La clasificación histórica se conserva para CRM y cumplimiento.
-  TipoCurso? get tipoLms => switch (tipo) {
-    TipoCurso.habilidadesDeNegocio || TipoCurso.habilidadesBlandas => tipo,
+  TipoCurso? get clasificacionLms => switch (clasificacion) {
+    TipoCurso.habilidadesDeNegocio ||
+    TipoCurso.habilidadesBlandas => clasificacion,
     _ => null,
   };
 
-  Curso copyWith({bool? activo}) => Curso(
-    id: id,
+  Curso copyWith({String? id, bool? activo}) => Curso(
+    id: id ?? this.id,
     nombre: nombre,
-    tipo: tipo,
+    clasificacion: clasificacion,
     areaCurso: areaCurso,
     instructorLegajo: instructorLegajo,
     cargaHorariaHs: cargaHorariaHs,
@@ -38,7 +39,7 @@ class Curso {
   Map<String, dynamic> toJson() => {
         'id': id,
         'nombre': nombre,
-        'tipo': tipo.name,
+        'clasificacion': clasificacion.name,
         'areaCurso': areaCurso,
         'instructorLegajo': instructorLegajo,
         'cargaHorariaHs': cargaHorariaHs,
@@ -48,8 +49,8 @@ class Curso {
   factory Curso.fromJson(Map<String, dynamic> json) => Curso(
         id: json['id']?.toString() ?? '',
         nombre: json['nombre']?.toString() ?? '',
-        tipo: TipoCurso.values.firstWhere(
-          (tipo) => tipo.name == json['tipo'],
+        clasificacion: TipoCurso.values.firstWhere(
+          (tipo) => tipo.name == json['clasificacion'],
           orElse: () => TipoCurso.libresExploracion,
         ),
         areaCurso: json['areaCurso']?.toString() ?? '',

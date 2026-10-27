@@ -93,7 +93,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-01',
         nombre: 'Estrategia y Modelos de Negocio',
-        tipo: TipoCurso.habilidadesDeNegocio,
+        clasificacion: TipoCurso.habilidadesDeNegocio,
         areaCurso: 'Negocio',
         instructorLegajo: 'EMP-004', // Martín Castro
         cargaHorariaHs: 4.0,
@@ -101,7 +101,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-02',
         nombre: 'Finanzas Básicas para Tech',
-        tipo: TipoCurso.habilidadesDeNegocio,
+        clasificacion: TipoCurso.habilidadesDeNegocio,
         areaCurso: 'Finanzas',
         instructorLegajo: 'EMP-005', // Carolina Herrera
         cargaHorariaHs: 2.0,
@@ -109,7 +109,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-03',
         nombre: 'Comunicación Asertiva y Feedback',
-        tipo: TipoCurso.habilidadesBlandas,
+        clasificacion: TipoCurso.habilidadesBlandas,
         areaCurso: 'RRHH',
         instructorLegajo: 'EMP-004', // Martín Castro
         cargaHorariaHs: 4.0,
@@ -117,7 +117,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-04',
         nombre: 'Gestión del Tiempo y Priorización',
-        tipo: TipoCurso.habilidadesBlandas,
+        clasificacion: TipoCurso.habilidadesBlandas,
         areaCurso: 'Productividad',
         instructorLegajo: 'EMP-003', // Valeria Ríos
         cargaHorariaHs: 2.0,
@@ -125,7 +125,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-05',
         nombre: 'Exploración de Arquitecturas Serverless',
-        tipo: TipoCurso.libresExploracion,
+        clasificacion: TipoCurso.libresExploracion,
         areaCurso: 'Innovación',
         instructorLegajo: 'EMP-003', // Valeria Ríos
         cargaHorariaHs: 1.0,
@@ -133,7 +133,7 @@ class MockFormacionRepository implements FormacionRepository {
       Curso(
         id: 'CUR-06',
         nombre: 'Machine Learning aplicado a Negocios',
-        tipo: TipoCurso.libresExploracion,
+        clasificacion: TipoCurso.libresExploracion,
         areaCurso: 'Data',
         instructorLegajo: 'EMP-004', // Martín Castro
         cargaHorariaHs: 8.0,

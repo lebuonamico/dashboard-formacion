@@ -23,7 +23,7 @@ import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 Curso course({String id = '107', String nombre = 'Curso LMS'}) => Curso(
   id: id,
   nombre: nombre,
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: 'Solo local',
   instructorLegajo: 'Solo local',
   cargaHorariaHs: 4,
@@ -41,7 +41,7 @@ SupabaseTableMapping mapping(
 
 final courseMapping = mapping(
   'test_catalog',
-  ['id', 'nombre', 'tipo', 'cargaHorariaHs'],
+  ['id', 'nombre', 'clasificacion', 'cargaHorariaHs'],
   ['id'],
 );
 final hoursMapping = mapping(
@@ -266,7 +266,7 @@ void main() {
       unorderedEquals([
         'col_id',
         'col_nombre',
-        'col_tipo',
+        'col_clasificacion',
         'col_cargaHorariaHs',
       ]),
     );
@@ -396,7 +396,7 @@ void main() {
         unorderedEquals([
           'col_id',
           'col_nombre',
-          'col_tipo',
+          'col_clasificacion',
           'col_cargaHorariaHs',
         ]),
       );

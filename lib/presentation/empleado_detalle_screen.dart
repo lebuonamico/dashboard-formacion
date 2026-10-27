@@ -472,7 +472,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           nombreCurso: curso?.nombre ?? certificacion.cursoNombre,
           infoCurso: curso == null
               ? 'Curso no encontrado en el catálogo'
-              : '${curso.tipo.label} · ${_formatearHoras(curso.cargaHorariaHs)} hs',
+              : '${curso.clasificacion.label} · ${_formatearHoras(curso.cargaHorariaHs)} hs',
           fechaTexto: _formatearFecha(certificacion.fechaFinalizacion!),
         );
       }).toList(),
@@ -552,7 +552,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ],
               ),
               subtitle: Text(
-                '${primeraCursada.curso?.tipo.label ?? 'Tipo sin especificar'} · '
+                '${primeraCursada.curso?.clasificacion.label ?? 'Tipo sin especificar'} · '
                 '${registros.length} ${registros.length == 1 ? 'registro' : 'registros'} · '
                 '${_formatearHoras(horasDeclaradas)} hs declaradas',
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
