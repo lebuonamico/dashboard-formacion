@@ -13,6 +13,7 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
+import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
@@ -22,7 +23,7 @@ import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 Curso course({String id = '107', String nombre = 'Curso LMS'}) => Curso(
   id: id,
   nombre: nombre,
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: 'Solo local',
   instructorLegajo: 'Solo local',
   cargaHorariaHs: 4,
@@ -40,7 +41,7 @@ SupabaseTableMapping mapping(
 
 final courseMapping = mapping(
   'test_catalog',
-  ['id', 'nombre', 'tipo', 'cargaHorariaHs'],
+  ['id', 'nombre', 'clasificacion', 'cargaHorariaHs'],
   ['id'],
 );
 final hoursMapping = mapping(
@@ -265,7 +266,7 @@ void main() {
       unorderedEquals([
         'col_id',
         'col_nombre',
-        'col_tipo',
+        'col_clasificacion',
         'col_cargaHorariaHs',
       ]),
     );
@@ -395,7 +396,7 @@ void main() {
         unorderedEquals([
           'col_id',
           'col_nombre',
-          'col_tipo',
+          'col_clasificacion',
           'col_cargaHorariaHs',
         ]),
       );
@@ -447,21 +448,19 @@ void main() {
     () async {
       final audit = Audit();
       final service = ImportacionService(auditoria: audit);
-      await service.persistir(
+      await service.ejecutar(
         tipoArchivo: 'horas_crm',
         nombreArchivo: 'file.xlsx',
-        registrosProcesados: 1,
-        guardar: () async {},
+        procesar: () async => ResultadoUpsert(registrosProcesados: 1),
       );
       expect(audit.records.single.estado, EstadoImportacion.completada);
       expect(audit.records.single.insertados, isNull);
       expect(audit.records.single.actualizados, isNull);
       await expectLater(
-        service.persistir(
+        service.ejecutar(
           tipoArchivo: 'horas_crm',
           nombreArchivo: 'file.xlsx',
-          registrosProcesados: 1,
-          guardar: () async => throw const FormatException('Invalid data'),
+          procesar: () async => throw const FormatException('Invalid data'),
         ),
         throwsFormatException,
       );

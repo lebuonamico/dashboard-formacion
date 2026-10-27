@@ -296,9 +296,9 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                 ),
               ),
               DataCell(
-                vm.curso.tipoLms == null
+                vm.curso.clasificacionLms == null
                     ? const Text('-')
-                    : TipoCursoChip(tipo: vm.curso.tipoLms!),
+                    : TipoCursoChip(tipo: vm.curso.clasificacionLms!),
               ),
               DataCell(
                 Text(

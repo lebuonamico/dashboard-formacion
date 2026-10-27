@@ -57,13 +57,11 @@ class EstructuraOrganizacional {
   final List<Area> areas;
   final List<Equipo> equipos;
 
-  final Map<String, Area> _areasPorId;
   final Map<String, Area> _areasPorClave;
   final Map<(String, String), Equipo> _equiposPorClave;
 
   EstructuraOrganizacional({required this.areas, required this.equipos})
-    : _areasPorId = {for (final area in areas) area.id: area},
-      _areasPorClave = {for (final area in areas) area.claveNomina: area},
+    : _areasPorClave = {for (final area in areas) area.claveNomina: area},
       _equiposPorClave = {
         for (final equipo in equipos)
           (equipo.areaId, equipo.claveNomina): equipo,
@@ -76,8 +74,6 @@ class EstructuraOrganizacional {
 
   static int _porNombre(String a, String b) =>
       claveNomina(a).compareTo(claveNomina(b));
-
-  Area? areaPorId(String id) => _areasPorId[id];
 
   /// Áreas ordenadas por nombre.
   List<Area> get areasOrdenadas =>

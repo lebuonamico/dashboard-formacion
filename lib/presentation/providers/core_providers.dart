@@ -47,7 +47,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
       columns: {
         'id': 'id_curso',
         'nombre': 'nombre',
-        'tipo': 'tipo',
+        'clasificacion': 'clasificacion',
         'cargaHorariaHs': 'carga_horaria',
         'activo': 'activo',
       },

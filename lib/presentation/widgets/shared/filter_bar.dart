@@ -40,12 +40,6 @@ class FilterBar extends ConsumerWidget {
     required this.hasActiveFilters,
     required this.onClear,
     this.filters = const [],
-    // Compatibilidad de construcción con consumidores anteriores; las pantallas
-    // actuales usan dimensiones y búsqueda exclusivamente dentro del menú.
-    @Deprecated('Usar scope y filtros de selección') String? searchHint,
-    @Deprecated('Usar scope y filtros de selección') String? searchText,
-    @Deprecated('Usar scope y filtros de selección')
-    ValueChanged<String>? onSearch,
   }) : assert(scope == null || rows == null);
 
   @override

@@ -10,9 +10,6 @@ enum ModuloAsistente {
 
   final String etiqueta;
   const ModuloAsistente(this.etiqueta);
-
-  static ModuloAsistente desdeRuta(String path) =>
-      DestinoAsistente.desdeUri(Uri.parse(path)).modulo;
 }
 
 /// Los parámetros de navegación se usan para buscar entidades localmente.

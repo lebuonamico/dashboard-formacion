@@ -3,6 +3,8 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/proyeccion_empleado_card.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -96,6 +98,19 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         const SizedBox(height: 12),
                         _buildGridCategorias(context, cump),
                         const SizedBox(height: 24),
+
+                        if (ref
+                                .watch(proyeccionEmpleadoProvider(legajo))
+                                .value
+                            case final proyeccion?) ...[
+                          Text('Proyección a fin de año', style: estiloSeccion),
+                          const SizedBox(height: 12),
+                          ProyeccionEmpleadoCard(
+                            proyeccion: proyeccion,
+                            anio: anio,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
 
                         // Cursos del período: Moodle y CRM
                         Text(
@@ -457,7 +472,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           nombreCurso: curso?.nombre ?? certificacion.cursoNombre,
           infoCurso: curso == null
               ? 'Curso no encontrado en el catálogo'
-              : '${curso.tipo.label} · ${_formatearHoras(curso.cargaHorariaHs)} hs',
+              : '${curso.clasificacion.label} · ${_formatearHoras(curso.cargaHorariaHs)} hs',
           fechaTexto: _formatearFecha(certificacion.fechaFinalizacion!),
         );
       }).toList(),
@@ -537,7 +552,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ],
               ),
               subtitle: Text(
-                '${primeraCursada.curso?.tipo.label ?? 'Tipo sin especificar'} · '
+                '${primeraCursada.curso?.clasificacion.label ?? 'Tipo sin especificar'} · '
                 '${registros.length} ${registros.length == 1 ? 'registro' : 'registros'} · '
                 '${_formatearHoras(horasDeclaradas)} hs declaradas',
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),

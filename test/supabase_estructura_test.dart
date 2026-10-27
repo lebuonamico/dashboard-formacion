@@ -83,7 +83,9 @@ void main() {
       'PRODUCTOS TECNOLÓGICOS',
       'SERVICIOS',
     ]);
-    expect(estructura.areaPorId('1')!.lideres, {'area@finnegans.com'});
+    expect(estructura.lideresDeArea('PRODUCTOS TECNOLÓGICOS'), {
+      'area@finnegans.com',
+    });
     expect(
       estructura.lideresDeEquipo('PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
       {'uno@finnegans.com', 'dos@finnegans.com'},

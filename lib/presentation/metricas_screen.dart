@@ -1,4 +1,5 @@
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
@@ -7,7 +8,6 @@ import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
 
-//import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
 class MetricasScreen extends ConsumerWidget {
   const MetricasScreen({super.key});
@@ -180,7 +180,7 @@ class MetricasScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${area.horasCompletadas.toStringAsFixed(0)} / ${area.horasRequeridas.toStringAsFixed(0)} hs (${area.porcentajeCumplimiento.toStringAsFixed(0)}%)',
+                      '${area.horasCompletadas.toStringAsFixed(0)} / ${area.horasRequeridas.toStringAsFixed(0)} hs (${formatearPorcentaje(area.porcentajeCumplimiento)})',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.colorScheme.onSurfaceVariant,
@@ -272,7 +272,7 @@ class MetricasScreen extends ConsumerWidget {
                     ),
                   ),
                   DataCell(
-                    Text('${item.porcentajeCumplimiento.toStringAsFixed(1)}%'),
+                    Text(formatearPorcentaje(item.porcentajeCumplimiento)),
                   ),
                   DataCell(
                     EtiquetaColor(
@@ -548,7 +548,7 @@ class MetricasScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${c.tipo.label} · Área: ${c.areaCurso}',
+                                      '${c.clasificacion.label} · Área: ${c.areaCurso}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: context

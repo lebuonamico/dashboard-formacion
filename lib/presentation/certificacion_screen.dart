@@ -320,9 +320,9 @@ class _TablaCertificacionesPaginadaState
               DataCell(_celdaAreaEquipo(vm)),
               DataCell(_celdaCurso(vm)),
               DataCell(
-                vm.curso?.tipoLms == null
+                vm.curso?.clasificacionLms == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : TipoCursoChip(tipo: vm.curso!.tipoLms!),
+                    : TipoCursoChip(tipo: vm.curso!.clasificacionLms!),
               ),
               DataCell(
                 Text(

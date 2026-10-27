@@ -91,7 +91,17 @@ class _CategorySummary {
   final Map<TipoCurso, double> hours;
   final double averageHours;
 
-  const _CategorySummary({required this.hours, required this.averageHours});
+  /// Objetivo del período por persona y total, para darle referencia al
+  /// promedio.
+  final double averageTarget;
+  final double totalTarget;
+
+  const _CategorySummary({
+    required this.hours,
+    required this.averageHours,
+    required this.averageTarget,
+    required this.totalTarget,
+  });
 
   factory _CategorySummary.from(List<CumplimientoEmpleado> items) {
     final hours = <TipoCurso, double>{};
@@ -108,9 +118,16 @@ class _CategorySummary {
       (total, item) => total + item.totalHorasCompletadas,
     );
 
+    final totalTarget = items.fold<double>(
+      0,
+      (total, item) => total + item.totalHorasRequeridas,
+    );
+
     return _CategorySummary(
       hours: hours,
       averageHours: totalCompleted / items.length,
+      averageTarget: totalTarget / items.length,
+      totalTarget: totalTarget,
     );
   }
 
@@ -200,14 +217,13 @@ class _CategoryChartCard extends StatelessWidget {
       for (final tipo in TipoCurso.values)
         context.colores.categoria(tipo).texto,
     ];
-    final labels = ['Negocio', 'Blandas', 'Libres', 'Dictado'];
     final legend = <_ChartLegendItem>[];
 
     for (var index = 0; index < TipoCurso.values.length; index++) {
       final tipo = TipoCurso.values[index];
       legend.add(
         _ChartLegendItem(
-          label: labels[index],
+          label: tipo.labelCorto,
           value: summary.hours[tipo] ?? 0,
           color: colors[index],
           backgroundColor: context.colorScheme.surfaceContainerLow,
@@ -217,7 +233,9 @@ class _CategoryChartCard extends StatelessWidget {
 
     return _SummaryCard(
       title: 'Distribución por categorías',
-      subtitle: 'Uso de las horas promedio registradas',
+      subtitle:
+          '${summary.totalHours.toStringAsFixed(0)} de '
+          '${summary.totalTarget.toStringAsFixed(0)} h válidas',
       trailing: '4 Pilares',
       footer: 'Capacitaciones distribuidas entre los 4 pilares',
       action: 'Ver cursos',
@@ -238,8 +256,12 @@ class _CategoryChartCard extends StatelessWidget {
                         color: colors[index],
                       ),
                   ],
-                  centerText: '${summary.averageHours.toStringAsFixed(1)} h',
-                  centerSubtitle: 'PROMEDIO',
+                  centerText:
+                      '${summary.averageHours.toStringAsFixed(1)} / '
+                      '${summary.averageTarget.toStringAsFixed(0)} h',
+                  // Más chico que el default para que entre "x / y h".
+                  centerTextSize: 16,
+                  centerSubtitle: 'POR PERSONA',
                 ),
                 const SizedBox(width: 18),
                 Expanded(

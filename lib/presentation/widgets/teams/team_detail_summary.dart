@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
@@ -169,7 +170,7 @@ class _TeamProgressPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${equipo.porcentajeCumplimiento.toStringAsFixed(1)}%',
+                formatearPorcentaje(equipo.porcentajeCumplimiento),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,

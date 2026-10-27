@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_category_distribution.dart';
 import 'package:flutter/material.dart';
@@ -179,7 +180,7 @@ class _AreaProgressPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${area.porcentajeCumplimiento.toStringAsFixed(1)}%',
+                formatearPorcentaje(area.porcentajeCumplimiento),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,

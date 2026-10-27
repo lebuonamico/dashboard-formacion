@@ -57,14 +57,14 @@ void main() {
       final source = <String, dynamic>{
         'id': '107',
         'nombre': 'Curso LMS',
-        'tipo': 'habilidadesDeNegocio',
+        'clasificacion': 'habilidadesDeNegocio',
         'cargaHorariaHs': 4.0,
         'activo': true,
       };
       final row = <String, dynamic>{
         'id_curso': '107',
         'nombre': 'Curso LMS',
-        'tipo': 'habilidadesDeNegocio',
+        'clasificacion': 'habilidadesDeNegocio',
         'carga_horaria': 4.0,
         'activo': true,
       };

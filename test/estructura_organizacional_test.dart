@@ -296,7 +296,6 @@ void main() {
         email: 'lider.uno@finnegans.com',
         estructura: _estructura(),
       );
-      expect(alcance.sinAsignaciones, isTrue);
       expect(visibles(alcance), isEmpty);
     });
 

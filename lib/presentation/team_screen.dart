@@ -1,14 +1,20 @@
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/presentation/providers/reportes_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/boton_imprimir_reporte.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_detail_summary.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_members_table.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,8 +35,13 @@ class EquipoScreen extends ConsumerWidget {
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
-    // Leandro: llama a _periodoLabel para armar el nombre del período que aparece en el encabezado.
-    final periodo = _periodoLabel(alcance, mes, anio);
+    final periodo = etiquetaPeriodoDetallada(alcance, mes, anio);
+    // Mismo panel que el detalle de área: el período es global a la app.
+    final periodControls = PeriodoFilterPanel(
+      accion: BotonImprimirReporte(
+        reporte: reporteEquipoProvider((area: area, equipo: equipo)),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: context.colorScheme.surfaceContainerLow,
@@ -52,6 +63,7 @@ class EquipoScreen extends ConsumerWidget {
                   final etiqueta = etiquetaPeriodo(alcance, mes, anio);
                   if (!(hayDatosAsync.value ?? true)) {
                     return _EmptyContent(
+                      periodControls: periodControls,
                       child: EmptyDataState.periodoSinDatos(
                         icon: Icons.groups_outlined,
                         periodo: etiqueta,
@@ -60,6 +72,7 @@ class EquipoScreen extends ConsumerWidget {
                   }
                   if (detalle == null) {
                     return _EmptyContent(
+                      periodControls: periodControls,
                       child: EmptyDataState(
                         icon: Icons.groups_outlined,
                         title:
@@ -74,6 +87,7 @@ class EquipoScreen extends ConsumerWidget {
                     detalle: detalle,
                     periodo: periodo,
                     esAnual: alcance == AlcancePeriodo.anual,
+                    periodControls: periodControls,
                   );
                 })(),
               ),
@@ -83,86 +97,104 @@ class EquipoScreen extends ConsumerWidget {
       ),
     );
   }
-
-  String _periodoLabel(AlcancePeriodo alcance, int mes, int anio) {
-    if (alcance == AlcancePeriodo.mensual) {
-      return '${nombreMes(mes)} $anio';
-    }
-    return 'Año $anio · meses con datos';
-  }
 }
 
-class _EquipoContent extends StatelessWidget {
+class _EquipoContent extends ConsumerWidget {
   final DetalleEquipoGeneral detalle;
   final String periodo;
   final bool esAnual;
+  final Widget periodControls;
 
   const _EquipoContent({
     required this.detalle,
     required this.periodo,
     required this.esAnual,
+    required this.periodControls,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final equipo = detalle.resumen;
+    final anio = ref.watch(filtroAnioPeriodoProvider);
+    final mes = ref.watch(filtroMesPeriodoProvider);
+    final proyeccion = ref
+        .watch(
+          proyeccionAnualProvider((area: equipo.area, equipo: equipo.nombre)),
+        )
+        .value;
 
     return ListView(
       padding: paddingPantalla,
       children: [
+        periodControls,
+        const SizedBox(height: 22),
         // Leandro: llama al widget EquipoDetalleHeader para mostrar el nombre, el período y el estado del equipo.
         EquipoDetalleHeader(equipo: equipo, periodo: periodo),
         const SizedBox(height: 22),
-        // Leandro: llama al widget KpiGrid para mostrar integrantes, horas, objetivo y cumplimiento del equipo.
-        KpiGrid(
-          cardHeight: 112,
-          items: [
-            KpiData(
-              title: 'Integrantes',
+        // Mismas cards que el inicio, con los datos del equipo.
+        KpiCardRow(
+          cards: [
+            DashboardKpiCard(
+              title: 'INTEGRANTES',
               value: '${equipo.cantidadIntegrantes}',
-              detail: 'nómina del equipo',
-              help: esAnual
-                  ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
-                  : 'Personas de la nómina que pertenecen al equipo evaluado en el período.',
+              suffix: 'nómina del equipo',
+              progress: equipo.cantidadIntegrantes == 0
+                  ? 0
+                  : equipo.integrantesEnObjetivo / equipo.cantidadIntegrantes,
+              progressLabel:
+                  '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
+              footer: '',
               icon: Icons.people_outline,
               color: context.colorScheme.primary,
             ),
-            KpiData(
-              title: 'Horas realizadas',
-              value: _horas(equipo.horasRealizadas),
-              detail: 'aplicadas al objetivo del período',
-              help: esAnual
-                  ? 'Suma de las horas válidas de los meses con datos del año.'
-                  : 'Horas validadas que corresponden al objetivo de cada integrante según su seniority.',
-              icon: Icons.schedule_outlined,
-              color: context.colores.acentoCian,
+            horasValidasKpiCard(
+              context,
+              esAnual: esAnual,
+              anio: anio,
+              mes: mes,
+              horas: equipo.horasRealizadas,
+              objetivo: equipo.horasObjetivo,
             ),
-            KpiData(
-              title: 'Objetivo del período',
+            DashboardKpiCard(
+              title: 'OBJETIVO DEL PERÍODO',
               value: _horas(equipo.horasObjetivo),
-              detail: 'según seniority y período',
-              help: esAnual
-                  ? 'Suma de los objetivos mensuales de los integrantes elegibles en los meses con datos del año.'
-                  : 'Suma de las horas requeridas a los integrantes según seniority y alcance seleccionado.',
+              suffix: 'según seniority',
+              progress: 1,
+              progressLabel: esAnual
+                  ? 'Suma de los objetivos del año'
+                  : 'Objetivo del mes',
+              footer: '',
               icon: Icons.flag_outlined,
               color: context.colores.acentoVioleta,
             ),
-            KpiData(
-              title: 'Cumplimiento',
-              value: '${equipo.porcentajeCumplimiento.toStringAsFixed(1)}%',
-              detail:
-                  '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
-              help: esAnual
-                  ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
-                  : 'Horas realizadas sobre horas objetivo; el estado final también considera cuántos integrantes cumplieron.',
-              icon: Icons.trending_up,
+            // El color sigue el estado del equipo, que también mira cuántos
+            // integrantes cumplieron.
+            cumplimientoKpiCard(
+              context,
+              esAnual: esAnual,
+              anio: anio,
+              mes: mes,
+              porcentaje: equipo.porcentajeCumplimiento,
+              variacion: ref
+                  .watch(
+                    variacionCumplimientoProvider((
+                      area: equipo.area,
+                      equipo: equipo.nombre,
+                    )),
+                  )
+                  .value,
               color: equipo.estado.colores(context).texto,
             ),
+            if (proyeccion != null) proyeccionKpiCard(context, proyeccion),
           ],
         ),
         const SizedBox(height: 16),
         // Leandro: llama al widget EquipoDetalleResumen para mostrar la distribución y el avance de las horas.
         EquipoDetalleResumen(equipo: equipo, esAnual: esAnual),
+        if (detalle.miembros.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ComparacionMoodleCrmCards(cumplimientos: detalle.miembros),
+        ],
         const SizedBox(height: 24),
         // Leandro: llama al widget EquipoMiembrosTable para listar el cumplimiento de cada integrante.
         EquipoMiembrosTable(miembros: detalle.miembros),
@@ -174,13 +206,17 @@ class _EquipoContent extends StatelessWidget {
 }
 
 class _EmptyContent extends StatelessWidget {
+  final Widget periodControls;
   final Widget child;
 
-  const _EmptyContent({required this.child});
+  const _EmptyContent({required this.periodControls, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(padding: paddingPantalla, children: [child]);
+    return ListView(
+      padding: paddingPantalla,
+      children: [periodControls, const SizedBox(height: 22), child],
+    );
   }
 }
 

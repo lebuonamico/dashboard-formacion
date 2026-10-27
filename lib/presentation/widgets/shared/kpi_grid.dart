@@ -30,9 +30,13 @@ class KpiGrid extends StatelessWidget {
     // Leandro: llama a LayoutBuilder para ajustar las columnas de KPIs al ancho disponible.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1050
-            ? 4
-            : constraints.maxWidth >= 580
+        final ancho = constraints.maxWidth;
+        final columns = ancho >= 1300 && items.length >= 5
+            ? 5
+            : ancho >= 1050
+            // Con 5 ítems, 3 + 2 queda mejor que 4 + 1.
+            ? (items.length == 5 ? 3 : 4)
+            : ancho >= 580
             ? 2
             : 1;
         final cardWidth = (constraints.maxWidth - (columns - 1) * 14) / columns;

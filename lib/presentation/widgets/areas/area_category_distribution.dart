@@ -1,3 +1,4 @@
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/areas/area_donut_chart.dart';
 import 'package:flutter/material.dart';
@@ -71,28 +72,28 @@ class AreasCategoryDistribution extends StatelessWidget {
                   valueSuffix: ' h',
                   slices: [
                     AreasDonutSlice(
-                      label: 'Negocio',
+                      label: TipoCurso.habilidadesDeNegocio.labelCorto,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: horasNegocio,
                       color: context.colores.negocio.texto,
                     ),
                     AreasDonutSlice(
-                      label: 'Blandas',
+                      label: TipoCurso.habilidadesBlandas.labelCorto,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: horasBlandas,
                       color: context.colores.blandas.texto,
                     ),
                     AreasDonutSlice(
-                      label: 'Libres',
+                      label: TipoCurso.libresExploracion.labelCorto,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los colaboradores de las áreas.',
                       value: horasLibres,
                       color: context.colores.exploracion.texto,
                     ),
                     AreasDonutSlice(
-                      label: 'Dictado',
+                      label: TipoCurso.dictadoCapacitaciones.labelCorto,
                       help:
                           'Horas cargadas como dictado de capacitaciones por colaboradores de las áreas.',
                       value: horasDictado,

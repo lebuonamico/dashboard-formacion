@@ -64,21 +64,4 @@ class ImportacionService {
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
-
-  // Compatibility for consumers that cannot yet report persistence counts.
-  Future<void> persistir({
-    required String tipoArchivo,
-    required String nombreArchivo,
-    required int registrosProcesados,
-    required Future<void> Function() guardar,
-  }) async {
-    await ejecutar(
-      tipoArchivo: tipoArchivo,
-      nombreArchivo: nombreArchivo,
-      procesar: () async {
-        await guardar();
-        return ResultadoUpsert(registrosProcesados: registrosProcesados);
-      },
-    );
-  }
 }

@@ -1,7 +1,10 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/presentation/widgets/shared/kpi_grid.dart';
+import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
+import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 import 'package:flutter/material.dart';
 
+/// Indicadores de todos los equipos, con las mismas cards que el inicio.
 class EquiposKpiSection extends StatelessWidget {
   final int totalEquipos;
   final int totalColaboradores;
@@ -10,6 +13,15 @@ class EquiposKpiSection extends StatelessWidget {
   final double desvioHoras;
   final double cumplimientoGlobal;
   final bool esAnual;
+  final int anio;
+  final int mes;
+
+  /// Variación del cumplimiento contra el mes anterior.
+  final VariacionCumplimiento? variacion;
+
+  /// Proyección a fin de año de todos los equipos; sin ella no se muestra la
+  /// card.
+  final ProyeccionAnual? proyeccion;
 
   const EquiposKpiSection({
     super.key,
@@ -19,70 +31,56 @@ class EquiposKpiSection extends StatelessWidget {
     required this.horasObjetivo,
     required this.desvioHoras,
     required this.cumplimientoGlobal,
+    required this.anio,
+    required this.mes,
     this.esAnual = false,
+    this.variacion,
+    this.proyeccion,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: llama a KpiGrid para mostrar los indicadores globales del período.
-    return KpiGrid(
-      items: [
-        KpiData(
-          title: 'Equipos activos',
+    return KpiCardRow(
+      cards: [
+        DashboardKpiCard(
+          title: 'EQUIPOS ACTIVOS',
           value: '$totalEquipos',
-          detail: 'en seguimiento',
-          help: esAnual
-              ? 'Equipos con colaboradores elegibles en al menos uno de los meses con datos del año.'
-              : 'Equipos con colaboradores elegibles en el período seleccionado.',
+          suffix: 'en seguimiento',
+          progress: 1,
+          progressLabel: 'Con colaboradores elegibles',
+          footer: '',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
         ),
-        KpiData(
-          title: 'Colaboradores',
+        DashboardKpiCard(
+          title: 'COLABORADORES',
           value: '$totalColaboradores',
-          detail: 'en todos los equipos',
-          help: esAnual
-              ? 'Colaboradores únicos que fueron elegibles en al menos uno de los meses con datos del año.'
-              : 'Colaboradores elegibles en el período seleccionado.',
+          suffix: 'en todos los equipos',
+          progress: 1,
+          progressLabel: 'Nómina elegible',
+          footer: '',
           icon: Icons.people_outline,
           color: context.colores.acentoCian,
         ),
-        KpiData(
-          title: 'Horas realizadas',
-          value: horasRealizadas.toStringAsFixed(1),
-          // Leandro: llama a _formatDesvio para expresar las horas faltantes o excedentes.
-          detail: _formatDesvio(desvioHoras),
-          help: esAnual
-              ? 'Suma de las horas válidas de los meses con datos del año.'
-              : 'Horas CRM de cursos finalizados en LMS, limitadas por la carga máxima del curso y por el objetivo de cada categoría según seniority.',
-          icon: Icons.schedule_outlined,
-          color: desvioHoras >= 0
-              ? context.colores.exito.texto
-              : context.colores.acentoVioleta,
+        horasValidasKpiCard(
+          context,
+          esAnual: esAnual,
+          anio: anio,
+          mes: mes,
+          horas: horasRealizadas,
+          objetivo: horasObjetivo,
         ),
-        KpiData(
-          title: 'Cumplimiento global',
-          value: '${cumplimientoGlobal.toStringAsFixed(1)}%',
-          detail: cumplimientoGlobal >= 100
-              ? 'objetivo alcanzado'
-              : 'avance acumulado',
-          help: esAnual
-              ? 'Porcentaje de horas válidas acumuladas sobre la suma de los objetivos mensuales de los períodos con datos.'
-              : 'Porcentaje de horas válidas realizadas sobre las horas objetivo del período.',
-          icon: Icons.trending_up,
-          color: cumplimientoGlobal >= 100
-              ? context.colores.exito.texto
-              : context.colores.advertencia.texto,
+        cumplimientoKpiCard(
+          context,
+          esAnual: esAnual,
+          anio: anio,
+          mes: mes,
+          porcentaje: cumplimientoGlobal,
+          variacion: variacion,
         ),
+        if (proyeccion case final proyeccion?)
+          proyeccionKpiCard(context, proyeccion),
       ],
     );
-  }
-
-  String _formatDesvio(double desvioHoras) {
-    if (desvioHoras >= 0) {
-      return '+${desvioHoras.toStringAsFixed(1)} hs sobre objetivo';
-    }
-
-    return 'faltan ${desvioHoras.abs().toStringAsFixed(1)} hs';
   }
 }

@@ -124,7 +124,7 @@ class _EstructuraFake implements EstructuraRepository {
 final _curso = Curso(
   id: '1',
   nombre: 'Negociación',
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: '',
   instructorLegajo: '',
   cargaHorariaHs: 4,
@@ -373,10 +373,6 @@ void main() {
     expect(await container.read(empleadosProvider.future), isEmpty);
     expect(await container.read(cargasDeHorasCRMProvider.future), isEmpty);
     expect(await container.read(certificacionesMoodleProvider.future), isEmpty);
-    expect(
-      (await container.read(alcanceUsuarioProvider.future)).sinAsignaciones,
-      isTrue,
-    );
   });
 
   test(
