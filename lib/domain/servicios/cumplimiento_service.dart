@@ -116,7 +116,14 @@ class CumplimientoService {
     for (final tipo in TipoCurso.values) tipo: 0.0,
   };
 
-  static String normalizarNombreCurso(String nombre) => nombre
+  /// Se llama por cada carga y certificación, con pocos nombres distintos:
+  /// cada uno se normaliza una sola vez.
+  static String normalizarNombreCurso(String nombre) =>
+      _nombresNormalizados[nombre] ??= _normalizarNombre(nombre);
+
+  static final _nombresNormalizados = <String, String>{};
+
+  static String _normalizarNombre(String nombre) => nombre
       .trim()
       .toLowerCase()
       .replaceAll('á', 'a')

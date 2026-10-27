@@ -77,6 +77,11 @@ Widget cumplimientoKpiCard(
             ),
       icon: Icons.event_available_outlined,
       color: colorCard,
+      ayuda:
+          'Horas válidas acumuladas en el año sobre la suma de los objetivos '
+          'de los meses con datos. Los meses sin registros CRM ni LMS no '
+          'cuentan. El recuadro muestra cuántos puntos cambió contra el '
+          'acumulado hasta el mes anterior.',
     );
   }
 
@@ -102,6 +107,11 @@ Widget cumplimientoKpiCard(
           ),
     icon: Icons.event_available_outlined,
     color: colorCard,
+    ayuda:
+        'Horas válidas del mes sobre el objetivo del mes de los colaboradores '
+        'elegibles, según su seniority. Cada persona suma como máximo su '
+        'objetivo en cada categoría. El recuadro compara las horas por '
+        'persona con el mes anterior.',
   );
 }
 
@@ -143,6 +153,13 @@ Widget proyeccionKpiCard(BuildContext context, ProyeccionAnual proyeccion) {
       EstadoProyeccion.enRiesgo => Icons.trending_down,
     },
     color: colores.texto,
+    ayuda:
+        'Estimación a diciembre: lo acumulado más la tendencia de cada '
+        'colaborador según sus meses con datos, sobre la meta del año. Las '
+        'horas de una persona no cubren a otra, ni las de una categoría a '
+        'otra. En camino: 100 % o más; Alcanzable: desde 85 %; En riesgo: '
+        'menos de 85 %. El ajuste son las horas por persona y por mes que '
+        'faltan para llegar.',
   );
 }
 
@@ -214,6 +231,10 @@ class DashboardKpiCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
+  /// Qué muestra la card y cómo se calcula. Aparece al pasar el mouse o
+  /// tocar el ícono de información junto al título.
+  final String? ayuda;
+
   const DashboardKpiCard({
     super.key,
     required this.title,
@@ -227,6 +248,7 @@ class DashboardKpiCard extends StatelessWidget {
     this.suffixDebajo = false,
     required this.icon,
     required this.color,
+    this.ayuda,
   });
 
   Widget _textoSuffix(BuildContext context) => Text(
@@ -259,6 +281,20 @@ class DashboardKpiCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (ayuda case final ayuda?) ...[
+                Tooltip(
+                  message: ayuda,
+                  triggerMode: TooltipTriggerMode.tap,
+                  showDuration: const Duration(seconds: 8),
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 15,
+                    color: context.colores.textoTenue,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               Icon(icon, size: 18, color: color),
             ],
           ),
@@ -347,3 +383,32 @@ class DashboardKpiCard extends StatelessWidget {
     );
   }
 }
+
+/// Quiénes cuentan en el período, para las cards de colaboradores.
+const ayudaNominaElegible =
+    'Colaboradores de la nómina elegibles en el período: ya habían ingresado '
+    'y estaban activos al cierre del mes (en el anual, en algún mes con '
+    'datos).';
+
+const ayudaHorasValidasMes =
+    'Horas que cuentan para el objetivo del mes: cursos de Negocio y Blandas '
+    'finalizados en el LMS, con la carga horaria del catálogo, y horas de '
+    'Libres y Dictado cargadas en el CRM. Cada persona suma como máximo su '
+    'objetivo en cada categoría.';
+
+const ayudaHorasValidasAnual =
+    'Suma de las horas válidas de los meses con datos del año: cursos de '
+    'Negocio y Blandas finalizados en el LMS y horas de Libres y Dictado del '
+    'CRM. Un mes fuerte compensa uno flojo; cada persona suma como máximo su '
+    'objetivo anual en cada categoría.';
+
+/// Integrantes de un área o equipo y cuántos cumplieron.
+String ayudaIntegrantes(String seccion) =>
+    'Colaboradores elegibles $seccion en el período. Abajo, cuántos '
+    'cumplieron el objetivo en todas sus categorías.';
+
+/// Objetivo de horas de un área o equipo.
+String ayudaObjetivo(String seccion) =>
+    'Horas que $seccion debía hacer según el plan de formación para la '
+    'seniority de cada integrante. En el anual, la suma de los objetivos de '
+    'los meses con datos.';

@@ -49,13 +49,13 @@ final alcanceUsuarioProvider = FutureProvider<AlcanceUsuario>((ref) async {
 });
 
 /// Fila de la nómina del usuario de la sesión, buscada por su email: el área
-/// y el equipo a los que pertenece. Lee el repositorio directo y no
+/// y el equipo a los que pertenece. Usa la nómina sin filtrar y no
 /// [empleadosProvider], porque un líder puede no estar en lo que lidera (el
 /// RLS le deja leer su propia fila). `null` en modo local o si no figura.
 final empleadoDeSesionProvider = FutureProvider<Empleado?>((ref) async {
   final sesion = ref.watch(sesionDatosProvider);
   if (!sesion.habilitada || sesion.email == null) return null;
-  final empleados = await ref.watch(empleadosRepositoryProvider).getEmpleados();
+  final empleados = await ref.watch(nominaProvider.future);
   return Empleado.porMail(empleados, sesion.email);
 });
 

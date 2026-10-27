@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
@@ -41,7 +42,10 @@ class EquiposScreen extends ConsumerWidget {
                   color: context.colorScheme.primary,
                 ),
               ),
-              error: (error, _) => _ErrorState(message: '$error'),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar los equipos',
+                error: error,
+              ),
               data: (resumen) => FadeIn(
                 child: (() {
                   // Leandro: llama al widget _DashboardContent para presentar el resumen y los equipos filtrados.
@@ -188,7 +192,10 @@ class _DashboardContent extends ConsumerWidget {
                 color: context.colorScheme.primary,
               ),
             ),
-            error: (error, _) => _ErrorState(message: '$error'),
+            error: (error, _) => ErrorDataState(
+              title: 'No pudimos cargar los equipos',
+              error: error,
+            ),
             // Leandro: llama al widget EquiposResults para mostrar y paginar las tarjetas de los equipos filtrados.
             data: (equiposFiltrados) => EquiposResults(
               key: ValueKey(
@@ -236,26 +243,6 @@ class _DashboardChartsRow extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          'No pudimos cargar los equipos.\n$message',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.colorScheme.error),
-        ),
-      ),
     );
   }
 }

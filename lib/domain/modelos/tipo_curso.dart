@@ -17,6 +17,15 @@ enum TipoCurso {
   /// símbolos.
   static TipoCurso? desdeTexto(String? texto) {
     if (texto == null) return null;
+    // Se consulta una vez por carga de horas y hay muy pocos textos
+    // distintos: se resuelve cada uno una sola vez.
+    if (_reconocidos.containsKey(texto)) return _reconocidos[texto];
+    return _reconocidos[texto] = _reconocer(texto);
+  }
+
+  static final _reconocidos = <String, TipoCurso?>{};
+
+  static TipoCurso? _reconocer(String texto) {
     final buscado = _normalizar(texto);
     if (buscado.isEmpty) return null;
     for (final tipo in TipoCurso.values) {

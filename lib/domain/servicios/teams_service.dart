@@ -201,29 +201,66 @@ class EquiposService {
     required CumplimientoService cumplimientoService,
     bool Function(Empleado)? incluir,
   }) {
-    return acumularMeses([
-      for (var mes = 1; mes <= 12; mes++)
-        // Leandro: llama a tieneDatosEnPeriodo para acumular sólo los meses que tienen registros CRM o LMS.
-        if (tieneDatosEnPeriodo(
-          cargas: cargas,
-          certificaciones: certificaciones,
-          anio: anio,
-          mes: mes,
-          esAnual: false,
-        ))
+    return acumularMeses(
+      calcularCumplimientoPorMes(
+        empleados: empleados,
+        historial: historial,
+        cursos: cursos,
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        cumplimientoService: cumplimientoService,
+        incluir: incluir,
+      ).values,
+    );
+  }
+
+  /// Cumplimiento de cada mes del año con registros CRM o LMS, de enero a
+  /// [hastaMes].
+  Map<int, List<CumplimientoEmpleado>> calcularCumplimientoPorMes({
+    required List<Empleado> empleados,
+    List<EmpleadoHistorial>? historial,
+    required List<Curso> cursos,
+    required List<CargaDeHorasCRM> cargas,
+    required List<CertificacionMoodle> certificaciones,
+    required int anio,
+    int hastaMes = 12,
+    required CumplimientoService cumplimientoService,
+    bool Function(Empleado)? incluir,
+  }) {
+    // Una sola pasada reparte los registros del año por mes, en vez de
+    // recorrer todo para cada uno de los 12 meses.
+    final cargasPorMes = <int, List<CargaDeHorasCRM>>{};
+    for (final carga in cargas) {
+      if (carga.fecha.year != anio) continue;
+      cargasPorMes.putIfAbsent(carga.fecha.month, () => []).add(carga);
+    }
+    final certificacionesPorMes = <int, List<CertificacionMoodle>>{};
+    for (final certificacion in certificaciones) {
+      final fecha = certificacion.fechaFinalizacion;
+      if (fecha == null || fecha.year != anio) continue;
+      certificacionesPorMes
+          .putIfAbsent(fecha.month, () => [])
+          .add(certificacion);
+    }
+    return {
+      for (var mes = 1; mes <= hastaMes; mes++)
+        // Solo cuentan los meses que tienen registros CRM o LMS.
+        if (cargasPorMes.containsKey(mes) ||
+            certificacionesPorMes.containsKey(mes))
           // Leandro: llama a calcularCumplimientoMensual para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
-          calcularCumplimientoMensual(
+          mes: calcularCumplimientoMensual(
             empleados: empleados,
             historial: historial,
             cursos: cursos,
-            cargas: cargas,
-            certificaciones: certificaciones,
+            cargas: cargasPorMes[mes] ?? const [],
+            certificaciones: certificacionesPorMes[mes] ?? const [],
             anio: anio,
             mes: mes,
             cumplimientoService: cumplimientoService,
             incluir: incluir,
           ),
-    ]);
+    };
   }
 
   /// Suma los cumplimientos de varios meses por colaborador, área y equipo,

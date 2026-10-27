@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
@@ -50,7 +51,11 @@ class DashboardAreasSection extends ConsumerWidget {
         const SizedBox(height: 12),
         areasAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Text('Error: $error'),
+          error: (error, _) => ErrorDataState(
+            title: 'No pudimos cargar las áreas',
+            error: error,
+            compact: true,
+          ),
           data: (areas) {
             if (areas.isEmpty) {
               return Column(
@@ -70,7 +75,11 @@ class DashboardAreasSection extends ConsumerWidget {
 
             return equiposAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Text('Error: $error'),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar las áreas',
+                error: error,
+                compact: true,
+              ),
               data: (equipos) {
                 final equiposPorArea = <String, int>{};
                 for (final equipo in equipos) {

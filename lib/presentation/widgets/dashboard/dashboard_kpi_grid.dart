@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
@@ -60,7 +61,13 @@ class DashboardKpiGrid extends StatelessWidget {
       equiposAsync,
     ];
     final error = asyncValues.where((value) => value.hasError).firstOrNull;
-    if (error != null) return Text('Error: ${error.error}');
+    if (error != null) {
+      return ErrorDataState(
+        title: 'No pudimos cargar esta sección',
+        error: error.error!,
+        compact: true,
+      );
+    }
 
     final cumplimientos = cumplimientosAsync.value ?? [];
     final cargas = cargasAsync.value ?? [];
@@ -95,6 +102,7 @@ class DashboardKpiGrid extends StatelessWidget {
           footer: '${equipos.length} equipos',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
+          ayuda: '$ayudaNominaElegible Abajo, cuántas áreas y equipos abarcan.',
         ),
         DashboardKpiCard(
           title: 'COLABORADORES CAPACITÁNDOSE',
@@ -107,6 +115,10 @@ class DashboardKpiGrid extends StatelessWidget {
               '${totalEmpleados - empleadosTomaronCurso} sin cursos tomados',
           icon: Icons.school_outlined,
           color: context.colores.exito.texto,
+          ayuda:
+              'Colaboradores elegibles con al menos una carga de horas en el '
+              'CRM en el período, sin contar las horas que dictaron. No indica '
+              'si cumplieron el objetivo.',
         ),
         // Solo las horas que suman al objetivo de cumplimiento del período.
         DashboardKpiCard(
@@ -121,6 +133,7 @@ class DashboardKpiGrid extends StatelessWidget {
               '${(metaPeriodo - horasRealizadas).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
           icon: Icons.schedule_outlined,
           color: context.colorScheme.primary,
+          ayuda: esAnual ? ayudaHorasValidasAnual : ayudaHorasValidasMes,
         ),
         cumplimientoKpiCard(
           context,

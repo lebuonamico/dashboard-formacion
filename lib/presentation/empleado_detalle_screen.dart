@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursadas_providers.dart';
@@ -58,7 +59,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
               // Al cambiar el período mantiene los datos previos en pantalla.
               skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              error: (err, _) => ErrorDataState(
+                title: 'No pudimos cargar el colaborador',
+                error: err,
+              ),
               data: (detalle) => FadeIn(
                 child: (() {
                   if (detalle == null) {
@@ -99,9 +103,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         _buildGridCategorias(context, cump),
                         const SizedBox(height: 24),
 
-                        if (ref
-                                .watch(proyeccionEmpleadoProvider(legajo))
-                                .value
+                        if (ref.watch(proyeccionEmpleadoProvider(legajo)).value
                             case final proyeccion?) ...[
                           Text('Proyección a fin de año', style: estiloSeccion),
                           const SizedBox(height: 12),
