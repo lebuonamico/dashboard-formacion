@@ -1,100 +1,100 @@
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 
-class EquipoGlobalViewModel {
-  final String id;
-  final String nombre;
-  final String area;
-  final String lider;
-  final int cantidadIntegrantes;
-  final int integrantesEnObjetivo;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double desvioHoras;
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final double promedioPorColaborador;
-  final double porcentajeCumplimiento;
-  final EstadoEquipo estado;
+part 'team_overview_compatibility.dart';
 
-  const EquipoGlobalViewModel({
+class TeamOverview {
+  final String id;
+  final String name;
+  final String area;
+  final String leader;
+  final int memberCount;
+  final int membersOnTarget;
+  final double completedHours;
+  final double targetHours;
+  final double hoursDeviation;
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final double averageHoursPerMember;
+  final double completionPercentage;
+  final TeamStatus status;
+
+  const TeamOverview({
     required this.id,
-    required this.nombre,
+    required this.name,
     required this.area,
-    required this.lider,
-    required this.cantidadIntegrantes,
-    required this.integrantesEnObjetivo,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.desvioHoras,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    required this.promedioPorColaborador,
-    required this.porcentajeCumplimiento,
-    required this.estado,
+    required this.leader,
+    required this.memberCount,
+    required this.membersOnTarget,
+    required this.completedHours,
+    required this.targetHours,
+    required this.hoursDeviation,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    required this.averageHoursPerMember,
+    required this.completionPercentage,
+    required this.status,
   });
 }
 
-/// Totales del período que consume la pantalla de Equipos.
-class ResumenEquiposPeriodo {
-  final bool tieneDatos;
-  final List<EquipoGlobalViewModel> equipos;
-  final int colaboradores;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final int enObjetivo;
-  final int enRiesgo;
-  final int criticos;
+class TeamsPeriodSummary {
+  final bool hasData;
+  final List<TeamOverview> teams;
+  final int employeeCount;
+  final double completedHours;
+  final double targetHours;
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final int onTarget;
+  final int atRisk;
+  final int critical;
 
-  const ResumenEquiposPeriodo({
-    this.tieneDatos = true,
-    required this.equipos,
-    required this.colaboradores,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    required this.enObjetivo,
-    required this.enRiesgo,
-    required this.criticos,
+  const TeamsPeriodSummary({
+    this.hasData = true,
+    required this.teams,
+    required this.employeeCount,
+    required this.completedHours,
+    required this.targetHours,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    required this.onTarget,
+    required this.atRisk,
+    required this.critical,
   });
 
-  const ResumenEquiposPeriodo.sinDatos()
+  const TeamsPeriodSummary.noData()
     : this(
-        tieneDatos: false,
-        equipos: const [],
-        colaboradores: 0,
-        horasRealizadas: 0,
-        horasObjetivo: 0,
-        horasNegocio: 0,
-        horasBlandas: 0,
-        horasLibres: 0,
-        horasDictado: 0,
-        enObjetivo: 0,
-        enRiesgo: 0,
-        criticos: 0,
+        hasData: false,
+        teams: const [],
+        employeeCount: 0,
+        completedHours: 0,
+        targetHours: 0,
+        businessHours: 0,
+        softSkillsHours: 0,
+        explorationHours: 0,
+        teachingHours: 0,
+        onTarget: 0,
+        atRisk: 0,
+        critical: 0,
       );
 
-  int get totalEquipos => equipos.length;
-  double get desvioHoras => horasRealizadas - horasObjetivo;
-  double get cumplimientoGlobal =>
-      horasObjetivo == 0 ? 0 : horasRealizadas / horasObjetivo * 100;
+  int get teamCount => teams.length;
+  double get hoursDeviation => completedHours - targetHours;
+  double get overallCompletion =>
+      targetHours == 0 ? 0 : completedHours / targetHours * 100;
 }
 
-/// Equipo seleccionado junto con los integrantes evaluados en el período.
-class DetalleEquipoGeneral {
-  final EquipoGlobalViewModel resumen;
-  final List<CumplimientoEmpleado> miembros;
+class TeamDetail {
+  final TeamOverview overview;
+  final List<CumplimientoEmpleado> members;
 
-  const DetalleEquipoGeneral({required this.resumen, required this.miembros});
+  const TeamDetail({required this.overview, required this.members});
 }

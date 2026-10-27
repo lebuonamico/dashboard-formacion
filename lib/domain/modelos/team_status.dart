@@ -1,8 +1,14 @@
-enum EstadoEquipo {
-  enObjetivo('En objetivo'),
-  enRiesgo('En riesgo'),
-  critico('Crítico');
+enum TeamStatus {
+  onTarget('En objetivo'),
+  atRisk('En riesgo'),
+  critical('Crítico');
 
   final String label;
-  const EstadoEquipo(this.label);
+  const TeamStatus(this.label);
+
+  static const enObjetivo = onTarget;
+  static const enRiesgo = atRisk;
+  static const critico = critical;
 }
+
+typedef EstadoEquipo = TeamStatus;

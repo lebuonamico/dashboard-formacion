@@ -1,28 +1,29 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/utils/orden_miembros.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
-import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/presentation/widgets/shared/category_hours_progress.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class EquipoMiembrosTable extends StatefulWidget {
-  final List<CumplimientoEmpleado> miembros;
+class TeamMembersTable extends StatefulWidget {
+  final List<CumplimientoEmpleado> members;
 
-  const EquipoMiembrosTable({super.key, required this.miembros});
+  const TeamMembersTable({super.key, required this.members});
 
   @override
-  State<EquipoMiembrosTable> createState() => _EquipoMiembrosTableState();
+  State<TeamMembersTable> createState() => _TeamMembersTableState();
 }
 
-class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
-  static const _integrantesPorPagina = 8;
-  int _paginaActual = 0;
-  var _orden = const EstadoOrdenMiembros();
+class _TeamMembersTableState extends State<TeamMembersTable> {
+  static const _membersPerPage = 8;
+  static const _minimumTableWidth = 980.0;
+  int _currentPage = 0;
+  var _sortState = const EstadoOrdenMiembros();
+  late List<CumplimientoEmpleado> _sortedMembers;
 
-  /// Columnas en el orden en que se muestran; null = no ordenable.
-  static const _columnas = <(String, OrdenMiembros?)>[
+  static const _columns = <(String, OrdenMiembros?)>[
     ('Legajo', OrdenMiembros.legajo),
     ('Colaborador', OrdenMiembros.colaborador),
     ('Seniority', OrdenMiembros.seniority),
@@ -32,38 +33,40 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
   ];
 
   @override
-  void didUpdateWidget(covariant EquipoMiembrosTable oldWidget) {
+  void initState() {
+    super.initState();
+    _sortedMembers = _sortState.aplicar(widget.members);
+  }
+
+  @override
+  void didUpdateWidget(covariant TeamMembersTable oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.miembros != widget.miembros) {
-      _paginaActual = 0;
+    if (oldWidget.members != widget.members) {
+      _currentPage = 0;
+      _sortedMembers = _sortState.aplicar(widget.members);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalIntegrantes = widget.miembros.length;
-    final totalPaginas = totalIntegrantes == 0
+    final memberCount = widget.members.length;
+    final pageCount = memberCount == 0
         ? 1
-        : (totalIntegrantes + _integrantesPorPagina - 1) ~/
-              _integrantesPorPagina;
-    final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-    final inicio = paginaSegura * _integrantesPorPagina;
-    final finCalculado = inicio + _integrantesPorPagina;
-    final fin = finCalculado > totalIntegrantes
-        ? totalIntegrantes
-        : finCalculado;
-    final miembrosVisibles = _orden
-        .aplicar(widget.miembros)
-        .sublist(inicio, fin);
-    final indiceOrden = _columnas.indexWhere(
-      (columna) => columna.$2 != null && columna.$2 == _orden.columna,
+        : (memberCount + _membersPerPage - 1) ~/ _membersPerPage;
+    final safePage = _currentPage.clamp(0, pageCount - 1);
+    final startIndex = safePage * _membersPerPage;
+    final calculatedEnd = startIndex + _membersPerPage;
+    final endIndex = calculatedEnd > memberCount ? memberCount : calculatedEnd;
+    final visibleMembers = _sortedMembers.sublist(startIndex, endIndex);
+    final sortColumnIndex = _columns.indexWhere(
+      (column) => column.$2 != null && column.$2 == _sortState.columna,
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Integrantes ($totalIntegrantes)',
+          'Integrantes ($memberCount)',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -71,21 +74,20 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
           ),
         ),
         const SizedBox(height: 12),
-        if (totalPaginas > 1) ...[
-          // Leandro: llama a PaginacionResultados para recorrer las páginas de integrantes.
+        if (pageCount > 1) ...[
           PaginacionResultados(
-            paginaActual: paginaSegura,
-            cantidadPaginas: totalPaginas,
-            desde: inicio + 1,
-            hasta: fin,
-            totalResultados: totalIntegrantes,
+            paginaActual: safePage,
+            cantidadPaginas: pageCount,
+            desde: startIndex + 1,
+            hasta: endIndex,
+            totalResultados: memberCount,
             etiquetaResultados: 'integrantes',
             icono: Icons.people_outline,
-            onPrevious: paginaSegura > 0
-                ? () => setState(() => _paginaActual = paginaSegura - 1)
+            onPrevious: safePage > 0
+                ? () => setState(() => _currentPage = safePage - 1)
                 : null,
-            onNext: paginaSegura < totalPaginas - 1
-                ? () => setState(() => _paginaActual = paginaSegura + 1)
+            onNext: safePage < pageCount - 1
+                ? () => setState(() => _currentPage = safePage + 1)
                 : null,
           ),
           const SizedBox(height: 12),
@@ -99,32 +101,35 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
                 scrollDirection: Axis.horizontal,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth < 980
-                        ? 980
+                    minWidth: constraints.maxWidth < _minimumTableWidth
+                        ? _minimumTableWidth
                         : constraints.maxWidth,
                   ),
                   child: DataTable(
-                    // La fila entera abre el detalle: no hace falta checkbox.
                     showCheckboxColumn: false,
                     headingRowColor: WidgetStatePropertyAll(
                       context.colorScheme.surfaceContainerLow,
                     ),
-                    sortColumnIndex: indiceOrden < 0 ? null : indiceOrden,
-                    sortAscending: _orden.ascendente,
+                    sortColumnIndex: sortColumnIndex < 0
+                        ? null
+                        : sortColumnIndex,
+                    sortAscending: _sortState.ascendente,
                     columns: [
-                      for (final (titulo, orden) in _columnas)
+                      for (final (title, sortColumn) in _columns)
                         DataColumn(
-                          label: Text(titulo),
-                          onSort: orden == null
+                          label: Text(title),
+                          onSort: sortColumn == null
                               ? null
                               : (_, _) => setState(() {
-                                  _orden = _orden.alternar(orden);
-                                  _paginaActual = 0;
+                                  _sortState = _sortState.alternar(sortColumn);
+                                  _sortedMembers = _sortState.aplicar(
+                                    widget.members,
+                                  );
+                                  _currentPage = 0;
                                 }),
                         ),
                     ],
-                    // Leandro: llama a _buildRow para convertir cada integrante visible en una fila.
-                    rows: miembrosVisibles.map(_buildRow).toList(),
+                    rows: visibleMembers.map(_buildRow).toList(),
                   ),
                 ),
               );
@@ -135,43 +140,41 @@ class _EquipoMiembrosTableState extends State<EquipoMiembrosTable> {
     );
   }
 
-  DataRow _buildRow(CumplimientoEmpleado miembro) {
-    final empleado = miembro.empleado;
-    final cumple = miembro.cumpleObjetivo;
+  DataRow _buildRow(CumplimientoEmpleado member) {
+    final employee = member.empleado;
+    final isOnTarget = member.cumpleObjetivo;
 
     return DataRow(
-      // Leandro: llama a context.push para abrir el detalle del colaborador seleccionado.
       onSelectChanged: (_) =>
-          context.push('/empleados/${Uri.encodeComponent(empleado.legajo)}'),
+          context.push('/empleados/${Uri.encodeComponent(employee.legajo)}'),
       cells: [
-        DataCell(Text(empleado.legajo)),
+        DataCell(Text(employee.legajo)),
         DataCell(
           Text(
-            empleado.nombreCompleto,
+            employee.nombreCompleto,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
-        DataCell(Text(empleado.seniority.label)),
+        DataCell(Text(employee.seniority.label)),
         DataCell(
           Text(
-            '${miembro.totalHorasCompletadas.toStringAsFixed(1)} / ${miembro.totalHorasRequeridas.toStringAsFixed(1)} h',
+            '${member.totalHorasCompletadas.toStringAsFixed(1)} / ${member.totalHorasRequeridas.toStringAsFixed(1)} h',
           ),
         ),
         DataCell(
           Text(
-            formatearPorcentaje(miembro.porcentajeTotal),
+            formatearPorcentaje(member.porcentajeTotal),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: cumple
+              color: isOnTarget
                   ? context.colores.exito.texto
                   : context.colores.advertencia.texto,
             ),
           ),
         ),
         DataCell(
-          // Leandro: llama a ProgresoHorasPorCategoria para mostrar el avance del integrante por categoría.
           ProgresoHorasPorCategoria(
-            cumplimiento: miembro,
+            cumplimiento: member,
             mostrarSoloHorasAplicables: true,
           ),
         ),

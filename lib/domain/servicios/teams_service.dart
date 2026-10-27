@@ -2,567 +2,245 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
-import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
+import 'package:app_finnegans/domain/modelos/team_identity.dart';
+import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
+import 'package:app_finnegans/domain/servicios/team_period_service.dart';
 
-/// Líderes para mostrar de un equipo, por el Sector y el Equipo de la
-/// nómina. `null` cuando no tiene líderes asignados.
-typedef ResolverLider = String? Function(String area, String equipo);
+part 'teams_service_compatibility.dart';
 
-class EquiposService {
-  bool tieneDatosEnPeriodo({
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-    required int mes,
-    required bool esAnual,
+typedef TeamLeaderResolver = String? Function(String area, String team);
+
+class TeamsService {
+  static const _onTargetPercentage = 100.0;
+  static const _atRiskPercentage = 70.0;
+
+  final TeamPeriodService periods;
+
+  const TeamsService({this.periods = const TeamPeriodService()});
+
+  List<TeamOverview> buildTeamOverviews(
+    List<CumplimientoEmpleado> compliance, {
+    TeamLeaderResolver? resolveLeader,
   }) {
-    bool perteneceAlPeriodo(DateTime fecha) =>
-        fecha.year == anio && (esAnual || fecha.month == mes);
+    final membersByTeam = <String, List<CumplimientoEmpleado>>{};
 
-    // Leandro: llama a perteneceAlPeriodo para reconocer los registros CRM o LMS del mes o año elegido.
-    return cargas.any((carga) => perteneceAlPeriodo(carga.fecha)) ||
-        certificaciones.any((certificacion) {
-          final fecha = certificacion.fechaFinalizacion;
-          return fecha != null && perteneceAlPeriodo(fecha);
-        });
-  }
+    for (final item in compliance) {
+      final employee = item.empleado;
+      final teamName = normalizeTeamName(employee.equipo);
+      final key = '${employee.area}::$teamName';
 
-  List<CargaDeHorasCRM> filtrarCargasPorPeriodo({
-    required List<CargaDeHorasCRM> cargas,
-    required int anio,
-    required int mes,
-    required bool esAnual,
-  }) {
-    return cargas.where((carga) {
-      final coincideAnio = carga.fecha.year == anio;
-      if (esAnual) return coincideAnio;
-
-      return coincideAnio && carga.fecha.month == mes;
-    }).toList();
-  }
-
-  List<CertificacionMoodle> filtrarCertificacionesPorPeriodo({
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-    required int mes,
-    required bool esAnual,
-  }) {
-    return certificaciones.where((certificacion) {
-      final fecha = certificacion.fechaFinalizacion;
-      if (!certificacion.finalizoCurso || fecha == null || fecha.year != anio) {
-        return false;
-      }
-      return esAnual || fecha.month == mes;
-    }).toList();
-  }
-
-  /// Colaboradores elegibles al cierre del período. [incluir] se aplica sobre
-  /// el estado vigente en ese mes, así un líder ve a alguien solo en los
-  /// meses en que estuvo en su equipo.
-  List<Empleado> filtrarEmpleadosPorPeriodo({
-    required List<Empleado> empleados,
-    List<EmpleadoHistorial>? historial,
-    required int anio,
-    required int mes,
-    required bool esAnual,
-    bool Function(Empleado)? incluir,
-  }) {
-    final inicioSiguiente = DateTime(anio, esAnual ? 13 : mes + 1);
-    final ultimoDia = DateTime(anio, esAnual ? 13 : mes + 1, 0);
-    final vigenciasPorLegajo = <String, List<EmpleadoHistorial>>{};
-    for (final vigencia in historial ?? <EmpleadoHistorial>[]) {
-      vigenciasPorLegajo.putIfAbsent(vigencia.legajo, () => []).add(vigencia);
+      membersByTeam.putIfAbsent(key, () => []).add(item);
     }
 
-    final elegibles = <Empleado>[];
-    for (final empleado in empleados) {
-      final ingreso = empleado.fechaIngreso;
-      if (ingreso == null) continue;
-      final fechaIngreso = DateTime(ingreso.year, ingreso.month, ingreso.day);
-      if (fechaIngreso.isAfter(ultimoDia)) continue;
-      if (historial == null) {
-        if (empleado.activo && (incluir?.call(empleado) ?? true)) {
-          elegibles.add(empleado);
-        }
-        continue;
-      }
-
-      final vigencias = vigenciasPorLegajo[empleado.legajo] ?? [];
-      final vigentes = vigencias.where((vigencia) {
-        final hasta = vigencia.vigenteHasta;
-        return vigencia.vigenteDesde.isBefore(inicioSiguiente) &&
-            (hasta == null || !hasta.isBefore(inicioSiguiente));
-      }).toList();
-      if (vigentes.isEmpty && vigencias.isNotEmpty) {
-        // Leandro: llama a reduce para recuperar el primer estado conocido sin usar el activo actual.
-        final primera = vigencias.reduce(
-          (anterior, actual) =>
-              actual.vigenteDesde.isBefore(anterior.vigenteDesde)
-              ? actual
-              : anterior,
-        );
-        if (!primera.vigenteDesde.isBefore(inicioSiguiente)) {
-          vigentes.addAll(
-            vigencias.where(
-              (vigencia) =>
-                  vigencia.vigenteDesde.isAtSameMomentAs(primera.vigenteDesde),
-            ),
-          );
-        }
-      }
-      if (vigentes.length != 1) {
-        throw StateError(
-          'El historial del colaborador ${empleado.legajo} no tiene una '
-          'vigencia única al cierre de $mes/$anio.',
-        );
-      }
-      final vigente = vigentes.single;
-      if (vigente.activo) {
-        // Leandro: llama a reconstruir para usar el estado, seniority y equipo vigentes al cierre del mes.
-        final reconstruido = vigente.reconstruir(empleado);
-        if (incluir?.call(reconstruido) ?? true) elegibles.add(reconstruido);
-      }
-    }
-    return elegibles;
-  }
-
-  int? ultimoMesConDatos({
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-  }) {
-    for (var mes = 12; mes >= 1; mes--) {
-      if (tieneDatosEnPeriodo(
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        esAnual: false,
-      )) {
-        return mes;
-      }
-    }
-    return null;
-  }
-
-  /// Cumplimiento de un mes: nómina elegible al cierre del mes, horas CRM y
-  /// finalizaciones LMS de ese mes.
-  List<CumplimientoEmpleado> calcularCumplimientoMensual({
-    required List<Empleado> empleados,
-    List<EmpleadoHistorial>? historial,
-    required List<Curso> cursos,
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-    required int mes,
-    required CumplimientoService cumplimientoService,
-    bool Function(Empleado)? incluir,
-  }) {
-    return cumplimientoService.calcularCumplimientoGlobal(
-      empleados: filtrarEmpleadosPorPeriodo(
-        empleados: empleados,
-        historial: historial,
-        anio: anio,
-        mes: mes,
-        esAnual: false,
-        incluir: incluir,
-      ),
-      cursos: cursos,
-      cargasDeHoras: filtrarCargasPorPeriodo(
-        cargas: cargas,
-        anio: anio,
-        mes: mes,
-        esAnual: false,
-      ),
-      certificacionesMoodle: filtrarCertificacionesPorPeriodo(
-        certificaciones: certificaciones,
-        anio: anio,
-        mes: mes,
-        esAnual: false,
-      ),
-      // El objetivo es el del plan vigente en este mes.
-      anio: anio,
-      mes: mes,
-    );
-  }
-
-  List<CumplimientoEmpleado> calcularCumplimientoAnual({
-    required List<Empleado> empleados,
-    List<EmpleadoHistorial>? historial,
-    required List<Curso> cursos,
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-    required CumplimientoService cumplimientoService,
-    bool Function(Empleado)? incluir,
-  }) {
-    return acumularMeses(
-      calcularCumplimientoPorMes(
-        empleados: empleados,
-        historial: historial,
-        cursos: cursos,
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
-        cumplimientoService: cumplimientoService,
-        incluir: incluir,
-      ).values,
-    );
-  }
-
-  /// Cumplimiento de cada mes del año con registros CRM o LMS, de enero a
-  /// [hastaMes].
-  Map<int, List<CumplimientoEmpleado>> calcularCumplimientoPorMes({
-    required List<Empleado> empleados,
-    List<EmpleadoHistorial>? historial,
-    required List<Curso> cursos,
-    required List<CargaDeHorasCRM> cargas,
-    required List<CertificacionMoodle> certificaciones,
-    required int anio,
-    int hastaMes = 12,
-    required CumplimientoService cumplimientoService,
-    bool Function(Empleado)? incluir,
-  }) {
-    // Una sola pasada reparte los registros del año por mes, en vez de
-    // recorrer todo para cada uno de los 12 meses.
-    final cargasPorMes = <int, List<CargaDeHorasCRM>>{};
-    for (final carga in cargas) {
-      if (carga.fecha.year != anio) continue;
-      cargasPorMes.putIfAbsent(carga.fecha.month, () => []).add(carga);
-    }
-    final certificacionesPorMes = <int, List<CertificacionMoodle>>{};
-    for (final certificacion in certificaciones) {
-      final fecha = certificacion.fechaFinalizacion;
-      if (fecha == null || fecha.year != anio) continue;
-      certificacionesPorMes
-          .putIfAbsent(fecha.month, () => [])
-          .add(certificacion);
-    }
-    return {
-      for (var mes = 1; mes <= hastaMes; mes++)
-        // Solo cuentan los meses que tienen registros CRM o LMS.
-        if (cargasPorMes.containsKey(mes) ||
-            certificacionesPorMes.containsKey(mes))
-          // Leandro: llama a calcularCumplimientoMensual para conservar los límites mensuales y la elegibilidad al cierre de cada mes.
-          mes: calcularCumplimientoMensual(
-            empleados: empleados,
-            historial: historial,
-            cursos: cursos,
-            cargas: cargasPorMes[mes] ?? const [],
-            certificaciones: certificacionesPorMes[mes] ?? const [],
-            anio: anio,
-            mes: mes,
-            cumplimientoService: cumplimientoService,
-            incluir: incluir,
-          ),
-    };
-  }
-
-  /// Suma los cumplimientos de varios meses por colaborador, área y equipo,
-  /// como el anual. Sirve también para acumular solo hasta un mes.
-  List<CumplimientoEmpleado> acumularMeses(
-    Iterable<List<CumplimientoEmpleado>> meses,
-  ) {
-    final acumulados = <String, CumplimientoEmpleado>{};
-
-    for (final cumplimientosMensuales in meses) {
-      for (final mensual in cumplimientosMensuales) {
-        final empleado = mensual.empleado;
-        final clave =
-            '${empleado.legajo}::${empleado.area}::'
-            '${_nombreEquipoNormalizado(empleado.equipo)}';
-        final anterior = acumulados[clave];
-        acumulados[clave] = CumplimientoEmpleado(
-          empleado: mensual.empleado,
-          horasValidas: {
-            for (final tipo in TipoCurso.values)
-              // En el anual las horas de cada mes van sin el tope mensual: un
-              // mes fuerte compensa uno flojo de la misma persona y categoría.
-              // El tope es el objetivo anual de la categoría, que aplica
-              // horasAplicablesAlObjetivo sobre los requeridos sumados. Solo
-              // suman los meses en que la categoría era requerida.
-              tipo:
-                  (anterior?.horasValidas[tipo] ?? 0) +
-                  ((mensual.horasRequeridas[tipo] ?? 0) > 0
-                      ? mensual.horasValidas[tipo] ?? 0
-                      : 0),
-          },
-          horasDeclaradas: {
-            for (final tipo in TipoCurso.values)
-              tipo:
-                  (anterior?.horasDeclaradas[tipo] ?? 0) +
-                  (mensual.horasDeclaradas[tipo] ?? 0),
-          },
-          horasRequeridas: {
-            for (final tipo in TipoCurso.values)
-              tipo:
-                  (anterior?.horasRequeridas[tipo] ?? 0) +
-                  (mensual.horasRequeridas[tipo] ?? 0),
-          },
-        );
-      }
+    final teams = <TeamOverview>[];
+    for (final members in membersByTeam.values) {
+      teams.add(_buildTeamOverview(members, resolveLeader));
     }
 
-    return acumulados.values.toList();
+    teams.sort(_compareTeamsByPriority);
+    return teams;
   }
 
-  List<EquipoGlobalViewModel> calcularEquiposGlobales(
-    List<CumplimientoEmpleado> cumplimientos, {
-    ResolverLider? liderDe,
-  }) {
-    final agrupadoPorEquipo = <String, List<CumplimientoEmpleado>>{};
-
-    for (final cumplimiento in cumplimientos) {
-      final empleado = cumplimiento.empleado;
-      final nombreEquipo = _nombreEquipoNormalizado(empleado.equipo);
-      final clave = '${empleado.area}::$nombreEquipo';
-
-      agrupadoPorEquipo.putIfAbsent(clave, () => []).add(cumplimiento);
-    }
-
-    final equipos = <EquipoGlobalViewModel>[];
-    for (final miembros in agrupadoPorEquipo.values) {
-      // Leandro: llama a _crearResumenEquipo para obtener los indicadores de cada grupo de integrantes.
-      equipos.add(_crearResumenEquipo(miembros, liderDe));
-    }
-
-    // Leandro: llama a _compararEquiposPorPrioridad para mostrar primero los equipos que requieren atención.
-    equipos.sort(_compararEquiposPorPrioridad);
-    return equipos;
-  }
-
-  DetalleEquipoGeneral? obtenerDetalleEquipo({
-    required List<CumplimientoEmpleado> cumplimientos,
+  TeamDetail? getTeamDetail({
+    required List<CumplimientoEmpleado> compliance,
     required String area,
-    required String equipo,
-    ResolverLider? liderDe,
+    required String team,
+    TeamLeaderResolver? resolveLeader,
   }) {
-    final areaBuscada = _normalizarComparacion(area);
-    final equipoBuscado = _normalizarComparacion(
-      _nombreEquipoNormalizado(equipo),
-    );
-    final miembros = cumplimientos.where((cumplimiento) {
-      final empleado = cumplimiento.empleado;
-      return _normalizarComparacion(empleado.area) == areaBuscada &&
-          _normalizarComparacion(_nombreEquipoNormalizado(empleado.equipo)) ==
-              equipoBuscado;
+    final requestedArea = normalizeTeamComparison(area);
+    final requestedTeam = normalizeTeamComparison(normalizeTeamName(team));
+    final members = compliance.where((item) {
+      final employee = item.empleado;
+      return normalizeTeamComparison(employee.area) == requestedArea &&
+          normalizeTeamComparison(normalizeTeamName(employee.equipo)) ==
+              requestedTeam;
     }).toList();
 
-    if (miembros.isEmpty) return null;
+    if (members.isEmpty) return null;
 
-    // Leandro: llama a _crearResumenEquipo antes de ordenar la tabla para conservar la misma fuente de líder que la vista global.
-    final resumen = _crearResumenEquipo(miembros, liderDe);
-    miembros.sort(
+    final overview = _buildTeamOverview(members, resolveLeader);
+    members.sort(
       (a, b) => a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
     );
 
-    return DetalleEquipoGeneral(resumen: resumen, miembros: miembros);
+    return TeamDetail(overview: overview, members: members);
   }
 
-  ResumenEquiposPeriodo calcularResumenPeriodo(
-    List<CumplimientoEmpleado> cumplimientos, {
-    int? colaboradoresAlCierre,
-    ResolverLider? liderDe,
+  TeamsPeriodSummary buildPeriodSummary(
+    List<CumplimientoEmpleado> compliance, {
+    int? uniqueEmployeeCount,
+    TeamLeaderResolver? resolveLeader,
   }) {
-    // Leandro: llama a calcularEquiposGlobales para obtener los equipos que se suman en los indicadores del período.
-    final equipos = calcularEquiposGlobales(cumplimientos, liderDe: liderDe);
-    var colaboradores = 0;
-    var horasRealizadas = 0.0;
-    var horasObjetivo = 0.0;
-    var horasNegocio = 0.0;
-    var horasBlandas = 0.0;
-    var horasLibres = 0.0;
-    var horasDictado = 0.0;
-    var enObjetivo = 0;
-    var enRiesgo = 0;
-    var criticos = 0;
+    final teams = buildTeamOverviews(compliance, resolveLeader: resolveLeader);
+    var employeeCount = 0;
+    var completedHours = 0.0;
+    var targetHours = 0.0;
+    var businessHours = 0.0;
+    var softSkillsHours = 0.0;
+    var explorationHours = 0.0;
+    var teachingHours = 0.0;
+    var onTarget = 0;
+    var atRisk = 0;
+    var critical = 0;
 
-    for (final equipo in equipos) {
-      colaboradores += equipo.cantidadIntegrantes;
-      horasRealizadas += equipo.horasRealizadas;
-      horasObjetivo += equipo.horasObjetivo;
-      horasNegocio += equipo.horasNegocio;
-      horasBlandas += equipo.horasBlandas;
-      horasLibres += equipo.horasLibres;
-      horasDictado += equipo.horasDictado;
-      switch (equipo.estado) {
-        case EstadoEquipo.enObjetivo:
-          enObjetivo++;
+    for (final team in teams) {
+      employeeCount += team.memberCount;
+      completedHours += team.completedHours;
+      targetHours += team.targetHours;
+      businessHours += team.businessHours;
+      softSkillsHours += team.softSkillsHours;
+      explorationHours += team.explorationHours;
+      teachingHours += team.teachingHours;
+      switch (team.status) {
+        case TeamStatus.onTarget:
+          onTarget++;
           break;
-        case EstadoEquipo.enRiesgo:
-          enRiesgo++;
+        case TeamStatus.atRisk:
+          atRisk++;
           break;
-        case EstadoEquipo.critico:
-          criticos++;
+        case TeamStatus.critical:
+          critical++;
           break;
       }
     }
 
-    return ResumenEquiposPeriodo(
-      equipos: equipos,
-      colaboradores: colaboradoresAlCierre ?? colaboradores,
-      horasRealizadas: horasRealizadas,
-      horasObjetivo: horasObjetivo,
-      horasNegocio: horasNegocio,
-      horasBlandas: horasBlandas,
-      horasLibres: horasLibres,
-      horasDictado: horasDictado,
-      enObjetivo: enObjetivo,
-      enRiesgo: enRiesgo,
-      criticos: criticos,
+    return TeamsPeriodSummary(
+      teams: teams,
+      employeeCount: uniqueEmployeeCount ?? employeeCount,
+      completedHours: completedHours,
+      targetHours: targetHours,
+      businessHours: businessHours,
+      softSkillsHours: softSkillsHours,
+      explorationHours: explorationHours,
+      teachingHours: teachingHours,
+      onTarget: onTarget,
+      atRisk: atRisk,
+      critical: critical,
     );
   }
 
-  EquipoGlobalViewModel _crearResumenEquipo(
-    List<CumplimientoEmpleado> miembros,
-    ResolverLider? liderDe,
+  TeamOverview _buildTeamOverview(
+    List<CumplimientoEmpleado> members,
+    TeamLeaderResolver? resolveLeader,
   ) {
-    final primerMiembro = miembros.first.empleado;
-    final nombreEquipo = _nombreEquipoNormalizado(primerMiembro.equipo);
-    // Los líderes asignados en el panel tienen prioridad. Sin asignación se
-    // muestra el Gerente de la nómina, como antes de que existieran.
-    final lideresAsignados = liderDe?.call(primerMiembro.area, nombreEquipo);
-    final horasRealizadas = miembros.fold<double>(
+    final firstEmployee = members.first.empleado;
+    final teamName = normalizeTeamName(firstEmployee.equipo);
+    // Assigned leaders take precedence over the manager from the employee roster.
+    final assignedLeaders = resolveLeader?.call(firstEmployee.area, teamName);
+    final completedHours = members.fold<double>(
       0,
-      (total, miembro) => total + miembro.totalHorasCompletadas,
+      (total, member) => total + member.totalHorasCompletadas,
     );
-    final horasObjetivo = miembros.fold<double>(
+    final targetHours = members.fold<double>(
       0,
-      (total, miembro) => total + miembro.totalHorasRequeridas,
+      (total, member) => total + member.totalHorasRequeridas,
     );
-    final porcentajeCumplimiento = horasObjetivo == 0
+    final completionPercentage = targetHours == 0
         ? 100.0
-        : (horasRealizadas / horasObjetivo) * 100;
-    final cantidadIntegrantes = miembros.length;
-    final integrantesEnObjetivo = miembros
-        .where((miembro) => miembro.cumpleObjetivo)
+        : (completedHours / targetHours) * 100;
+    final memberCount = members.length;
+    final membersOnTarget = members
+        .where((member) => member.cumpleObjetivo)
         .length;
 
-    return EquipoGlobalViewModel(
-      id: _crearTeamId(primerMiembro.area, nombreEquipo),
-      nombre: nombreEquipo,
-      area: primerMiembro.area,
-      lider: lideresAsignados != null && lideresAsignados.isNotEmpty
-          ? lideresAsignados
-          : primerMiembro.gerente.trim().isEmpty
+    return TeamOverview(
+      id: _createTeamId(firstEmployee.area, teamName),
+      name: teamName,
+      area: firstEmployee.area,
+      leader: assignedLeaders != null && assignedLeaders.isNotEmpty
+          ? assignedLeaders
+          : firstEmployee.gerente.trim().isEmpty
           ? 'Sin líder asignado'
-          : primerMiembro.gerente,
-      cantidadIntegrantes: cantidadIntegrantes,
-      integrantesEnObjetivo: integrantesEnObjetivo,
-      horasRealizadas: horasRealizadas,
-      horasObjetivo: horasObjetivo,
-      desvioHoras: horasRealizadas - horasObjetivo,
-      // Leandro: llama a _sumarHorasCategoria para separar las horas aplicables al objetivo por categoría.
-      horasNegocio: _sumarHorasCategoria(
-        miembros,
-        TipoCurso.habilidadesDeNegocio,
-      ),
-      horasBlandas: _sumarHorasCategoria(
-        miembros,
-        TipoCurso.habilidadesBlandas,
-      ),
-      horasLibres: _sumarHorasCategoria(miembros, TipoCurso.libresExploracion),
-      horasDictado: _sumarHorasCategoria(
-        miembros,
+          : firstEmployee.gerente,
+      memberCount: memberCount,
+      membersOnTarget: membersOnTarget,
+      completedHours: completedHours,
+      targetHours: targetHours,
+      hoursDeviation: completedHours - targetHours,
+      businessHours: _sumCategoryHours(members, TipoCurso.habilidadesDeNegocio),
+      softSkillsHours: _sumCategoryHours(members, TipoCurso.habilidadesBlandas),
+      explorationHours: _sumCategoryHours(members, TipoCurso.libresExploracion),
+      teachingHours: _sumCategoryHours(
+        members,
         TipoCurso.dictadoCapacitaciones,
       ),
-      promedioPorColaborador: cantidadIntegrantes == 0
+      averageHoursPerMember: memberCount == 0
           ? 0
-          : horasRealizadas / cantidadIntegrantes,
-      porcentajeCumplimiento: porcentajeCumplimiento,
-      // Leandro: llama a calcularEstadoEquipo para asignar el estado usando el avance y el cumplimiento de los integrantes.
-      estado: calcularEstadoEquipo(
-        porcentajeCumplimiento: porcentajeCumplimiento,
-        cantidadIntegrantes: cantidadIntegrantes,
-        integrantesEnObjetivo: integrantesEnObjetivo,
+          : completedHours / memberCount,
+      completionPercentage: completionPercentage,
+      status: calculateTeamStatus(
+        completionPercentage: completionPercentage,
+        memberCount: memberCount,
+        membersOnTarget: membersOnTarget,
       ),
     );
   }
 
-  EstadoEquipo calcularEstadoEquipo({
-    required double porcentajeCumplimiento,
-    required int cantidadIntegrantes,
-    required int integrantesEnObjetivo,
+  TeamStatus calculateTeamStatus({
+    required double completionPercentage,
+    required int memberCount,
+    required int membersOnTarget,
   }) {
-    final todosEnObjetivo =
-        cantidadIntegrantes > 0 && integrantesEnObjetivo == cantidadIntegrantes;
+    final allMembersOnTarget =
+        memberCount > 0 && membersOnTarget == memberCount;
 
-    if (porcentajeCumplimiento >= 100.0 && todosEnObjetivo) {
-      return EstadoEquipo.enObjetivo;
+    if (completionPercentage >= _onTargetPercentage && allMembersOnTarget) {
+      return TeamStatus.onTarget;
     }
 
-    if (porcentajeCumplimiento >= 70.0 || integrantesEnObjetivo > 0) {
-      return EstadoEquipo.enRiesgo;
+    if (completionPercentage >= _atRiskPercentage || membersOnTarget > 0) {
+      return TeamStatus.atRisk;
     }
 
-    return EstadoEquipo.critico;
+    return TeamStatus.critical;
   }
 
-  int _compararEquiposPorPrioridad(
-    EquipoGlobalViewModel a,
-    EquipoGlobalViewModel b,
-  ) {
-    final estado = _ordenEstado(a.estado).compareTo(_ordenEstado(b.estado));
-    if (estado != 0) return estado;
+  int _compareTeamsByPriority(TeamOverview a, TeamOverview b) {
+    final statusOrder = _statusPriority(
+      a.status,
+    ).compareTo(_statusPriority(b.status));
+    if (statusOrder != 0) return statusOrder;
 
-    final cumplimiento = a.porcentajeCumplimiento.compareTo(
-      b.porcentajeCumplimiento,
+    final completionOrder = a.completionPercentage.compareTo(
+      b.completionPercentage,
     );
-    if (cumplimiento != 0) return cumplimiento;
+    if (completionOrder != 0) return completionOrder;
 
-    return a.nombre.compareTo(b.nombre);
+    return a.name.compareTo(b.name);
   }
 
-  int _ordenEstado(EstadoEquipo estado) {
-    switch (estado) {
-      case EstadoEquipo.critico:
+  int _statusPriority(TeamStatus status) {
+    switch (status) {
+      case TeamStatus.critical:
         return 0;
-      case EstadoEquipo.enRiesgo:
+      case TeamStatus.atRisk:
         return 1;
-      case EstadoEquipo.enObjetivo:
+      case TeamStatus.onTarget:
         return 2;
     }
   }
 
-  double _sumarHorasCategoria(
-    List<CumplimientoEmpleado> miembros,
-    TipoCurso tipo,
+  double _sumCategoryHours(
+    List<CumplimientoEmpleado> members,
+    TipoCurso category,
   ) {
-    return miembros.fold<double>(
+    return members.fold<double>(
       0,
-      (total, miembro) => total + miembro.horasAplicablesAlObjetivo(tipo),
+      (total, member) => total + member.horasAplicablesAlObjetivo(category),
     );
   }
 
-  /// Si el colaborador es del área y equipo pedidos, con la misma comparación
-  /// que el detalle de área y de equipo. `null` no filtra por ese campo.
-  bool perteneceA(Empleado empleado, {String? area, String? equipo}) {
-    if (area != null &&
-        _normalizarComparacion(empleado.area) != _normalizarComparacion(area)) {
-      return false;
-    }
-    return equipo == null ||
-        _normalizarComparacion(_nombreEquipoNormalizado(empleado.equipo)) ==
-            _normalizarComparacion(_nombreEquipoNormalizado(equipo));
+  String _createTeamId(String area, String team) {
+    return '${_normalizeId(area)}-${_normalizeId(team)}';
   }
 
-  String _nombreEquipoNormalizado(String equipo) {
-    return equipo.trim().isEmpty ? 'Sin equipo asignado' : equipo.trim();
-  }
-
-  String _crearTeamId(String area, String equipo) {
-    return '${_normalizarId(area)}-${_normalizarId(equipo)}';
-  }
-
-  String _normalizarComparacion(String valor) => valor.trim().toLowerCase();
-
-  String _normalizarId(String valor) {
-    return valor
+  String _normalizeId(String value) {
+    return value
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')

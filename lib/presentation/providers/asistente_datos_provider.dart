@@ -461,7 +461,7 @@ Map<String, Object?> _global(ResumenEquiposPeriodo r) => {
   'en_riesgo': r.enRiesgo,
   'criticos': r.criticos,
 };
-Map<String, Object?> _equipo(EquipoGlobalViewModel e) => {
+Map<String, Object?> _equipo(TeamOverview e) => {
   'equipo': e.nombre,
   'area': e.area,
   'integrantes': e.cantidadIntegrantes,
@@ -535,11 +535,11 @@ Future<ProviderContainer> _snapshot(
       filtroMesPeriodoProvider.overrideWith((_) => periodo.mes),
       filtroAnioPeriodoProvider.overrideWith((_) => periodo.anio),
       cargasDashboardProvider.overrideWith(
-        (_) async => equiposService.filtrarCargasPorPeriodo(
-          cargas: cargas,
-          anio: periodo.anio,
-          mes: periodo.mes,
-          esAnual: periodo.anual,
+        (_) async => equiposService.periods.filterTimeEntriesByPeriod(
+          timeEntries: cargas,
+          year: periodo.anio,
+          month: periodo.mes,
+          isAnnual: periodo.anual,
         ),
       ),
     ],

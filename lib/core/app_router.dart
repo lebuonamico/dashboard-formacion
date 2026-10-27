@@ -117,13 +117,16 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
           pageBuilder: (context, state) {
             final area = state.pathParameters['area']!;
             final equipo = state.pathParameters['equipo']!;
-            return _conFundido(state, EquipoScreen(area: area, equipo: equipo));
+            return _conFundido(
+              state,
+              TeamDetailScreen(area: area, team: equipo),
+            );
           },
         ),
         GoRoute(
           path: '/equipos',
           pageBuilder: (context, state) =>
-              _conFundido(state, const EquiposScreen()),
+              _conFundido(state, const TeamsScreen()),
         ),
         GoRoute(
           path: '/admin',

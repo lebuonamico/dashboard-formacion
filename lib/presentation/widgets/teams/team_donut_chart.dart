@@ -2,16 +2,15 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/shared/donut_chart.dart';
 import 'package:flutter/material.dart';
 
-class EquiposDonutSlice {
+class TeamDonutSlice {
   final String label;
   final double value;
   final Color color;
 
-  /// Fondo de la fila de la leyenda; por defecto el de la página.
   final Color? backgroundColor;
   final String help;
 
-  const EquiposDonutSlice({
+  const TeamDonutSlice({
     required this.label,
     required this.value,
     required this.color,
@@ -20,13 +19,13 @@ class EquiposDonutSlice {
   });
 }
 
-class EquiposDonutChart extends StatelessWidget {
-  final List<EquiposDonutSlice> slices;
+class TeamDonutChart extends StatelessWidget {
+  final List<TeamDonutSlice> slices;
   final String centerValue;
   final String centerLabel;
   final String valueSuffix;
 
-  const EquiposDonutChart({
+  const TeamDonutChart({
     super.key,
     required this.slices,
     required this.centerValue,
@@ -40,7 +39,6 @@ class EquiposDonutChart extends StatelessWidget {
 
     return Row(
       children: [
-        // Leandro: llama a DonutChart para representar los segmentos del resumen.
         DonutChart(
           segments: slices
               .map(
@@ -59,7 +57,6 @@ class EquiposDonutChart extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final slice in slices) ...[
-                // Leandro: llama a _DonutLegendItem para mostrar el valor y porcentaje de cada segmento.
                 _DonutLegendItem(
                   slice: slice,
                   total: total,
@@ -76,7 +73,7 @@ class EquiposDonutChart extends StatelessWidget {
 }
 
 class _DonutLegendItem extends StatelessWidget {
-  final EquiposDonutSlice slice;
+  final TeamDonutSlice slice;
   final double total;
   final String valueSuffix;
 

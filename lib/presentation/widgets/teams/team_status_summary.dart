@@ -2,88 +2,85 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
 import 'package:flutter/material.dart';
 
-class EquiposStatusSummary extends StatelessWidget {
+class TeamsStatusSummary extends StatelessWidget {
   final int total;
-  final int enObjetivo;
-  final int enRiesgo;
-  final int criticos;
+  final int onTarget;
+  final int atRisk;
+  final int critical;
 
-  const EquiposStatusSummary({
+  const TeamsStatusSummary({
     super.key,
     required this.total,
-    required this.enObjetivo,
-    required this.enRiesgo,
-    required this.criticos,
+    required this.onTarget,
+    required this.atRisk,
+    required this.critical,
   });
 
   @override
   Widget build(BuildContext context) {
-    final requierenAtencion = enRiesgo + criticos;
+    final teamsRequiringAttention = atRisk + critical;
+
+    final heading = _StatusHeading(
+      teamsRequiringAttention: teamsRequiringAttention,
+    );
+
+    final chart = TeamDonutChart(
+      centerValue: '$total',
+      centerLabel: 'EQUIPOS',
+      slices: [
+        TeamDonutSlice(
+          label: 'En objetivo',
+          value: onTarget.toDouble(),
+          color: context.colores.exito.texto,
+          backgroundColor: context.colores.exito.fondo,
+          help:
+              'Equipos con 100% o más de horas y todos sus integrantes cumpliendo el objetivo por categoría.',
+        ),
+        TeamDonutSlice(
+          label: 'En riesgo',
+          value: atRisk.toDouble(),
+          color: context.colores.advertencia.texto,
+          backgroundColor: context.colores.advertencia.fondo,
+          help:
+              'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
+        ),
+        TeamDonutSlice(
+          label: 'Críticos',
+          value: critical.toDouble(),
+          color: context.colores.peligro.texto,
+          backgroundColor: context.colores.peligro.fondo,
+          help:
+              'Equipos con bajo avance y sin integrantes cumpliendo el objetivo individual.',
+        ),
+      ],
+    );
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: context.panel(),
-      child: Builder(
-        builder: (context) {
-          // Leandro: llama a _StatusHeading para indicar cuántos equipos requieren atención.
-          final heading = _StatusHeading(requierenAtencion: requierenAtencion);
-          // Leandro: llama a EquiposDonutChart para mostrar la distribución de estados de los equipos.
-          final chart = EquiposDonutChart(
-            centerValue: '$total',
-            centerLabel: 'EQUIPOS',
-            slices: [
-              EquiposDonutSlice(
-                label: 'En objetivo',
-                value: enObjetivo.toDouble(),
-                color: context.colores.exito.texto,
-                backgroundColor: context.colores.exito.fondo,
-                help:
-                    'Equipos con 100% o más de horas y todos sus integrantes cumpliendo el objetivo por categoría.',
-              ),
-              EquiposDonutSlice(
-                label: 'En riesgo',
-                value: enRiesgo.toDouble(),
-                color: context.colores.advertencia.texto,
-                backgroundColor: context.colores.advertencia.fondo,
-                help:
-                    'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
-              ),
-              EquiposDonutSlice(
-                label: 'Críticos',
-                value: criticos.toDouble(),
-                color: context.colores.peligro.texto,
-                backgroundColor: context.colores.peligro.fondo,
-                help:
-                    'Equipos con bajo avance y sin integrantes cumpliendo el objetivo individual.',
-              ),
-            ],
-          );
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 44, child: heading),
-              const SizedBox(height: 12),
-              Flexible(
-                fit: FlexFit.loose,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 166),
-                  child: Center(child: chart),
-                ),
-              ),
-            ],
-          );
-        },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 44, child: heading),
+          const SizedBox(height: 12),
+          Flexible(
+            fit: FlexFit.loose,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 166),
+              child: Center(child: chart),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _StatusHeading extends StatelessWidget {
-  final int requierenAtencion;
+  final int teamsRequiringAttention;
 
-  const _StatusHeading({required this.requierenAtencion});
+  const _StatusHeading({required this.teamsRequiringAttention});
 
   @override
   Widget build(BuildContext context) {
@@ -115,9 +112,9 @@ class _StatusHeading extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          requierenAtencion == 0
+          teamsRequiringAttention == 0
               ? 'No hay equipos que requieran atención.'
-              : '$requierenAtencion ${requierenAtencion == 1 ? 'equipo requiere' : 'equipos requieren'} atención.',
+              : '$teamsRequiringAttention ${teamsRequiringAttention == 1 ? 'equipo requiere' : 'equipos requieren'} atención.',
           style: TextStyle(
             fontSize: 13,
             color: context.colorScheme.onSurfaceVariant,
