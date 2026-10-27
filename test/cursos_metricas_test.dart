@@ -16,7 +16,7 @@ Curso _curso(
 }) => Curso(
   id: nombre,
   nombre: nombre,
-  tipo: tipo,
+  clasificacion: tipo,
   areaCurso: '',
   instructorLegajo: '',
   cargaHorariaHs: carga,

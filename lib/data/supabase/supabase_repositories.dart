@@ -241,7 +241,7 @@ class SupabaseCursosRepository
   final _Table _table;
   SupabaseCursosRepository(SupabaseClient client, SupabaseTableMapping mapping)
     : _table = _Table(client, mapping) {
-    mapping.requireFields(['id', 'nombre', 'tipo', 'cargaHorariaHs']);
+    mapping.requireFields(['id', 'nombre', 'clasificacion', 'cargaHorariaHs']);
   }
   @override
   Future<List<Curso>> getCursos({String? id, String? nombre}) async =>
@@ -262,7 +262,7 @@ class SupabaseCursosRepository
               (c) => {
                 'id': c.id,
                 'nombre': c.nombre.trim(),
-                'tipo': c.tipo.name,
+                'clasificacion': c.clasificacion.name,
                 'cargaHorariaHs': c.cargaHorariaHs,
                 'activo': c.activo,
               },
@@ -279,10 +279,24 @@ class SupabaseCursosRepository
         'La foto de Cursos está vacía o tiene claves inválidas.',
       );
     }
-    final presentes = items.map((item) => item.id).toSet();
     final anteriores = await getCursos();
+    // Un curso que ya existe con el mismo nombre se actualiza con su ID
+    // actual: el nombre es único en la base y horas y finalizaciones
+    // apuntan a ese ID. Los que no existen se insertan con el ID del archivo.
+    final idPorNombre = {
+      for (final curso in anteriores)
+        normalizarNombreCurso(curso.nombre): curso.id,
+    };
+    final vigentes = [
+      for (final item in items)
+        item.copyWith(
+          id: idPorNombre[normalizarNombreCurso(item.nombre)],
+          activo: true,
+        ),
+    ];
+    final presentes = vigentes.map((item) => item.id).toSet();
     final cambios = [
-      for (final item in items) item.copyWith(activo: true),
+      ...vigentes,
       for (final item in anteriores)
         if (item.activo && !presentes.contains(item.id))
           item.copyWith(activo: false),

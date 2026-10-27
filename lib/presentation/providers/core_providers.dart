@@ -1,4 +1,3 @@
-import 'package:app_finnegans/domain/repositorios/impresion_repository.dart';
 import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart';
 import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
@@ -14,7 +13,6 @@ import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart
 import 'package:app_finnegans/domain/repositorios/usuarios_autorizados_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/data/printing_impresion_repository.dart';
 import 'package:app_finnegans/data/repositorios_separados.dart';
 import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.dart';
 import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_repository.dart';
@@ -49,7 +47,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
       columns: {
         'id': 'id_curso',
         'nombre': 'nombre',
-        'tipo': 'tipo',
+        'clasificacion': 'clasificacion',
         'cargaHorariaHs': 'carga_horaria',
         'activo': 'activo',
       },
@@ -171,9 +169,4 @@ final estructuraRepositoryProvider = Provider<EstructuraRepository?>(
   (ref) => SupabaseConfig.enabled
       ? SupabaseEstructuraRepository(ref.watch(supabaseClientProvider))
       : null,
-);
-
-/// Diálogo de impresión del navegador o del sistema. Igual en los dos modos.
-final impresionRepositoryProvider = Provider<ImpresionRepository>(
-  (ref) => const PrintingImpresionRepository(),
 );

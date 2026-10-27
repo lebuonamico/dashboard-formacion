@@ -42,7 +42,7 @@ Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
           Curso(
             id: 'C1',
             nombre: 'Oratoria',
-            tipo: TipoCurso.habilidadesBlandas,
+            clasificacion: TipoCurso.habilidadesBlandas,
             areaCurso: '',
             instructorLegajo: '',
             cargaHorariaHs: 4,

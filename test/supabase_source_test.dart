@@ -35,7 +35,7 @@ void _seedLocalData() {
       {
         'id': 'LOCAL-COURSE',
         'nombre': 'Curso local ficticio',
-        'tipo': 'habilidadesDeNegocio',
+        'clasificacion': 'habilidadesDeNegocio',
         'areaCurso': 'Área local',
         'instructorLegajo': 'LOCAL-ONLY',
         'cargaHorariaHs': 2,

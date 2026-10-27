@@ -548,7 +548,7 @@ class MetricasScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${c.tipo.label} · Área: ${c.areaCurso}',
+                                      '${c.clasificacion.label} · Área: ${c.areaCurso}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: context

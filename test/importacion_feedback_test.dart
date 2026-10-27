@@ -229,7 +229,7 @@ FilePickerResult _csv(String nombre, String contenido) {
 }
 
 const _catalogo =
-    'idCurso,NombreCurso,TipoCurso,CargaHoraria\r\n'
+    'idCurso,NombreCurso,Clasificacion,CargaHoraria\r\n'
     '107,Curso de prueba,Habilidades de negocio,4\r\n';
 
 bool _diagnosticoListTilePreexistente(FlutterErrorDetails details) {

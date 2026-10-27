@@ -24,7 +24,7 @@ void main() {
   Curso curso(String nombre, TipoCurso tipo, double carga) => Curso(
     id: nombre,
     nombre: nombre,
-    tipo: tipo,
+    clasificacion: tipo,
     areaCurso: 'General',
     instructorLegajo: '',
     cargaHorariaHs: carga,
@@ -89,6 +89,35 @@ void main() {
       ],
     );
 
+    expect(resultado.horasValidas[TipoCurso.libresExploracion], 1);
+    expect(resultado.horasValidas[TipoCurso.dictadoCapacitaciones], 2);
+  });
+
+  test('reconoce las Clasificaciones tal como vienen del CRM', () {
+    expect(
+      TipoCurso.desdeTexto('Habilidades de Negocio y Herramientas'),
+      TipoCurso.habilidadesDeNegocio,
+    );
+    expect(
+      TipoCurso.desdeTexto('Habilidades Blandas'),
+      TipoCurso.habilidadesBlandas,
+    );
+    expect(
+      TipoCurso.desdeTexto('Exploracion / Profundizacion'),
+      TipoCurso.libresExploracion,
+    );
+    expect(
+      TipoCurso.desdeTexto('Horas de Dictado'),
+      TipoCurso.dictadoCapacitaciones,
+    );
+    expect(TipoCurso.desdeTexto('Otra cosa'), isNull);
+
+    final resultado = calcular(
+      cargas: [
+        carga('A', 1, clasif: 'Exploracion / Profundizacion'),
+        carga('B', 2, clasif: 'Horas de Dictado'),
+      ],
+    );
     expect(resultado.horasValidas[TipoCurso.libresExploracion], 1);
     expect(resultado.horasValidas[TipoCurso.dictadoCapacitaciones], 2);
   });

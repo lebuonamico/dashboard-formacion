@@ -72,7 +72,7 @@ FilterRow cursoFilterRow(Curso c, String instructor) => _LabeledFilterRow(
     cursoFilterDimension: c.id.trim(),
     'Área': c.areaCurso,
     'Instructor': instructor,
-    'Tipo': c.tipoLms?.label ?? '',
+    'Tipo': c.clasificacionLms?.label ?? '',
   },
   {cursoFilterDimension: _cursoLabel(c.nombre, c.id)},
 );
@@ -122,7 +122,7 @@ FilterRow certificacionFilterRow(
       cursoFilterDimension: id,
       'Área': vm.empleado?.area ?? '',
       'Equipo': vm.empleado?.equipo ?? '',
-      'Tipo': vm.curso?.tipoLms?.label ?? '',
+      'Tipo': vm.curso?.clasificacionLms?.label ?? '',
       'Estado': vm.certificacion.finalizoCurso ? 'Finalizado' : 'Pendiente',
     },
     {

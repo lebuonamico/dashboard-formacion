@@ -419,11 +419,11 @@ class AsistenteContextoService {
         )
         .firstOrNull;
     if (categoria != null) {
-      candidatos = candidatos.where((c) => c.tipo == categoria).toList();
+      candidatos = candidatos.where((c) => c.clasificacion == categoria).toList();
     }
     int puntaje(Curso c) {
-      final texto = normalizar('${c.nombre} ${c.areaCurso} ${c.tipo.label}');
-      return (pendientes.contains(c.tipo) ? 5 : 0) +
+      final texto = normalizar('${c.nombre} ${c.areaCurso} ${c.clasificacion.label}');
+      return (pendientes.contains(c.clasificacion) ? 5 : 0) +
           palabras.where(texto.contains).length * 2;
     }
 
@@ -436,8 +436,8 @@ class AsistenteContextoService {
             .map(
               (c) => <String, Object?>{
                 'curso': c.nombre,
-                'categoria': c.tipo.label,
-                'rol': c.tipo == TipoCurso.dictadoCapacitaciones
+                'categoria': c.clasificacion.label,
+                'rol': c.clasificacion == TipoCurso.dictadoCapacitaciones
                     ? 'instructor'
                     : 'participante',
                 'horas': c.cargaHorariaHs,
