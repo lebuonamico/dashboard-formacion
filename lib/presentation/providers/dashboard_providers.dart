@@ -16,17 +16,17 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
   final mes = ref.watch(filtroMesPeriodoProvider);
   final anio = ref.watch(filtroAnioPeriodoProvider);
 
-  final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
-  final legajos = await ref.watch(legajosVisiblesProvider.future);
   final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
   final hasta = alcance == AlcancePeriodo.anual
       ? DateTime(anio + 1)
       : DateTime(anio, mes + 1);
-  final cargas = await repo.getCargasDeHoras(desde: desde, hasta: hasta);
-  // Mismo alcance que el resto de las pantallas.
-  if (legajos == null) return cargas;
+  // Las horas ya están en memoria (con el alcance del usuario): cambiar el
+  // período filtra, no vuelve a consultar la base.
+  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
   return cargas
-      .where((carga) => legajos.contains(carga.empleadoLegajo))
+      .where(
+        (carga) => !carga.fecha.isBefore(desde) && carga.fecha.isBefore(hasta),
+      )
       .toList();
 });
 

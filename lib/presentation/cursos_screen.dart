@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
@@ -37,7 +38,10 @@ class CursosScreen extends ConsumerWidget {
                     child: cursosAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(child: Text('Error: $err')),
+                      error: (err, _) => ErrorDataState(
+                        title: 'No pudimos cargar los cursos',
+                        error: err,
+                      ),
                       data: (cursosList) => FadeIn(
                         child: (() {
                           if (cursosList.isEmpty) {

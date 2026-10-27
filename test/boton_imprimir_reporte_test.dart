@@ -68,11 +68,30 @@ void main() {
     expect(find.text('Imprimir reporte'), findsOne);
   });
 
-  testWidgets('Sin datos en el período queda deshabilitado', (tester) async {
+  testWidgets('Sin datos en el período avisa que no hay datos cargados', (
+    tester,
+  ) async {
     await _montar(tester, reporte: () async => null, imprimir: _sinImprimir);
 
-    expect(_boton(tester).onPressed, isNull);
-    expect(_ayuda(tester), 'No hay datos para reportar en este período');
+    expect(_ayuda(tester), sinDatosParaReporte);
+    await tester.tap(find.text('Imprimir reporte'));
+    await tester.pump();
+
+    expect(find.text('No hay datos cargados para este período.'), findsOne);
+  });
+
+  testWidgets('Si no se pudieron cargar los datos lo explica', (tester) async {
+    await _montar(
+      tester,
+      reporte: () async => throw StateError('detalle técnico'),
+      imprimir: _sinImprimir,
+    );
+
+    await tester.tap(find.text('Imprimir reporte'));
+    await tester.pump();
+
+    expect(find.textContaining('No se pudieron cargar los datos.'), findsOne);
+    expect(find.textContaining('detalle técnico'), findsNothing);
   });
 
   testWidgets('Mientras cargan los datos queda deshabilitado', (tester) async {

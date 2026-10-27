@@ -54,10 +54,11 @@ class PeriodoFilterPanel extends ConsumerWidget {
             selectedForegroundColor: context.colorScheme.onPrimary,
             unselectedForegroundColor: context.colorScheme.onSurface,
           );
+          // El anual abarca todo el año: el mes solo se elige en mensual.
+          final esMensual = alcance == AlcancePeriodo.mensual;
           // Leandro: llama a _MonthField para seleccionar el mes del período.
           final monthField = _MonthField(
             selectedMonth: mes,
-            enabled: alcance == AlcancePeriodo.mensual,
             onChanged: (value) {
               if (value == null) return;
               ref.read(filtroMesPeriodoProvider.notifier).state = value;
@@ -79,8 +80,10 @@ class PeriodoFilterPanel extends ConsumerWidget {
                 title,
                 const SizedBox(height: 12),
                 scopeControl,
-                const SizedBox(height: 12),
-                monthField,
+                if (esMensual) ...[
+                  const SizedBox(height: 12),
+                  monthField,
+                ],
                 const SizedBox(height: 12),
                 yearField,
               ],
@@ -92,8 +95,10 @@ class PeriodoFilterPanel extends ConsumerWidget {
               Expanded(child: title),
               const SizedBox(width: 16),
               scopeControl,
-              const SizedBox(width: 12),
-              SizedBox(width: 170, child: monthField),
+              if (esMensual) ...[
+                const SizedBox(width: 12),
+                SizedBox(width: 170, child: monthField),
+              ],
               const SizedBox(width: 12),
               SizedBox(width: 135, child: yearField),
             ],
@@ -145,14 +150,9 @@ class _PeriodTitle extends StatelessWidget {
 
 class _MonthField extends StatelessWidget {
   final int selectedMonth;
-  final bool enabled;
   final ValueChanged<int?> onChanged;
 
-  const _MonthField({
-    required this.selectedMonth,
-    required this.enabled,
-    required this.onChanged,
-  });
+  const _MonthField({required this.selectedMonth, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +168,7 @@ class _MonthField extends StatelessWidget {
             ),
           )
           .toList(),
-      onChanged: enabled ? onChanged : null,
+      onChanged: onChanged,
     );
   }
 }

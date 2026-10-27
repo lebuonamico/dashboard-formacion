@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +47,10 @@ class AreasScreen extends ConsumerWidget {
                   color: context.colorScheme.primary,
                 ),
               ),
-              error: (error, _) => _ErrorState(message: '$error'),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar las áreas',
+                error: error,
+              ),
               data: (resumen) => FadeIn(
                 child: _AreasContent(
                   resumen: resumen,
@@ -185,7 +189,10 @@ class _AreasContent extends ConsumerWidget {
                 color: context.colorScheme.primary,
               ),
             ),
-            error: (error, _) => _ErrorState(message: '$error'),
+            error: (error, _) => ErrorDataState(
+              title: 'No pudimos cargar las áreas',
+              error: error,
+            ),
             data: (areasFiltradas) => AreasResults(
               key: ValueKey(
                 '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
@@ -231,26 +238,6 @@ class _ChartsRow extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          'No pudimos cargar las áreas.\n$message',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.colorScheme.error),
-        ),
-      ),
     );
   }
 }

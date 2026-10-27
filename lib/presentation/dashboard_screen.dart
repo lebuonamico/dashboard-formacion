@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
@@ -53,7 +54,10 @@ class DashboardScreen extends ConsumerWidget {
                   hayDatosAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (error, _) => Text('Error: $error'),
+                    error: (error, _) => ErrorDataState(
+                      title: 'No pudimos cargar el tablero',
+                      error: error,
+                    ),
                     data: (hayDatos) => FadeIn(
                       child: (() {
                         if (!hayDatos) {

@@ -1,12 +1,15 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/reporte_formacion.dart';
 import 'package:app_finnegans/presentation/providers/reportes_providers.dart';
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
+const sinDatosParaReporte = 'No hay datos cargados para este período.';
+
 /// Botón compacto que imprime el reporte de la pantalla. Queda deshabilitado
-/// mientras [reporte] carga o si el período no tiene nada para reportar.
+/// mientras [reporte] carga; sin datos o con error avisa al tocarlo.
 class BotonImprimirReporte extends ConsumerStatefulWidget {
   final ProviderListenable<AsyncValue<ReporteFormacion?>> reporte;
 
@@ -34,16 +37,20 @@ class _BotonImprimirReporteState extends ConsumerState<BotonImprimirReporte> {
     }
   }
 
+  void _avisar(String mensaje) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(mensaje)));
+
   @override
   Widget build(BuildContext context) {
     final reporteAsync = ref.watch(widget.reporte);
     // Al cambiar el período queda el valor anterior mientras recarga: no se
     // imprime hasta tener el del período elegido.
-    final reporte = reporteAsync.isLoading ? null : reporteAsync.value;
+    final cargando = reporteAsync.isLoading;
     final ayuda = switch (reporteAsync) {
       AsyncValue(isLoading: true) => 'Cargando datos…',
       AsyncValue(hasError: true) => 'No se pudieron cargar los datos',
-      AsyncValue(value: null) => 'No hay datos para reportar en este período',
+      AsyncValue(value: null) => sinDatosParaReporte,
       _ => 'Genera un PDF con los datos de esta pantalla',
     };
     final cs = context.colorScheme;
@@ -51,9 +58,18 @@ class _BotonImprimirReporteState extends ConsumerState<BotonImprimirReporte> {
     return Tooltip(
       message: ayuda,
       child: OutlinedButton.icon(
-        onPressed: _generando || reporte == null
+        // Sin datos o con error sigue habilitado para explicar por qué no
+        // hay reporte, en vez de quedar mudo.
+        onPressed: _generando || cargando
             ? null
-            : () => _imprimir(reporte),
+            : () => switch (reporteAsync) {
+                AsyncValue(:final error?) => _avisar(
+                  'No se pudieron cargar los datos. '
+                  '${mensajeErrorCarga(error)}',
+                ),
+                AsyncValue(value: final reporte?) => _imprimir(reporte),
+                _ => _avisar(sinDatosParaReporte),
+              },
         style: OutlinedButton.styleFrom(
           visualDensity: VisualDensity.compact,
           padding: const EdgeInsets.symmetric(horizontal: 10),

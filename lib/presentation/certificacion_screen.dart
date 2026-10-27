@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -37,10 +38,9 @@ class CertificacionScreen extends ConsumerWidget {
               padding: paddingPantalla,
               child: completasAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Text(
-                    'No se pudieron cargar las certificaciones LMS: $error',
-                  ),
+                error: (error, _) => ErrorDataState(
+                  title: 'No pudimos cargar las certificaciones LMS',
+                  error: error,
                 ),
                 data: (todas) => FadeIn(
                   child: (() {
@@ -132,6 +132,7 @@ class CertificacionScreen extends ConsumerWidget {
         title: 'Finalizadas',
         value: '$finalizadas',
         detail: '${porcentajeFinalizadas.toStringAsFixed(0)}% del total',
+        help: 'Certificaciones con el curso finalizado en el LMS.',
         icon: Icons.task_alt,
         color: colores.exito.texto,
       ),
@@ -139,6 +140,9 @@ class CertificacionScreen extends ConsumerWidget {
         title: 'Pendientes',
         value: '$pendientes',
         detail: 'sin finalización en el LMS',
+        help:
+            'Certificaciones importadas que todavía no tienen el curso '
+            'finalizado en el LMS. No acreditan horas.',
         icon: Icons.pending_actions_outlined,
         color: colores.advertencia.texto,
       ),
