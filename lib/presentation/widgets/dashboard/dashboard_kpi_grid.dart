@@ -102,6 +102,7 @@ class DashboardKpiGrid extends StatelessWidget {
           footer: '${equipos.length} equipos',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
+          ayuda: '$ayudaNominaElegible Abajo, cuántas áreas y equipos abarcan.',
         ),
         DashboardKpiCard(
           title: 'COLABORADORES CAPACITÁNDOSE',
@@ -114,6 +115,10 @@ class DashboardKpiGrid extends StatelessWidget {
               '${totalEmpleados - empleadosTomaronCurso} sin cursos tomados',
           icon: Icons.school_outlined,
           color: context.colores.exito.texto,
+          ayuda:
+              'Colaboradores elegibles con al menos una carga de horas en el '
+              'CRM en el período, sin contar las horas que dictaron. No indica '
+              'si cumplieron el objetivo.',
         ),
         // Solo las horas que suman al objetivo de cumplimiento del período.
         DashboardKpiCard(
@@ -128,6 +133,7 @@ class DashboardKpiGrid extends StatelessWidget {
               '${(metaPeriodo - horasRealizadas).clamp(0, double.infinity).toStringAsFixed(1)} h para la meta',
           icon: Icons.schedule_outlined,
           color: context.colorScheme.primary,
+          ayuda: esAnual ? ayudaHorasValidasAnual : ayudaHorasValidasMes,
         ),
         cumplimientoKpiCard(
           context,

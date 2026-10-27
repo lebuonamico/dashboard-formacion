@@ -150,6 +150,7 @@ class _EquipoContent extends ConsumerWidget {
               footer: '',
               icon: Icons.people_outline,
               color: context.colorScheme.primary,
+              ayuda: ayudaIntegrantes('del equipo'),
             ),
             horasValidasKpiCard(
               context,
@@ -170,6 +171,7 @@ class _EquipoContent extends ConsumerWidget {
               footer: '',
               icon: Icons.flag_outlined,
               color: context.colores.acentoVioleta,
+              ayuda: ayudaObjetivo('el equipo'),
             ),
             // El color sigue el estado del equipo, que también mira cuántos
             // integrantes cumplieron.

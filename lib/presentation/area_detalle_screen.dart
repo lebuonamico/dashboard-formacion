@@ -147,6 +147,7 @@ class _AreaContent extends ConsumerWidget {
               footer: '',
               icon: Icons.people_outline,
               color: context.colorScheme.primary,
+              ayuda: ayudaIntegrantes('del área'),
             ),
             horasValidasKpiCard(
               context,
@@ -167,6 +168,7 @@ class _AreaContent extends ConsumerWidget {
               footer: '',
               icon: Icons.flag_outlined,
               color: context.colores.acentoVioleta,
+              ayuda: ayudaObjetivo('el área'),
             ),
             cumplimientoKpiCard(
               context,

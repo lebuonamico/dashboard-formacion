@@ -132,6 +132,7 @@ class CertificacionScreen extends ConsumerWidget {
         title: 'Finalizadas',
         value: '$finalizadas',
         detail: '${porcentajeFinalizadas.toStringAsFixed(0)}% del total',
+        help: 'Certificaciones con el curso finalizado en el LMS.',
         icon: Icons.task_alt,
         color: colores.exito.texto,
       ),
@@ -139,6 +140,9 @@ class CertificacionScreen extends ConsumerWidget {
         title: 'Pendientes',
         value: '$pendientes',
         detail: 'sin finalización en el LMS',
+        help:
+            'Certificaciones importadas que todavía no tienen el curso '
+            'finalizado en el LMS. No acreditan horas.',
         icon: Icons.pending_actions_outlined,
         color: colores.advertencia.texto,
       ),

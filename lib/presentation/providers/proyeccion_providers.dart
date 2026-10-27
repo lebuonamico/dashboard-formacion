@@ -54,27 +54,17 @@ final cumplimientoPorMesProvider =
           : alcanceUsuario.incluyeEmpleado;
       final equiposService = ref.read(equiposServiceProvider);
 
-      return {
-        for (var mes = 1; mes <= mesCorte; mes++)
-          if (equiposService.tieneDatosEnPeriodo(
-            cargas: cargas,
-            certificaciones: certificaciones,
-            anio: anio,
-            mes: mes,
-            esAnual: false,
-          ))
-            mes: equiposService.calcularCumplimientoMensual(
-              empleados: empleados,
-              historial: historial,
-              cursos: cursos,
-              cargas: cargas,
-              certificaciones: certificaciones,
-              anio: anio,
-              mes: mes,
-              cumplimientoService: cumplimientoService,
-              incluir: incluir,
-            ),
-      };
+      return equiposService.calcularCumplimientoPorMes(
+        empleados: empleados,
+        historial: historial,
+        cursos: cursos,
+        cargas: cargas,
+        certificaciones: certificaciones,
+        anio: anio,
+        hastaMes: mesCorte,
+        cumplimientoService: cumplimientoService,
+        incluir: incluir,
+      );
     });
 
 /// Cuánto cambió el cumplimiento de una sección contra el mes anterior.
@@ -211,10 +201,10 @@ final proyeccionEmpleadoProvider =
 /// Proyección de una sección: `(area: null, equipo: null)` es toda la nómina
 /// visible; con área, solo esa área; con área y equipo, solo ese equipo.
 final proyeccionAnualProvider =
-    FutureProvider.family<
-      ProyeccionAnual?,
-      ({String? area, String? equipo})
-    >((ref, seccion) async {
+    FutureProvider.family<ProyeccionAnual?, ({String? area, String? equipo})>((
+      ref,
+      seccion,
+    ) async {
       final mesCorte = await ref.watch(mesCorteProyeccionAnualProvider.future);
       if (mesCorte == null) return null;
       final porMes = await ref.watch(cumplimientoPorMesProvider.future);
