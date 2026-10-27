@@ -124,7 +124,7 @@ class _EstructuraFake implements EstructuraRepository {
 final _curso = Curso(
   id: '1',
   nombre: 'Negociación',
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: '',
   instructorLegajo: '',
   cargaHorariaHs: 4,

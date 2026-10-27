@@ -51,6 +51,9 @@ class EquiposKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
+          ayuda:
+              'Equipos con al menos un colaborador elegible en el período '
+              'elegido.',
         ),
         DashboardKpiCard(
           title: 'COLABORADORES',
@@ -61,6 +64,7 @@ class EquiposKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.people_outline,
           color: context.colores.acentoCian,
+          ayuda: ayudaNominaElegible,
         ),
         horasValidasKpiCard(
           context,

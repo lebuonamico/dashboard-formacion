@@ -47,7 +47,7 @@ final _empleado = Empleado(
 final _curso = Curso(
   id: '1',
   nombre: 'Negociación',
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: '',
   instructorLegajo: '',
   cargaHorariaHs: 4,

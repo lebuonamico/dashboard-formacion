@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +13,11 @@ class DashboardMonthlyHours extends StatelessWidget {
   Widget build(BuildContext context) {
     return evolucionAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text('Error: $error'),
+      error: (error, _) => ErrorDataState(
+        title: 'No pudimos cargar esta sección',
+        error: error,
+        compact: true,
+      ),
       data: (meses) {
         if (meses.isEmpty) return const SizedBox.shrink();
 
@@ -41,7 +46,10 @@ class _MonthlyHoursSummary {
   ) {
     final points = [
       for (final item in meses)
-        _MonthlyHoursPoint(label: _monthLabel(item.mes.month), hours: item.horas),
+        _MonthlyHoursPoint(
+          label: _monthLabel(item.mes.month),
+          hours: item.horas,
+        ),
     ];
 
     return _MonthlyHoursSummary(points: points, target: 8);

@@ -64,8 +64,8 @@ class CumplimientoService {
         final cursoNormalizado = normalizarNombreCurso(carga.cursoNombre);
         final curso = cursosMap[cursoNormalizado];
         if (curso != null) {
-          horasDeclaradas[curso.tipo] =
-              (horasDeclaradas[curso.tipo] ?? 0) + carga.horasTotales;
+          horasDeclaradas[curso.clasificacion] =
+              (horasDeclaradas[curso.clasificacion] ?? 0) + carga.horasTotales;
         }
       }
 
@@ -87,16 +87,16 @@ class CumplimientoService {
         final curso = cursosMap[cursoNormalizado];
         // Libres y Dictado se acreditan solo por CRM.
         if (curso == null ||
-            curso.tipo == TipoCurso.libresExploracion ||
-            curso.tipo == TipoCurso.dictadoCapacitaciones) {
+            curso.clasificacion == TipoCurso.libresExploracion ||
+            curso.clasificacion == TipoCurso.dictadoCapacitaciones) {
           continue;
         }
 
         final horasAcreditadas = curso.cargaHorariaHs < 0
             ? 0.0
             : curso.cargaHorariaHs;
-        horasValidas[curso.tipo] =
-            (horasValidas[curso.tipo] ?? 0) + horasAcreditadas;
+        horasValidas[curso.clasificacion] =
+            (horasValidas[curso.clasificacion] ?? 0) + horasAcreditadas;
       }
 
       // Requerimientos mensuales según el seniority del empleado.
@@ -116,7 +116,14 @@ class CumplimientoService {
     for (final tipo in TipoCurso.values) tipo: 0.0,
   };
 
-  static String normalizarNombreCurso(String nombre) => nombre
+  /// Se llama por cada carga y certificación, con pocos nombres distintos:
+  /// cada uno se normaliza una sola vez.
+  static String normalizarNombreCurso(String nombre) =>
+      _nombresNormalizados[nombre] ??= _normalizarNombre(nombre);
+
+  static final _nombresNormalizados = <String, String>{};
+
+  static String _normalizarNombre(String nombre) => nombre
       .trim()
       .toLowerCase()
       .replaceAll('á', 'a')

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -23,7 +24,7 @@ import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 Curso course({String id = '107', String nombre = 'Curso LMS'}) => Curso(
   id: id,
   nombre: nombre,
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: 'Solo local',
   instructorLegajo: 'Solo local',
   cargaHorariaHs: 4,
@@ -41,7 +42,7 @@ SupabaseTableMapping mapping(
 
 final courseMapping = mapping(
   'test_catalog',
-  ['id', 'nombre', 'tipo', 'cargaHorariaHs'],
+  ['id', 'nombre', 'clasificacion', 'cargaHorariaHs'],
   ['id'],
 );
 final hoursMapping = mapping(
@@ -66,6 +67,26 @@ final completionMapping = mapping(
   ['legajo', 'cursoId', 'finalizoCurso', 'fechaFinalizacion'],
   ['legajo', 'cursoId'],
 );
+
+/// Respuesta de PostgREST con el total en `content-range`, como la manda
+/// Supabase cuando se pide el conteo.
+http.Response _filas(
+  http.BaseRequest request,
+  List<Map<String, dynamic>> rows, {
+  int? total,
+}) {
+  final offset = int.parse(request.url.queryParameters['offset'] ?? '0');
+  final rango = rows.isEmpty ? '*' : '$offset-${offset + rows.length - 1}';
+  return http.Response(
+    jsonEncode(rows),
+    200,
+    request: request,
+    headers: {
+      'content-type': 'application/json',
+      'content-range': '$rango/${total ?? rows.length}',
+    },
+  );
+}
 
 class Audit implements ImportacionesRepository {
   final records = <RegistroImportacion>[];
@@ -212,7 +233,10 @@ void main() {
     },
   );
 
-  test('Remote paging returns records beyond a response page', () async {
+  test('Remote paging reads every page, the rest in parallel, even when the '
+      'server caps pages below the requested size', () async {
+    const total = 1001;
+    const tope = 500;
     final requests = <http.Request>[];
     final client = SupabaseClient(
       'https://test.supabase.co',
@@ -220,28 +244,28 @@ void main() {
       httpClient: MockClient((request) async {
         requests.add(request);
         final offset = int.parse(request.url.queryParameters['offset']!);
-        final count = offset == 0 ? 500 : 1;
-        return http.Response(
-          jsonEncode(
-            List.generate(
-              count,
-              (i) => courseMapping.encode(course(id: '${offset + i}').toJson()),
-            ),
-          ),
-          200,
-          request: request,
-        );
+        final limit = int.parse(request.url.queryParameters['limit']!);
+        final count = [limit, tope, total - offset].reduce(min);
+        return _filas(request, [
+          for (var i = 0; i < count; i++)
+            courseMapping.encode(course(id: '${offset + i}').toJson()),
+        ], total: total);
       }),
     );
-    expect(
-      (await SupabaseCursosRepository(
-        client,
-        courseMapping,
-      ).getCursos()).length,
-      501,
-    );
-    expect(requests.length, 2);
-    expect(requests.last.url.queryParameters['offset'], '500');
+    final cursos = await SupabaseCursosRepository(
+      client,
+      courseMapping,
+    ).getCursos();
+    expect(cursos.length, total);
+    expect(cursos.map((c) => c.id).toSet().length, total);
+    expect(requests.map((r) => r.url.queryParameters['offset']), [
+      '0',
+      '500',
+      '1000',
+    ]);
+    // Solo la primera página pide el total.
+    expect(requests.first.headers['prefer'], contains('count=exact'));
+    expect(requests.last.headers['prefer'] ?? '', isNot(contains('count')));
     await client.dispose();
   });
 
@@ -266,7 +290,7 @@ void main() {
       unorderedEquals([
         'col_id',
         'col_nombre',
-        'col_tipo',
+        'col_clasificacion',
         'col_cargaHorariaHs',
       ]),
     );
@@ -281,12 +305,7 @@ void main() {
         'public-test-key',
         httpClient: MockClient((request) async {
           requests.add(request);
-          return http.Response(
-            '[]',
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
+          return _filas(request, []);
         }),
       );
       final courses = SupabaseCursosRepository(client, courseMapping);
@@ -311,11 +330,13 @@ void main() {
           'lt.2025-02-01T00:00:00.000',
         ]),
       );
+      // El catálogo se lee una vez; los filtros por nombre o ID se
+      // resuelven sobre esa lectura.
+      final antes = requests.length;
       await courses.getCursos(nombre: '  A_100%  ');
-      expect(
-        requests.last.url.queryParameters['col_nombre'],
-        r'ilike.A\_100\%',
-      );
+      await courses.getCursos(id: '107');
+      await courses.getCursos();
+      expect(requests.length, antes + 1);
       final denied = SupabaseClient(
         'https://test.supabase.co',
         'public-test-key',
@@ -346,14 +367,10 @@ void main() {
         'public-test-key',
         httpClient: MockClient((request) async {
           requests.add(request);
-          return http.Response(
-            request.method == 'GET'
-                ? jsonEncode([courseMapping.encode(course().toJson())])
-                : '',
-            request.method == 'GET' ? 200 : 201,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
+          if (request.method == 'GET') {
+            return _filas(request, [courseMapping.encode(course().toJson())]);
+          }
+          return http.Response('', 201, request: request);
         }),
       );
       final courses = SupabaseCursosRepository(client, courseMapping);
@@ -396,7 +413,7 @@ void main() {
         unorderedEquals([
           'col_id',
           'col_nombre',
-          'col_tipo',
+          'col_clasificacion',
           'col_cargaHorariaHs',
         ]),
       );
@@ -419,12 +436,7 @@ void main() {
                   'fechaFinalizacion': '2025-01-15',
                 })
               : courseMapping.encode(course().toJson());
-          return http.Response(
-            jsonEncode([row]),
-            200,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
+          return _filas(request, [row]);
         }),
       );
       final repo = SupabaseCertificacionesMoodleRepository(

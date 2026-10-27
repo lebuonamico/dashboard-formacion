@@ -667,21 +667,15 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               );
             },
             refrescar: () async {
+              // La nómina no cambia cursos, horas ni finalizaciones: lo que
+              // depende de quién ve a quién se recalcula solo desde la nómina.
               container.invalidate(estructuraProvider);
-              container.invalidate(empleadosProvider);
+              container.invalidate(nominaProvider);
               container.invalidate(empleadoHistorialProvider);
-              container.invalidate(cursosProvider);
-              container.invalidate(cargasDeHorasCRMProvider);
-              container.invalidate(cargasDashboardProvider);
-              container.invalidate(certificacionesMoodleProvider);
               await Future.wait([
                 container.read(estructuraProvider.future),
                 container.read(empleadosProvider.future),
                 container.read(empleadoHistorialProvider.future),
-                container.read(cursosProvider.future),
-                container.read(cargasDeHorasCRMProvider.future),
-                container.read(cargasDashboardProvider.future),
-                container.read(certificacionesMoodleProvider.future),
               ]);
             },
           );
@@ -775,10 +769,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'titulo',
                 ]);
                 final tipoIndex = _buscarColumna(headers, const [
-                  'tipo',
-                  'tipocurso',
-                  'category',
-                  'categoria',
+                  'clasificacion',
                 ]);
                 final horasIndex = _buscarColumna(headers, const [
                   'cargahorariahs',
@@ -793,7 +784,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   horasIndex,
                 ].any((index) => index == -1)) {
                   throw FormatException(
-                    'Faltan columnas obligatorias de ID, nombre, tipo o carga horaria en la hoja "${hoja.key}".',
+                    'Faltan columnas obligatorias de ID, nombre, clasificación o carga horaria en la hoja "${hoja.key}".',
                   );
                 }
 
@@ -831,7 +822,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   final curso = Curso(
                     id: id,
                     nombre: nombre,
-                    tipo: _tipoCursoDesdeTexto(
+                    clasificacion: _tipoCursoDesdeTexto(
                       row[tipoIndex].toString(),
                       ubicacion,
                     ),
@@ -1189,30 +1180,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  // Compatibilidad con archivos históricos; las nuevas categorías LMS son negocio y blandas.
+  // Misma regla que la Clasificación del CRM.
   TipoCurso _tipoCursoDesdeTexto(String value, String ubicacion) {
-    final normalized = _normalize(value);
-    for (final tipo in TipoCurso.values) {
-      if (_normalize(tipo.name) == normalized ||
-          _normalize(tipo.label) == normalized) {
-        return tipo;
-      }
+    final tipo = TipoCurso.desdeTexto(value);
+    if (tipo == null) {
+      throw FormatException('Clasificación inválida en $ubicacion: "$value".');
     }
-    if (normalized.contains('negocio') || normalized.contains('business')) {
-      return TipoCurso.habilidadesDeNegocio;
-    }
-    if (normalized.contains('blanda') || normalized.contains('soft')) {
-      return TipoCurso.habilidadesBlandas;
-    }
-    if (normalized.contains('dictad') || normalized.contains('impart')) {
-      return TipoCurso.dictadoCapacitaciones;
-    }
-    if (normalized.contains('libre') ||
-        normalized.contains('exploracion') ||
-        normalized.contains('profundizacion')) {
-      return TipoCurso.libresExploracion;
-    }
-    throw FormatException('Tipo de curso inválido en $ubicacion: "$value".');
+    return tipo;
   }
 
   bool _filaConDatos(List<dynamic> row) =>

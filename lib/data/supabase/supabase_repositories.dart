@@ -25,27 +25,13 @@ class _Table {
     Map<String, Object> equals = const {},
     DateTime? desde,
     DateTime? hasta,
-    String? nombre,
   }) async {
-    final result = <Map<String, dynamic>>[];
-    // Supabase limits responses; paginate instead of silently truncating data.
-    const pageSize = 500;
-    for (var offset = 0; ; offset += pageSize) {
+    PostgrestTransformBuilder<PostgrestList> page(int from, int to) {
       var query = client
           .from(mapping.table)
           .select(mapping.columns.values.join(','));
       for (final entry in equals.entries) {
         query = query.eq(mapping.column(entry.key), entry.value);
-      }
-      if (nombre != null) {
-        query = query.ilike(
-          mapping.column('nombre'),
-          nombre
-              .trim()
-              .replaceAll('\\', '\\\\')
-              .replaceAll('%', '\\%')
-              .replaceAll('_', '\\_'),
-        );
       }
       if (desde != null) {
         query = query.gte(mapping.column('fecha'), desde.toIso8601String());
@@ -57,11 +43,27 @@ class _Table {
       for (final field in mapping.conflictFields.skip(1)) {
         ordered = ordered.order(mapping.column(field));
       }
-      final rows = await ordered.range(offset, offset + pageSize - 1);
-      result.addAll(rows.map(mapping.decode));
-      if (rows.length < pageSize) break;
+      return ordered.range(from, to);
     }
-    return result;
+
+    // Supabase limits responses; paginate instead of silently truncating data.
+    // The first page also brings the total, so the rest is requested at once
+    // instead of one page after another.
+    const pageSize = 1000;
+    final first = await page(0, pageSize - 1).count(CountOption.exact);
+    final rows = [...first.data];
+    // The server may cap a page below pageSize: step by what it returned.
+    final step = rows.length;
+    if (step > 0 && step < first.count) {
+      final rest = await Future.wait([
+        for (var offset = step; offset < first.count; offset += step)
+          page(offset, offset + step - 1),
+      ]);
+      for (final pageRows in rest) {
+        rows.addAll(pageRows);
+      }
+    }
+    return rows.map(mapping.decode).toList();
   }
 
   String _key(Map<String, dynamic> row) => jsonEncode([
@@ -241,34 +243,63 @@ class SupabaseCursosRepository
   final _Table _table;
   SupabaseCursosRepository(SupabaseClient client, SupabaseTableMapping mapping)
     : _table = _Table(client, mapping) {
-    mapping.requireFields(['id', 'nombre', 'tipo', 'cargaHorariaHs']);
+    mapping.requireFields(['id', 'nombre', 'clasificacion', 'cargaHorariaHs']);
   }
+
+  /// El catálogo es chico y lo leen la pantalla de cursos, las horas, las
+  /// finalizaciones y las importaciones: se pide una vez y se reutiliza hasta
+  /// que esta app lo modifique.
+  Future<List<Curso>>? _catalogo;
+
+  Future<List<Curso>> _leerCatalogo() {
+    final lectura = _catalogo ??= _table.read().then(
+      (rows) => rows.map(Curso.fromJson).toList(),
+    );
+    // Un fallo no queda guardado: el próximo pedido vuelve a intentar.
+    lectura.catchError((Object _) {
+      if (identical(_catalogo, lectura)) _catalogo = null;
+      return const <Curso>[];
+    });
+    return lectura;
+  }
+
   @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async =>
-      (await _table.read(
-        equals: {'id': ?id},
-        nombre: nombre,
-      )).map(Curso.fromJson).toList();
+  Future<List<Curso>> getCursos({String? id, String? nombre}) async {
+    final buscado = nombre?.trim().toLowerCase();
+    return [
+      for (final curso in await _leerCatalogo())
+        if ((id == null || curso.id == id) &&
+            (buscado == null || curso.nombre.trim().toLowerCase() == buscado))
+          curso,
+    ];
+  }
+
   @override
   Future<void> upsert(List<Curso> items) async {
     await upsertConResultado(items);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(List<Curso> items) =>
-      _table.upsert(
+  Future<ResultadoUpsert> upsertConResultado(List<Curso> items) async {
+    try {
+      return await _table.upsert(
         items
             .map(
               (c) => {
                 'id': c.id,
                 'nombre': c.nombre.trim(),
-                'tipo': c.tipo.name,
+                'clasificacion': c.clasificacion.name,
                 'cargaHorariaHs': c.cargaHorariaHs,
                 'activo': c.activo,
               },
             )
             .toList(),
       );
+    } finally {
+      _catalogo = null;
+    }
+  }
+
   @override
   Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
     List<Curso> items,
@@ -279,10 +310,26 @@ class SupabaseCursosRepository
         'La foto de Cursos está vacía o tiene claves inválidas.',
       );
     }
-    final presentes = items.map((item) => item.id).toSet();
+    // Se compara contra la base actual, no contra lo leído antes.
+    _catalogo = null;
     final anteriores = await getCursos();
+    // Un curso que ya existe con el mismo nombre se actualiza con su ID
+    // actual: el nombre es único en la base y horas y finalizaciones
+    // apuntan a ese ID. Los que no existen se insertan con el ID del archivo.
+    final idPorNombre = {
+      for (final curso in anteriores)
+        normalizarNombreCurso(curso.nombre): curso.id,
+    };
+    final vigentes = [
+      for (final item in items)
+        item.copyWith(
+          id: idPorNombre[normalizarNombreCurso(item.nombre)],
+          activo: true,
+        ),
+    ];
+    final presentes = vigentes.map((item) => item.id).toSet();
     final cambios = [
-      for (final item in items) item.copyWith(activo: true),
+      ...vigentes,
       for (final item in anteriores)
         if (item.activo && !presentes.contains(item.id))
           item.copyWith(activo: false),
@@ -307,20 +354,21 @@ Future<void> _hydrateCourses(
   List<Map<String, dynamic>> rows,
   CursosRepository cursos,
 ) async {
-  final names = <String, String>{};
+  if (rows.isEmpty) return;
+  // Una sola lectura del catálogo en vez de una consulta por curso.
+  final names = {
+    for (final curso in await cursos.getCursos()) curso.id: curso.nombre,
+  };
   for (final row in rows) {
     final id = row['cursoId']?.toString();
     if (id == null || id.isEmpty) {
       throw const FormatException('Falta la FK del curso.');
     }
-    if (!names.containsKey(id)) {
-      final matches = await cursos.getCursos(id: id);
-      if (matches.length != 1) {
-        throw FormatException('Curso inexistente o inaccesible: $id.');
-      }
-      names[id] = matches.single.nombre;
+    final nombre = names[id];
+    if (nombre == null) {
+      throw FormatException('Curso inexistente o inaccesible: $id.');
     }
-    row['cursoNombre'] = names[id];
+    row['cursoNombre'] = nombre;
   }
 }
 

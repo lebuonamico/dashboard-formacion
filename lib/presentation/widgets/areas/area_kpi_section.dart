@@ -51,6 +51,9 @@ class AreasKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.apartment_outlined,
           color: context.colorScheme.primary,
+          ayuda:
+              'Áreas con al menos un colaborador elegible en el período '
+              'elegido.',
         ),
         DashboardKpiCard(
           title: 'COLABORADORES',
@@ -61,6 +64,7 @@ class AreasKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.people_outline,
           color: context.colores.acentoCian,
+          ayuda: ayudaNominaElegible,
         ),
         horasValidasKpiCard(
           context,
@@ -110,5 +114,7 @@ Widget horasValidasKpiCard(
         : 'Meta alcanzada',
     icon: Icons.schedule_outlined,
     color: context.colorScheme.primary,
+    ayuda: esAnual ? ayudaHorasValidasAnual : ayudaHorasValidasMes,
   );
 }
+

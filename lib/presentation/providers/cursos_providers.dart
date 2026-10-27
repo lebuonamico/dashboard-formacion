@@ -144,7 +144,7 @@ final cursosConInstructorProvider = Provider<AsyncValue<List<CursoViewModel>>>((
             vm.curso.areaCurso.toLowerCase().contains(query) ||
             vm.nombreInstructor.toLowerCase().contains(query);
 
-        final matchesTipo = tipoFiltro == null || vm.curso.tipo == tipoFiltro;
+        final matchesTipo = tipoFiltro == null || vm.curso.clasificacion == tipoFiltro;
 
         return matchesQuery &&
             matchesTipo &&

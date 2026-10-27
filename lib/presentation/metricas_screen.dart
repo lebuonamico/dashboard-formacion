@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -7,7 +8,6 @@ import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/presentation/providers/metricas_providers.dart';
-
 
 class MetricasScreen extends ConsumerWidget {
   const MetricasScreen({super.key});
@@ -39,7 +39,11 @@ class MetricasScreen extends ConsumerWidget {
                 kpisAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
+                  error: (err, _) => ErrorDataState(
+                    title: 'No pudimos cargar esta sección',
+                    error: err,
+                    compact: true,
+                  ),
                   data: (kpis) => _buildKpiRow(context, kpis),
                 ),
                 const SizedBox(height: 24),
@@ -53,7 +57,11 @@ class MetricasScreen extends ConsumerWidget {
                 areaAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
+                  error: (err, _) => ErrorDataState(
+                    title: 'No pudimos cargar esta sección',
+                    error: err,
+                    compact: true,
+                  ),
                   data: (areas) => _buildSemaforoAreasGrid(areas),
                 ),
                 const SizedBox(height: 24),
@@ -67,7 +75,11 @@ class MetricasScreen extends ConsumerWidget {
                 seniorityAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
+                  error: (err, _) => ErrorDataState(
+                    title: 'No pudimos cargar esta sección',
+                    error: err,
+                    compact: true,
+                  ),
                   data: (seniorities) =>
                       _buildTablaDesviosSeniority(context, seniorities),
                 ),
@@ -82,7 +94,11 @@ class MetricasScreen extends ConsumerWidget {
                 instructoresAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
+                  error: (err, _) => ErrorDataState(
+                    title: 'No pudimos cargar esta sección',
+                    error: err,
+                    compact: true,
+                  ),
                   data: (instructores) =>
                       _buildTablaInstructores(context, instructores),
                 ),
@@ -548,7 +564,7 @@ class MetricasScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${c.tipo.label} · Área: ${c.areaCurso}',
+                                      '${c.clasificacion.label} · Área: ${c.areaCurso}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: context

@@ -47,7 +47,7 @@ final _empleadosMapping = _mapping(
 );
 final _cursosMapping = _mapping(
   'cursos',
-  ['id', 'nombre', 'tipo', 'cargaHorariaHs'],
+  ['id', 'nombre', 'clasificacion', 'cargaHorariaHs'],
   ['id'],
 );
 final _horasMapping = _mapping(
@@ -76,7 +76,7 @@ final _finalizacionesMapping = _mapping(
 Curso _curso(String id) => Curso(
   id: id,
   nombre: 'Curso $id',
-  tipo: TipoCurso.habilidadesDeNegocio,
+  clasificacion: TipoCurso.habilidadesDeNegocio,
   areaCurso: '',
   instructorLegajo: '',
   cargaHorariaHs: 2,

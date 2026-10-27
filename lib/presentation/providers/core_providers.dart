@@ -21,6 +21,7 @@ import 'package:app_finnegans/domain/repositorios/certificaciones_moodle_reposit
 import 'package:app_finnegans/domain/repositorios/cursos_repository.dart';
 import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
+import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 
 final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
@@ -49,7 +50,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
       columns: {
         'id': 'id_curso',
         'nombre': 'nombre',
-        'tipo': 'tipo',
+        'clasificacion': 'clasificacion',
         'cargaHorariaHs': 'carga_horaria',
         'activo': 'activo',
       },
@@ -94,6 +95,8 @@ final empleadosRepositoryProvider = Provider<EmpleadosRepository>((ref) {
 });
 
 final cursosRepositoryProvider = Provider<CursosRepository>((ref) {
+  // El repositorio guarda el catálogo leído: otra sesión lo vuelve a leer.
+  ref.watch(sesionDatosProvider);
   return SupabaseConfig.enabled
       ? SupabaseCursosRepository(
           ref.watch(supabaseClientProvider),
