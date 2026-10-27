@@ -17,7 +17,7 @@ class DashboardKpiGrid extends StatelessWidget {
   final AsyncValue<List<CumplimientoEmpleado>> cumplimientosAsync;
   final AsyncValue<List<CargaDeHorasCRM>> cargasAsync;
   final AsyncValue<List<SemaforoAreaViewModel>> areasAsync;
-  final AsyncValue<List<EquipoGlobalViewModel>> equiposAsync;
+  final AsyncValue<List<TeamOverview>> equiposAsync;
   final AlcancePeriodo alcance;
   final int mesSeleccionado;
   final int anioSeleccionado;

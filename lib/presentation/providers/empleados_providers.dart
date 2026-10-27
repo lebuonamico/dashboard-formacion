@@ -156,19 +156,19 @@ final detalleEmpleadoProvider =
           .where((item) => item.legajo == legajo)
           .toList();
 
-      final cargasPeriodo = equiposService.filtrarCargasPorPeriodo(
-        cargas: cargasEmpleado,
-        anio: anio,
-        mes: mes,
-        esAnual: esAnual,
+      final cargasPeriodo = equiposService.periods.filterTimeEntriesByPeriod(
+        timeEntries: cargasEmpleado,
+        year: anio,
+        month: mes,
+        isAnnual: esAnual,
       );
       // Solo las finalizadas del período suman cumplimiento.
-      final certificacionesValidasPeriodo = equiposService
-          .filtrarCertificacionesPorPeriodo(
-            certificaciones: certificacionesEmpleado,
-            anio: anio,
-            mes: mes,
-            esAnual: esAnual,
+      final certificacionesValidasPeriodo = equiposService.periods
+          .filterCertificationsByPeriod(
+            certifications: certificacionesEmpleado,
+            year: anio,
+            month: mes,
+            isAnnual: esAnual,
           );
       // Para mostrar se incluyen todas las que tienen fecha en el período.
       final certificacionesPeriodo =

@@ -76,7 +76,7 @@ FilterRow cursoFilterRow(Curso c, String instructor) => _LabeledFilterRow(
   },
   {cursoFilterDimension: _cursoLabel(c.nombre, c.id)},
 );
-FilterRow equipoFilterRow(EquipoGlobalViewModel e) => {
+FilterRow equipoFilterRow(TeamOverview e) => {
   'Equipo': e.nombre,
   'Área': e.area,
   'Líder': e.lider,

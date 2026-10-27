@@ -4,38 +4,32 @@ import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 import 'package:flutter/material.dart';
 
-/// Indicadores de todos los equipos, con las mismas cards que el inicio.
-class EquiposKpiSection extends StatelessWidget {
-  final int totalEquipos;
-  final int totalColaboradores;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double desvioHoras;
-  final double cumplimientoGlobal;
-  final bool esAnual;
-  final int anio;
-  final int mes;
+class TeamsKpiSection extends StatelessWidget {
+  final int teamCount;
+  final int employeeCount;
+  final double completedHours;
+  final double targetHours;
+  final double overallCompletion;
+  final bool isAnnual;
+  final int year;
+  final int month;
 
-  /// Variación del cumplimiento contra el mes anterior.
-  final VariacionCumplimiento? variacion;
+  final VariacionCumplimiento? variation;
 
-  /// Proyección a fin de año de todos los equipos; sin ella no se muestra la
-  /// card.
-  final ProyeccionAnual? proyeccion;
+  final ProyeccionAnual? projection;
 
-  const EquiposKpiSection({
+  const TeamsKpiSection({
     super.key,
-    required this.totalEquipos,
-    required this.totalColaboradores,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.desvioHoras,
-    required this.cumplimientoGlobal,
-    required this.anio,
-    required this.mes,
-    this.esAnual = false,
-    this.variacion,
-    this.proyeccion,
+    required this.teamCount,
+    required this.employeeCount,
+    required this.completedHours,
+    required this.targetHours,
+    required this.overallCompletion,
+    required this.year,
+    required this.month,
+    this.isAnnual = false,
+    this.variation,
+    this.projection,
   });
 
   @override
@@ -44,7 +38,7 @@ class EquiposKpiSection extends StatelessWidget {
       cards: [
         DashboardKpiCard(
           title: 'EQUIPOS ACTIVOS',
-          value: '$totalEquipos',
+          value: '$teamCount',
           suffix: 'en seguimiento',
           progress: 1,
           progressLabel: 'Con colaboradores elegibles',
@@ -57,7 +51,7 @@ class EquiposKpiSection extends StatelessWidget {
         ),
         DashboardKpiCard(
           title: 'COLABORADORES',
-          value: '$totalColaboradores',
+          value: '$employeeCount',
           suffix: 'en todos los equipos',
           progress: 1,
           progressLabel: 'Nómina elegible',
@@ -68,22 +62,22 @@ class EquiposKpiSection extends StatelessWidget {
         ),
         horasValidasKpiCard(
           context,
-          esAnual: esAnual,
-          anio: anio,
-          mes: mes,
-          horas: horasRealizadas,
-          objetivo: horasObjetivo,
+          esAnual: isAnnual,
+          anio: year,
+          mes: month,
+          horas: completedHours,
+          objetivo: targetHours,
         ),
         cumplimientoKpiCard(
           context,
-          esAnual: esAnual,
-          anio: anio,
-          mes: mes,
-          porcentaje: cumplimientoGlobal,
-          variacion: variacion,
+          esAnual: isAnnual,
+          anio: year,
+          mes: month,
+          porcentaje: overallCompletion,
+          variacion: variation,
         ),
-        if (proyeccion case final proyeccion?)
-          proyeccionKpiCard(context, proyeccion),
+        if (projection case final projection?)
+          proyeccionKpiCard(context, projection),
       ],
     );
   }

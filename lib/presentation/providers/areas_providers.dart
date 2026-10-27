@@ -193,7 +193,7 @@ final areasFiltradasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
 /// período.
 class DetalleAreaViewModel {
   final AreaGlobalViewModel area;
-  final List<EquipoGlobalViewModel> equipos;
+  final List<TeamOverview> equipos;
   final List<CumplimientoEmpleado> miembros;
 
   const DetalleAreaViewModel({

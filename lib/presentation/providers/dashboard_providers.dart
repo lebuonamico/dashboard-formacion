@@ -50,12 +50,12 @@ final mesesEvaluadosDashboardProvider = FutureProvider<int>((ref) async {
   final equiposService = ref.read(equiposServiceProvider);
   var meses = 0;
   for (var mes = 1; mes <= 12; mes++) {
-    if (equiposService.tieneDatosEnPeriodo(
-      cargas: cargas,
-      certificaciones: certificaciones,
-      anio: anio,
-      mes: mes,
-      esAnual: false,
+    if (equiposService.periods.hasDataInPeriod(
+      timeEntries: cargas,
+      certifications: certificaciones,
+      year: anio,
+      month: mes,
+      isAnnual: false,
     )) {
       meses++;
     }
@@ -87,12 +87,12 @@ final evolucionMensualDashboardProvider =
       );
       final equiposService = ref.read(equiposServiceProvider);
 
-      bool tieneDatos(DateTime fecha) => equiposService.tieneDatosEnPeriodo(
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: fecha.year,
-        mes: fecha.month,
-        esAnual: false,
+      bool tieneDatos(DateTime fecha) => equiposService.periods.hasDataInPeriod(
+        timeEntries: cargas,
+        certifications: certificaciones,
+        year: fecha.year,
+        month: fecha.month,
+        isAnnual: false,
       );
 
       var mesFinal = DateTime(anio, mesElegido);
@@ -109,17 +109,18 @@ final evolucionMensualDashboardProvider =
           (() {
             final fecha = DateTime(mesFinal.year, mesFinal.month - offset);
             if (!tieneDatos(fecha)) return (mes: fecha, horas: 0.0);
-            final cumplimientos = equiposService.calcularCumplimientoMensual(
-              empleados: empleados,
-              historial: historial,
-              cursos: cursos,
-              cargas: cargas,
-              certificaciones: certificaciones,
-              anio: fecha.year,
-              mes: fecha.month,
-              cumplimientoService: cumplimientoService,
-              incluir: incluir,
-            );
+            final cumplimientos = equiposService.periods
+                .calculateMonthlyCompliance(
+                  employees: empleados,
+                  history: historial,
+                  courses: cursos,
+                  timeEntries: cargas,
+                  certifications: certificaciones,
+                  year: fecha.year,
+                  month: fecha.month,
+                  complianceService: cumplimientoService,
+                  includeEmployee: incluir,
+                );
             if (cumplimientos.isEmpty) return (mes: fecha, horas: 0.0);
             final total = cumplimientos.fold<double>(
               0,

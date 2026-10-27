@@ -1,41 +1,37 @@
-import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
-import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/utils/period_formatter.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
-import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm.dart';
 import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
+import 'package:app_finnegans/presentation/widgets/shared/fade_in.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
+import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
+import 'package:app_finnegans/presentation/widgets/shared/periodo_filter_panel.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_category_distribution.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_kpi_section.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_results.dart';
+import 'package:app_finnegans/presentation/widgets/teams/team_status_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class EquiposScreen extends ConsumerWidget {
-  const EquiposScreen({super.key});
+class TeamsScreen extends ConsumerWidget {
+  const TeamsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Leandro: llama a resumenEquiposPeriodoProvider para obtener los indicadores y el estado de datos del período.
-    final resumenAsync = ref.watch(resumenEquiposPeriodoProvider);
-    // Leandro: llama a equiposGlobalFiltradosProvider para obtener los equipos que coinciden con los filtros.
-    final equiposFiltradosAsync = ref.watch(equiposGlobalFiltradosProvider);
+    final summaryAsync = ref.watch(teamsPeriodSummaryProvider);
+    final filteredTeamsAsync = ref.watch(filteredTeamOverviewsProvider);
 
     return Scaffold(
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          // Leandro: llama al widget AppTopBar para mostrar el título de la pantalla de Equipos.
           const AppTopBar(title: 'Dashboard global de equipos'),
           Expanded(
-            // Leandro: llama a AsyncValue.when para mostrar la carga, el error o el contenido del período.
-            child: resumenAsync.when(
+            child: summaryAsync.when(
               skipLoadingOnRefresh: false,
               loading: () => Center(
                 child: CircularProgressIndicator(
@@ -46,14 +42,11 @@ class EquiposScreen extends ConsumerWidget {
                 title: 'No pudimos cargar los equipos',
                 error: error,
               ),
-              data: (resumen) => FadeIn(
-                child: (() {
-                  // Leandro: llama al widget _DashboardContent para presentar el resumen y los equipos filtrados.
-                  return _DashboardContent(
-                    resumen: resumen,
-                    equiposFiltradosAsync: equiposFiltradosAsync,
-                  );
-                })(),
+              data: (summary) => FadeIn(
+                child: _TeamsOverviewContent(
+                  summary: summary,
+                  filteredTeamsAsync: filteredTeamsAsync,
+                ),
               ),
             ),
           ),
@@ -63,25 +56,24 @@ class EquiposScreen extends ConsumerWidget {
   }
 }
 
-class _DashboardContent extends ConsumerWidget {
-  final ResumenEquiposPeriodo resumen;
-  final AsyncValue<List<EquipoGlobalViewModel>> equiposFiltradosAsync;
+class _TeamsOverviewContent extends ConsumerWidget {
+  final TeamsPeriodSummary summary;
+  final AsyncValue<List<TeamOverview>> filteredTeamsAsync;
 
-  const _DashboardContent({
-    required this.resumen,
-    required this.equiposFiltradosAsync,
+  const _TeamsOverviewContent({
+    required this.summary,
+    required this.filteredTeamsAsync,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final equipos = resumen.equipos;
-    final busqueda = ref.watch(busquedaEquipoProvider);
-    final estadoSeleccionado = ref.watch(filtroEstadoEquipoProvider);
-    final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
-    final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
-    final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
-    final hayFiltrosActivos =
-        busqueda.trim().isNotEmpty || estadoSeleccionado != null;
+    final teams = summary.teams;
+    final query = ref.watch(teamSearchQueryProvider);
+    final selectedStatus = ref.watch(teamStatusFilterProvider);
+    final selectedScope = ref.watch(alcancePeriodoProvider);
+    final selectedMonth = ref.watch(filtroMesPeriodoProvider);
+    final selectedYear = ref.watch(filtroAnioPeriodoProvider);
+    final hasActiveFilters = query.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(
       padding: paddingPantalla,
@@ -96,8 +88,8 @@ class _DashboardContent extends ConsumerWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          resumen.tieneDatos
-              ? 'Seguimiento del avance de ${equipos.length} equipos de formación.'
+          summary.hasData
+              ? 'Seguimiento del avance de ${teams.length} equipos de formación.'
               : 'Seleccioná un período con datos cargados.',
           style: TextStyle(
             fontSize: 14,
@@ -105,21 +97,18 @@ class _DashboardContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 18),
-        // Leandro: llama al widget PeriodoFilterPanel para elegir el mes, el año y el alcance de los indicadores.
         const PeriodoFilterPanel(),
         const SizedBox(height: 22),
-        if (!resumen.tieneDatos)
-          // Leandro: llama al widget EmptyDataState para informar que el período seleccionado no tiene registros.
+        if (!summary.hasData)
           EmptyDataState.periodoSinDatos(
             icon: Icons.groups_outlined,
             periodo: etiquetaPeriodo(
-              alcanceSeleccionado,
-              mesSeleccionado,
-              anioSeleccionado,
+              selectedScope,
+              selectedMonth,
+              selectedYear,
             ),
           )
-        else if (equipos.isEmpty)
-          // Leandro: llama al widget EmptyDataState para informar que no hay equipos con colaboradores elegibles.
+        else if (teams.isEmpty)
           const EmptyDataState(
             icon: Icons.groups_outlined,
             title:
@@ -128,65 +117,57 @@ class _DashboardContent extends ConsumerWidget {
                 'Verificá la nómina elegible para el período seleccionado.',
           )
         else ...[
-          // Leandro: llama al widget EquiposKpiSection para mostrar equipos, colaboradores, horas y cumplimiento global.
-          EquiposKpiSection(
-            totalEquipos: resumen.totalEquipos,
-            totalColaboradores: resumen.colaboradores,
-            horasRealizadas: resumen.horasRealizadas,
-            horasObjetivo: resumen.horasObjetivo,
-            desvioHoras: resumen.desvioHoras,
-            cumplimientoGlobal: resumen.cumplimientoGlobal,
-            esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
-            anio: anioSeleccionado,
-            mes: mesSeleccionado,
-            variacion: ref
+          TeamsKpiSection(  
+            teamCount: summary.teamCount,
+            employeeCount: summary.employeeCount,
+            completedHours: summary.completedHours,
+            targetHours: summary.targetHours,
+            overallCompletion: summary.overallCompletion,
+            isAnnual: selectedScope == AlcancePeriodo.anual,
+            year: selectedYear,
+            month: selectedMonth,
+            variation: ref
                 .watch(
                   variacionCumplimientoProvider((area: null, equipo: null)),
                 )
                 .value,
-            proyeccion: ref
+            projection: ref
                 .watch(proyeccionAnualProvider((area: null, equipo: null)))
                 .value,
           ),
           const SizedBox(height: 16),
-          // Leandro: llama al widget _DashboardChartsRow para organizar los gráficos de estados y categorías.
-          _DashboardChartsRow(
-            // Leandro: llama al widget EquiposStatusSummary para mostrar cuántos equipos hay en cada estado.
-            statusChart: EquiposStatusSummary(
-              total: resumen.totalEquipos,
-              enObjetivo: resumen.enObjetivo,
-              enRiesgo: resumen.enRiesgo,
-              criticos: resumen.criticos,
+          _TeamsChartsRow(
+            statusChart: TeamsStatusSummary(
+              total: summary.teamCount,
+              onTarget: summary.onTarget,
+              atRisk: summary.atRisk,
+              critical: summary.critical,
             ),
-            // Leandro: llama al widget EquiposCategoryDistribution para mostrar las horas válidas por categoría.
-            categoryChart: EquiposCategoryDistribution(
-              horasNegocio: resumen.horasNegocio,
-              horasBlandas: resumen.horasBlandas,
-              horasLibres: resumen.horasLibres,
-              horasDictado: resumen.horasDictado,
-              esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
+            categoryChart: TeamCategoryDistribution(
+              businessHours: summary.businessHours,
+              softSkillsHours: summary.softSkillsHours,
+              explorationHours: summary.explorationHours,
+              teachingHours: summary.teachingHours,
+              isAnnual: selectedScope == AlcancePeriodo.anual,
             ),
           ),
-          // Moodle vs CRM de todos los equipos, con los mismos colaboradores
-          // del resumen.
-          if (ref.watch(cumplimientoEquiposProvider).value case final items?
+
+          if (ref.watch(teamComplianceProvider).value case final items?
               when items.isNotEmpty) ...[
             const SizedBox(height: 16),
             ComparacionMoodleCrmCards(cumplimientos: items),
           ],
           const SizedBox(height: 24),
-          // Criterios independientes de equipo, área, líder y estado.
           FilterBar(
-            scope: 'equipos',
-            hasActiveFilters: hayFiltrosActivos,
-
+            scope: teamFilterScope,
+            hasActiveFilters: hasActiveFilters,
             onClear: () {
-              ref.read(busquedaEquipoProvider.notifier).state = '';
-              ref.read(filtroEstadoEquipoProvider.notifier).state = null;
+              ref.read(teamSearchQueryProvider.notifier).state = '';
+              ref.read(teamStatusFilterProvider.notifier).state = null;
             },
           ),
           const SizedBox(height: 24),
-          equiposFiltradosAsync.when(
+          filteredTeamsAsync.when(
             loading: () => Center(
               child: CircularProgressIndicator(
                 color: context.colorScheme.primary,
@@ -196,15 +177,14 @@ class _DashboardContent extends ConsumerWidget {
               title: 'No pudimos cargar los equipos',
               error: error,
             ),
-            // Leandro: llama al widget EquiposResults para mostrar y paginar las tarjetas de los equipos filtrados.
-            data: (equiposFiltrados) => EquiposResults(
+            data: (filteredTeams) => TeamResults(
               key: ValueKey(
-                '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
-                '$busqueda-$estadoSeleccionado',
+                '$selectedScope-$selectedYear-$selectedMonth-'
+                '$query-$selectedStatus',
               ),
-              equipos: equiposFiltrados,
-              totalEquipos: resumen.totalEquipos,
-              esAnual: alcanceSeleccionado == AlcancePeriodo.anual,
+              teams: filteredTeams,
+              teamCount: summary.teamCount,
+              isAnnual: selectedScope == AlcancePeriodo.anual,
             ),
           ),
         ],
@@ -213,11 +193,12 @@ class _DashboardContent extends ConsumerWidget {
   }
 }
 
-class _DashboardChartsRow extends StatelessWidget {
+class _TeamsChartsRow extends StatelessWidget {
+  static const _horizontalChartsBreakpoint = 1180.0;
   final Widget statusChart;
   final Widget categoryChart;
 
-  const _DashboardChartsRow({
+  const _TeamsChartsRow({
     required this.statusChart,
     required this.categoryChart,
   });
@@ -226,7 +207,7 @@ class _DashboardChartsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 1180) {
+        if (constraints.maxWidth < _horizontalChartsBreakpoint) {
           return Column(
             children: [statusChart, const SizedBox(height: 16), categoryChart],
           );

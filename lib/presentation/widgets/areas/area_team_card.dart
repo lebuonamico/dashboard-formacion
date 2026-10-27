@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 
 /// Grilla de los equipos generales de un área, con título y conteo.
 class AreaEquiposGrid extends StatelessWidget {
-  final List<EquipoGlobalViewModel> equipos;
+  final List<TeamOverview> equipos;
   final bool esAnual;
   final String origen;
 
@@ -99,7 +99,7 @@ class _CountBadge extends StatelessWidget {
 /// Tarjeta de un equipo dentro del detalle de área, con el estilo de la
 /// pantalla de Equipos.
 class AreaEquipoCard extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview equipo;
   final bool esAnual;
 
   /// Sección del menú desde la que se llegó, para que el detalle la resalte.
@@ -168,7 +168,7 @@ class AreaEquipoCard extends StatelessWidget {
 }
 
 class _CardHeader extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview equipo;
 
   const _CardHeader({required this.equipo});
 
@@ -248,7 +248,7 @@ class _LeaderRow extends StatelessWidget {
 }
 
 class _ProgressSection extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview equipo;
   final double progress;
   final bool esAnual;
 
@@ -324,7 +324,7 @@ class _ProgressSection extends StatelessWidget {
 }
 
 class _CardFooter extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview equipo;
 
   const _CardFooter({required this.equipo});
 

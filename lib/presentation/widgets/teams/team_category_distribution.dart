@@ -1,27 +1,28 @@
-import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_donut_chart.dart';
 import 'package:flutter/material.dart';
 
-class EquiposCategoryDistribution extends StatelessWidget {
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final bool esAnual;
+class TeamCategoryDistribution extends StatelessWidget {
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final bool isAnnual;
 
-  const EquiposCategoryDistribution({
+  const TeamCategoryDistribution({
     super.key,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    this.esAnual = false,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    this.isAnnual = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final total = horasNegocio + horasBlandas + horasLibres + horasDictado;
+    final total =
+        businessHours + softSkillsHours + explorationHours + teachingHours;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -45,7 +46,7 @@ class EquiposCategoryDistribution extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Tooltip(
-                    message: esAnual
+                    message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
                         : 'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
                     child: Icon(
@@ -61,43 +62,42 @@ class EquiposCategoryDistribution extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Leandro: llama a EquiposDonutChart para mostrar las horas por categoría.
           Flexible(
             fit: FlexFit.loose,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
-                child: EquiposDonutChart(
+                child: TeamDonutChart(
                   centerValue: total.toStringAsFixed(1),
                   centerLabel: 'HORAS',
                   valueSuffix: ' h',
                   slices: [
-                    EquiposDonutSlice(
+                    TeamDonutSlice(
                       label: TipoCurso.habilidadesDeNegocio.labelCorto,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
-                      value: horasNegocio,
+                      value: businessHours,
                       color: context.colores.negocio.texto,
                     ),
-                    EquiposDonutSlice(
+                    TeamDonutSlice(
                       label: TipoCurso.habilidadesBlandas.labelCorto,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
-                      value: horasBlandas,
+                      value: softSkillsHours,
                       color: context.colores.blandas.texto,
                     ),
-                    EquiposDonutSlice(
+                    TeamDonutSlice(
                       label: TipoCurso.libresExploracion.labelCorto,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los integrantes.',
-                      value: horasLibres,
+                      value: explorationHours,
                       color: context.colores.exploracion.texto,
                     ),
-                    EquiposDonutSlice(
+                    TeamDonutSlice(
                       label: TipoCurso.dictadoCapacitaciones.labelCorto,
                       help:
                           'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
-                      value: horasDictado,
+                      value: teachingHours,
                       color: context.colores.dictado.texto,
                     ),
                   ],

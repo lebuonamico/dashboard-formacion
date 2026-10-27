@@ -22,10 +22,11 @@ final mesCorteProyeccionAnualProvider = FutureProvider<int?>((ref) async {
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
   return ref
       .read(equiposServiceProvider)
-      .ultimoMesConDatos(
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
+      .periods
+      .lastMonthWithData(
+        timeEntries: cargas,
+        certifications: certificaciones,
+        year: anio,
       );
 });
 
@@ -54,16 +55,16 @@ final cumplimientoPorMesProvider =
           : alcanceUsuario.incluyeEmpleado;
       final equiposService = ref.read(equiposServiceProvider);
 
-      return equiposService.calcularCumplimientoPorMes(
-        empleados: empleados,
-        historial: historial,
-        cursos: cursos,
-        cargas: cargas,
-        certificaciones: certificaciones,
-        anio: anio,
-        hastaMes: mesCorte,
-        cumplimientoService: cumplimientoService,
-        incluir: incluir,
+      return equiposService.periods.calculateComplianceByMonth(
+        employees: empleados,
+        history: historial,
+        courses: cursos,
+        timeEntries: cargas,
+        certifications: certificaciones,
+        year: anio,
+        throughMonth: mesCorte,
+        complianceService: cumplimientoService,
+        includeEmployee: incluir,
       );
     });
 
@@ -111,17 +112,17 @@ final variacionCumplimientoProvider =
               ? entry.value
               : entry.value
                     .where(
-                      (item) => equiposService.perteneceA(
+                      (item) => equiposService.periods.belongsToTeam(
                         item.empleado,
                         area: seccion.area,
-                        equipo: seccion.equipo,
+                        team: seccion.equipo,
                       ),
                     )
                     .toList(),
       };
 
       double porcentaje(int hasta) {
-        final acumulado = equiposService.acumularMeses([
+        final acumulado = equiposService.periods.accumulateMonths([
           for (final entry in filtrado.entries)
             if (entry.key <= hasta) entry.value,
         ]);
@@ -217,10 +218,10 @@ final proyeccionAnualProvider =
       if (seccion.area != null || seccion.equipo != null) {
         final legajos = {
           for (final item in porMes[mesCorte] ?? const <CumplimientoEmpleado>[])
-            if (equiposService.perteneceA(
+            if (equiposService.periods.belongsToTeam(
               item.empleado,
               area: seccion.area,
-              equipo: seccion.equipo,
+              team: seccion.equipo,
             ))
               item.empleado.legajo,
         };

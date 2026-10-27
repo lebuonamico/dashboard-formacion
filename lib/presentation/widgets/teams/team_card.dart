@@ -1,28 +1,29 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/domain/modelos/team_overview.dart';
+import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/presentation/utils/porcentaje_formatter.dart';
-import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class EquipoCard extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
-  final bool esAnual;
+class TeamCard extends StatelessWidget {
+  final TeamOverview team;
+  final bool isAnnual;
 
-  const EquipoCard({super.key, required this.equipo, this.esAnual = false});
+  const TeamCard({super.key, required this.team, this.isAnnual = false});
 
   @override
   Widget build(BuildContext context) {
-    final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
+    final progress = (team.completionPercentage / 100).clamp(0.0, 1.0);
 
     return Material(
       color: context.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        // Leandro: llama a context.push para abrir el detalle del equipo al tocar la tarjeta.
+
         onTap: () => context.push(
-          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}?origen=equipos',
+          '/areas/${Uri.encodeComponent(team.area)}/equipos/${Uri.encodeComponent(team.name)}?origen=equipos',
         ),
         child: Container(
           decoration: context.panel(sombra: true),
@@ -31,7 +32,7 @@ class EquipoCard extends StatelessWidget {
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: equipo.estado.colores(context).texto,
+                  color: team.status.colores(context).texto,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -43,21 +44,18 @@ class EquipoCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Leandro: llama a _CardHeader para mostrar el nombre, área y estado del equipo.
-                      _CardHeader(equipo: equipo),
+                      _CardHeader(team: team),
                       const SizedBox(height: 13),
-                      // Leandro: llama a _LeaderRow para mostrar el líder del equipo.
-                      _LeaderRow(lider: equipo.lider),
+                      _LeaderRow(leader: team.leader),
                       const Spacer(),
-                      // Leandro: llama a _ProgressSection para mostrar integrantes en objetivo y avance de horas.
+
                       _ProgressSection(
-                        equipo: equipo,
+                        team: team,
                         progress: progress,
-                        esAnual: esAnual,
+                        isAnnual: isAnnual,
                       ),
                       const SizedBox(height: 9),
-                      // Leandro: llama a _CardFooter para mostrar las horas realizadas y el desvío.
-                      _CardFooter(equipo: equipo),
+                      _CardFooter(team: team),
                     ],
                   ),
                 ),
@@ -71,9 +69,9 @@ class EquipoCard extends StatelessWidget {
 }
 
 class _CardHeader extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview team;
 
-  const _CardHeader({required this.equipo});
+  const _CardHeader({required this.team});
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +83,7 @@ class _CardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                equipo.nombre,
+                team.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -97,7 +95,7 @@ class _CardHeader extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                equipo.area,
+                team.area,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -110,17 +108,16 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        // Leandro: llama a _StatusBadge para mostrar la insignia del estado del equipo.
-        _StatusBadge(status: equipo.estado),
+        _StatusBadge(status: team.status),
       ],
     );
   }
 }
 
 class _LeaderRow extends StatelessWidget {
-  final String lider;
+  final String leader;
 
-  const _LeaderRow({required this.lider});
+  const _LeaderRow({required this.leader});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +131,7 @@ class _LeaderRow extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'Líder: $lider',
+            'Líder: $leader',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -149,14 +146,14 @@ class _LeaderRow extends StatelessWidget {
 }
 
 class _ProgressSection extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview team;
   final double progress;
-  final bool esAnual;
+  final bool isAnnual;
 
   const _ProgressSection({
-    required this.equipo,
+    required this.team,
     required this.progress,
-    required this.esAnual,
+    required this.isAnnual,
   });
 
   @override
@@ -171,7 +168,7 @@ class _ProgressSection extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
+                      '${team.membersOnTarget} de ${team.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -182,7 +179,7 @@ class _ProgressSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Tooltip(
-                    message: esAnual
+                    message: isAnnual
                         ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
                         : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
                     child: Icon(
@@ -198,11 +195,11 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatearPorcentaje(equipo.porcentajeCumplimiento),
+              formatearPorcentaje(team.completionPercentage),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: equipo.estado.colores(context).texto,
+                color: team.status.colores(context).texto,
               ),
             ),
           ],
@@ -214,7 +211,7 @@ class _ProgressSection extends StatelessWidget {
             value: progress,
             minHeight: 7,
             backgroundColor: context.colores.graficoPista,
-            color: equipo.estado.colores(context).texto,
+            color: team.status.colores(context).texto,
           ),
         ),
       ],
@@ -223,9 +220,9 @@ class _ProgressSection extends StatelessWidget {
 }
 
 class _CardFooter extends StatelessWidget {
-  final EquipoGlobalViewModel equipo;
+  final TeamOverview team;
 
-  const _CardFooter({required this.equipo});
+  const _CardFooter({required this.team});
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +233,7 @@ class _CardFooter extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} hs',
+                  '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
@@ -247,12 +244,11 @@ class _CardFooter extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                // Leandro: llama a _formatDesvio para mostrar las horas faltantes o excedentes del equipo.
-                _formatDesvio(equipo.desvioHoras),
+                _formatHoursDeviation(team.hoursDeviation),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: equipo.desvioHoras >= 0
+                  color: team.hoursDeviation >= 0
                       ? context.colores.exito.texto
                       : context.colores.peligro.texto,
                 ),
@@ -279,17 +275,17 @@ class _CardFooter extends StatelessWidget {
     );
   }
 
-  String _formatDesvio(double desvioHoras) {
-    if (desvioHoras >= 0) {
-      return '+${desvioHoras.toStringAsFixed(1)} hs';
+  String _formatHoursDeviation(double hoursDeviation) {
+    if (hoursDeviation >= 0) {
+      return '+${hoursDeviation.toStringAsFixed(1)} hs';
     }
 
-    return '-${desvioHoras.abs().toStringAsFixed(1)} hs';
+    return '-${hoursDeviation.abs().toStringAsFixed(1)} hs';
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  final EstadoEquipo status;
+  final TeamStatus status;
 
   const _StatusBadge({required this.status});
 

@@ -1,5 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 import 'package:app_finnegans/presentation/widgets/teams/team_card.dart';
 import 'package:flutter/material.dart';
@@ -7,46 +7,47 @@ import 'package:flutter/material.dart';
 const _maxCardWidth = 410.0;
 const _gridSpacing = 16.0;
 const _rowsPerPage = 2;
+const _cardHeight = 252.0;
 
-class EquiposResults extends StatefulWidget {
-  final List<EquipoGlobalViewModel> equipos;
-  final int totalEquipos;
-  final bool esAnual;
+class TeamResults extends StatefulWidget {
+  final List<TeamOverview> teams;
+  final int teamCount;
+  final bool isAnnual;
 
-  const EquiposResults({
+  const TeamResults({
     super.key,
-    required this.equipos,
-    required this.totalEquipos,
-    this.esAnual = false,
+    required this.teams,
+    required this.teamCount,
+    this.isAnnual = false,
   });
 
   @override
-  State<EquiposResults> createState() => _EquiposResultsState();
+  State<TeamResults> createState() => _TeamResultsState();
 }
 
-class _EquiposResultsState extends State<EquiposResults> {
-  int _paginaActual = 0;
+class _TeamResultsState extends State<TeamResults> {
+  int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant EquiposResults oldWidget) {
+  void didUpdateWidget(covariant TeamResults oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Leandro: llama a _mismosEquipos para reiniciar la página cuando cambian los resultados.
-    if (!_mismosEquipos(oldWidget.equipos, widget.equipos)) {
-      _paginaActual = 0;
+
+    if (!_haveSameTeams(oldWidget.teams, widget.teams)) {
+      _currentPage = 0;
     }
   }
 
-  bool _mismosEquipos(
-    List<EquipoGlobalViewModel> anteriores,
-    List<EquipoGlobalViewModel> actuales,
+  bool _haveSameTeams(
+    List<TeamOverview> previousTeams,
+    List<TeamOverview> currentTeams,
   ) {
-    if (anteriores.length != actuales.length) return false;
-    for (var index = 0; index < actuales.length; index++) {
-      final anterior = anteriores[index];
-      final actual = actuales[index];
-      if (anterior.id != actual.id ||
-          anterior.horasRealizadas != actual.horasRealizadas ||
-          anterior.horasObjetivo != actual.horasObjetivo) {
+    if (previousTeams.length != currentTeams.length) return false;
+    for (var index = 0; index < currentTeams.length; index++) {
+      final previous = previousTeams[index];
+      final current = currentTeams[index];
+      if (previous.id != current.id ||
+          previous.completedHours != current.completedHours ||
+          previous.targetHours != current.targetHours) {
         return false;
       }
     }
@@ -57,17 +58,20 @@ class _EquiposResultsState extends State<EquiposResults> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnasCalculadas =
+        final calculatedColumns =
             (constraints.maxWidth / (_maxCardWidth + _gridSpacing)).ceil();
-        final columnas = columnasCalculadas < 1 ? 1 : columnasCalculadas;
-        final itemsPorPagina = columnas * _rowsPerPage;
-        final cantidadPaginas = (widget.equipos.length / itemsPorPagina).ceil();
-        final paginaSegura = cantidadPaginas == 0
+        final columnCount = calculatedColumns < 1 ? 1 : calculatedColumns;
+        final itemsPerPage = columnCount * _rowsPerPage;
+        final pageCount = (widget.teams.length / itemsPerPage).ceil();
+        final safePage = pageCount == 0
             ? 0
-            : _paginaActual.clamp(0, cantidadPaginas - 1);
-        final desde = paginaSegura * itemsPorPagina;
-        final hasta = (desde + itemsPorPagina).clamp(0, widget.equipos.length);
-        final equiposVisibles = widget.equipos.sublist(desde, hasta);
+            : _currentPage.clamp(0, pageCount - 1);
+        final startIndex = safePage * itemsPerPage;
+        final endIndex = (startIndex + itemsPerPage).clamp(
+          0,
+          widget.teams.length,
+        );
+        final visibleTeams = widget.teams.sublist(startIndex, endIndex);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,13 +87,12 @@ class _EquiposResultsState extends State<EquiposResults> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Leandro: llama a _CountBadge para mostrar cuántos equipos coinciden con los filtros.
-                _CountBadge(count: widget.equipos.length),
+                _CountBadge(count: widget.teams.length),
                 const Spacer(),
                 Text(
-                  widget.equipos.length == widget.totalEquipos
-                      ? '${widget.totalEquipos} equipos en el período'
-                      : '${widget.equipos.length} de ${widget.totalEquipos} equipos',
+                  widget.teams.length == widget.teamCount
+                      ? '${widget.teamCount} equipos en el período'
+                      : '${widget.teams.length} de ${widget.teamCount} equipos',
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colorScheme.onSurfaceVariant,
@@ -98,31 +101,29 @@ class _EquiposResultsState extends State<EquiposResults> {
               ],
             ),
             const SizedBox(height: 13),
-            if (widget.equipos.isEmpty)
-              // Leandro: llama a _EmptySearch para avisar que ningún equipo coincide con los filtros.
+            if (widget.teams.isEmpty)
               const _EmptySearch()
             else ...[
-              if (cantidadPaginas > 1) ...[
-                // Leandro: llama a PaginacionResultados para recorrer las páginas de equipos.
+              if (pageCount > 1) ...[
                 PaginacionResultados(
-                  paginaActual: paginaSegura,
-                  cantidadPaginas: cantidadPaginas,
-                  desde: desde + 1,
-                  hasta: hasta,
-                  totalResultados: widget.equipos.length,
+                  paginaActual: safePage,
+                  cantidadPaginas: pageCount,
+                  desde: startIndex + 1,
+                  hasta: endIndex,
+                  totalResultados: widget.teams.length,
                   etiquetaResultados: 'equipos',
                   icono: Icons.view_module_outlined,
-                  onPrevious: paginaSegura == 0
+                  onPrevious: safePage == 0
                       ? null
-                      : () => setState(() => _paginaActual = paginaSegura - 1),
-                  onNext: paginaSegura == cantidadPaginas - 1
+                      : () => setState(() => _currentPage = safePage - 1),
+                  onNext: safePage == pageCount - 1
                       ? null
-                      : () => setState(() => _paginaActual = paginaSegura + 1),
+                      : () => setState(() => _currentPage = safePage + 1),
                 ),
                 const SizedBox(height: 18),
               ],
-              // Leandro: llama a _TeamsGrid para mostrar los equipos de la página actual.
-              _TeamsGrid(equipos: equiposVisibles, esAnual: widget.esAnual),
+
+              _TeamsGrid(teams: visibleTeams, isAnnual: widget.isAnnual),
             ],
           ],
         );
@@ -157,14 +158,13 @@ class _CountBadge extends StatelessWidget {
 }
 
 class _TeamsGrid extends StatelessWidget {
-  final List<EquipoGlobalViewModel> equipos;
-  final bool esAnual;
+  final List<TeamOverview> teams;
+  final bool isAnnual;
 
-  const _TeamsGrid({required this.equipos, required this.esAnual});
+  const _TeamsGrid({required this.teams, required this.isAnnual});
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: llama a GridView.builder para distribuir las tarjetas de equipos.
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -172,12 +172,12 @@ class _TeamsGrid extends StatelessWidget {
         maxCrossAxisExtent: _maxCardWidth,
         crossAxisSpacing: _gridSpacing,
         mainAxisSpacing: _gridSpacing,
-        mainAxisExtent: 252,
+        mainAxisExtent: _cardHeight,
       ),
-      itemCount: equipos.length,
-      // Leandro: llama a EquipoCard para mostrar el resumen de cada equipo visible.
+      itemCount: teams.length,
+
       itemBuilder: (context, index) =>
-          EquipoCard(equipo: equipos[index], esAnual: esAnual),
+          TeamCard(team: teams[index], isAnnual: isAnnual),
     );
   }
 }
@@ -198,7 +198,7 @@ class _EmptySearch extends StatelessWidget {
             size: 30,
             color: context.colorScheme.onSurfaceVariant,
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'No encontramos equipos con esos filtros.',
             style: TextStyle(
@@ -206,7 +206,7 @@ class _EmptySearch extends StatelessWidget {
               color: context.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda, área o estado.',
             style: TextStyle(
