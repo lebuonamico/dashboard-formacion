@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
+import 'package:app_finnegans/domain/modelos/reporte_formacion.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/presentation/reportes/reporte_pdf.dart';
@@ -80,49 +81,47 @@ void main() {
     ),
   ];
 
-  ReporteFormacion reporte({bool soloCriticos = false}) => ReporteFormacion(
-    tipo: 'Reporte de área',
-    titulo: 'Desarrollo',
-    detalles: const ['Líder: María López', '2 equipos'],
-    periodo: 'Octubre 2026',
-    integrantes: 4,
-    enObjetivo: 2,
-    horas: 21,
-    objetivo: 34,
-    porcentaje: 61.8,
-    estado: 'Crítico',
-    nivel: NivelReporte.critico,
-    miembros: miembros,
-    desgloseTitulo: 'Cumplimiento por equipo',
-    desglose: const [
-      FilaDesgloseReporte(
-        nombre: 'Core',
-        integrantes: 2,
-        horas: 11,
-        objetivo: 16,
-        porcentaje: 68.8,
+  ReporteFormacion reporte({TipoReporte tipo = TipoReporte.area}) =>
+      ReporteFormacion(
+        tipo: tipo,
+        titulo: 'Desarrollo',
+        detalles: const ['Líder: María López', '2 equipos'],
+        periodo: 'Octubre 2026',
+        integrantes: 4,
+        enObjetivo: 2,
+        horas: 21,
+        objetivo: 34,
+        porcentaje: 61.8,
         estado: 'Crítico',
         nivel: NivelReporte.critico,
-      ),
-      FilaDesgloseReporte(
-        nombre: 'Mobile',
-        integrantes: 2,
-        horas: 10,
-        objetivo: 18,
-        porcentaje: 55.6,
-        estado: 'En riesgo',
-        nivel: NivelReporte.atencion,
-      ),
-    ],
-    evolucion: [
-      (mes: DateTime(2026, 7), horas: 3.2),
-      (mes: DateTime(2026, 8), horas: 4.1),
-      (mes: DateTime(2026, 9), horas: 2.7),
-      (mes: DateTime(2026, 10), horas: 5.3),
-    ],
-    soloCriticos: soloCriticos,
-    mostrarEquipo: !soloCriticos,
-  );
+        miembros: miembros,
+        desglose: const [
+          FilaDesgloseReporte(
+            nombre: 'Core',
+            integrantes: 2,
+            horas: 11,
+            objetivo: 16,
+            porcentaje: 68.8,
+            estado: 'Crítico',
+            nivel: NivelReporte.critico,
+          ),
+          FilaDesgloseReporte(
+            nombre: 'Mobile',
+            integrantes: 2,
+            horas: 10,
+            objetivo: 18,
+            porcentaje: 55.6,
+            estado: 'En riesgo',
+            nivel: NivelReporte.atencion,
+          ),
+        ],
+        evolucion: [
+          (mes: DateTime(2026, 7), horas: 3.2),
+          (mes: DateTime(2026, 8), horas: 4.1),
+          (mes: DateTime(2026, 9), horas: 2.7),
+          (mes: DateTime(2026, 10), horas: 5.3),
+        ],
+      );
 
   test('genera el PDF del reporte con tildes y varias secciones', () async {
     final bytes = await generarReportePdf(reporte());
@@ -132,9 +131,9 @@ void main() {
     final salida = Platform.environment['REPORTE_PDF_SALIDA'];
     if (salida != null) {
       File('$salida/reporte_area.pdf').writeAsBytesSync(bytes);
-      File(
-        '$salida/reporte_general.pdf',
-      ).writeAsBytesSync(await generarReportePdf(reporte(soloCriticos: true)));
+      File('$salida/reporte_general.pdf').writeAsBytesSync(
+        await generarReportePdf(reporte(tipo: TipoReporte.general)),
+      );
     }
   });
 

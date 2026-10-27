@@ -217,14 +217,13 @@ class _CategoryChartCard extends StatelessWidget {
       for (final tipo in TipoCurso.values)
         context.colores.categoria(tipo).texto,
     ];
-    final labels = ['Negocio', 'Blandas', 'Libres', 'Dictado'];
     final legend = <_ChartLegendItem>[];
 
     for (var index = 0; index < TipoCurso.values.length; index++) {
       final tipo = TipoCurso.values[index];
       legend.add(
         _ChartLegendItem(
-          label: labels[index],
+          label: tipo.labelCorto,
           value: summary.hours[tipo] ?? 0,
           color: colors[index],
           backgroundColor: context.colorScheme.surfaceContainerLow,

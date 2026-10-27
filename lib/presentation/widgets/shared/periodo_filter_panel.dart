@@ -1,12 +1,25 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/presentation/widgets/teams/team_period_controls.dart';
+import 'package:app_finnegans/presentation/utils/period_formatter.dart';
+import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
+import 'package:app_finnegans/presentation/widgets/shared/period_segmented_control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Selector de período conectado a los providers globales.
 /// Cualquier pantalla que lo use comparte el mismo período.
 class PeriodoFilterPanel extends ConsumerWidget {
-  const PeriodoFilterPanel({super.key});
+  /// Qué entra al cálculo del período, para el texto de ayuda.
+  final String incluidos;
+
+  /// Se muestra junto al título, como el botón para imprimir el reporte.
+  final Widget? accion;
+
+  const PeriodoFilterPanel({
+    super.key,
+    this.incluidos = 'todos los equipos',
+    this.accion,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,23 +29,176 @@ class PeriodoFilterPanel extends ConsumerWidget {
     final aniosDisponibles = ref
         .watch(aniosEquipoDisponiblesProvider)
         .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
+    final yearOptions = {...aniosDisponibles, anio}.toList()
+      ..sort((a, b) => b.compareTo(a));
 
-    return EquiposPeriodControls(
-      alcance: alcance,
-      selectedMonth: mes,
-      selectedYear: anio,
-      availableYears: aniosDisponibles,
-      onScopeChanged: (value) {
-        ref.read(alcancePeriodoProvider.notifier).state = value;
-      },
-      onMonthChanged: (value) {
-        if (value == null) return;
-        ref.read(filtroMesPeriodoProvider.notifier).state = value;
-      },
-      onYearChanged: (value) {
-        if (value == null) return;
-        ref.read(filtroAnioPeriodoProvider.notifier).state = value;
-      },
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: context.panel(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final title = _PeriodTitle(
+            esAnual: alcance == AlcancePeriodo.anual,
+            incluidos: incluidos,
+            accion: accion,
+          );
+          // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
+          final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
+            selected: alcance,
+            options: AlcancePeriodo.values,
+            labelBuilder: (scope) => scope.label,
+            onChanged: (value) =>
+                ref.read(alcancePeriodoProvider.notifier).state = value,
+            selectedColor: context.colorScheme.primary,
+            unselectedColor: context.colorScheme.surface,
+            selectedForegroundColor: context.colorScheme.onPrimary,
+            unselectedForegroundColor: context.colorScheme.onSurface,
+          );
+          // Leandro: llama a _MonthField para seleccionar el mes del período.
+          final monthField = _MonthField(
+            selectedMonth: mes,
+            enabled: alcance == AlcancePeriodo.mensual,
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(filtroMesPeriodoProvider.notifier).state = value;
+            },
+          );
+          // Leandro: llama a _YearField para seleccionar el año del período.
+          final yearField = _YearField(
+            selectedYear: anio,
+            yearOptions: yearOptions,
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+            },
+          );
+          if (constraints.maxWidth < 820) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+                const SizedBox(height: 12),
+                scopeControl,
+                const SizedBox(height: 12),
+                monthField,
+                const SizedBox(height: 12),
+                yearField,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 16),
+              scopeControl,
+              const SizedBox(width: 12),
+              SizedBox(width: 170, child: monthField),
+              const SizedBox(width: 12),
+              SizedBox(width: 135, child: yearField),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PeriodTitle extends StatelessWidget {
+  final bool esAnual;
+  final String incluidos;
+  final Widget? accion;
+
+  const _PeriodTitle({
+    required this.esAnual,
+    required this.incluidos,
+    this.accion,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          'Período de análisis',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: context.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Tooltip(
+          message: esAnual
+              ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
+              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $incluidos con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
+          child: Icon(
+            Icons.info_outline,
+            size: 16,
+            color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+          ),
+        ),
+        if (accion case final accion?) ...[const SizedBox(width: 12), accion],
+      ],
+    );
+  }
+}
+
+class _MonthField extends StatelessWidget {
+  final int selectedMonth;
+  final bool enabled;
+  final ValueChanged<int?> onChanged;
+
+  const _MonthField({
+    required this.selectedMonth,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterDropdown<int>(
+      value: selectedMonth,
+      hint: 'Mes',
+      icon: Icons.calendar_month_outlined,
+      items: List.generate(12, (index) => index + 1)
+          .map(
+            (month) => DropdownMenuItem<int>(
+              value: month,
+              child: Text(nombreMes(month), overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: enabled ? onChanged : null,
+    );
+  }
+}
+
+class _YearField extends StatelessWidget {
+  final int selectedYear;
+  final List<int> yearOptions;
+  final ValueChanged<int?> onChanged;
+
+  const _YearField({
+    required this.selectedYear,
+    required this.yearOptions,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterDropdown<int>(
+      value: selectedYear,
+      hint: 'Año',
+      icon: Icons.event_outlined,
+      items: yearOptions
+          .map(
+            (year) => DropdownMenuItem<int>(
+              value: year,
+              child: Text('$year', overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
     );
   }
 }

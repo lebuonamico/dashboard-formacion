@@ -1,11 +1,15 @@
 enum TipoCurso {
-  habilidadesDeNegocio('Habilidades de negocio'),
-  habilidadesBlandas('Habilidades blandas'),
-  libresExploracion('Libres / exploración'),
-  dictadoCapacitaciones('Dictado de capacitaciones');
+  habilidadesDeNegocio('Habilidades de negocio', 'Negocio'),
+  habilidadesBlandas('Habilidades blandas', 'Blandas'),
+  libresExploracion('Libres / exploración', 'Libres'),
+  dictadoCapacitaciones('Dictado de capacitaciones', 'Dictado');
 
   final String label;
-  const TipoCurso(this.label);
+
+  /// Para gráficos, leyendas y encabezados de tabla.
+  final String labelCorto;
+
+  const TipoCurso(this.label, this.labelCorto);
 
   /// Reconoce la categoría a partir de la Clasificación del CRM o del catálogo
   /// (p. ej. "Habilidades de Negocio y Herramientas", "Horas de Dictado",

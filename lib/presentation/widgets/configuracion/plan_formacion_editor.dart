@@ -24,13 +24,6 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
   static const _anchoHoras = 104.0;
   static const _anchoTotal = 90.0;
 
-  static const _etiquetaCorta = {
-    TipoCurso.habilidadesDeNegocio: 'Negocio',
-    TipoCurso.habilidadesBlandas: 'Blandas',
-    TipoCurso.libresExploracion: 'Libres',
-    TipoCurso.dictadoCapacitaciones: 'Dictado',
-  };
-
   final _controladores = {
     for (final seniority in Seniority.values)
       for (final tipo in TipoCurso.values)
@@ -408,7 +401,7 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(_etiquetaCorta[tipo]!, style: estiloEncabezado),
+                      Text(tipo.labelCorto, style: estiloEncabezado),
                     ],
                   ),
                 ),
