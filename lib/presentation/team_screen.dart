@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/proyeccion_providers.dart';
@@ -57,7 +58,10 @@ class EquipoScreen extends ConsumerWidget {
                   color: context.colorScheme.primary,
                 ),
               ),
-              error: (error, _) => _ErrorState(message: '$error'),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar el equipo',
+                error: error,
+              ),
               data: (detalle) => FadeIn(
                 child: (() {
                   final etiqueta = etiquetaPeriodo(alcance, mes, anio);
@@ -216,26 +220,6 @@ class _EmptyContent extends StatelessWidget {
     return ListView(
       padding: paddingPantalla,
       children: [periodControls, const SizedBox(height: 22), child],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          'No pudimos cargar el equipo.\n$message',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.colorScheme.error),
-        ),
-      ),
     );
   }
 }

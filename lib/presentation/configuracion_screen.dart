@@ -667,21 +667,15 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
               );
             },
             refrescar: () async {
+              // La nómina no cambia cursos, horas ni finalizaciones: lo que
+              // depende de quién ve a quién se recalcula solo desde la nómina.
               container.invalidate(estructuraProvider);
-              container.invalidate(empleadosProvider);
+              container.invalidate(nominaProvider);
               container.invalidate(empleadoHistorialProvider);
-              container.invalidate(cursosProvider);
-              container.invalidate(cargasDeHorasCRMProvider);
-              container.invalidate(cargasDashboardProvider);
-              container.invalidate(certificacionesMoodleProvider);
               await Future.wait([
                 container.read(estructuraProvider.future),
                 container.read(empleadosProvider.future),
                 container.read(empleadoHistorialProvider.future),
-                container.read(cursosProvider.future),
-                container.read(cargasDeHorasCRMProvider.future),
-                container.read(cargasDashboardProvider.future),
-                container.read(certificacionesMoodleProvider.future),
               ]);
             },
           );

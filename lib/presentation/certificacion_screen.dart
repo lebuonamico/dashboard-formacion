@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -37,10 +38,9 @@ class CertificacionScreen extends ConsumerWidget {
               padding: paddingPantalla,
               child: completasAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Text(
-                    'No se pudieron cargar las certificaciones LMS: $error',
-                  ),
+                error: (error, _) => ErrorDataState(
+                  title: 'No pudimos cargar las certificaciones LMS',
+                  error: error,
                 ),
                 data: (todas) => FadeIn(
                   child: (() {

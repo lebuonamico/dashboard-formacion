@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -59,7 +60,10 @@ class AreaDetalleScreen extends ConsumerWidget {
                   color: context.colorScheme.primary,
                 ),
               ),
-              error: (error, _) => _ErrorState(message: '$error'),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar el área',
+                error: error,
+              ),
               data: (detalle) => FadeIn(
                 child: (() {
                   final periodo = etiquetaPeriodo(alcance, mes, anio);
@@ -216,24 +220,4 @@ class _AreaContent extends ConsumerWidget {
   }
 
   String _horas(double value) => '${value.toStringAsFixed(1)} h';
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          'No pudimos cargar el área.\n$message',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.colorScheme.error),
-        ),
-      ),
-    );
-  }
 }

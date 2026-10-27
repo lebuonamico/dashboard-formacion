@@ -16,12 +16,19 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+/// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
+/// sola vez. La comparten [empleadosProvider] y [empleadoDeSesionProvider].
+final nominaProvider = FutureProvider<List<Empleado>>((ref) {
+  // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
+  ref.watch(sesionDatosProvider);
+  return ref.watch(empleadosRepositoryProvider).getEmpleados();
+});
+
 /// Nómina que ve el usuario de la sesión, según su rol y las áreas o equipos
 /// que lidera.
 final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
-  final repo = ref.watch(empleadosRepositoryProvider);
   // La nómina va primero: si falla, ese es el error que tiene que verse.
-  final empleados = await repo.getEmpleados();
+  final empleados = await ref.watch(nominaProvider.future);
   final alcance = await ref.watch(alcanceUsuarioProvider.future);
   return empleados.where(alcance.incluyeEmpleado).toList();
 });

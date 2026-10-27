@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
@@ -60,7 +61,13 @@ class DashboardKpiGrid extends StatelessWidget {
       equiposAsync,
     ];
     final error = asyncValues.where((value) => value.hasError).firstOrNull;
-    if (error != null) return Text('Error: ${error.error}');
+    if (error != null) {
+      return ErrorDataState(
+        title: 'No pudimos cargar esta sección',
+        error: error.error!,
+        compact: true,
+      );
+    }
 
     final cumplimientos = cumplimientosAsync.value ?? [];
     final cargas = cargasAsync.value ?? [];

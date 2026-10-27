@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
@@ -15,7 +16,11 @@ class DashboardSummaryCharts extends StatelessWidget {
   Widget build(BuildContext context) {
     return cumplimientosAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text('Error: $error'),
+      error: (error, _) => ErrorDataState(
+        title: 'No pudimos cargar esta sección',
+        error: error,
+        compact: true,
+      ),
       data: (cumplimientos) {
         if (cumplimientos.isEmpty) return const SizedBox.shrink();
 

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/presentation/widgets/shared/error_data_state.dart';
 import 'package:app_finnegans/presentation/widgets/shared/margenes_pantalla.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
@@ -41,7 +42,10 @@ class EmpleadosScreen extends ConsumerWidget {
                     child: empleadosFiltrados.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(child: Text('Error: $err')),
+                      error: (err, _) => ErrorDataState(
+                        title: 'No pudimos cargar los empleados',
+                        error: err,
+                      ),
                       data: (empleados) => FadeIn(
                         child: (() {
                           if (empleados.isEmpty) {
