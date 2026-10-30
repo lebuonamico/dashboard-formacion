@@ -39,7 +39,7 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
 
   Widget _buildFicha(BuildContext context, TipoCurso tipo) {
     final colores = context.colores;
-    final horasRegistradas = cumplimiento!.horasCompletadas[tipo] ?? 0.0;
+    final horasRegistradas = cumplimiento!.horasValidas[tipo] ?? 0.0;
     final horasRealizadas = mostrarSoloHorasAplicables
         ? cumplimiento!.horasAplicablesAlObjetivo(tipo)
         : horasRegistradas;

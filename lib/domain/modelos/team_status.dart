@@ -5,10 +5,4 @@ enum TeamStatus {
 
   final String label;
   const TeamStatus(this.label);
-
-  static const enObjetivo = onTarget;
-  static const enRiesgo = atRisk;
-  static const critico = critical;
 }
-
-typedef EstadoEquipo = TeamStatus;

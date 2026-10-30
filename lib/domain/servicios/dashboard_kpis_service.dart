@@ -47,15 +47,15 @@ class DashboardKpisService {
   const DashboardKpisService();
 
   DashboardCumplimientoAcumulado acumularCumplimiento(
-    Iterable<ResumenEquiposPeriodo> meses,
+    Iterable<TeamsPeriodSummary> meses,
   ) {
     var horasValidas = 0.0;
     var horasObjetivo = 0.0;
     for (final mes in meses) {
-      if (!mes.tieneDatos || mes.colaboradores == 0) continue;
+      if (!mes.hasData || mes.employeeCount == 0) continue;
       // Las horas de cada mes ya respetan elegibilidad, categorías y topes.
-      horasValidas += mes.horasRealizadas;
-      horasObjetivo += mes.horasObjetivo;
+      horasValidas += mes.completedHours;
+      horasObjetivo += mes.targetHours;
     }
     return DashboardCumplimientoAcumulado(
       horasValidas: horasValidas,
@@ -76,7 +76,7 @@ class DashboardKpisService {
     final totalEmpleados = legajos.length;
     final horasRealizadas = cumplimientos.fold<double>(
       0,
-      (t, i) => t + i.totalHorasCompletadas,
+      (t, i) => t + i.totalHorasValidas,
     );
     final horasObjetivo = cumplimientos.fold<double>(
       0,

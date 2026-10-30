@@ -1,17 +1,9 @@
-import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
-import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
-import 'package:app_finnegans/domain/modelos/curso.dart';
-import 'package:app_finnegans/domain/modelos/empleado.dart';
-import 'package:app_finnegans/domain/modelos/empleado_historial.dart';
 import 'package:app_finnegans/domain/modelos/team_identity.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
-import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 import 'package:app_finnegans/domain/servicios/team_period_service.dart';
-
-part 'teams_service_compatibility.dart';
 
 typedef TeamLeaderResolver = String? Function(String area, String team);
 
@@ -134,7 +126,7 @@ class TeamsService {
     final assignedLeaders = resolveLeader?.call(firstEmployee.area, teamName);
     final completedHours = members.fold<double>(
       0,
-      (total, member) => total + member.totalHorasCompletadas,
+      (total, member) => total + member.totalHorasValidas,
     );
     final targetHours = members.fold<double>(
       0,

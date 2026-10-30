@@ -24,11 +24,11 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
+    final hayDatosAsync = ref.watch(hasTeamPeriodDataProvider);
     final cumplimientoAsync = ref.watch(cumplimientoDashboardProvider);
     final areasAsync = ref.watch(semaforoPorAreaProvider);
     final cargasAsync = ref.watch(cargasDashboardProvider);
-    final equiposAsync = ref.watch(equiposGlobalProvider);
+    final equiposAsync = ref.watch(teamOverviewsProvider);
     final mesesEvaluados =
         ref.watch(mesesEvaluadosDashboardProvider).value ?? 1;
     final alcance = ref.watch(alcancePeriodoProvider);

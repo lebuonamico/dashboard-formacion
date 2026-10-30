@@ -27,7 +27,7 @@ class PeriodoFilterPanel extends ConsumerWidget {
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);
     final aniosDisponibles = ref
-        .watch(aniosEquipoDisponiblesProvider)
+        .watch(availableTeamYearsProvider)
         .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
     final yearOptions = {...aniosDisponibles, anio}.toList()
       ..sort((a, b) => b.compareTo(a));

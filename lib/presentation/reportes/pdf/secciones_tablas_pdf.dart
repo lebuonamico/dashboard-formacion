@@ -145,7 +145,7 @@ List<pw.Widget> integrantesPdf(
             for (final tipo in TipoCurso.values)
               pw.Text(_categoria(m, tipo), style: estiloCelda),
             pw.Text(
-              '${m.totalHorasCompletadas.toStringAsFixed(1)} / '
+              '${m.totalHorasValidas.toStringAsFixed(1)} / '
               '${m.totalHorasRequeridas.toStringAsFixed(0)}',
               style: estiloCelda,
             ),

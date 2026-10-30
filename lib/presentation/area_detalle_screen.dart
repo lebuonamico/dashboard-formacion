@@ -32,7 +32,7 @@ class AreaDetalleScreen extends ConsumerWidget {
     final detalleAsync = ref.watch(detalleAreaProvider(nombreArea));
     // Mantener la selección durante cargas o períodos sin integrantes.
     final filtroMiembros = ref.watch(filtroEstadoMiembroAreaProvider);
-    final hayDatosAsync = ref.watch(hayDatosEquiposPeriodoProvider);
+    final hayDatosAsync = ref.watch(hasTeamPeriodDataProvider);
     final alcance = ref.watch(alcancePeriodoProvider);
     final mes = ref.watch(filtroMesPeriodoProvider);
     final anio = ref.watch(filtroAnioPeriodoProvider);

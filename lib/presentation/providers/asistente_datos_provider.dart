@@ -107,7 +107,7 @@ Future<ContextoAsistente> _preparar(
     final resultado = <String, Object?>{'periodo': periodo.toJson()};
     resultados.add(resultado);
     try {
-      final hayDatos = await scope.read(hayDatosEquiposPeriodoProvider.future);
+      final hayDatos = await scope.read(hasTeamPeriodDataProvider.future);
       resultado['tiene_datos'] = hayDatos;
       if (!hayDatos) {
         resultado['alcance'] =
@@ -124,9 +124,9 @@ Future<ContextoAsistente> _preparar(
         continue;
       }
       final resumen = usaGrupos
-          ? await scope.read(resumenEquiposPeriodoProvider.future)
+          ? await scope.read(teamsPeriodSummaryProvider.future)
           : null;
-      if (resumen != null && resumen.colaboradores == 0) {
+      if (resumen != null && resumen.employeeCount == 0) {
         resultado['disponibilidad'] =
             'Hay movimientos pero no colaboradores evaluables; no hay un KPI de cumplimiento para mostrar.';
         continue;
@@ -171,10 +171,10 @@ Future<ContextoAsistente> _preparar(
             r'categor|negocio|blanda|libre|dictad',
           ).hasMatch(service.normalizar(pregunta))) {
             resultado['horas_validas_por_categoria'] = {
-              'negocio': resumen!.horasNegocio,
-              'blandas': resumen.horasBlandas,
-              'libres': resumen.horasLibres,
-              'dictado': resumen.horasDictado,
+              'negocio': resumen!.businessHours,
+              'blandas': resumen.softSkillsHours,
+              'libres': resumen.explorationHours,
+              'dictado': resumen.teachingHours,
             };
           }
         case TemaAsistente.areas:
@@ -229,10 +229,10 @@ Future<ContextoAsistente> _preparar(
             );
           }
         case TemaAsistente.equipos:
-          var lista = resumen!.equipos.toList();
+          var lista = resumen!.teams.toList();
           final q = service.normalizar(pregunta);
           final explicitos = lista
-              .where((e) => _menciona(q, e.nombre, service))
+              .where((e) => _menciona(q, e.name, service))
               .toList();
           final areasExplicitas = lista
               .map((e) => e.area)
@@ -245,7 +245,7 @@ Future<ContextoAsistente> _preparar(
             final seleccionado = lista
                 .where(
                   (e) =>
-                      service.normalizar(e.nombre) ==
+                      service.normalizar(e.name) ==
                           service.normalizar(destino.equipo!) &&
                       service.normalizar(e.area) ==
                           service.normalizar(destino.area ?? ''),
@@ -277,7 +277,7 @@ Future<ContextoAsistente> _preparar(
               lista = lista
                   .where(
                     (e) =>
-                        service.normalizar(e.nombre) ==
+                        service.normalizar(e.name) ==
                         service.normalizar(destino.equipo!),
                   )
                   .toList();
@@ -285,23 +285,23 @@ Future<ContextoAsistente> _preparar(
           }
           if (q.contains('critic')) {
             lista = lista
-                .where((e) => e.estado == EstadoEquipo.critico)
+                .where((e) => e.status == TeamStatus.critical)
                 .toList();
           } else if (q.contains('riesgo')) {
             lista = lista
-                .where((e) => e.estado == EstadoEquipo.enRiesgo)
+                .where((e) => e.status == TeamStatus.atRisk)
                 .toList();
           } else if (q.contains('en objetivo')) {
             lista = lista
-                .where((e) => e.estado == EstadoEquipo.enObjetivo)
+                .where((e) => e.status == TeamStatus.onTarget)
                 .toList();
           }
           if (RegExp(r'menor|mayor|mejor|peor|compar').hasMatch(q)) {
             lista.sort(
               (a, b) => q.contains('mayor') || q.contains('mejor')
-                  ? b.porcentajeCumplimiento.compareTo(a.porcentajeCumplimiento)
-                  : a.porcentajeCumplimiento.compareTo(
-                      b.porcentajeCumplimiento,
+                  ? b.completionPercentage.compareTo(a.completionPercentage)
+                  : a.completionPercentage.compareTo(
+                      b.completionPercentage,
                     ),
             );
           }
@@ -383,7 +383,7 @@ Future<void> _agregarAcumulado(
       '${p.anio}-${p.mes.toString().padLeft(2, '0')}';
   final meses = <Map<String, Object?>>[];
   final detalle = <Map<String, Object?>>[];
-  final evaluados = <ResumenEquiposPeriodo>[];
+  final evaluados = <TeamsPeriodSummary>[];
   var incompleto = false;
   for (final periodo in consulta.periodos) {
     final mes = <String, Object?>{
@@ -394,12 +394,12 @@ Future<void> _agregarAcumulado(
     ProviderContainer? scope;
     try {
       scope = await _snapshot(ref, periodo, requiereHistorial: true);
-      if (!await scope.read(hayDatosEquiposPeriodoProvider.future)) {
+      if (!await scope.read(hasTeamPeriodDataProvider.future)) {
         mes['estado'] = 'sin_datos';
         continue;
       }
-      final resumen = await scope.read(resumenEquiposPeriodoProvider.future);
-      if (resumen.colaboradores == 0) {
+      final resumen = await scope.read(teamsPeriodSummaryProvider.future);
+      if (resumen.employeeCount == 0) {
         mes['estado'] = 'sin_colaboradores_evaluables';
         continue;
       }
@@ -407,9 +407,9 @@ Future<void> _agregarAcumulado(
       mes['estado'] = 'evaluado';
       detalle.add({
         'periodo': clave(periodo),
-        'horas_validas': resumen.horasRealizadas,
-        'horas_objetivo': resumen.horasObjetivo,
-        'cumplimiento_pct': resumen.cumplimientoGlobal,
+        'horas_validas': resumen.completedHours,
+        'horas_objetivo': resumen.targetHours,
+        'cumplimiento_pct': resumen.overallCompletion,
       });
     } catch (_) {
       // Un fallo de lectura o de cálculo no equivale a un mes sin registros.
@@ -450,26 +450,26 @@ Future<void> _agregarAcumulado(
   );
 }
 
-Map<String, Object?> _global(ResumenEquiposPeriodo r) => {
+Map<String, Object?> _global(TeamsPeriodSummary r) => {
   'completo': true,
-  'colaboradores': r.colaboradores,
-  'horas_validas': r.horasRealizadas,
-  'horas_objetivo': r.horasObjetivo,
-  'cumplimiento_pct': r.cumplimientoGlobal,
-  'equipos': r.totalEquipos,
-  'en_objetivo': r.enObjetivo,
-  'en_riesgo': r.enRiesgo,
-  'criticos': r.criticos,
+  'colaboradores': r.employeeCount,
+  'horas_validas': r.completedHours,
+  'horas_objetivo': r.targetHours,
+  'cumplimiento_pct': r.overallCompletion,
+  'equipos': r.teamCount,
+  'en_objetivo': r.onTarget,
+  'en_riesgo': r.atRisk,
+  'criticos': r.critical,
 };
 Map<String, Object?> _equipo(TeamOverview e) => {
-  'equipo': e.nombre,
+  'equipo': e.name,
   'area': e.area,
-  'integrantes': e.cantidadIntegrantes,
-  'personas_en_objetivo': e.integrantesEnObjetivo,
-  'horas_validas': e.horasRealizadas,
-  'horas_objetivo': e.horasObjetivo,
-  'cumplimiento_pct': e.porcentajeCumplimiento,
-  'estado': e.estado.label,
+  'integrantes': e.memberCount,
+  'personas_en_objetivo': e.membersOnTarget,
+  'horas_validas': e.completedHours,
+  'horas_objetivo': e.targetHours,
+  'cumplimiento_pct': e.completionPercentage,
+  'estado': e.status.label,
 };
 bool _menciona(String q, String nombre, AsistenteContextoService s) {
   final n = s.normalizar(nombre);
@@ -490,7 +490,7 @@ Future<ProviderContainer> _snapshot(
   final certificacionesF = ref.read(certificacionesMoodleProvider.future);
   final estructuraF = ref.read(estructuraProvider.future);
   final alcanceF = ref.read(alcanceUsuarioProvider.future);
-  final equiposService = ref.read(equiposServiceProvider);
+  final equiposService = ref.read(teamsServiceProvider);
   final cumplimientoServiceF = ref.read(cumplimientoServiceProvider.future);
   final sesion = ref.read(sesionDatosProvider);
   final (
@@ -525,7 +525,7 @@ Future<ProviderContainer> _snapshot(
       cursosProvider.overrideWith((_) async => cursos),
       cargasDeHorasCRMProvider.overrideWith((_) async => cargas),
       certificacionesMoodleProvider.overrideWith((_) async => certificaciones),
-      equiposServiceProvider.overrideWithValue(equiposService),
+      teamsServiceProvider.overrideWithValue(equiposService),
       cumplimientoServiceProvider.overrideWith(
         (_) async => cumplimientoService,
       ),

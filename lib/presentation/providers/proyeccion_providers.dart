@@ -21,7 +21,7 @@ final mesCorteProyeccionAnualProvider = FutureProvider<int?>((ref) async {
   final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
   return ref
-      .read(equiposServiceProvider)
+      .read(teamsServiceProvider)
       .periods
       .lastMonthWithData(
         timeEntries: cargas,
@@ -53,7 +53,7 @@ final cumplimientoPorMesProvider =
       final incluir = alcanceUsuario.esTotal
           ? null
           : alcanceUsuario.incluyeEmpleado;
-      final equiposService = ref.read(equiposServiceProvider);
+      final equiposService = ref.read(teamsServiceProvider);
 
       return equiposService.periods.calculateComplianceByMonth(
         employees: empleados,
@@ -103,7 +103,7 @@ final variacionCumplimientoProvider =
       final mesCorte = await ref.watch(mesCorteProyeccionAnualProvider.future);
       if (mesCorte == null) return null;
       final porMes = await ref.watch(cumplimientoPorMesProvider.future);
-      final equiposService = ref.read(equiposServiceProvider);
+      final equiposService = ref.read(teamsServiceProvider);
 
       final todos = seccion.area == null && seccion.equipo == null;
       final filtrado = {
@@ -128,7 +128,7 @@ final variacionCumplimientoProvider =
         ]);
         final horas = acumulado.fold<double>(
           0,
-          (t, c) => t + c.totalHorasCompletadas,
+          (t, c) => t + c.totalHorasValidas,
         );
         final objetivo = acumulado.fold<double>(
           0,
@@ -140,7 +140,7 @@ final variacionCumplimientoProvider =
       double? horasPersona(int mes) {
         final items = filtrado[mes];
         if (items == null || items.isEmpty) return null;
-        return items.fold<double>(0, (t, c) => t + c.totalHorasCompletadas) /
+        return items.fold<double>(0, (t, c) => t + c.totalHorasValidas) /
             items.length;
       }
 
@@ -209,7 +209,7 @@ final proyeccionAnualProvider =
       final mesCorte = await ref.watch(mesCorteProyeccionAnualProvider.future);
       if (mesCorte == null) return null;
       final porMes = await ref.watch(cumplimientoPorMesProvider.future);
-      final equiposService = ref.read(equiposServiceProvider);
+      final equiposService = ref.read(teamsServiceProvider);
 
       // La sección se define por dónde está cada colaborador en el mes de
       // corte; de ellos se toma todo el historial del año, aunque antes

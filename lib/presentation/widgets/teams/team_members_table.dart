@@ -158,7 +158,7 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
         DataCell(Text(employee.seniority.label)),
         DataCell(
           Text(
-            '${member.totalHorasCompletadas.toStringAsFixed(1)} / ${member.totalHorasRequeridas.toStringAsFixed(1)} h',
+            '${member.totalHorasValidas.toStringAsFixed(1)} / ${member.totalHorasRequeridas.toStringAsFixed(1)} h',
           ),
         ),
         DataCell(

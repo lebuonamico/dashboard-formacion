@@ -1,8 +1,6 @@
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_status.dart';
 
-part 'team_overview_compatibility.dart';
-
 class TeamOverview {
   final String id;
   final String name;

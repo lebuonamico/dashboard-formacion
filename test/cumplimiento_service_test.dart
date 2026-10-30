@@ -154,17 +154,17 @@ void main() {
 
   test('el cálculo mensual usa solo las finalizaciones y cargas del mes', () {
     List<CumplimientoEmpleado> mes(int numero) =>
-        const EquiposService().calcularCumplimientoMensual(
-          empleados: [empleado],
-          cursos: [curso('Arquitectura Cloud', TipoCurso.habilidadesDeNegocio, 8)],
-          cargas: [
+        const TeamsService().periods.calculateMonthlyCompliance(
+          employees: [empleado],
+          courses: [curso('Arquitectura Cloud', TipoCurso.habilidadesDeNegocio, 8)],
+          timeEntries: [
             carga('Arquitectura Cloud', 1),
             carga('Taller', 2, clasif: 'Dictado de capacitaciones'),
           ],
-          certificaciones: [finalizado('Arquitectura Cloud')],
-          anio: 2026,
-          mes: numero,
-          cumplimientoService: const CumplimientoService(),
+          certifications: [finalizado('Arquitectura Cloud')],
+          year: 2026,
+          month: numero,
+          complianceService: const CumplimientoService(),
         );
 
     // Cargas del 10/05 y finalización del 20/05.
@@ -209,14 +209,14 @@ void main() {
 
     test('el objetivo sale de la versión vigente en el mes evaluado', () {
       List<CumplimientoEmpleado> mes(int numero) =>
-          const EquiposService().calcularCumplimientoMensual(
-            empleados: [empleado],
-            cursos: const [],
-            cargas: [carga('Taller', 5, clasif: 'Dictado de capacitaciones')],
-            certificaciones: const [],
-            anio: 2026,
-            mes: numero,
-            cumplimientoService: servicio,
+          const TeamsService().periods.calculateMonthlyCompliance(
+            employees: [empleado],
+            courses: const [],
+            timeEntries: [carga('Taller', 5, clasif: 'Dictado de capacitaciones')],
+            certifications: const [],
+            year: 2026,
+            month: numero,
+            complianceService: servicio,
           );
 
       // Mayo es anterior al cambio: el dictado pedido sigue siendo 4 h.
@@ -235,11 +235,12 @@ void main() {
     });
 
     test('el anual suma los objetivos de cada mes con su versión', () {
-      final anual = const EquiposService()
-          .calcularCumplimientoAnual(
-            empleados: [empleado],
-            cursos: const [],
-            cargas: [
+      final anual = const TeamsService()
+          .periods
+          .calculateAnnualCompliance(
+            employees: [empleado],
+            courses: const [],
+            timeEntries: [
               carga('Taller', 5, clasif: 'Dictado de capacitaciones'),
               CargaDeHorasCRM(
                 id: 'junio',
@@ -251,9 +252,9 @@ void main() {
                 clasificacion: 'Dictado de capacitaciones',
               ),
             ],
-            certificaciones: const [],
-            anio: 2026,
-            cumplimientoService: servicio,
+            certifications: const [],
+            year: 2026,
+            complianceService: servicio,
           )
           .single;
 
@@ -281,14 +282,15 @@ void main() {
             clasificacion: 'Dictado de capacitaciones',
           );
       CumplimientoEmpleado anual(List<CargaDeHorasCRM> cargas) =>
-          const EquiposService()
-              .calcularCumplimientoAnual(
-                empleados: [empleado],
-                cursos: const [],
-                cargas: cargas,
-                certificaciones: const [],
-                anio: 2026,
-                cumplimientoService: servicio,
+          const TeamsService()
+              .periods
+              .calculateAnnualCompliance(
+                employees: [empleado],
+                courses: const [],
+                timeEntries: cargas,
+                certifications: const [],
+                year: 2026,
+                complianceService: servicio,
               )
               .single;
 

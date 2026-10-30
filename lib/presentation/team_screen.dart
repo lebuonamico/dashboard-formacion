@@ -148,8 +148,3 @@ class _EmptyContent extends StatelessWidget {
     );
   }
 }
-
-class EquipoScreen extends TeamDetailScreen {
-  const EquipoScreen({super.key, required super.area, required String equipo})
-    : super(team: equipo);
-}

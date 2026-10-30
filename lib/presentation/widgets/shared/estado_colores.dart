@@ -18,13 +18,13 @@ extension ColoresSemaforo on EstadoSemaforo {
 }
 
 /// Colores del estado de un equipo, con el mismo semáforo que las áreas.
-extension ColoresEstadoEquipo on EstadoEquipo {
+extension ColoresEstadoEquipo on TeamStatus {
   ParColores colores(BuildContext context) {
     final colores = context.colores;
     return switch (this) {
-      EstadoEquipo.enObjetivo => colores.exito,
-      EstadoEquipo.enRiesgo => colores.advertencia,
-      EstadoEquipo.critico => colores.peligro,
+      TeamStatus.onTarget => colores.exito,
+      TeamStatus.atRisk => colores.advertencia,
+      TeamStatus.critical => colores.peligro,
     };
   }
 }

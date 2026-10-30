@@ -77,10 +77,10 @@ FilterRow cursoFilterRow(Curso c, String instructor) => _LabeledFilterRow(
   {cursoFilterDimension: _cursoLabel(c.nombre, c.id)},
 );
 FilterRow equipoFilterRow(TeamOverview e) => {
-  'Equipo': e.nombre,
+  'Equipo': e.name,
   'Área': e.area,
-  'Líder': e.lider,
-  'Estado': e.estado.label,
+  'Líder': e.leader,
+  'Estado': e.status.label,
 };
 FilterRow crmFilterRow(
   CargaDeHorasCRMViewModel vm, {
@@ -252,8 +252,8 @@ final dataFilterRowsProvider =
               .whenData((items) => items.map(empleadoFilterRow).toList());
         case 'equipos':
           return ref
-              .watch(resumenEquiposPeriodoProvider)
-              .whenData((data) => data.equipos.map(equipoFilterRow).toList());
+              .watch(teamsPeriodSummaryProvider)
+              .whenData((data) => data.teams.map(equipoFilterRow).toList());
         case 'areas':
           return ref
               .watch(resumenAreasPeriodoProvider)

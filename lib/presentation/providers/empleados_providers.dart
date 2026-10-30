@@ -141,7 +141,7 @@ final detalleEmpleadoProvider =
       final cumplimientoService = await ref.watch(
         cumplimientoServiceProvider.future,
       );
-      final equiposService = ref.read(equiposServiceProvider);
+      final equiposService = ref.read(teamsServiceProvider);
       final esAnual = alcance == AlcancePeriodo.anual;
 
       final empleado = empleados

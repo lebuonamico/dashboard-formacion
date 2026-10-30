@@ -238,7 +238,7 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
         DataCell(SeniorityChip(seniority: empleado.seniority)),
         DataCell(
           Text(
-            '${miembro.totalHorasCompletadas.toStringAsFixed(1)} / ${miembro.totalHorasRequeridas.toStringAsFixed(1)} h',
+            '${miembro.totalHorasValidas.toStringAsFixed(1)} / ${miembro.totalHorasRequeridas.toStringAsFixed(1)} h',
           ),
         ),
         DataCell(

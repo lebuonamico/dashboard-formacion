@@ -19,7 +19,7 @@ class DashboardAreasSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Conservar filtros aunque el cambio de período desmonte esta sección.
     final selection = ref.watch(dataFilterSelectionProvider('dashboard_areas'));
-    final equiposAsync = ref.watch(equiposGlobalProvider);
+    final equiposAsync = ref.watch(teamOverviewsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

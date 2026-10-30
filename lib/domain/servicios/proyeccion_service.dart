@@ -227,7 +227,7 @@ class ProyeccionService {
 
     final n = empleados.length;
     double conTope(List<CumplimientoEmpleado> items) =>
-        items.fold<double>(0, (t, c) => t + c.totalHorasCompletadas);
+        items.fold<double>(0, (t, c) => t + c.totalHorasValidas);
     final horasCorte = conTope(delCorte);
     final objetivoCorte = delCorte.fold<double>(
       0,

@@ -168,13 +168,3 @@ final teamDetailProvider =
       );
     });
 
-final busquedaEquipoProvider = teamSearchQueryProvider;
-final filtroEstadoEquipoProvider = teamStatusFilterProvider;
-final equiposServiceProvider = teamsServiceProvider;
-final aniosEquipoDisponiblesProvider = availableTeamYearsProvider;
-final hayDatosEquiposPeriodoProvider = hasTeamPeriodDataProvider;
-final cumplimientoEquiposProvider = teamComplianceProvider;
-final resumenEquiposPeriodoProvider = teamsPeriodSummaryProvider;
-final equiposGlobalProvider = teamOverviewsProvider;
-final equiposGlobalFiltradosProvider = filteredTeamOverviewsProvider;
-final detalleEquipoGeneralProvider = teamDetailProvider;

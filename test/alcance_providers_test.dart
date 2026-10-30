@@ -282,12 +282,12 @@ void main() {
     );
     expect(certificaciones.map((c) => c.legajo), ['1']);
 
-    final resumen = await container.read(resumenEquiposPeriodoProvider.future);
-    expect(resumen.equipos, hasLength(1));
-    expect(resumen.equipos.single.nombre, 'PLATAFORMA CORE');
-    expect(resumen.equipos.single.area, 'PRODUCTOS TECNOLÓGICOS');
+    final resumen = await container.read(teamsPeriodSummaryProvider.future);
+    expect(resumen.teams, hasLength(1));
+    expect(resumen.teams.single.name, 'PLATAFORMA CORE');
+    expect(resumen.teams.single.area, 'PRODUCTOS TECNOLÓGICOS');
     // El email del líder coincide con el de la nómina: se ve su nombre.
-    expect(resumen.equipos.single.lider, 'Lía Líder');
+    expect(resumen.teams.single.leader, 'Lía Líder');
   });
 
   test('Un usuario de área ve toda su área, sin equipo incluidos', () async {
@@ -306,8 +306,8 @@ void main() {
     // No hay empleado con ese email: se muestra el email.
     expect(areas.areas.single.lideres, 'area@finnegans.com');
 
-    final equipos = await container.read(resumenEquiposPeriodoProvider.future);
-    expect(equipos.equipos.map((equipo) => equipo.nombre).toSet(), {
+    final equipos = await container.read(teamsPeriodSummaryProvider.future);
+    expect(equipos.teams.map((equipo) => equipo.name).toSet(), {
       'SOPORTE',
       'Sin equipo asignado',
     });
@@ -328,14 +328,14 @@ void main() {
       expect(empleados.map((e) => e.legajo), ['1', '2', '3', '4']);
 
       final resumen = await container.read(
-        resumenEquiposPeriodoProvider.future,
+        teamsPeriodSummaryProvider.future,
       );
-      final backend = resumen.equipos.firstWhere((e) => e.nombre == 'BACKEND');
-      expect(backend.lider, 'Gerente BACKEND');
-      final core = resumen.equipos.firstWhere(
-        (e) => e.nombre == 'PLATAFORMA CORE',
+      final backend = resumen.teams.firstWhere((e) => e.name == 'BACKEND');
+      expect(backend.leader, 'Gerente BACKEND');
+      final core = resumen.teams.firstWhere(
+        (e) => e.name == 'PLATAFORMA CORE',
       );
-      expect(core.lider, 'Lía Líder');
+      expect(core.leader, 'Lía Líder');
     },
   );
 
@@ -414,9 +414,9 @@ void main() {
     final empleados = await container.read(empleadosProvider.future);
     expect(empleados.map((e) => e.legajo), ['1', '2', '3', '4']);
 
-    final resumen = await container.read(resumenEquiposPeriodoProvider.future);
+    final resumen = await container.read(teamsPeriodSummaryProvider.future);
     expect(
-      resumen.equipos.firstWhere((e) => e.nombre == 'PLATAFORMA CORE').lider,
+      resumen.teams.firstWhere((e) => e.name == 'PLATAFORMA CORE').leader,
       'Gerente Core',
     );
   });
@@ -482,13 +482,13 @@ void main() {
       () async {
         final junio = contenedor(6);
         final cumplimientosJunio = await junio.read(
-          cumplimientoEquiposProvider.future,
+          teamComplianceProvider.future,
         );
         expect(cumplimientosJunio.map((c) => c.empleado.legajo), ['1']);
 
         final julio = contenedor(7);
         final cumplimientosJulio = await julio.read(
-          cumplimientoEquiposProvider.future,
+          teamComplianceProvider.future,
         );
         expect(cumplimientosJulio.map((c) => c.empleado.legajo).toSet(), {
           '1',

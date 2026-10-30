@@ -114,8 +114,8 @@ class AreaEquipoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (equipo.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
-    final colorEstado = equipo.estado.colores(context).texto;
+    final progress = (equipo.completionPercentage / 100).clamp(0.0, 1.0);
+    final colorEstado = equipo.status.colores(context).texto;
 
     return Material(
       color: context.colorScheme.surface,
@@ -123,7 +123,7 @@ class AreaEquipoCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () => context.push(
-          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.nombre)}?origen=$origen',
+          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.name)}?origen=$origen',
         ),
         child: Container(
           decoration: context.panel(sombra: true),
@@ -146,7 +146,7 @@ class AreaEquipoCard extends StatelessWidget {
                     children: [
                       _CardHeader(equipo: equipo),
                       const SizedBox(height: 13),
-                      _LeaderRow(lider: equipo.lider),
+                      _LeaderRow(lider: equipo.leader),
                       const Spacer(),
                       _ProgressSection(
                         equipo: equipo,
@@ -174,7 +174,7 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final integrantes = equipo.cantidadIntegrantes;
+    final integrantes = equipo.memberCount;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +184,7 @@ class _CardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                equipo.nombre,
+                equipo.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -210,7 +210,7 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        _StatusBadge(status: equipo.estado),
+        _StatusBadge(status: equipo.status),
       ],
     );
   }
@@ -260,7 +260,7 @@ class _ProgressSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorEstado = equipo.estado.colores(context).texto;
+    final colorEstado = equipo.status.colores(context).texto;
 
     return Column(
       children: [
@@ -272,7 +272,7 @@ class _ProgressSection extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      '${equipo.integrantesEnObjetivo} de ${equipo.cantidadIntegrantes} en objetivo',
+                      '${equipo.membersOnTarget} de ${equipo.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -299,7 +299,7 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatearPorcentaje(equipo.porcentajeCumplimiento),
+              formatearPorcentaje(equipo.completionPercentage),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -337,7 +337,7 @@ class _CardFooter extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '${equipo.horasRealizadas.toStringAsFixed(1)} de ${equipo.horasObjetivo.toStringAsFixed(1)} hs',
+                  '${equipo.completedHours.toStringAsFixed(1)} de ${equipo.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
@@ -348,11 +348,11 @@ class _CardFooter extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                _formatDesvio(equipo.desvioHoras),
+                _formatDesvio(equipo.hoursDeviation),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: equipo.desvioHoras >= 0
+                  color: equipo.hoursDeviation >= 0
                       ? context.colores.exito.texto
                       : context.colores.peligro.texto,
                 ),
@@ -389,7 +389,7 @@ class _CardFooter extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  final EstadoEquipo status;
+  final TeamStatus status;
 
   const _StatusBadge({required this.status});
 

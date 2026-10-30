@@ -16,7 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final reporteDashboardProvider = FutureProvider<ReporteFormacion?>((ref) async {
   final periodo = _periodo(ref);
-  if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) return null;
+  if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
   final cumplimientos = await ref.watch(cumplimientoDashboardProvider.future);
   if (cumplimientos.isEmpty) return null;
 
@@ -25,7 +25,7 @@ final reporteDashboardProvider = FutureProvider<ReporteFormacion?>((ref) async {
     mesesEvaluadosDashboardProvider.future,
   );
   final areas = await ref.watch(semaforoPorAreaProvider.future);
-  final equipos = await ref.watch(equiposGlobalProvider.future);
+  final equipos = await ref.watch(teamOverviewsProvider.future);
   final evolucion = await ref.watch(evolucionMensualDashboardProvider.future);
   final proyeccion = await _proyeccionOpcional(ref, (area: null, equipo: null));
 
@@ -73,7 +73,7 @@ final reporteAreaProvider = FutureProvider.family<ReporteFormacion?, String>((
   nombreArea,
 ) async {
   final periodo = _periodo(ref);
-  if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) return null;
+  if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
   final detalle = await ref.watch(detalleAreaProvider(nombreArea).future);
   if (detalle == null) return null;
 
@@ -103,13 +103,13 @@ final reporteAreaProvider = FutureProvider.family<ReporteFormacion?, String>((
     desglose: [
       for (final equipo in detalle.equipos)
         FilaDesgloseReporte(
-          nombre: equipo.nombre,
-          integrantes: equipo.cantidadIntegrantes,
-          horas: equipo.horasRealizadas,
-          objetivo: equipo.horasObjetivo,
-          porcentaje: equipo.porcentajeCumplimiento,
-          estado: equipo.estado.label,
-          nivel: _nivelEquipo(equipo.estado),
+          nombre: equipo.name,
+          integrantes: equipo.memberCount,
+          horas: equipo.completedHours,
+          objetivo: equipo.targetHours,
+          porcentaje: equipo.completionPercentage,
+          estado: equipo.status.label,
+          nivel: _nivelEquipo(equipo.status),
         ),
     ],
   );
@@ -121,34 +121,34 @@ final reporteEquipoProvider =
       seccion,
     ) async {
       final periodo = _periodo(ref);
-      if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) return null;
+      if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
       final detalle = await ref.watch(
-        detalleEquipoGeneralProvider(seccion).future,
+        teamDetailProvider(seccion).future,
       );
       if (detalle == null) return null;
 
-      final equipo = detalle.resumen;
+      final equipo = detalle.overview;
       final proyeccion = await _proyeccionOpcional(ref, (
         area: equipo.area,
-        equipo: equipo.nombre,
+        equipo: equipo.name,
       ));
       return ReporteFormacion(
         tipo: TipoReporte.equipo,
-        titulo: equipo.nombre,
+        titulo: equipo.name,
         detalles: [
           'Área: ${equipo.area}',
-          if (equipo.lider.trim().isNotEmpty) 'Líder: ${equipo.lider}',
+          if (equipo.leader.trim().isNotEmpty) 'Líder: ${equipo.leader}',
         ],
         periodo: periodo,
-        integrantes: equipo.cantidadIntegrantes,
-        enObjetivo: equipo.integrantesEnObjetivo,
-        horas: equipo.horasRealizadas,
-        objetivo: equipo.horasObjetivo,
-        porcentaje: equipo.porcentajeCumplimiento,
-        estado: equipo.estado.label,
-        nivel: _nivelEquipo(equipo.estado),
+        integrantes: equipo.memberCount,
+        enObjetivo: equipo.membersOnTarget,
+        horas: equipo.completedHours,
+        objetivo: equipo.targetHours,
+        porcentaje: equipo.completionPercentage,
+        estado: equipo.status.label,
+        nivel: _nivelEquipo(equipo.status),
         proyeccion: proyeccion,
-        miembros: detalle.miembros,
+        miembros: detalle.members,
       );
     });
 
@@ -197,8 +197,8 @@ NivelReporte _nivelSemaforo(EstadoSemaforo estado) => switch (estado) {
   EstadoSemaforo.rojo => NivelReporte.critico,
 };
 
-NivelReporte _nivelEquipo(EstadoEquipo estado) => switch (estado) {
-  EstadoEquipo.enObjetivo => NivelReporte.ok,
-  EstadoEquipo.enRiesgo => NivelReporte.atencion,
-  EstadoEquipo.critico => NivelReporte.critico,
+NivelReporte _nivelEquipo(TeamStatus estado) => switch (estado) {
+  TeamStatus.onTarget => NivelReporte.ok,
+  TeamStatus.atRisk => NivelReporte.atencion,
+  TeamStatus.critical => NivelReporte.critico,
 };

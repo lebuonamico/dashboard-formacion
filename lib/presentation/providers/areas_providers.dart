@@ -106,11 +106,11 @@ final filtroEstadoAreaProvider = StateProvider<EstadoSemaforo?>((ref) => null);
 final resumenAreasPeriodoProvider = FutureProvider<ResumenAreasPeriodo>((
   ref,
 ) async {
-  if (!await ref.watch(hayDatosEquiposPeriodoProvider.future)) {
+  if (!await ref.watch(hasTeamPeriodDataProvider.future)) {
     return const ResumenAreasPeriodo.sinDatos();
   }
   // Mismo cálculo que Equipos: el período global y la nómina elegible.
-  final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
+  final cumplimientos = await ref.watch(teamComplianceProvider.future);
   final lideres = await ref.watch(etiquetasLideresProvider.future);
 
   final agrupado = <String, List<CumplimientoEmpleado>>{};
@@ -214,7 +214,7 @@ final detalleAreaProvider =
       ref,
       nombreArea,
     ) async {
-      final cumplimientos = await ref.watch(cumplimientoEquiposProvider.future);
+      final cumplimientos = await ref.watch(teamComplianceProvider.future);
       final buscada = nombreArea.trim().toLowerCase();
 
       final miembros =
@@ -233,9 +233,9 @@ final detalleAreaProvider =
       // Los equipos salen del mismo cálculo que la pantalla de Equipos, así
       // las tarjetas muestran los mismos números en las dos pantallas.
       final resumenEquipos = await ref.watch(
-        resumenEquiposPeriodoProvider.future,
+        teamsPeriodSummaryProvider.future,
       );
-      final equipos = resumenEquipos.equipos
+      final equipos = resumenEquipos.teams
           .where((equipo) => equipo.area.trim().toLowerCase() == buscada)
           .toList();
 
@@ -262,7 +262,7 @@ AreaGlobalViewModel _resumirArea(
       .toSet();
   final horasRealizadas = miembros.fold<double>(
     0,
-    (total, item) => total + item.totalHorasCompletadas,
+    (total, item) => total + item.totalHorasValidas,
   );
   final horasObjetivo = miembros.fold<double>(
     0,

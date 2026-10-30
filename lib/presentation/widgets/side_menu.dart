@@ -269,18 +269,6 @@ class _SideMenuState extends ConsumerState<SideMenu>
                   isSelected: isSelected('certificaciones', '/certificaciones'),
                   onTap: () => context.push('/certificaciones'),
                 ),
-                /*
-                _MenuItem(
-                  icon: Icons.analytics_outlined,
-                  label: 'Métricas',
-                  isSelected: currentRoute.startsWith('/metricas'),
-                  onTap: () {
-                    context.push(
-                      '/metricas',
-                    ); // Navega a la pantalla de métricas
-                  },
-                ),
-                */
                 if (gestiona)
                   _MenuItem(
                     icon: Icons.settings_outlined,

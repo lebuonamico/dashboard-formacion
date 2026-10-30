@@ -60,8 +60,8 @@ class EstadoOrdenMiembros {
     OrdenMiembros.seniority => a.empleado.seniority.index.compareTo(
       b.empleado.seniority.index,
     ),
-    OrdenMiembros.horas => a.totalHorasCompletadas.compareTo(
-      b.totalHorasCompletadas,
+    OrdenMiembros.horas => a.totalHorasValidas.compareTo(
+      b.totalHorasValidas,
     ),
     OrdenMiembros.cumplimiento => a.porcentajeTotal.compareTo(
       b.porcentajeTotal,

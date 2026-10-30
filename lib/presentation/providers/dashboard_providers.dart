@@ -36,7 +36,7 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
 /// coinciden con los de las otras pantallas.
 final cumplimientoDashboardProvider =
     FutureProvider<List<CumplimientoEmpleado>>((ref) {
-      return ref.watch(cumplimientoEquiposProvider.future);
+      return ref.watch(teamComplianceProvider.future);
     });
 
 /// Meses que se evaluaron en el período: 1 en el mensual; en el anual, los
@@ -47,7 +47,7 @@ final mesesEvaluadosDashboardProvider = FutureProvider<int>((ref) async {
   final anio = ref.watch(filtroAnioPeriodoProvider);
   final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
   final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  final equiposService = ref.read(equiposServiceProvider);
+  final equiposService = ref.read(teamsServiceProvider);
   var meses = 0;
   for (var mes = 1; mes <= 12; mes++) {
     if (equiposService.periods.hasDataInPeriod(
@@ -85,7 +85,7 @@ final evolucionMensualDashboardProvider =
       final cumplimientoService = await ref.watch(
         cumplimientoServiceProvider.future,
       );
-      final equiposService = ref.read(equiposServiceProvider);
+      final equiposService = ref.read(teamsServiceProvider);
 
       bool tieneDatos(DateTime fecha) => equiposService.periods.hasDataInPeriod(
         timeEntries: cargas,
@@ -124,7 +124,7 @@ final evolucionMensualDashboardProvider =
             if (cumplimientos.isEmpty) return (mes: fecha, horas: 0.0);
             final total = cumplimientos.fold<double>(
               0,
-              (t, item) => t + item.totalHorasCompletadas,
+              (t, item) => t + item.totalHorasValidas,
             );
             return (mes: fecha, horas: total / cumplimientos.length);
           })(),

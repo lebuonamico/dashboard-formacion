@@ -9,28 +9,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _seccionEquipo = (area: 'Desarrollo', equipo: 'Core');
 
-EquipoGlobalViewModel _equipo({
+TeamOverview _equipo({
   String nombre = 'Core',
   String lider = 'María López',
   double porcentaje = 50,
-  EstadoEquipo estado = EstadoEquipo.critico,
-}) => EquipoGlobalViewModel(
+  TeamStatus estado = TeamStatus.critical,
+}) => TeamOverview(
   id: 'desarrollo-$nombre',
-  nombre: nombre,
+  name: nombre,
   area: 'Desarrollo',
-  lider: lider,
-  cantidadIntegrantes: 2,
-  integrantesEnObjetivo: 1,
-  horasRealizadas: 8,
-  horasObjetivo: 16,
-  desvioHoras: -8,
-  horasNegocio: 4,
-  horasBlandas: 4,
-  horasLibres: 0,
-  horasDictado: 0,
-  promedioPorColaborador: 4,
-  porcentajeCumplimiento: porcentaje,
-  estado: estado,
+  leader: lider,
+  memberCount: 2,
+  membersOnTarget: 1,
+  completedHours: 8,
+  targetHours: 16,
+  hoursDeviation: -8,
+  businessHours: 4,
+  softSkillsHours: 4,
+  explorationHours: 0,
+  teachingHours: 0,
+  averageHoursPerMember: 4,
+  completionPercentage: porcentaje,
+  status: estado,
 );
 
 const _area = AreaGlobalViewModel(
@@ -51,15 +51,15 @@ const _area = AreaGlobalViewModel(
 
 ProviderContainer _container({
   bool hayDatos = true,
-  DetalleEquipoGeneral? equipo,
+  TeamDetail? equipo,
   DetalleAreaViewModel? area,
   bool fallaProyeccion = false,
 }) {
   final container = ProviderContainer(
     retry: (_, _) => null,
     overrides: [
-      hayDatosEquiposPeriodoProvider.overrideWith((ref) async => hayDatos),
-      detalleEquipoGeneralProvider(
+      hasTeamPeriodDataProvider.overrideWith((ref) async => hayDatos),
+      teamDetailProvider(
         _seccionEquipo,
       ).overrideWith((ref) async => equipo),
       detalleAreaProvider('Desarrollo').overrideWith((ref) async => area),
@@ -81,7 +81,7 @@ void main() {
   test('Sin datos en el período no hay reporte en ninguna pantalla', () async {
     final container = _container(
       hayDatos: false,
-      equipo: DetalleEquipoGeneral(resumen: _equipo(), miembros: const []),
+      equipo: TeamDetail(overview: _equipo(), members: const []),
     );
 
     expect(await container.read(reporteDashboardProvider.future), isNull);
@@ -106,7 +106,7 @@ void main() {
 
   test('El reporte del equipo usa los números de su detalle', () async {
     final container = _container(
-      equipo: DetalleEquipoGeneral(resumen: _equipo(), miembros: const []),
+      equipo: TeamDetail(overview: _equipo(), members: const []),
     );
 
     final reporte = await container.read(
@@ -132,7 +132,7 @@ void main() {
           _equipo(
             nombre: 'Mobile',
             porcentaje: 100,
-            estado: EstadoEquipo.enObjetivo,
+            estado: TeamStatus.onTarget,
           ),
         ],
         miembros: const [],
@@ -154,7 +154,7 @@ void main() {
 
   test('Si la proyección falla, el reporte sale sin ella', () async {
     final container = _container(
-      equipo: DetalleEquipoGeneral(resumen: _equipo(), miembros: const []),
+      equipo: TeamDetail(overview: _equipo(), members: const []),
       fallaProyeccion: true,
     );
 
@@ -168,7 +168,7 @@ void main() {
 
   test('En el anual el período aclara que suma los meses con datos', () async {
     final container = _container(
-      equipo: DetalleEquipoGeneral(resumen: _equipo(), miembros: const []),
+      equipo: TeamDetail(overview: _equipo(), members: const []),
     );
     container.read(alcancePeriodoProvider.notifier).state =
         AlcancePeriodo.anual;

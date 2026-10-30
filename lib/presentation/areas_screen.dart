@@ -167,7 +167,7 @@ class _AreasContent extends ConsumerWidget {
           ),
           // Moodle vs CRM de todas las áreas, con los mismos colaboradores
           // del resumen.
-          if (ref.watch(cumplimientoEquiposProvider).value case final items?
+          if (ref.watch(teamComplianceProvider).value case final items?
               when items.isNotEmpty) ...[
             const SizedBox(height: 16),
             ComparacionMoodleCrmCards(cumplimientos: items),

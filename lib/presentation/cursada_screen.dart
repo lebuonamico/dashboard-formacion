@@ -18,7 +18,7 @@ class CursadasScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cursadasAsync = ref.watch(cursadasCompletasProvider);
+    final cursadasAsync = ref.watch(cargasDeHorasCompletasProvider);
 
     return Scaffold(
       body: Column(
@@ -146,7 +146,7 @@ class _BarraFiltrosCrm extends ConsumerWidget {
 
 /// Tabla de cargas de horas, de a una página por vez y a todo el ancho.
 class _TablaCargasPaginada extends StatefulWidget {
-  final List<CursadaViewModel> cargas;
+  final List<CargaDeHorasCRMViewModel> cargas;
 
   const _TablaCargasPaginada({required this.cargas});
 
@@ -248,7 +248,7 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _tabla(List<CursadaViewModel> visibles) {
+  Widget _tabla(List<CargaDeHorasCRMViewModel> visibles) {
     final cs = context.colorScheme;
     final secundario = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
     // Encabezados, divisores y márgenes salen del dataTableTheme.
@@ -280,7 +280,7 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
             cells: [
               DataCell(
                 Text(
-                  _formatFecha(vm.cursada.fecha),
+                  _formatFecha(vm.carga.fecha),
                   style: TextStyle(
                     fontSize: 13,
                     color: context.colores.textoIntermedio,
@@ -298,7 +298,7 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
               DataCell(_celdaHoras(vm)),
               DataCell(
                 Text(
-                  vm.cursada.id,
+                  vm.carga.id,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: secundario,
@@ -310,10 +310,10 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaColaborador(CursadaViewModel vm) {
+  Widget _celdaColaborador(CargaDeHorasCRMViewModel vm) {
     final cs = context.colorScheme;
     final emp = vm.empleado;
-    final legajo = vm.cursada.empleadoLegajo;
+    final legajo = vm.carga.empleadoLegajo;
 
     return Row(
       children: [
@@ -367,7 +367,7 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaAreaEquipo(CursadaViewModel vm) {
+  Widget _celdaAreaEquipo(CargaDeHorasCRMViewModel vm) {
     final cs = context.colorScheme;
     final emp = vm.empleado;
     if (emp == null) {
@@ -397,8 +397,8 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaCurso(CursadaViewModel vm) {
-    final nombre = vm.curso?.nombre ?? vm.cursada.cursoNombre;
+  Widget _celdaCurso(CargaDeHorasCRMViewModel vm) {
+    final nombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
 
     // El nombre se corta con puntos suspensivos; el tooltip muestra el nombre
     // completo.
@@ -417,8 +417,8 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaHoras(CursadaViewModel vm) {
-    final carga = vm.cursada;
+  Widget _celdaHoras(CargaDeHorasCRMViewModel vm) {
+    final carga = vm.carga;
     final exito = context.colores.exito;
 
     return Container(

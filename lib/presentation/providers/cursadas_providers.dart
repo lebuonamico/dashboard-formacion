@@ -33,10 +33,7 @@ class CargaDeHorasCRMViewModel {
     required this.curso,
   });
 
-  CargaDeHorasCRM get cursada => carga;
 }
-
-typedef CursadaViewModel = CargaDeHorasCRMViewModel;
 
 final busquedaCargaDeHorasProvider = StateProvider<String>((ref) => '');
 
@@ -136,5 +133,3 @@ final cargasDeHorasCompletasProvider =
 
       return AsyncValue.data(viewModels);
     });
-
-final cursadasCompletasProvider = cargasDeHorasCompletasProvider;

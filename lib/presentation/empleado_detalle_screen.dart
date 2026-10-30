@@ -37,7 +37,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
         ? 'Año $anio'
         : '${nombreMes(mes)} $anio';
     final hayDatosPeriodo =
-        ref.watch(hayDatosEquiposPeriodoProvider).value ?? true;
+        ref.watch(hasTeamPeriodDataProvider).value ?? true;
 
     final estiloSeccion = TextStyle(
       fontSize: 16,
@@ -495,7 +495,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     final grupos = <String, List<CargaDeHorasCRMViewModel>>{};
     for (final cursada in cursadas) {
       final cursoId = cursada.curso?.id.trim() ?? '';
-      final nombreCurso = cursada.curso?.nombre ?? cursada.cursada.cursoNombre;
+      final nombreCurso = cursada.curso?.nombre ?? cursada.carga.cursoNombre;
       final clave = cursoId.isNotEmpty
           ? 'id:$cursoId'
           : 'nombre:${nombreCurso.trim().toLowerCase()}';
@@ -508,7 +508,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     return Column(
       children: cursosAgrupados.map((grupo) {
         final registros = grupo.value
-          ..sort((a, b) => b.cursada.fecha.compareTo(a.cursada.fecha));
+          ..sort((a, b) => b.carga.fecha.compareTo(a.carga.fecha));
         final primeraCursada = registros.first;
         final nombreCurso = _nombreCurso(registros);
         final cursoFinalizado = cursosFinalizados.contains(
@@ -516,7 +516,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
         );
         final horasDeclaradas = registros.fold<double>(
           0,
-          (total, item) => total + item.cursada.horasTotales,
+          (total, item) => total + item.carga.horasTotales,
         );
 
         return Container(
@@ -562,7 +562,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
               children: [
                 const Divider(height: 1),
                 ...registros.map((registro) {
-                  final fechaTexto = _formatearFecha(registro.cursada.fecha);
+                  final fechaTexto = _formatearFecha(registro.carga.fecha);
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -586,7 +586,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (registro.cursada.esDictada) ...[
+                        if (registro.carga.esDictada) ...[
                           EtiquetaColor(
                             texto: 'Dictada',
                             colores: colores.dictado,
@@ -594,7 +594,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                         ],
                         Text(
-                          '${_formatearHoras(registro.cursada.horasTotales)} hs',
+                          '${_formatearHoras(registro.carga.horasTotales)} hs',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -615,7 +615,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
   String _nombreCurso(List<CargaDeHorasCRMViewModel> cursadas) {
     final primera = cursadas.first;
-    return primera.curso?.nombre ?? primera.cursada.cursoNombre;
+    return primera.curso?.nombre ?? primera.carga.cursoNombre;
   }
 
   String _formatearHoras(double horas) => horas == horas.roundToDouble()

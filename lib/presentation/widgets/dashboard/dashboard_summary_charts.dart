@@ -120,7 +120,7 @@ class _CategorySummary {
 
     final totalCompleted = items.fold<double>(
       0,
-      (total, item) => total + item.totalHorasCompletadas,
+      (total, item) => total + item.totalHorasValidas,
     );
 
     final totalTarget = items.fold<double>(

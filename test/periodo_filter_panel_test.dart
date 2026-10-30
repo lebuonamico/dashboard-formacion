@@ -14,7 +14,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          aniosEquipoDisponiblesProvider.overrideWith((ref) async => [2026]),
+          availableTeamYearsProvider.overrideWith((ref) async => [2026]),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),

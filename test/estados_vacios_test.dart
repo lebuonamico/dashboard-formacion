@@ -210,18 +210,18 @@ void main() {
         cumplimientoDashboardProvider.future,
       );
       final resumenEquipos = await container.read(
-        resumenEquiposPeriodoProvider.future,
+        teamsPeriodSummaryProvider.future,
       );
       final horasDashboard = cumplimientos.fold<double>(
         0,
-        (total, item) => total + item.totalHorasCompletadas,
+        (total, item) => total + item.totalHorasValidas,
       );
 
       expect(cumplimientos.map((item) => item.empleado.legajo).toSet(), {
         _empleado.legajo,
       });
-      expect(resumenEquipos.colaboradores, 1);
-      expect(horasDashboard, resumenEquipos.horasRealizadas);
+      expect(resumenEquipos.employeeCount, 1);
+      expect(horasDashboard, resumenEquipos.completedHours);
       expect(horasDashboard, 0);
       // La card de horas muestra solo las válidas para el objetivo.
       final cardHoras = find.ancestor(
@@ -359,7 +359,7 @@ void main() {
         tester,
         ruta: '/equipo',
         pantalla: (_) =>
-            const EquipoScreen(area: 'Tecnología', equipo: 'Plataforma'),
+            const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
       );
 
       expect(
@@ -377,7 +377,7 @@ void main() {
         tester,
         ruta: '/equipo',
         pantalla: (_) =>
-            const EquipoScreen(area: 'Tecnología', equipo: 'Plataforma'),
+            const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
         cargas: [_carga(DateTime(_anio, _mes, 10))],
       );
 

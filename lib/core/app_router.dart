@@ -4,7 +4,6 @@ import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/area_detalle_screen.dart';
 import 'package:app_finnegans/presentation/areas_screen.dart';
 import 'package:app_finnegans/presentation/team_screen.dart';
-import 'package:app_finnegans/presentation/metricas_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/presentation/empleados_screen.dart';
 import 'package:app_finnegans/presentation/dashboard_screen.dart';
@@ -95,11 +94,6 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
           },
         ),
 
-        GoRoute(
-          path: '/metricas',
-          pageBuilder: (context, state) =>
-              _conFundido(state, const MetricasScreen()),
-        ),
         GoRoute(
           path: '/areas',
           pageBuilder: (context, state) =>
