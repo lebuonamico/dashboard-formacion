@@ -1,5 +1,5 @@
-import 'package:app_finnegans/domain/modelos/seniority.dart';
-import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
+import 'package:app_finnegans/features/employees/domain/seniority.dart';
+import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter/material.dart';
 
 /// Color de texto (o ícono) y su fondo, para chips, badges y avisos.

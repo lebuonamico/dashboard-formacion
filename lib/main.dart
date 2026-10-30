@@ -1,8 +1,8 @@
-import 'package:app_finnegans/core/app_router.dart';
+import 'package:app_finnegans/core/router/app_router.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/presentation/providers/tema_provider.dart';
-import 'package:app_finnegans/presentation/widgets/transicion_tema.dart';
+import 'package:app_finnegans/core/theme/theme_mode_provider.dart';
+import 'package:app_finnegans/core/widgets/theme_transition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

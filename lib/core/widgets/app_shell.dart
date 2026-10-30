@@ -1,0 +1,31 @@
+import 'package:app_finnegans/core/widgets/side_menu.dart';
+import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_chat.dart';
+import 'package:flutter/material.dart';
+
+/// Marco de todas las pantallas autenticadas: el menú lateral queda fijo y
+/// sólo cambia [child], la pantalla de la ruta actual. Así el menú no se
+/// reconstruye al navegar y su animación no se corta.
+class AppShell extends StatelessWidget {
+  final Widget child;
+
+  const AppShell({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                const SideMenu(),
+                Expanded(child: child),
+              ],
+            ),
+            const Positioned.fill(child: AssistantChat()),
+          ],
+        ),
+      ),
+    );
+  }
+}
