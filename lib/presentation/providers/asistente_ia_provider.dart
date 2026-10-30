@@ -78,8 +78,9 @@ class AssistantChatController extends Notifier<ChatState> {
 
   void _cancelOperation() {
     final cancellation = _cancellation;
-    if (cancellation != null && !cancellation.isCompleted)
+    if (cancellation != null && !cancellation.isCompleted) {
       cancellation.complete();
+    }
   }
 
   void _validateSession() {
