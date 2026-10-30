@@ -7,12 +7,12 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/widgets/employee_projection_card.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,9 +30,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(employeeDetailProvider(employeeId));
-    final scope = ref.watch(periodScopeProvider);
-    final month = ref.watch(periodMonthFilterProvider);
-    final year = ref.watch(periodYearFilterProvider);
+    final scope = ref.watch(periodFilterProvider).scope;
+    final month = ref.watch(periodFilterProvider).month;
+    final year = ref.watch(periodFilterProvider).year;
     final periodText = scope == PeriodScope.annual
         ? 'Año $year'
         : '${monthName(month)} $year';

@@ -1,6 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
-import 'package:app_finnegans/core/period/period_providers.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
@@ -20,8 +20,8 @@ class TeamDetailKpiSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final year = ref.watch(periodYearFilterProvider);
-    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodFilterProvider).year;
+    final month = ref.watch(periodFilterProvider).month;
     final projection = ref
         .watch(annualProjectionProvider((area: team.area, team: team.name)))
         .value;

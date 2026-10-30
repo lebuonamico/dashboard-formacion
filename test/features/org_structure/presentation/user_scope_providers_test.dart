@@ -247,9 +247,11 @@ ProviderContainer _container({
       lmsCertificationsRepositoryProvider.overrideWithValue(
         _FakeCertifications(certifications ?? _completions(employeeIds, 6)),
       ),
-      periodScopeProvider.overrideWith((ref) => PeriodScope.monthly),
-      periodMonthFilterProvider.overrideWith((ref) => month),
-      periodYearFilterProvider.overrideWith((ref) => _year),
+      periodFilterProvider.overrideWith(
+        () => PeriodFilterNotifier(
+          PeriodFilter(scope: PeriodScope.monthly, month: month, year: _year),
+        ),
+      ),
     ],
   );
   addTearDown(container.dispose);

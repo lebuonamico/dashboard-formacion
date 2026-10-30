@@ -14,9 +14,9 @@ export 'package:app_finnegans/features/projection/domain/projection_service.dart
 /// Mes en el que se corta la proyección: el elegido en el mensual; en el
 /// anual, el último mes del año con datos. `null` si el año no tiene datos.
 final annualProjectionCutoffMonthProvider = FutureProvider<int?>((ref) async {
-  final year = ref.watch(periodYearFilterProvider);
-  if (ref.watch(periodScopeProvider) == PeriodScope.monthly) {
-    return ref.watch(periodMonthFilterProvider);
+  final year = ref.watch(periodFilterProvider).year;
+  if (ref.watch(periodFilterProvider).scope == PeriodScope.monthly) {
+    return ref.watch(periodFilterProvider).month;
   }
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
@@ -40,7 +40,7 @@ final complianceByMonthProvider =
       );
       if (cutoffMonth == null) return {};
 
-      final year = ref.watch(periodYearFilterProvider);
+      final year = ref.watch(periodFilterProvider).year;
       final employees = await ref.watch(employeesProvider.future);
       final history = await ref.watch(employeeHistoryProvider.future);
       final courses = await ref.watch(coursesProvider.future);

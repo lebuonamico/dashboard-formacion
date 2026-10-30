@@ -1,6 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/projection/domain/projection_service.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';

@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/period/period_providers.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 
 const _months = [
   'Enero',
@@ -32,3 +32,10 @@ String detailedPeriodLabel(PeriodScope scope, int month, int year) =>
     scope == PeriodScope.annual
     ? 'Año $year · meses con datos'
     : '${monthName(month)} $year';
+
+extension PeriodScopeLabel on PeriodScope {
+  String get label => switch (this) {
+    PeriodScope.monthly => 'Mensual',
+    PeriodScope.annual => 'Anual',
+  };
+}

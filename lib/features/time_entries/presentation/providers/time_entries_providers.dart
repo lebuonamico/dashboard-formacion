@@ -1,5 +1,5 @@
 import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
-import 'package:app_finnegans/core/period/period_filter.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
@@ -116,11 +116,9 @@ final joinedTimeEntriesProvider =
                     employeeId.toLowerCase().contains(query) ||
                     area.toLowerCase().contains(query);
 
-                final periodMatch = matchesPeriod(
-                  date,
-                  year: yearFilter,
-                  month: filterMonth,
-                );
+                final periodMatch = ref
+                    .watch(periodServiceProvider)
+                    .contains(date, year: yearFilter, month: filterMonth);
 
                 return matchesQuery &&
                     periodMatch &&

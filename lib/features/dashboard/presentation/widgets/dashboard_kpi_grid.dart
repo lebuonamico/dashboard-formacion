@@ -6,7 +6,7 @@ import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.d
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

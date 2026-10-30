@@ -133,9 +133,9 @@ final employeeDetailProvider =
       final courses = await ref.watch(coursesProvider.future);
       final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
       final certifications = await ref.watch(lmsCertificationsProvider.future);
-      final scope = ref.watch(periodScopeProvider);
-      final month = ref.watch(periodMonthFilterProvider);
-      final year = ref.watch(periodYearFilterProvider);
+      final scope = ref.watch(periodFilterProvider).scope;
+      final month = ref.watch(periodFilterProvider).month;
+      final year = ref.watch(periodFilterProvider).year;
       final complianceService = await ref.watch(
         complianceServiceProvider.future,
       );

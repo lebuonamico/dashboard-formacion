@@ -1,6 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,13 +29,13 @@ void main() {
 
     final scope = ProviderScope.containerOf(
       tester.element(find.byType(PeriodFilterPanel)),
-    ).read(periodScopeProvider.notifier);
+    ).read(periodFilterProvider.notifier);
 
-    scope.state = PeriodScope.annual;
+    scope.setScope(PeriodScope.annual);
     await tester.pump();
     expect(month, findsNothing);
 
-    scope.state = PeriodScope.monthly;
+    scope.setScope(PeriodScope.monthly);
     await tester.pump();
     expect(month, findsOne);
   });

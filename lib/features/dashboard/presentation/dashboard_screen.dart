@@ -6,7 +6,7 @@ import 'package:app_finnegans/features/compliance/presentation/providers/area_co
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/features/dashboard/presentation/widgets/dashboard_areas_section.dart';
 import 'package:app_finnegans/features/dashboard/presentation/widgets/dashboard_kpi_grid.dart';
 import 'package:app_finnegans/features/dashboard/presentation/widgets/dashboard_summary_charts.dart';
@@ -15,7 +15,7 @@ import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/features/reports/presentation/widgets/print_report_button.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,9 +31,9 @@ class DashboardScreen extends ConsumerWidget {
     final teamsAsync = ref.watch(teamOverviewsProvider);
     final evaluatedMonths =
         ref.watch(dashboardEvaluatedMonthsProvider).value ?? 1;
-    final scope = ref.watch(periodScopeProvider);
-    final month = ref.watch(periodMonthFilterProvider);
-    final year = ref.watch(periodYearFilterProvider);
+    final scope = ref.watch(periodFilterProvider).scope;
+    final month = ref.watch(periodFilterProvider).month;
+    final year = ref.watch(periodFilterProvider).year;
 
     return Scaffold(
       body: Column(

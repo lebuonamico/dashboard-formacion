@@ -10,11 +10,11 @@ import 'package:app_finnegans/features/areas/presentation/providers/areas_provid
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_detail_summary.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_members_table.dart';
 import 'package:app_finnegans/features/reports/presentation/widgets/print_report_button.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_team_card.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
@@ -33,9 +33,9 @@ class AreaDetailScreen extends ConsumerWidget {
     // Mantener la selección durante cargas o períodos sin integrantes.
     final membersFilter = ref.watch(areaMemberStatusFilterProvider);
     final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final scope = ref.watch(periodScopeProvider);
-    final month = ref.watch(periodMonthFilterProvider);
-    final year = ref.watch(periodYearFilterProvider);
+    final scope = ref.watch(periodFilterProvider).scope;
+    final month = ref.watch(periodFilterProvider).month;
+    final year = ref.watch(periodFilterProvider).year;
     final periodControls = PeriodFilterPanel(
       included: 'todas las áreas',
       action: PrintReportButton(report: areaReportProvider(areaName)),
@@ -125,8 +125,8 @@ class _AreaContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final area = detail.area;
-    final year = ref.watch(periodYearFilterProvider);
-    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodFilterProvider).year;
+    final month = ref.watch(periodFilterProvider).month;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

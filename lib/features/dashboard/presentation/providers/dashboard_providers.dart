@@ -12,9 +12,9 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 final dashboardTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((
   ref,
 ) async {
-  final scope = ref.watch(periodScopeProvider);
-  final month = ref.watch(periodMonthFilterProvider);
-  final year = ref.watch(periodYearFilterProvider);
+  final scope = ref.watch(periodFilterProvider).scope;
+  final month = ref.watch(periodFilterProvider).month;
+  final year = ref.watch(periodFilterProvider).year;
 
   final from = DateTime(year, scope == PeriodScope.annual ? 1 : month);
   final until = scope == PeriodScope.annual
@@ -44,9 +44,9 @@ final dashboardComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
 /// Meses que se evaluaron en el período: 1 en el mensual; en el anual, los
 /// meses con registros CRM o LMS, igual que el acumulado de Equipos.
 final dashboardEvaluatedMonthsProvider = FutureProvider<int>((ref) async {
-  if (ref.watch(periodScopeProvider) == PeriodScope.monthly) return 1;
+  if (ref.watch(periodFilterProvider).scope == PeriodScope.monthly) return 1;
 
-  final year = ref.watch(periodYearFilterProvider);
+  final year = ref.watch(periodFilterProvider).year;
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
   final teamsService = ref.read(teamsServiceProvider);
@@ -70,9 +70,9 @@ final dashboardEvaluatedMonthsProvider = FutureProvider<int>((ref) async {
 /// en el período elegido (en el anual, el último mes del año con datos).
 final dashboardMonthlyEvolutionProvider =
     FutureProvider<List<({DateTime month, double hours})>>((ref) async {
-      final scope = ref.watch(periodScopeProvider);
-      final chosenMonth = ref.watch(periodMonthFilterProvider);
-      final year = ref.watch(periodYearFilterProvider);
+      final scope = ref.watch(periodFilterProvider).scope;
+      final chosenMonth = ref.watch(periodFilterProvider).month;
+      final year = ref.watch(periodFilterProvider).year;
       final employees = await ref.watch(employeesProvider.future);
       final history = await ref.watch(employeeHistoryProvider.future);
       final courses = await ref.watch(coursesProvider.future);

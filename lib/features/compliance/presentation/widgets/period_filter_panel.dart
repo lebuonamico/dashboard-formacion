@@ -1,8 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
-import 'package:app_finnegans/core/period/period_segmented_control.dart';
+import 'package:app_finnegans/core/period/presentation/period_segmented_control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,9 +23,9 @@ class PeriodFilterPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedScope = ref.watch(periodScopeProvider);
-    final month = ref.watch(periodMonthFilterProvider);
-    final year = ref.watch(periodYearFilterProvider);
+    final selectedScope = ref.watch(periodFilterProvider).scope;
+    final month = ref.watch(periodFilterProvider).month;
+    final year = ref.watch(periodFilterProvider).year;
     final availableYears = ref
         .watch(availableTeamYearsProvider)
         .maybeWhen(data: (years) => years, orElse: () => [year]);
@@ -48,7 +48,7 @@ class PeriodFilterPanel extends ConsumerWidget {
             options: PeriodScope.values,
             labelBuilder: (scope) => scope.label,
             onChanged: (value) =>
-                ref.read(periodScopeProvider.notifier).state = value,
+                ref.read(periodFilterProvider.notifier).setScope(value),
             selectedColor: context.colorScheme.primary,
             unselectedColor: context.colorScheme.surface,
             selectedForegroundColor: context.colorScheme.onPrimary,
@@ -61,7 +61,7 @@ class PeriodFilterPanel extends ConsumerWidget {
             selectedMonth: month,
             onChanged: (value) {
               if (value == null) return;
-              ref.read(periodMonthFilterProvider.notifier).state = value;
+              ref.read(periodFilterProvider.notifier).setMonth(value);
             },
           );
           // Leandro: llama a _YearField para seleccionar el año del período.
@@ -70,7 +70,7 @@ class PeriodFilterPanel extends ConsumerWidget {
             yearOptions: yearOptions,
             onChanged: (value) {
               if (value == null) return;
-              ref.read(periodYearFilterProvider.notifier).state = value;
+              ref.read(periodFilterProvider.notifier).setYear(value);
             },
           );
           if (constraints.maxWidth < 820) {

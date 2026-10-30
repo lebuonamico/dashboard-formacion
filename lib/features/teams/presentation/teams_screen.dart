@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
@@ -9,7 +9,7 @@ import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/data_filters/filter_bar.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_category_distribution.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_kpi_section.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_results.dart';
@@ -70,9 +70,9 @@ class _TeamsOverviewContent extends ConsumerWidget {
     final teams = summary.teams;
     final query = ref.watch(teamSearchQueryProvider);
     final selectedStatus = ref.watch(teamStatusFilterProvider);
-    final selectedScope = ref.watch(periodScopeProvider);
-    final selectedMonth = ref.watch(periodMonthFilterProvider);
-    final selectedYear = ref.watch(periodYearFilterProvider);
+    final selectedScope = ref.watch(periodFilterProvider).scope;
+    final selectedMonth = ref.watch(periodFilterProvider).month;
+    final selectedYear = ref.watch(periodFilterProvider).year;
     final hasActiveFilters = query.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(

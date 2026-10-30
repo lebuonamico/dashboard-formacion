@@ -9,13 +9,13 @@ import 'package:app_finnegans/features/courses/presentation/providers/courses_pr
 import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
-import 'package:app_finnegans/core/period/period_providers.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 export 'package:app_finnegans/features/teams/domain/team_overview.dart';
 export 'package:app_finnegans/features/teams/domain/team_status.dart';
-export 'package:app_finnegans/core/period/period_providers.dart';
+export 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 
 const teamFilterScope = 'equipos';
 
@@ -40,9 +40,9 @@ final availableTeamYearsProvider = FutureProvider<List<int>>((ref) async {
 });
 
 final hasTeamPeriodDataProvider = FutureProvider<bool>((ref) async {
-  final scope = ref.watch(periodScopeProvider);
-  final month = ref.watch(periodMonthFilterProvider);
-  final year = ref.watch(periodYearFilterProvider);
+  final scope = ref.watch(periodFilterProvider).scope;
+  final month = ref.watch(periodFilterProvider).month;
+  final year = ref.watch(periodFilterProvider).year;
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
   return ref
@@ -67,9 +67,9 @@ final teamComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
   final courses = await ref.watch(coursesProvider.future);
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
-  final scope = ref.watch(periodScopeProvider);
-  final month = ref.watch(periodMonthFilterProvider);
-  final year = ref.watch(periodYearFilterProvider);
+  final scope = ref.watch(periodFilterProvider).scope;
+  final month = ref.watch(periodFilterProvider).month;
+  final year = ref.watch(periodFilterProvider).year;
   final complianceService = await ref.watch(complianceServiceProvider.future);
   final periodService = ref.read(teamsServiceProvider).periods;
   final userScope = await ref.watch(userScopeProvider.future);
@@ -113,7 +113,7 @@ final teamsPeriodSummaryProvider = FutureProvider<TeamsPeriodSummary>((
   final service = ref.read(teamsServiceProvider);
   final leaders = await ref.watch(leaderLabelsProvider.future);
   final uniqueEmployeeCount =
-      ref.watch(periodScopeProvider) == PeriodScope.annual
+      ref.watch(periodFilterProvider).scope == PeriodScope.annual
       ? compliance.map((item) => item.employee.employeeId).toSet().length
       : null;
   return service.buildPeriodSummary(

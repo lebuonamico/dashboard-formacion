@@ -86,9 +86,15 @@ Future<ProviderContainer> _show(
       crmTimeEntriesProvider.overrideWith((ref) async => timeEntries),
       dashboardTimeEntriesProvider.overrideWith((ref) async => timeEntries),
       lmsCertificationsProvider.overrideWith((ref) async => certifications),
-      periodScopeProvider.overrideWith((ref) => PeriodScope.monthly),
-      periodMonthFilterProvider.overrideWith((ref) => _month),
-      periodYearFilterProvider.overrideWith((ref) => _year),
+      periodFilterProvider.overrideWith(
+        () => PeriodFilterNotifier(
+          const PeriodFilter(
+            scope: PeriodScope.monthly,
+            month: _month,
+            year: _year,
+          ),
+        ),
+      ),
     ],
     retry: (_, _) => null,
   );

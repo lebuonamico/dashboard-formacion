@@ -1,5 +1,5 @@
 import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
-import 'package:app_finnegans/core/period/period_filter.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
@@ -97,8 +97,9 @@ final courseStatsProvider = Provider<AsyncValue<List<CourseViewModel>>>((ref) {
     for (var e in employees) e.employeeId: '${e.firstName} ${e.lastName}',
   };
 
-  bool inPeriod(DateTime date) =>
-      matchesPeriod(date, year: yearFilter, month: filterMonth);
+  bool inPeriod(DateTime date) => ref
+      .watch(periodServiceProvider)
+      .contains(date, year: yearFilter, month: filterMonth);
 
   // Mismo cruce por nombre normalizado que el cálculo de cumplimiento.
   final crmEmployeeIds = <String, Set<String>>{};

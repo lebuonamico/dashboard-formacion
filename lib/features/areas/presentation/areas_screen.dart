@@ -8,10 +8,10 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_category_distribution.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_results.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_status_summary.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
@@ -82,9 +82,9 @@ class _AreasContent extends ConsumerWidget {
     final areas = summary.areas;
     final search = ref.watch(searchAreaProvider);
     final selectedStatus = ref.watch(areaStatusFilterProvider);
-    final selectedScope = ref.watch(periodScopeProvider);
-    final selectedMonth = ref.watch(periodMonthFilterProvider);
-    final selectedYear = ref.watch(periodYearFilterProvider);
+    final selectedScope = ref.watch(periodFilterProvider).scope;
+    final selectedMonth = ref.watch(periodFilterProvider).month;
+    final selectedYear = ref.watch(periodFilterProvider).year;
     final isAnnual = selectedScope == PeriodScope.annual;
     final hasActiveFilters = search.trim().isNotEmpty || selectedStatus != null;
 

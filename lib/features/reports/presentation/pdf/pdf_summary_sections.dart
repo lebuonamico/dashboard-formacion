@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/projection/domain/projection_service.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;

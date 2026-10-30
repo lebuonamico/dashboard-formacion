@@ -3,7 +3,7 @@ import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/data_filters/filter_bar.dart';

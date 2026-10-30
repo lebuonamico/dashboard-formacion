@@ -1,6 +1,5 @@
 import 'dart:collection';
 
-import 'package:app_finnegans/core/period/period_filter.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
@@ -315,11 +314,9 @@ final dataFilterRowsProvider =
               .whenData(
                 (items) => items
                     .where(
-                      (timeEntry) => matchesPeriod(
-                        timeEntry.date,
-                        year: year,
-                        month: month,
-                      ),
+                      (timeEntry) => ref
+                          .watch(periodServiceProvider)
+                          .contains(timeEntry.date, year: year, month: month),
                     )
                     .map(
                       (c) => crmFilterRow(

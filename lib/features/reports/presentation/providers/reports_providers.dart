@@ -8,7 +8,7 @@ import 'package:app_finnegans/features/compliance/presentation/providers/area_co
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/report_pdf.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Arman el reporte de cada pantalla con los mismos cálculos que sus cards.
@@ -164,9 +164,9 @@ final printReportProvider = Provider<PrintReport>((ref) {
 });
 
 String _period(Ref ref) => detailedPeriodLabel(
-  ref.watch(periodScopeProvider),
-  ref.watch(periodMonthFilterProvider),
-  ref.watch(periodYearFilterProvider),
+  ref.watch(periodFilterProvider).scope,
+  ref.watch(periodFilterProvider).month,
+  ref.watch(periodFilterProvider).year,
 );
 
 /// La proyección es una tarjeta opcional: si falla, el reporte sale sin ella,

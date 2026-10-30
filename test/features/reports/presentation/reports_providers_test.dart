@@ -68,9 +68,9 @@ ProviderContainer _container({
     ],
   );
   addTearDown(container.dispose);
-  container.read(periodScopeProvider.notifier).state = PeriodScope.monthly;
-  container.read(periodMonthFilterProvider.notifier).state = 10;
-  container.read(periodYearFilterProvider.notifier).state = 2026;
+  container.read(periodFilterProvider.notifier).setScope(PeriodScope.monthly);
+  container.read(periodFilterProvider.notifier).setMonth(10);
+  container.read(periodFilterProvider.notifier).setYear(2026);
   return container;
 }
 
@@ -163,7 +163,7 @@ void main() {
     final container = _container(
       team: TeamDetail(overview: _team(), members: const []),
     );
-    container.read(periodScopeProvider.notifier).state = PeriodScope.annual;
+    container.read(periodFilterProvider.notifier).setScope(PeriodScope.annual);
 
     final report = await container.read(
       teamReportProvider(_teamSection).future,

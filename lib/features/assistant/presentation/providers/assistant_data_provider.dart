@@ -40,9 +40,9 @@ Future<AssistantContext> _prepare(
   final service = ref.read(assistantContextServiceProvider);
   final dynamic = ref.read(aiRealContextProvider);
   final visible = AssistantPeriod(
-    year: ref.read(periodYearFilterProvider),
-    month: ref.read(periodMonthFilterProvider),
-    annual: ref.read(periodScopeProvider) == PeriodScope.annual,
+    year: ref.read(periodFilterProvider).year,
+    month: ref.read(periodFilterProvider).month,
+    annual: ref.read(periodFilterProvider).scope == PeriodScope.annual,
   );
   final query = service.plan(question, destination, visible);
   final data = <String, Object?>{'notas_alcance': <String>[]};
@@ -521,11 +521,15 @@ Future<ProviderContainer> _snapshot(
       lmsCertificationsProvider.overrideWith((_) async => certifications),
       teamsServiceProvider.overrideWithValue(teamsService),
       complianceServiceProvider.overrideWith((_) async => complianceService),
-      periodScopeProvider.overrideWith(
-        (_) => period.annual ? PeriodScope.annual : PeriodScope.monthly,
+      periodFilterProvider.overrideWith(
+        () => PeriodFilterNotifier(
+          PeriodFilter(
+            scope: period.annual ? PeriodScope.annual : PeriodScope.monthly,
+            month: period.month,
+            year: period.year,
+          ),
+        ),
       ),
-      periodMonthFilterProvider.overrideWith((_) => period.month),
-      periodYearFilterProvider.overrideWith((_) => period.year),
       dashboardTimeEntriesProvider.overrideWith(
         (_) async => teamsService.periods.filterTimeEntriesByPeriod(
           timeEntries: timeEntries,

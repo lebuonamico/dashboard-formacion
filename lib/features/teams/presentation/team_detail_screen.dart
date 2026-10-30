@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/period_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/reports/presentation/widgets/print_report_button.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
@@ -9,7 +9,7 @@ import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
-import 'package:app_finnegans/core/period/period_filter_panel.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_detail_kpi_section.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_detail_summary.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_members_table.dart';
@@ -27,9 +27,9 @@ class TeamDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(teamDetailProvider((area: area, team: team)));
     final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final scope = ref.watch(periodScopeProvider);
-    final month = ref.watch(periodMonthFilterProvider);
-    final year = ref.watch(periodYearFilterProvider);
+    final scope = ref.watch(periodFilterProvider).scope;
+    final month = ref.watch(periodFilterProvider).month;
+    final year = ref.watch(periodFilterProvider).year;
     final detailedLabel = detailedPeriodLabel(scope, month, year);
 
     final periodControls = PeriodFilterPanel(
