@@ -17,247 +17,241 @@ import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
-/// sola vez. La comparten [empleadosProvider] y [empleadoDeSesionProvider].
-final nominaProvider = FutureProvider<List<Empleado>>((ref) {
+/// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
+final payrollProvider = FutureProvider<List<Employee>>((ref) {
   // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
-  ref.watch(sesionDatosProvider);
-  return ref.watch(empleadosRepositoryProvider).getEmpleados();
+  ref.watch(sessionDataProvider);
+  return ref.watch(employeesRepositoryProvider).getEmployees();
 });
 
 /// Nómina que ve el usuario de la sesión, según su rol y las áreas o equipos
 /// que lidera.
-final empleadosProvider = FutureProvider<List<Empleado>>((ref) async {
+final employeesProvider = FutureProvider<List<Employee>>((ref) async {
   // La nómina va primero: si falla, ese es el error que tiene que verse.
-  final empleados = await ref.watch(nominaProvider.future);
-  final alcance = await ref.watch(alcanceUsuarioProvider.future);
-  return empleados.where(alcance.incluyeEmpleado).toList();
+  final employees = await ref.watch(payrollProvider.future);
+  final scope = await ref.watch(userScopeProvider.future);
+  return employees.where(scope.includesEmployee).toList();
 });
 
 /// Legajos que ve el usuario, o `null` si ve toda la empresa. Filtra las
 /// horas y las finalizaciones con el mismo criterio que la nómina.
-final legajosVisiblesProvider = FutureProvider<Set<String>?>((ref) async {
-  final alcance = await ref.watch(alcanceUsuarioProvider.future);
-  if (alcance.esTotal) return null;
-  final empleados = await ref.watch(empleadosProvider.future);
-  return {for (final empleado in empleados) empleado.legajo};
+final visibleEmployeeIdsProvider = FutureProvider<Set<String>?>((ref) async {
+  final scope = await ref.watch(userScopeProvider.future);
+  if (scope.isTotal) return null;
+  final employees = await ref.watch(employeesProvider.future);
+  return {for (final employee in employees) employee.employeeId};
 });
 
-final empleadoHistorialProvider = FutureProvider<List<EmpleadoHistorial>?>((
+final employeeHistoryProvider = FutureProvider<List<EmployeeHistoryEntry>?>((
   ref,
 ) async {
-  final repo = ref.watch(empleadosRepositoryProvider);
-  if (repo is! EmpleadosHistorialRepository) return null;
+  final repo = ref.watch(employeesRepositoryProvider);
+  if (repo is! EmployeeHistoryRepository) return null;
   // Con RLS cada usuario recibe vigencias distintas: se vuelve a consultar
   // cuando entra otro en la misma pestaña.
-  ref.watch(sesionDatosProvider);
+  ref.watch(sessionDataProvider);
   // Leandro: llama a getHistorialEmpleados para consultar las vigencias sin escribir un historial paralelo.
-  return (repo as EmpleadosHistorialRepository).getHistorialEmpleados();
+  return (repo as EmployeeHistoryRepository).getEmployeeHistory();
 });
 
-final busquedaEmpleadoProvider = StateProvider<String>((ref) => '');
-final filtroSeniorityProvider = StateProvider<Seniority?>((ref) => null);
+final employeeSearchProvider = StateProvider<String>((ref) => '');
+final seniorityFilterProvider = StateProvider<Seniority?>((ref) => null);
 
-final empleadosFiltradosProvider = Provider<AsyncValue<List<Empleado>>>((ref) {
-  final empleadosAsync = ref.watch(empleadosProvider);
-  final query = ref.watch(busquedaEmpleadoProvider).toLowerCase();
-  final seniorityFiltro = ref.watch(filtroSeniorityProvider);
+final filteredEmployeesProvider = Provider<AsyncValue<List<Employee>>>((ref) {
+  final employeesAsync = ref.watch(employeesProvider);
+  final query = ref.watch(employeeSearchProvider).toLowerCase();
+  final seniorityFilter = ref.watch(seniorityFilterProvider);
   final selection = ref.watch(dataFilterSelectionProvider('personas'));
 
-  return empleadosAsync.whenData((empleados) {
-    return empleados.where((emp) {
+  return employeesAsync.whenData((employees) {
+    return employees.where((emp) {
       final matchesQuery =
-          emp.nombre.toLowerCase().contains(query) ||
-          emp.apellido.toLowerCase().contains(query) ||
-          emp.legajo.toLowerCase().contains(query) ||
+          emp.firstName.toLowerCase().contains(query) ||
+          emp.lastName.toLowerCase().contains(query) ||
+          emp.employeeId.toLowerCase().contains(query) ||
           emp.area.toLowerCase().contains(query) ||
-          emp.equipo.toLowerCase().contains(query) ||
-          emp.gerente.toLowerCase().contains(query) ||
-          emp.mail.toLowerCase().contains(query);
+          emp.team.toLowerCase().contains(query) ||
+          emp.manager.toLowerCase().contains(query) ||
+          emp.email.toLowerCase().contains(query);
 
       final matchesSeniority =
-          seniorityFiltro == null || emp.seniority == seniorityFiltro;
+          seniorityFilter == null || emp.seniority == seniorityFilter;
 
       return matchesQuery &&
           matchesSeniority &&
-          matchesDataFilters(selection, empleadoFilterRow(emp));
+          matchesDataFilters(selection, employeeFilterRow(emp));
     }).toList();
   });
 });
 
 /// Curso que el empleado cargó en el CRM como dictado, con las horas del período.
-class CursoDictadoViewModel {
-  final String codigo;
-  final String nombre;
+class TaughtCourseViewModel {
+  final String code;
+  final String name;
   final String area;
-  final double horas;
+  final double hours;
 
-  const CursoDictadoViewModel({
-    required this.codigo,
-    required this.nombre,
+  const TaughtCourseViewModel({
+    required this.code,
+    required this.name,
     required this.area,
-    required this.horas,
+    required this.hours,
   });
 }
 
-class DetalleEmpleadoViewModel {
-  final Empleado empleado;
-  final CumplimientoEmpleado cumplimiento;
-  final List<CargaDeHorasCRMViewModel> cargasCrm;
-  final List<CertificacionMoodle> certificacionesMoodle;
-  final Map<String, Curso> cursosPorNombre;
-  final List<CursoDictadoViewModel> cursosDictados;
-  final Set<String> cursosFinalizados;
+class EmployeeDetailViewModel {
+  final Employee employee;
+  final EmployeeCompliance compliance;
+  final List<CrmTimeEntryViewModel> timeEntriesCrm;
+  final List<LmsCertification> lmsCertifications;
+  final Map<String, Course> coursesByName;
+  final List<TaughtCourseViewModel> taughtCourses;
+  final Set<String> completedCourses;
 
-  DetalleEmpleadoViewModel({
-    required this.empleado,
-    required this.cumplimiento,
-    required this.cargasCrm,
-    required this.certificacionesMoodle,
-    required this.cursosPorNombre,
-    required this.cursosDictados,
-    required this.cursosFinalizados,
+  EmployeeDetailViewModel({
+    required this.employee,
+    required this.compliance,
+    required this.timeEntriesCrm,
+    required this.lmsCertifications,
+    required this.coursesByName,
+    required this.taughtCourses,
+    required this.completedCourses,
   });
 
   /// Busca el curso del catálogo por nombre normalizado.
-  Curso? cursoPorNombre(String nombre) =>
-      cursosPorNombre[CumplimientoService.normalizarNombreCurso(nombre)];
+  Course? courseByName(String name) =>
+      coursesByName[ComplianceService.normalizeCourseName(name)];
 }
 
 /// Detalle del empleado recalculado para el período global seleccionado.
-final detalleEmpleadoProvider =
-    FutureProvider.family<DetalleEmpleadoViewModel?, String>((
+final employeeDetailProvider =
+    FutureProvider.family<EmployeeDetailViewModel?, String>((
       ref,
-      legajo,
+      employeeId,
     ) async {
-      final empleados = await ref.watch(empleadosProvider.future);
-      final cursos = await ref.watch(cursosProvider.future);
-      final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-      final certificaciones = await ref.watch(
-        certificacionesMoodleProvider.future,
+      final employees = await ref.watch(employeesProvider.future);
+      final courses = await ref.watch(coursesProvider.future);
+      final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+      final certifications = await ref.watch(lmsCertificationsProvider.future);
+      final scope = ref.watch(periodScopeProvider);
+      final month = ref.watch(periodMonthFilterProvider);
+      final year = ref.watch(periodYearFilterProvider);
+      final complianceService = await ref.watch(
+        complianceServiceProvider.future,
       );
-      final alcance = ref.watch(alcancePeriodoProvider);
-      final mes = ref.watch(filtroMesPeriodoProvider);
-      final anio = ref.watch(filtroAnioPeriodoProvider);
-      final cumplimientoService = await ref.watch(
-        cumplimientoServiceProvider.future,
-      );
-      final equiposService = ref.read(teamsServiceProvider);
-      final esAnual = alcance == AlcancePeriodo.anual;
+      final teamsService = ref.read(teamsServiceProvider);
+      final isAnnual = scope == PeriodScope.annual;
 
-      final empleado = empleados
-          .where((emp) => emp.legajo == legajo)
+      final employee = employees
+          .where((emp) => emp.employeeId == employeeId)
           .firstOrNull;
-      if (empleado == null) return null;
+      if (employee == null) return null;
 
-      final cargasEmpleado = cargas
-          .where((carga) => carga.empleadoLegajo == legajo)
+      final employeeTimeEntries = timeEntries
+          .where((timeEntry) => timeEntry.employeeId == employeeId)
           .toList();
-      final certificacionesEmpleado = certificaciones
-          .where((item) => item.legajo == legajo)
+      final employeeCertifications = certifications
+          .where((item) => item.employeeId == employeeId)
           .toList();
 
-      final cargasPeriodo = equiposService.periods.filterTimeEntriesByPeriod(
-        timeEntries: cargasEmpleado,
-        year: anio,
-        month: mes,
-        isAnnual: esAnual,
+      final periodTimeEntries = teamsService.periods.filterTimeEntriesByPeriod(
+        timeEntries: employeeTimeEntries,
+        year: year,
+        month: month,
+        isAnnual: isAnnual,
       );
       // Solo las finalizadas del período suman cumplimiento.
-      final certificacionesValidasPeriodo = equiposService.periods
+      final periodValidCertifications = teamsService.periods
           .filterCertificationsByPeriod(
-            certifications: certificacionesEmpleado,
-            year: anio,
-            month: mes,
-            isAnnual: esAnual,
+            certifications: employeeCertifications,
+            year: year,
+            month: month,
+            isAnnual: isAnnual,
           );
       // Para mostrar se incluyen todas las que tienen fecha en el período.
-      final certificacionesPeriodo =
-          certificacionesEmpleado.where((item) {
-            final fecha = item.fechaFinalizacion;
-            if (fecha == null || fecha.year != anio) return false;
-            return esAnual || fecha.month == mes;
-          }).toList()..sort(
-            (a, b) => b.fechaFinalizacion!.compareTo(a.fechaFinalizacion!),
-          );
+      final periodCertifications = employeeCertifications.where((item) {
+        final date = item.completedAt;
+        if (date == null || date.year != year) return false;
+        return isAnnual || date.month == month;
+      }).toList()..sort((a, b) => b.completedAt!.compareTo(a.completedAt!));
 
-      var cumplimiento = cumplimientoService
-          .calcularCumplimientoGlobal(
-            empleados: [empleado],
-            cursos: cursos,
-            cargasDeHoras: cargasPeriodo,
-            certificacionesMoodle: certificacionesValidasPeriodo,
-            anio: anio,
-            mes: mes,
+      var compliance = complianceService
+          .calculateComplianceGlobal(
+            employees: [employee],
+            courses: courses,
+            timeEntries: periodTimeEntries,
+            lmsCertifications: periodValidCertifications,
+            year: year,
+            month: month,
           )
           .first;
-      if (esAnual) {
+      if (isAnnual) {
         // Objetivo del año: los 12 meses, cada uno con su versión del plan.
-        cumplimiento = CumplimientoEmpleado(
-          empleado: cumplimiento.empleado,
-          horasValidas: cumplimiento.horasValidas,
-          horasDeclaradas: cumplimiento.horasDeclaradas,
-          horasRequeridas: cumplimientoService.planes.requeridasDelAnio(
-            empleado.seniority,
-            anio,
+        compliance = EmployeeCompliance(
+          employee: compliance.employee,
+          creditedHours: compliance.creditedHours,
+          declaredHours: compliance.declaredHours,
+          requiredHours: complianceService.plans.requiredForYear(
+            employee.seniority,
+            year,
           ),
         );
       }
 
-      final cursosPorNombre = {
-        for (final curso in cursos)
-          CumplimientoService.normalizarNombreCurso(curso.nombre): curso,
+      final coursesByName = {
+        for (final course in courses)
+          ComplianceService.normalizeCourseName(course.name): course,
       };
-      final cargasCrm = cargasPeriodo
+      final timeEntriesCrm = periodTimeEntries
           .map(
-            (carga) => CargaDeHorasCRMViewModel(
-              carga: carga,
-              empleado: empleado,
-              curso:
-                  cursosPorNombre[CumplimientoService.normalizarNombreCurso(
-                    carga.cursoNombre,
+            (timeEntry) => CrmTimeEntryViewModel(
+              timeEntry: timeEntry,
+              employee: employee,
+              course:
+                  coursesByName[ComplianceService.normalizeCourseName(
+                    timeEntry.courseName,
                   )],
             ),
           )
           .toList();
 
       // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
-      final dictadosPorCurso = <String, List<CargaDeHorasCRMViewModel>>{};
-      for (final item in cargasCrm.where((item) => item.carga.esDictada)) {
-        final cursoId = item.curso?.id.trim() ?? item.carga.cursoId?.trim();
-        final clave = cursoId != null && cursoId.isNotEmpty
-            ? 'id:$cursoId'
-            : 'nombre:${CumplimientoService.normalizarNombreCurso(item.carga.cursoNombre)}';
-        dictadosPorCurso.putIfAbsent(clave, () => []).add(item);
+      final taughtByCourse = <String, List<CrmTimeEntryViewModel>>{};
+      for (final item in timeEntriesCrm.where(
+        (item) => item.timeEntry.isTaught,
+      )) {
+        final courseId =
+            item.course?.id.trim() ?? item.timeEntry.courseId?.trim();
+        final key = courseId != null && courseId.isNotEmpty
+            ? 'id:$courseId'
+            : 'nombre:${ComplianceService.normalizeCourseName(item.timeEntry.courseName)}';
+        taughtByCourse.putIfAbsent(key, () => []).add(item);
       }
-      final dictados =
-          dictadosPorCurso.values.map((items) {
-            final primero = items.first;
-            final curso = primero.curso;
-            return CursoDictadoViewModel(
-              codigo: curso?.id ?? primero.carga.cursoId ?? '',
-              nombre: curso?.nombre ?? primero.carga.cursoNombre,
-              area: curso?.areaCurso ?? primero.carga.descripcionCurso ?? '',
-              horas: items.fold<double>(
-                0,
-                (total, item) => total + item.carga.horasTotales,
-              ),
-            );
-          }).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
-      final cursosFinalizados = certificacionesEmpleado
-          .where((item) => item.finalizoCurso)
-          .map(
-            (item) =>
-                CumplimientoService.normalizarNombreCurso(item.cursoNombre),
-          )
+      final taught = taughtByCourse.values.map((items) {
+        final first = items.first;
+        final course = first.course;
+        return TaughtCourseViewModel(
+          code: course?.id ?? first.timeEntry.courseId ?? '',
+          name: course?.name ?? first.timeEntry.courseName,
+          area: course?.courseArea ?? first.timeEntry.courseDescription ?? '',
+          hours: items.fold<double>(
+            0,
+            (total, item) => total + item.timeEntry.hours,
+          ),
+        );
+      }).toList()..sort((a, b) => a.name.compareTo(b.name));
+      final completedCourses = employeeCertifications
+          .where((item) => item.isCompleted)
+          .map((item) => ComplianceService.normalizeCourseName(item.courseName))
           .toSet();
 
-      return DetalleEmpleadoViewModel(
-        empleado: empleado,
-        cumplimiento: cumplimiento,
-        cargasCrm: cargasCrm,
-        certificacionesMoodle: certificacionesPeriodo,
-        cursosPorNombre: cursosPorNombre,
-        cursosDictados: dictados,
-        cursosFinalizados: cursosFinalizados,
+      return EmployeeDetailViewModel(
+        employee: employee,
+        compliance: compliance,
+        timeEntriesCrm: timeEntriesCrm,
+        lmsCertifications: periodCertifications,
+        coursesByName: coursesByName,
+        taughtCourses: taught,
+        completedCourses: completedCourses,
       );
     });

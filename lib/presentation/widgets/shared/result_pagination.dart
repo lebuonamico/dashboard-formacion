@@ -2,26 +2,26 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// La pantalla calcula las páginas y este widget sólo muestra el estado y botones.
-class PaginacionResultados extends StatelessWidget {
-  final int paginaActual;
-  final int cantidadPaginas;
-  final int desde;
-  final int hasta;
-  final int totalResultados;
-  final String etiquetaResultados;
-  final IconData icono;
+class ResultsPagination extends StatelessWidget {
+  final int currentPage;
+  final int pageCount;
+  final int from;
+  final int until;
+  final int totalResults;
+  final String resultsLabel;
+  final IconData icon;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
 
-  const PaginacionResultados({
+  const ResultsPagination({
     super.key,
-    required this.paginaActual,
-    required this.cantidadPaginas,
-    required this.desde,
-    required this.hasta,
-    required this.totalResultados,
-    required this.etiquetaResultados,
-    required this.icono,
+    required this.currentPage,
+    required this.pageCount,
+    required this.from,
+    required this.until,
+    required this.totalResults,
+    required this.resultsLabel,
+    required this.icon,
     required this.onPrevious,
     required this.onNext,
   });
@@ -29,7 +29,7 @@ class PaginacionResultados extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final estiloTexto = TextStyle(
+    final textStyle = TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w600,
       color: cs.onSurface,
@@ -47,11 +47,11 @@ class PaginacionResultados extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icono, size: 20, color: cs.primary),
+              Icon(icon, size: 20, color: cs.primary),
               const SizedBox(width: 9),
               Text(
-                'Mostrando $desde-$hasta de $totalResultados $etiquetaResultados',
-                style: estiloTexto,
+                'Mostrando $from-$until de $totalResults $resultsLabel',
+                style: textStyle,
               ),
             ],
           ),
@@ -66,8 +66,8 @@ class PaginacionResultados extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Página ${paginaActual + 1} de $cantidadPaginas',
-                style: estiloTexto.copyWith(fontWeight: FontWeight.w700),
+                'Página ${currentPage + 1} de $pageCount',
+                style: textStyle.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 12),
               // Leandro: llama a IconButton.filledTonal con onNext para solicitar la página siguiente.

@@ -21,25 +21,25 @@ class UserAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
     final cs = context.colorScheme;
-    final rol = RolUsuario.fromString(auth.rol);
-    final esLider = rol == RolUsuario.lider || rol == RolUsuario.area;
-    final datos = _DatosUsuario(
+    final role = UserRole.fromString(auth.role);
+    final isLeader = role == UserRole.teamLead || role == UserRole.areaLead;
+    final data = _UserData(
       email: auth.email,
-      nombre: auth.nombre,
-      fotoUrl: auth.fotoUrl,
-      rol: auth.rol,
-      modoLocal: !auth.enabled,
+      name: auth.name,
+      photoUrl: auth.photoUrl,
+      role: auth.role,
+      localMode: !auth.enabled,
       // Lo que lidera (asignado en el panel) y a qué equipo y área pertenece
       // según la nómina: pueden no coincidir, por eso se muestran los dos.
-      lidera: esLider
+      leads: isLeader
           ? ref
-                .watch(estructuraProvider)
+                .watch(orgStructureProvider)
                 .whenData(
-                  (estructura) =>
-                      estructura?.lidera(rol: rol, email: auth.email ?? ''),
+                  (structure) =>
+                      structure?.leads(role: role, email: auth.email ?? ''),
                 )
           : null,
-      pertenece: esLider ? ref.watch(empleadoDeSesionProvider) : null,
+      belongs: isLeader ? ref.watch(sessionEmployeeProvider) : null,
     );
 
     return PopupMenuButton<Never>(
@@ -49,17 +49,17 @@ class UserAvatar extends ConsumerWidget {
         PopupMenuItem<Never>(
           enabled: false,
           padding: EdgeInsets.zero,
-          child: _TarjetaUsuario(datos: datos),
+          child: _UserCard(data: data),
         ),
         const PopupMenuDivider(),
-        const _EntradaTemaOscuro(),
+        const _DarkModeEntry(),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _FotoUsuario(datos: datos, radio: 18),
+            _UserPhoto(data: data, radius: 18),
             const SizedBox(width: 10),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 220),
@@ -68,7 +68,7 @@ class UserAvatar extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    datos.titulo,
+                    data.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -77,9 +77,9 @@ class UserAvatar extends ConsumerWidget {
                       color: cs.onSurface,
                     ),
                   ),
-                  if (datos.subtitulo != null)
+                  if (data.subtitle != null)
                     Text(
-                      datos.subtitulo!,
+                      data.subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -110,8 +110,8 @@ class UserAvatar extends ConsumerWidget {
 ///
 /// Mientras el usuario no elija, la app sigue al sistema operativo y el switch
 /// refleja el tema que se está viendo.
-class _EntradaTemaOscuro extends PopupMenuEntry<Never> {
-  const _EntradaTemaOscuro();
+class _DarkModeEntry extends PopupMenuEntry<Never> {
+  const _DarkModeEntry();
 
   @override
   double get height => 44;
@@ -120,22 +120,22 @@ class _EntradaTemaOscuro extends PopupMenuEntry<Never> {
   bool represents(Object? value) => false;
 
   @override
-  State<_EntradaTemaOscuro> createState() => _EntradaTemaOscuroState();
+  State<_DarkModeEntry> createState() => _DarkModeEntryState();
 }
 
-class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
+class _DarkModeEntryState extends State<_DarkModeEntry> {
   /// Igual que la transición de color de los ítems del side menu.
-  static const _duracion = Duration(milliseconds: 200);
-  static final _radio = BorderRadius.circular(8);
+  static const _duration = Duration(milliseconds: 200);
+  static final _radius = BorderRadius.circular(8);
 
   bool _hover = false;
-  bool _presionado = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final oscuro = Theme.of(context).brightness == Brightness.dark;
-    final colorFondo = _presionado
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = _pressed
         ? cs.primary.withValues(alpha: 0.1)
         : _hover
         ? cs.onSurface.withValues(alpha: 0.05)
@@ -143,9 +143,9 @@ class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
 
     return Consumer(
       builder: (context, ref, _) {
-        void cambiar(bool valor) => ref
-            .read(temaProvider.notifier)
-            .cambiar(valor ? ThemeMode.dark : ThemeMode.light);
+        void change(bool value) => ref
+            .read(themeModeProvider.notifier)
+            .change(value ? ThemeMode.dark : ThemeMode.light);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -153,34 +153,34 @@ class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
             onEnter: (_) => setState(() => _hover = true),
             onExit: (_) => setState(() => _hover = false),
             child: Listener(
-              onPointerDown: (_) => setState(() => _presionado = true),
-              onPointerUp: (_) => setState(() => _presionado = false),
-              onPointerCancel: (_) => setState(() => _presionado = false),
+              onPointerDown: (_) => setState(() => _pressed = true),
+              onPointerUp: (_) => setState(() => _pressed = false),
+              onPointerCancel: (_) => setState(() => _pressed = false),
               child: AnimatedContainer(
-                duration: _duracion,
+                duration: _duration,
                 curve: Curves.easeOut,
                 height: widget.height - 4,
                 decoration: BoxDecoration(
-                  color: colorFondo,
-                  borderRadius: _radio,
+                  color: backgroundColor,
+                  borderRadius: _radius,
                 ),
                 child: Material(
                   type: MaterialType.transparency,
                   child: InkWell(
-                    borderRadius: _radio,
+                    borderRadius: _radius,
                     // Sin ripple ni resaltados propios: el feedback lo da el
                     // fondo.
                     splashFactory: NoSplash.splashFactory,
                     highlightColor: Colors.transparent,
                     hoverColor: Colors.transparent,
                     focusColor: cs.primary.withValues(alpha: 0.08),
-                    onTap: () => cambiar(!oscuro),
+                    onTap: () => change(!dark),
                     child: Padding(
                       padding: const EdgeInsets.only(left: 12, right: 4),
                       child: Row(
                         children: [
                           Icon(
-                            oscuro
+                            dark
                                 ? Icons.dark_mode_outlined
                                 : Icons.light_mode_outlined,
                             size: 18,
@@ -201,8 +201,8 @@ class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
                             scale: 0.8,
                             child: Switch(
                               key: const Key('apariencia_switch'),
-                              value: oscuro,
-                              onChanged: cambiar,
+                              value: dark,
+                              onChanged: change,
                             ),
                           ),
                         ],
@@ -219,84 +219,84 @@ class _EntradaTemaOscuroState extends State<_EntradaTemaOscuro> {
   }
 }
 
-class _DatosUsuario {
+class _UserData {
   final String? email;
-  final String? nombre;
-  final String? fotoUrl;
-  final String? rol;
-  final bool modoLocal;
+  final String? name;
+  final String? photoUrl;
+  final String? role;
+  final bool localMode;
 
   /// Solo para Líder de equipo y Área; `null` para el resto.
-  final AsyncValue<String?>? lidera;
-  final AsyncValue<Empleado?>? pertenece;
+  final AsyncValue<String?>? leads;
+  final AsyncValue<Employee?>? belongs;
 
-  const _DatosUsuario({
+  const _UserData({
     required this.email,
-    required this.nombre,
-    required this.fotoUrl,
-    required this.rol,
-    required this.modoLocal,
-    this.lidera,
-    this.pertenece,
+    required this.name,
+    required this.photoUrl,
+    required this.role,
+    required this.localMode,
+    this.leads,
+    this.belongs,
   });
 
   /// Primera línea del chip: el nombre si Google lo informa, si no el mail.
-  String get titulo =>
-      nombre ?? email ?? (modoLocal ? 'Modo local' : 'Sin sesión iniciada');
+  String get title =>
+      name ?? email ?? (localMode ? 'Modo local' : 'Sin sesión iniciada');
 
   /// Segunda línea: el mail, solo cuando no se usó ya como título.
-  String? get subtitulo {
-    if (nombre != null) return email;
-    if (email == null && modoLocal) return 'Sin sesión iniciada';
+  String? get subtitle {
+    if (name != null) return email;
+    if (email == null && localMode) return 'Sin sesión iniciada';
     return null;
   }
 
   /// Primera letra del nombre o del mail. Si no hay sesión o viene raro, 'U'.
-  String get inicial {
-    final limpio = (nombre ?? email)?.trim() ?? '';
-    if (limpio.isEmpty) return 'U';
-    final inicial = limpio.characters.first.toUpperCase();
-    return RegExp(r'[A-ZÁÉÍÓÚÑ0-9]').hasMatch(inicial) ? inicial : 'U';
+  String get initial {
+    final clean = (name ?? email)?.trim() ?? '';
+    if (clean.isEmpty) return 'U';
+    final initial = clean.characters.first.toUpperCase();
+    return RegExp(r'[A-ZÁÉÍÓÚÑ0-9]').hasMatch(initial) ? initial : 'U';
   }
 }
 
 /// Foto de Google recortada en círculo; sin foto, o si no carga, la inicial.
-class _FotoUsuario extends StatelessWidget {
-  final _DatosUsuario datos;
-  final double radio;
+class _UserPhoto extends StatelessWidget {
+  final _UserData data;
+  final double radius;
 
-  const _FotoUsuario({required this.datos, required this.radio});
+  const _UserPhoto({required this.data, required this.radius});
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final inicial = CircleAvatar(
-      radius: radio,
+    final initial = CircleAvatar(
+      radius: radius,
       backgroundColor: cs.primary,
       child: Text(
-        datos.inicial,
-        style: TextStyle(color: cs.onPrimary, fontSize: radio * 0.85),
+        data.initial,
+        style: TextStyle(color: cs.onPrimary, fontSize: radius * 0.85),
       ),
     );
-    final url = datos.fotoUrl;
-    if (url == null) return inicial;
+    final url = data.photoUrl;
+    if (url == null) return initial;
 
     return ClipOval(
       child: Image.network(
         url,
-        width: radio * 2,
-        height: radio * 2,
+        width: radius * 2,
+        height: radius * 2,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => inicial,
+        errorBuilder: (_, _, _) => initial,
       ),
     );
   }
 }
 
-class _TarjetaUsuario extends StatelessWidget {
-  final _DatosUsuario datos;
+class _UserCard extends StatelessWidget {
+  final _UserData data;
 
-  const _TarjetaUsuario({required this.datos});
+  const _UserCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -310,15 +310,15 @@ class _TarjetaUsuario extends StatelessWidget {
           children: [
             Row(
               children: [
-                _FotoUsuario(datos: datos, radio: 24),
+                _UserPhoto(data: data, radius: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        datos.nombre ??
-                            (datos.modoLocal ? 'Modo local' : 'Usuario'),
+                        data.name ??
+                            (data.localMode ? 'Modo local' : 'Usuario'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -329,7 +329,7 @@ class _TarjetaUsuario extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        datos.email ?? 'Sin sesión iniciada',
+                        data.email ?? 'Sin sesión iniciada',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -355,25 +355,23 @@ class _TarjetaUsuario extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            _BadgeRol(rol: datos.rol, modoLocal: datos.modoLocal),
-            if (datos.lidera case final lidera?) ...[
+            _RoleBadge(role: data.role, localMode: data.localMode),
+            if (data.leads case final leads?) ...[
               const SizedBox(height: 12),
-              _DatoCuenta(
-                clave: 'cuenta_lidera',
-                titulo: 'Lidera',
-                valor: lidera.whenData((texto) => (texto ?? '—', false)),
+              _AccountData(
+                itemKey: 'cuenta_lidera',
+                title: 'Lidera',
+                value: leads.whenData((text) => (text ?? '—', false)),
               ),
             ],
-            if (datos.pertenece case final pertenece?) ...[
+            if (data.belongs case final belongs?) ...[
               const SizedBox(height: 10),
-              _DatoCuenta(
-                clave: 'cuenta_pertenece',
-                titulo: 'Pertenece a',
-                valor: pertenece.whenData(
-                  (empleado) => (
-                    EstructuraOrganizacional.pertenencia(empleado),
-                    empleado == null,
-                  ),
+              _AccountData(
+                itemKey: 'cuenta_pertenece',
+                title: 'Pertenece a',
+                value: belongs.whenData(
+                  (employee) =>
+                      (OrgStructure.membership(employee), employee == null),
                 ),
               ),
             ],
@@ -386,23 +384,23 @@ class _TarjetaUsuario extends StatelessWidget {
 
 /// Un dato de la cuenta con su título chico, como el del rol. El valor es el
 /// texto y si va en ámbar.
-class _DatoCuenta extends StatelessWidget {
-  final String clave;
-  final String titulo;
-  final AsyncValue<(String, bool)> valor;
+class _AccountData extends StatelessWidget {
+  final String itemKey;
+  final String title;
+  final AsyncValue<(String, bool)> value;
 
-  const _DatoCuenta({
-    required this.clave,
-    required this.titulo,
-    required this.valor,
+  const _AccountData({
+    required this.itemKey,
+    required this.title,
+    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final (texto, advertencia) = valor.when(
-      data: (dato) => dato,
+    final colors = context.colors;
+    final (text, warning) = value.when(
+      data: (data) => data,
       error: (_, _) => ('No disponible', true),
       loading: () => ('Cargando…', false),
     );
@@ -411,7 +409,7 @@ class _DatoCuenta extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          titulo,
+          title,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
@@ -421,13 +419,11 @@ class _DatoCuenta extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          texto,
-          key: Key(clave),
+          text,
+          key: Key(itemKey),
           style: TextStyle(
             fontSize: 13,
-            color: advertencia
-                ? colores.advertencia.texto
-                : colores.textoIntermedio,
+            color: warning ? colors.warning.text : colors.intermediateText,
           ),
         ),
       ],
@@ -435,33 +431,28 @@ class _DatoCuenta extends StatelessWidget {
   }
 }
 
-class _BadgeRol extends StatelessWidget {
-  final String? rol;
-  final bool modoLocal;
+class _RoleBadge extends StatelessWidget {
+  final String? role;
+  final bool localMode;
 
-  const _BadgeRol({required this.rol, required this.modoLocal});
+  const _RoleBadge({required this.role, required this.localMode});
 
   @override
   Widget build(BuildContext context) {
-    final conocido = RolUsuario.fromString(rol);
-    final crudo = rol?.trim() ?? '';
+    final known = UserRole.fromString(role);
+    final raw = role?.trim() ?? '';
 
     final cs = context.colorScheme;
-    final advertencia = context.colores.advertencia;
+    final warning = context.colors.warning;
 
     // Un rol irreconocible se muestra tal cual, en ámbar, como en el panel admin.
-    final (texto, color, fondo, descripcion) = conocido != null
-        ? (
-            conocido.label,
-            cs.primary,
-            cs.primaryContainer,
-            conocido.descripcion,
-          )
+    final (text, color, background, description) = known != null
+        ? (known.label, cs.primary, cs.primaryContainer, known.description)
         : (
-            modoLocal ? 'Sin rol' : (crudo.isEmpty ? 'Sin rol' : crudo),
-            advertencia.texto,
-            advertencia.fondo,
-            modoLocal
+            localMode ? 'Sin rol' : (raw.isEmpty ? 'Sin rol' : raw),
+            warning.text,
+            warning.background,
+            localMode
                 ? 'La app corre sin Supabase, no hay usuario autenticado.'
                 : 'Rol no reconocido por el sistema.',
           );
@@ -472,11 +463,11 @@ class _BadgeRol extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: fondo,
+            color: background,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            texto,
+            text,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -486,10 +477,10 @@ class _BadgeRol extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          descripcion,
+          description,
           style: TextStyle(
             fontSize: 12,
-            color: context.colores.textoIntermedio,
+            color: context.colors.intermediateText,
           ),
         ),
       ],

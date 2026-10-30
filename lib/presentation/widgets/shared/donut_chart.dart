@@ -34,7 +34,7 @@ class DonutChart extends StatelessWidget {
       height: 132,
       // Leandro: llama a CustomPaint con _DonutPainter para dibujar los segmentos del gráfico.
       child: CustomPaint(
-        painter: _DonutPainter(segments, context.colores.graficoPista),
+        painter: _DonutPainter(segments, context.colors.chartTrack),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -65,9 +65,9 @@ class DonutChart extends StatelessWidget {
 
 class _DonutPainter extends CustomPainter {
   final List<DonutChartSegment> segments;
-  final Color colorPista;
+  final Color trackColor;
 
-  const _DonutPainter(this.segments, this.colorPista);
+  const _DonutPainter(this.segments, this.trackColor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -79,7 +79,7 @@ class _DonutPainter extends CustomPainter {
       (sum, segment) => sum + segment.value,
     );
     final backgroundPaint = Paint()
-      ..color = colorPista
+      ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -111,6 +111,6 @@ class _DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) {
     return oldDelegate.segments != segments ||
-        oldDelegate.colorPista != colorPista;
+        oldDelegate.trackColor != trackColor;
   }
 }

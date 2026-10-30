@@ -16,13 +16,13 @@ import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 
-class EmpleadosScreen extends ConsumerWidget {
-  const EmpleadosScreen({super.key});
+class EmployeesScreen extends ConsumerWidget {
+  const EmployeesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final empleadosFiltrados = ref.watch(empleadosFiltradosProvider);
-    final cumplimientos = ref.watch(cumplimientoGlobalProvider);
+    final filteredEmployees = ref.watch(filteredEmployeesProvider);
+    final complianceList = ref.watch(globalComplianceProvider);
 
     return Scaffold(
       body: Column(
@@ -32,31 +32,31 @@ class EmpleadosScreen extends ConsumerWidget {
           // Contenido
           Expanded(
             child: Padding(
-              padding: paddingPantalla,
+              padding: screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _BarraFiltrosEmpleados(),
+                  const _EmployeesFiltersBar(),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: empleadosFiltrados.when(
+                    child: filteredEmployees.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar los empleados',
                         error: err,
                       ),
-                      data: (empleados) => FadeIn(
+                      data: (employees) => FadeIn(
                         child: (() {
-                          if (empleados.isEmpty) {
-                            final hayNomina =
+                          if (employees.isEmpty) {
+                            final hasPayroll =
                                 ref
-                                    .watch(empleadosProvider)
+                                    .watch(employeesProvider)
                                     .value
                                     ?.isNotEmpty ??
                                 false;
                             return SingleChildScrollView(
-                              child: hayNomina
+                              child: hasPayroll
                                   ? const EmptyDataState(
                                       icon: Icons.search_off_outlined,
                                       title:
@@ -72,22 +72,22 @@ class EmpleadosScreen extends ConsumerWidget {
                                     ),
                             );
                           }
-                          return cumplimientos.when(
+                          return complianceList.when(
                             loading: () => const Center(
                               child: CircularProgressIndicator(),
                             ),
-                            error: (_, _) => _TablaEmpleadosPaginada(
-                              empleados: empleados,
-                              cumplimientoPorLegajo: const {},
+                            error: (_, _) => _PaginatedEmployeesTable(
+                              employees: employees,
+                              complianceByEmployeeId: const {},
                             ),
                             data: (items) {
-                              final porLegajo = {
+                              final byEmployeeId = {
                                 for (final item in items)
-                                  item.empleado.legajo: item,
+                                  item.employee.employeeId: item,
                               };
-                              return _TablaEmpleadosPaginada(
-                                empleados: empleados,
-                                cumplimientoPorLegajo: porLegajo,
+                              return _PaginatedEmployeesTable(
+                                employees: employees,
+                                complianceByEmployeeId: byEmployeeId,
                               );
                             },
                           );
@@ -106,69 +106,69 @@ class EmpleadosScreen extends ConsumerWidget {
 }
 
 /// Selección múltiple por dimensión, independiente de los indicadores.
-class _BarraFiltrosEmpleados extends ConsumerWidget {
-  const _BarraFiltrosEmpleados();
+class _EmployeesFiltersBar extends ConsumerWidget {
+  const _EmployeesFiltersBar();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final busqueda = ref.watch(busquedaEmpleadoProvider);
-    final seniority = ref.watch(filtroSeniorityProvider);
+    final search = ref.watch(employeeSearchProvider);
+    final seniority = ref.watch(seniorityFilterProvider);
 
     return FilterBar(
       scope: 'personas',
-      hasActiveFilters: busqueda.isNotEmpty || seniority != null,
+      hasActiveFilters: search.isNotEmpty || seniority != null,
 
       onClear: () {
-        ref.read(busquedaEmpleadoProvider.notifier).state = '';
-        ref.read(filtroSeniorityProvider.notifier).state = null;
+        ref.read(employeeSearchProvider.notifier).state = '';
+        ref.read(seniorityFilterProvider.notifier).state = null;
       },
     );
   }
 }
 
 /// Tabla del directorio, de a una página por vez y a todo el ancho.
-class _TablaEmpleadosPaginada extends StatefulWidget {
-  final List<Empleado> empleados;
-  final Map<String, CumplimientoEmpleado> cumplimientoPorLegajo;
+class _PaginatedEmployeesTable extends StatefulWidget {
+  final List<Employee> employees;
+  final Map<String, EmployeeCompliance> complianceByEmployeeId;
 
-  const _TablaEmpleadosPaginada({
-    required this.empleados,
-    required this.cumplimientoPorLegajo,
+  const _PaginatedEmployeesTable({
+    required this.employees,
+    required this.complianceByEmployeeId,
   });
 
   @override
-  State<_TablaEmpleadosPaginada> createState() =>
-      _TablaEmpleadosPaginadaState();
+  State<_PaginatedEmployeesTable> createState() =>
+      _PaginatedEmployeesTableState();
 }
 
-class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
+class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
   // Filas de dos líneas: nombre + mail, área + equipo y las fichas de
   // progreso en dos renglones.
-  static const _altoFila = 56.0;
-  static const _altoEncabezado = 44.0;
-  static const _altoPaginador = 60.0;
-  static const _separacion = 12.0;
+  static const _rowHeight = 56.0;
+  static const _headerHeight = 44.0;
+  static const _paginatorHeight = 60.0;
+  static const _spacing = 12.0;
 
   /// Debajo de este ancho las columnas se aprietan demasiado: aparece el
   /// scroll horizontal en lugar de cortar todos los textos. Es mayor que en
   /// el CRM porque la columna de progreso tiene ancho fijo.
-  static const _anchoMinimo = 1100.0;
+  static const _minimumWidth = 1100.0;
 
-  /// Las fichas de [ProgresoHorasPorCategoria] miden 256 px fijos; la columna
+  /// Las fichas de [CategoryHoursProgress] miden 256 px fijos; la columna
   /// suma el espacio entre columnas para que no desborden.
-  static const _anchoProgreso = 256.0 + 24.0;
+  static const _progressWidth = 256.0 + 24.0;
 
   /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimoPorPagina = 5;
+  static const _minimumPerPage = 5;
 
-  int _paginaActual = 0;
+  int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant _TablaEmpleadosPaginada oldWidget) {
+  void didUpdateWidget(covariant _PaginatedEmployeesTable oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Al cambiar el filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.empleados != widget.empleados) {
-      _paginaActual = 0;
+    if (oldWidget.employees != widget.employees) {
+      _currentPage = 0;
     }
   }
 
@@ -176,32 +176,30 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final total = widget.empleados.length;
+        final total = widget.employees.length;
 
         // Cuántas filas entran en el alto disponible, para que la tabla llene
         // la página sin dejar un hueco antes del paginador.
-        final altoParaTabla =
-            constraints.maxHeight - _altoPaginador - _separacion;
-        final porPagina = ((altoParaTabla - _altoEncabezado) / _altoFila)
+        final heightForTable =
+            constraints.maxHeight - _paginatorHeight - _spacing;
+        final perPage = ((heightForTable - _headerHeight) / _rowHeight)
             .floor()
             .clamp(
-              _minimoPorPagina,
-              total < _minimoPorPagina ? _minimoPorPagina : total,
+              _minimumPerPage,
+              total < _minimumPerPage ? _minimumPerPage : total,
             );
 
-        final totalPaginas = total == 0
-            ? 1
-            : (total + porPagina - 1) ~/ porPagina;
-        final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-        final inicio = paginaSegura * porPagina;
-        final finCalculado = inicio + porPagina;
-        final fin = finCalculado > total ? total : finCalculado;
-        final visibles = widget.empleados.sublist(inicio, fin);
+        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
+        final safePage = _currentPage.clamp(0, totalPages - 1);
+        final start = safePage * perPage;
+        final calculatedEnd = start + perPage;
+        final end = calculatedEnd > total ? total : calculatedEnd;
+        final visible = widget.employees.sublist(start, end);
 
         // Ancho fijo (no un mínimo): las columnas flex necesitan un ancho
         // acotado para repartirse, si no colapsan dentro del scroll.
-        final ancho = constraints.maxWidth < _anchoMinimo
-            ? _anchoMinimo
+        final width = constraints.maxWidth < _minimumWidth
+            ? _minimumWidth
             : constraints.maxWidth;
 
         return Column(
@@ -211,27 +209,27 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: ancho,
+                  width: width,
                   // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _tabla(visibles)),
+                  child: SingleChildScrollView(child: _table(visible)),
                 ),
               ),
             ),
-            if (totalPaginas > 1) ...[
-              const SizedBox(height: _separacion),
-              PaginacionResultados(
-                paginaActual: paginaSegura,
-                cantidadPaginas: totalPaginas,
-                desde: inicio + 1,
-                hasta: fin,
-                totalResultados: total,
-                etiquetaResultados: 'empleados',
-                icono: Icons.people_outline,
-                onPrevious: paginaSegura > 0
-                    ? () => setState(() => _paginaActual = paginaSegura - 1)
+            if (totalPages > 1) ...[
+              const SizedBox(height: _spacing),
+              ResultsPagination(
+                currentPage: safePage,
+                pageCount: totalPages,
+                from: start + 1,
+                until: end,
+                totalResults: total,
+                resultsLabel: 'empleados',
+                icon: Icons.people_outline,
+                onPrevious: safePage > 0
+                    ? () => setState(() => _currentPage = safePage - 1)
                     : null,
-                onNext: paginaSegura < totalPaginas - 1
-                    ? () => setState(() => _paginaActual = paginaSegura + 1)
+                onNext: safePage < totalPages - 1
+                    ? () => setState(() => _currentPage = safePage + 1)
                     : null,
               ),
             ],
@@ -241,14 +239,14 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
     );
   }
 
-  Widget _tabla(List<Empleado> visibles) {
+  Widget _table(List<Employee> visible) {
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       showCheckboxColumn: false,
       columnSpacing: 24,
-      headingRowHeight: _altoEncabezado,
-      dataRowMinHeight: _altoFila,
-      dataRowMaxHeight: _altoFila,
+      headingRowHeight: _headerHeight,
+      dataRowMinHeight: _rowHeight,
+      dataRowMaxHeight: _rowHeight,
       // Proporciones del ancho: el nombre y el área son lo que más se lee,
       // el legajo es un dato corto.
       columns: const [
@@ -260,33 +258,34 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
         ),
         DataColumn(columnWidth: FlexColumnWidth(1.6), label: Text('Seniority')),
         DataColumn(
-          columnWidth: FixedColumnWidth(_anchoProgreso),
+          columnWidth: FixedColumnWidth(_progressWidth),
           label: Text('Progreso por categoría'),
         ),
       ],
       rows: [
-        for (final emp in visibles)
+        for (final emp in visible)
           DataRow(
-            onSelectChanged: (_) => context.push('/empleados/${emp.legajo}'),
+            onSelectChanged: (_) =>
+                context.push('/empleados/${emp.employeeId}'),
             cells: [
               DataCell(
                 Text(
-                  emp.legajo,
+                  emp.employeeId,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: context.colores.textoIntermedio,
+                    color: context.colors.intermediateText,
                   ),
                 ),
               ),
-              DataCell(_celdaEmpleado(emp)),
-              DataCell(_celdaAreaEquipo(emp)),
+              DataCell(_employeeCell(emp)),
+              DataCell(_areaTeamCell(emp)),
               DataCell(SeniorityChip(seniority: emp.seniority)),
               DataCell(
-                ProgresoHorasPorCategoria(
-                  cumplimiento: widget.cumplimientoPorLegajo[emp.legajo],
+                CategoryHoursProgress(
+                  compliance: widget.complianceByEmployeeId[emp.employeeId],
                 ),
               ),
             ],
@@ -295,7 +294,7 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
     );
   }
 
-  Widget _celdaEmpleado(Empleado emp) {
+  Widget _employeeCell(Employee emp) {
     final cs = context.colorScheme;
     return Row(
       children: [
@@ -303,7 +302,7 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
           radius: 14,
           backgroundColor: cs.outlineVariant,
           child: Text(
-            emp.nombre.isEmpty ? '?' : emp.nombre.substring(0, 1),
+            emp.firstName.isEmpty ? '?' : emp.firstName.substring(0, 1),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -318,7 +317,7 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${emp.nombre} ${emp.apellido}',
+                '${emp.firstName} ${emp.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -328,7 +327,7 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
                 ),
               ),
               Text(
-                _mostrarDato(emp.mail),
+                _showData(emp.email),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
@@ -340,22 +339,22 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
     );
   }
 
-  Widget _celdaAreaEquipo(Empleado emp) {
+  Widget _areaTeamCell(Employee emp) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _mostrarDato(emp.area),
+          _showData(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
-            color: context.colores.textoIntermedio,
+            color: context.colors.intermediateText,
           ),
         ),
         Text(
-          _mostrarDato(emp.equipo),
+          _showData(emp.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -367,5 +366,5 @@ class _TablaEmpleadosPaginadaState extends State<_TablaEmpleadosPaginada> {
     );
   }
 
-  String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
+  String _showData(String value) => value.trim().isEmpty ? '-' : value;
 }

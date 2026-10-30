@@ -31,24 +31,24 @@ class TeamsStatusSummary extends StatelessWidget {
         TeamDonutSlice(
           label: 'En objetivo',
           value: onTarget.toDouble(),
-          color: context.colores.exito.texto,
-          backgroundColor: context.colores.exito.fondo,
+          color: context.colors.success.text,
+          backgroundColor: context.colors.success.background,
           help:
               'Equipos con 100% o más de horas y todos sus integrantes cumpliendo el objetivo por categoría.',
         ),
         TeamDonutSlice(
           label: 'En riesgo',
           value: atRisk.toDouble(),
-          color: context.colores.advertencia.texto,
-          backgroundColor: context.colores.advertencia.fondo,
+          color: context.colors.warning.text,
+          backgroundColor: context.colors.warning.background,
           help:
               'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
         ),
         TeamDonutSlice(
           label: 'Críticos',
           value: critical.toDouble(),
-          color: context.colores.peligro.texto,
-          backgroundColor: context.colores.peligro.fondo,
+          color: context.colors.danger.text,
+          backgroundColor: context.colors.danger.background,
           help:
               'Equipos con bajo avance y sin integrantes cumpliendo el objetivo individual.',
         ),

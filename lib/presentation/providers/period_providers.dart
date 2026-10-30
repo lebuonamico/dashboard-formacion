@@ -1,21 +1,21 @@
 import 'package:flutter_riverpod/legacy.dart';
 
-enum AlcancePeriodo {
-  mensual('Mensual'),
-  anual('Anual');
+enum PeriodScope {
+  monthly('Mensual'),
+  annual('Anual');
 
   final String label;
-  const AlcancePeriodo(this.label);
+  const PeriodScope(this.label);
 }
 
-final alcancePeriodoProvider = StateProvider<AlcancePeriodo>(
-  (ref) => AlcancePeriodo.mensual,
+final periodScopeProvider = StateProvider<PeriodScope>(
+  (ref) => PeriodScope.monthly,
 );
 
-final filtroMesPeriodoProvider = StateProvider<int>(
+final periodMonthFilterProvider = StateProvider<int>(
   (ref) => DateTime.now().month,
 );
 
-final filtroAnioPeriodoProvider = StateProvider<int>(
+final periodYearFilterProvider = StateProvider<int>(
   (ref) => DateTime.now().year,
 );

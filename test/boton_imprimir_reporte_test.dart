@@ -8,33 +8,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _reporte = ReporteFormacion(
-  tipo: TipoReporte.equipo,
-  titulo: 'Core',
-  periodo: 'Octubre 2026',
-  integrantes: 0,
-  enObjetivo: 0,
-  horas: 0,
-  objetivo: 0,
-  porcentaje: 0,
-  estado: 'Crítico',
-  nivel: NivelReporte.critico,
-  miembros: [],
+const _report = TrainingReport(
+  type: ReportType.team,
+  title: 'Core',
+  period: 'Octubre 2026',
+  memberCount: 0,
+  onTarget: 0,
+  hours: 0,
+  target: 0,
+  percentage: 0,
+  status: 'Crítico',
+  level: ReportLevel.critical,
+  members: [],
 );
 
-Future<void> _montar(
+Future<void> _mount(
   WidgetTester tester, {
-  required Future<ReporteFormacion?> Function() reporte,
-  required ImprimirReporte imprimir,
+  required Future<TrainingReport?> Function() report,
+  required PrintReport print,
 }) async {
-  final reporteProvider = FutureProvider<ReporteFormacion?>((ref) => reporte());
+  final reportProvider = FutureProvider<TrainingReport?>((ref) => report());
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [imprimirReporteProvider.overrideWithValue(imprimir)],
+      overrides: [printReportProvider.overrideWithValue(print)],
       child: MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: Center(child: BotonImprimirReporte(reporte: reporteProvider)),
+          body: Center(child: PrintReportButton(report: reportProvider)),
         ),
       ),
     ),
@@ -42,38 +42,37 @@ Future<void> _montar(
   await tester.pump();
 }
 
-OutlinedButton _boton(WidgetTester tester) =>
+OutlinedButton _button(WidgetTester tester) =>
     tester.widget<OutlinedButton>(find.bySubtype<OutlinedButton>());
 
-String _ayuda(WidgetTester tester) =>
+String _help(WidgetTester tester) =>
     tester.widget<Tooltip>(find.byType(Tooltip)).message!;
 
-Future<void> _sinImprimir(ReporteFormacion _) async =>
-    fail('No debería imprimir');
+Future<void> _noPrint(TrainingReport _) async => fail('No debería imprimir');
 
 void main() {
   testWidgets('Con el reporte listo imprime ese reporte', (tester) async {
-    final impresos = <ReporteFormacion>[];
-    await _montar(
+    final printed = <TrainingReport>[];
+    await _mount(
       tester,
-      reporte: () async => _reporte,
-      imprimir: (reporte) async => impresos.add(reporte),
+      report: () async => _report,
+      print: (report) async => printed.add(report),
     );
 
-    expect(_boton(tester).onPressed, isNotNull);
+    expect(_button(tester).onPressed, isNotNull);
     await tester.tap(find.text('Imprimir reporte'));
     await tester.pump();
 
-    expect(impresos, [same(_reporte)]);
+    expect(printed, [same(_report)]);
     expect(find.text('Imprimir reporte'), findsOne);
   });
 
   testWidgets('Sin datos en el período avisa que no hay datos cargados', (
     tester,
   ) async {
-    await _montar(tester, reporte: () async => null, imprimir: _sinImprimir);
+    await _mount(tester, report: () async => null, print: _noPrint);
 
-    expect(_ayuda(tester), sinDatosParaReporte);
+    expect(_help(tester), noReportData);
     await tester.tap(find.text('Imprimir reporte'));
     await tester.pump();
 
@@ -81,10 +80,10 @@ void main() {
   });
 
   testWidgets('Si no se pudieron cargar los datos lo explica', (tester) async {
-    await _montar(
+    await _mount(
       tester,
-      reporte: () async => throw StateError('detalle técnico'),
-      imprimir: _sinImprimir,
+      report: () async => throw StateError('detalle técnico'),
+      print: _noPrint,
     );
 
     await tester.tap(find.text('Imprimir reporte'));
@@ -95,24 +94,20 @@ void main() {
   });
 
   testWidgets('Mientras cargan los datos queda deshabilitado', (tester) async {
-    final pendiente = Completer<ReporteFormacion?>();
-    await _montar(
-      tester,
-      reporte: () => pendiente.future,
-      imprimir: _sinImprimir,
-    );
+    final pending = Completer<TrainingReport?>();
+    await _mount(tester, report: () => pending.future, print: _noPrint);
 
-    expect(_boton(tester).onPressed, isNull);
-    expect(_ayuda(tester), 'Cargando datos…');
+    expect(_button(tester).onPressed, isNull);
+    expect(_help(tester), 'Cargando datos…');
   });
 
   testWidgets('Si falla la impresión lo avisa y se puede reintentar', (
     tester,
   ) async {
-    await _montar(
+    await _mount(
       tester,
-      reporte: () async => _reporte,
-      imprimir: (_) async => throw StateError('sin fuentes'),
+      report: () async => _report,
+      print: (_) async => throw StateError('sin fuentes'),
     );
 
     await tester.tap(find.text('Imprimir reporte'));
@@ -122,6 +117,6 @@ void main() {
       find.text('No se pudo generar el reporte: Bad state: sin fuentes'),
       findsOne,
     );
-    expect(_boton(tester).onPressed, isNotNull);
+    expect(_button(tester).onPressed, isNotNull);
   });
 }

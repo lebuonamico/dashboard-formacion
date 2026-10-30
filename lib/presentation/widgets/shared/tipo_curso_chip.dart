@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 /// Etiqueta de color para la categoría de un curso. La usan el catálogo de
 /// cursos y las certificaciones LMS, para que cada tipo tenga siempre el mismo
 /// color (el mismo que en los gráficos del dashboard).
-class TipoCursoChip extends StatelessWidget {
-  final TipoCurso tipo;
+class CourseCategoryChip extends StatelessWidget {
+  final CourseCategory type;
 
-  const TipoCursoChip({super.key, required this.tipo});
+  const CourseCategoryChip({super.key, required this.type});
 
   @override
-  Widget build(BuildContext context) => EtiquetaColor(
-    texto: tipo.label,
-    colores: context.colores.categoria(tipo),
-  );
+  Widget build(BuildContext context) =>
+      ColorLabel(text: type.label, colors: context.colors.category(type));
 }

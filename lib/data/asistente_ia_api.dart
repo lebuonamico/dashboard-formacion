@@ -4,49 +4,49 @@ import 'dart:convert';
 import 'package:app_finnegans/domain/servicios/asistente_contexto_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum TipoErrorAsistente {
-  temporal,
-  limite,
-  conexion,
-  sesion,
-  permiso,
-  desconocido,
+enum AssistantErrorType {
+  temporary,
+  limit,
+  connection,
+  session,
+  permission,
+  unknown,
 }
 
-class AsistenteIaException implements Exception {
-  final String mensaje;
+class AssistantException implements Exception {
+  final String message;
   final int? status;
-  final TipoErrorAsistente tipo;
+  final AssistantErrorType type;
   // Solo códigos conocidos para diagnóstico; nunca se guarda el cuerpo crudo.
-  final String? codigo;
-  const AsistenteIaException(
-    this.mensaje, {
+  final String? code;
+  const AssistantException(
+    this.message, {
     this.status,
-    this.tipo = TipoErrorAsistente.desconocido,
-    this.codigo,
+    this.type = AssistantErrorType.unknown,
+    this.code,
   });
 
-  static const mensajeTemporal =
+  static const temporaryMessage =
       'El servicio de IA está experimentando una dificultad temporal. Tu pregunta se conservó y podés volver a intentarlo en unos momentos.';
-  static const mensajeLimite =
+  static const limitMessage =
       'El asistente alcanzó temporalmente su límite de consultas. Intentá nuevamente más tarde.';
-  static const mensajeConexion =
+  static const connectionMessage =
       'No pudimos completar la conexión. Revisá tu conexión a Internet e intentá nuevamente.';
-  static const mensajeSesion =
+  static const sessionMessage =
       'Tu sesión venció. Volvé a iniciar sesión para continuar utilizando el asistente.';
-  static const mensajePermiso =
+  static const permissionMessage =
       'No tenés permisos para utilizar el asistente. Si creés que es un error, consultá con el administrador.';
-  static const mensajeDesconocido =
+  static const unknownMessage =
       'No pudimos completar tu consulta en este momento. Podés volver a intentarlo.';
 
-  bool get permiteReintentar =>
+  bool get allowsRetry =>
       status != 401 &&
       status != 403 &&
-      tipo != TipoErrorAsistente.sesion &&
-      tipo != TipoErrorAsistente.permiso;
+      type != AssistantErrorType.session &&
+      type != AssistantErrorType.permission;
 
-  factory AsistenteIaException.http(int status, {Object? details}) {
-    const codigos = {
+  factory AssistantException.http(int status, {Object? details}) {
+    const codes = {
       'RESOURCE_EXHAUSTED',
       'UNAVAILABLE',
       'INTERNAL',
@@ -60,135 +60,125 @@ class AsistenteIaException implements Exception {
       'WORKER_LIMIT',
       'WORKER_RESOURCE_LIMIT',
     };
-    Object? cuerpo = details;
-    if (cuerpo is String) {
-      if (cuerpo.length > 16000) {
-        cuerpo = null;
+    Object? body = details;
+    if (body is String) {
+      if (body.length > 16000) {
+        body = null;
       } else {
         try {
-          cuerpo = jsonDecode(cuerpo);
+          body = jsonDecode(body);
         } on FormatException {
-          cuerpo = null;
+          body = null;
         }
       }
     }
-    String? codigo;
-    if (cuerpo is Map) {
-      final error = cuerpo['error'];
-      for (final candidato in [
+    String? code;
+    if (body is Map) {
+      final error = body['error'];
+      for (final candidate in [
         if (error is Map) error['status'],
         if (error is Map) error['code'],
-        cuerpo['status'],
-        cuerpo['code'],
+        body['status'],
+        body['code'],
       ]) {
-        if (candidato is String && codigos.contains(candidato)) {
-          codigo = candidato;
+        if (candidate is String && codes.contains(candidate)) {
+          code = candidate;
           break;
         }
       }
     }
     // Los estados de nuestra sesión tienen prioridad. Un error de credenciales
     // del proveedor dentro de un 502 no se presenta como sesión vencida.
-    final tipo = switch (status) {
-      401 => TipoErrorAsistente.sesion,
-      403 => TipoErrorAsistente.permiso,
-      429 => TipoErrorAsistente.limite,
-      0 || 408 || 504 => TipoErrorAsistente.conexion,
-      _ when codigo == 'RESOURCE_EXHAUSTED' => TipoErrorAsistente.limite,
-      _ when codigo == 'DEADLINE_EXCEEDED' => TipoErrorAsistente.conexion,
-      502 || 503 when codigo == 'UNAVAILABLE' => TipoErrorAsistente.temporal,
-      _ => TipoErrorAsistente.desconocido,
+    final type = switch (status) {
+      401 => AssistantErrorType.session,
+      403 => AssistantErrorType.permission,
+      429 => AssistantErrorType.limit,
+      0 || 408 || 504 => AssistantErrorType.connection,
+      _ when code == 'RESOURCE_EXHAUSTED' => AssistantErrorType.limit,
+      _ when code == 'DEADLINE_EXCEEDED' => AssistantErrorType.connection,
+      502 || 503 when code == 'UNAVAILABLE' => AssistantErrorType.temporary,
+      _ => AssistantErrorType.unknown,
     };
-    final mensaje = switch (tipo) {
-      TipoErrorAsistente.temporal => mensajeTemporal,
-      TipoErrorAsistente.limite => mensajeLimite,
-      TipoErrorAsistente.conexion => mensajeConexion,
-      TipoErrorAsistente.sesion => mensajeSesion,
-      TipoErrorAsistente.permiso => mensajePermiso,
-      TipoErrorAsistente.desconocido => mensajeDesconocido,
+    final message = switch (type) {
+      AssistantErrorType.temporary => temporaryMessage,
+      AssistantErrorType.limit => limitMessage,
+      AssistantErrorType.connection => connectionMessage,
+      AssistantErrorType.session => sessionMessage,
+      AssistantErrorType.permission => permissionMessage,
+      AssistantErrorType.unknown => unknownMessage,
     };
-    return AsistenteIaException(
-      mensaje,
-      status: status,
-      tipo: tipo,
-      codigo: codigo,
-    );
+    return AssistantException(message, status: status, type: type, code: code);
   }
 }
 
 /// Usa el cliente compartido: functions.invoke adjunta la sesión de Supabase.
 /// No conoce la clave ni el endpoint de Gemini. No realiza reintentos.
-class AsistenteIaApi {
+class AssistantApi {
   final SupabaseClient? client;
   final Duration timeout;
 
-  AsistenteIaApi(this.client, {this.timeout = const Duration(seconds: 40)});
+  AssistantApi(this.client, {this.timeout = const Duration(seconds: 40)});
 
-  Future<String> consultar(String mensaje, {Future<void>? cancelacion}) async {
+  Future<String> query(String message, {Future<void>? cancellation}) async {
     final supabase = client;
     if (supabase == null ||
         supabase.auth.currentSession == null ||
         supabase.auth.currentSession!.isExpired) {
-      throw AsistenteIaException.http(401);
+      throw AssistantException.http(401);
     }
     // Defensa local; el endpoint también debe imponer sus propios límites.
-    if (mensaje.trim().isEmpty ||
-        mensaje.length > AsistenteContextoService.maxMensaje ||
-        utf8.encode(mensaje).length > AsistenteContextoService.maxMensaje * 4) {
-      throw const AsistenteIaException(AsistenteIaException.mensajeDesconocido);
+    if (message.trim().isEmpty ||
+        message.length > AssistantContextService.maxMessage ||
+        utf8.encode(message).length > AssistantContextService.maxMessage * 4) {
+      throw const AssistantException(AssistantException.unknownMessage);
     }
-    final abortar = Completer<void>();
-    void cancelar() {
-      if (!abortar.isCompleted) abortar.complete();
+    final abort = Completer<void>();
+    void cancel() {
+      if (!abort.isCompleted) abort.complete();
     }
 
-    if (cancelacion != null) {
-      unawaited(cancelacion.then((_) => cancelar()));
+    if (cancellation != null) {
+      unawaited(cancellation.then((_) => cancel()));
     }
     try {
       final response = await supabase.functions
           .invoke(
             'asistente-ia',
-            body: {'mensaje': mensaje},
-            abortSignal: abortar.future,
+            body: {'mensaje': message},
+            abortSignal: abort.future,
           )
           .timeout(
             timeout,
             onTimeout: () {
-              cancelar();
+              cancel();
               throw TimeoutException('assistant_timeout');
             },
           );
       if (response.status < 200 || response.status >= 300) {
-        throw AsistenteIaException.http(
-          response.status,
-          details: response.data,
-        );
+        throw AssistantException.http(response.status, details: response.data);
       }
       final data = response.data;
-      final respuesta = data is Map ? data['respuesta'] : null;
-      if (respuesta is! String ||
-          respuesta.trim().isEmpty ||
-          respuesta.length > 16000) {
-        throw const AsistenteIaException(
-          AsistenteIaException.mensajeDesconocido,
-        );
+      final responseBody = data is Map ? data['respuesta'] : null;
+      if (responseBody is! String ||
+          responseBody.trim().isEmpty ||
+          responseBody.length > 16000) {
+        throw const AssistantException(AssistantException.unknownMessage);
       }
-      return respuesta.trim();
+      return responseBody.trim();
     } on FunctionException catch (error) {
-      throw AsistenteIaException.http(error.status, details: error.details);
+      throw AssistantException.http(error.status, details: error.details);
     } on TimeoutException {
-      throw const AsistenteIaException(
-        AsistenteIaException.mensajeConexion,
-        tipo: TipoErrorAsistente.conexion,
+      throw const AssistantException(
+        AssistantException.connectionMessage,
+        type: AssistantErrorType.connection,
       );
-    } on AsistenteIaException {
+    } on AssistantException {
       rethrow;
     } catch (_) {
       // Ni mensajes internos, cuerpos, tokens ni stack traces al navegador.
-      throw const AsistenteIaException(AsistenteIaException.mensajeDesconocido);
+      throw const AssistantException(AssistantException.unknownMessage);
     } finally {
-      cancelar();
+      cancel();
     }
   }
 }

@@ -25,18 +25,16 @@ class TeamDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(
-      teamDetailProvider((area: area, equipo: team)),
-    );
+    final detailAsync = ref.watch(teamDetailProvider((area: area, team: team)));
     final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final scope = ref.watch(alcancePeriodoProvider);
-    final month = ref.watch(filtroMesPeriodoProvider);
-    final year = ref.watch(filtroAnioPeriodoProvider);
-    final periodLabel = etiquetaPeriodoDetallada(scope, month, year);
+    final scope = ref.watch(periodScopeProvider);
+    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodYearFilterProvider);
+    final detailedLabel = detailedPeriodLabel(scope, month, year);
 
-    final periodControls = PeriodoFilterPanel(
-      accion: BotonImprimirReporte(
-        reporte: reporteEquipoProvider((area: area, equipo: team)),
+    final periodControls = PeriodFilterPanel(
+      action: PrintReportButton(
+        report: teamReportProvider((area: area, team: team)),
       ),
     );
 
@@ -57,14 +55,14 @@ class TeamDetailScreen extends ConsumerWidget {
                 error: error,
               ),
               data: (detail) {
-                final label = etiquetaPeriodo(scope, month, year);
+                final label = periodLabel(scope, month, year);
                 final Widget content;
                 if (!(hasDataAsync.value ?? true)) {
                   content = _EmptyContent(
                     periodControls: periodControls,
-                    child: EmptyDataState.periodoSinDatos(
+                    child: EmptyDataState.periodWithoutData(
                       icon: Icons.groups_outlined,
-                      periodo: label,
+                      period: label,
                     ),
                   );
                 } else if (detail == null) {
@@ -81,8 +79,8 @@ class TeamDetailScreen extends ConsumerWidget {
                 } else {
                   content = _TeamDetailContent(
                     detail: detail,
-                    periodLabel: periodLabel,
-                    isAnnual: scope == AlcancePeriodo.anual,
+                    periodLabel: detailedLabel,
+                    isAnnual: scope == PeriodScope.annual,
                     periodControls: periodControls,
                   );
                 }
@@ -114,7 +112,7 @@ class _TeamDetailContent extends StatelessWidget {
     final team = detail.overview;
 
     return ListView(
-      padding: paddingPantalla,
+      padding: screenPadding,
       children: [
         periodControls,
         const SizedBox(height: 22),
@@ -125,7 +123,7 @@ class _TeamDetailContent extends StatelessWidget {
         TeamDetailSummary(team: team, isAnnual: isAnnual),
         if (detail.members.isNotEmpty) ...[
           const SizedBox(height: 16),
-          ComparacionMoodleCrmCards(cumplimientos: detail.members),
+          MoodleCrmComparisonCards(complianceList: detail.members),
         ],
         const SizedBox(height: 24),
         TeamMembersTable(members: detail.members),
@@ -143,7 +141,7 @@ class _EmptyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: paddingPantalla,
+      padding: screenPadding,
       children: [periodControls, const SizedBox(height: 22), child],
     );
   }

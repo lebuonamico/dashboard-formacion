@@ -4,20 +4,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   test('una columna inexistente se explica sin mostrar el error técnico', () {
-    final mensaje = mensajeErrorCarga(
+    final message = timeEntryErrorMessage(
       const PostgrestException(
         message: 'column cursos.tipo does not exist',
         code: '42703',
       ),
     );
 
-    expect(mensaje, contains('no coincide con esta versión'));
-    expect(mensaje, isNot(contains('cursos.tipo')));
+    expect(message, contains('no coincide con esta versión'));
+    expect(message, isNot(contains('cursos.tipo')));
   });
 
   test('sin permisos lo dice', () {
     expect(
-      mensajeErrorCarga(
+      timeEntryErrorMessage(
         const PostgrestException(message: 'denied', code: '42501'),
       ),
       contains('permisos'),
@@ -26,14 +26,14 @@ void main() {
 
   test('un FormatException conserva su mensaje', () {
     expect(
-      mensajeErrorCarga(const FormatException('Fecha inválida.')),
+      timeEntryErrorMessage(const FormatException('Fecha inválida.')),
       'Fecha inválida.',
     );
   });
 
   test('un error desconocido da un mensaje genérico', () {
-    final mensaje = mensajeErrorCarga(StateError('boom'));
-    expect(mensaje, contains('error inesperado'));
-    expect(mensaje, isNot(contains('boom')));
+    final message = timeEntryErrorMessage(StateError('boom'));
+    expect(message, contains('error inesperado'));
+    expect(message, isNot(contains('boom')));
   });
 }

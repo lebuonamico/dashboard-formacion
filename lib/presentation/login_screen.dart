@@ -33,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     final loginMessage = _rejectionMessage ?? auth.error;
     final cs = context.colorScheme;
-    final colores = context.colores;
+    final colors = context.colors;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -182,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: colores.textoTenue,
+                              color: colors.faintText,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -253,7 +253,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Text(
         '•',
-        style: TextStyle(fontSize: 10, color: context.colores.textoTenue),
+        style: TextStyle(fontSize: 10, color: context.colors.faintText),
       ),
     );
   }

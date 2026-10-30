@@ -20,8 +20,8 @@ class FadeIn extends StatelessWidget {
       tween: Tween(begin: 0, end: 1),
       duration: duration,
       curve: Curves.easeOut,
-      builder: (context, opacidad, hijo) =>
-          Opacity(opacity: opacidad, child: hijo),
+      builder: (context, opacity, child) =>
+          Opacity(opacity: opacity, child: child),
       child: child,
     );
   }

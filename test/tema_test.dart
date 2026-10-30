@@ -9,30 +9,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Relación de contraste WCAG entre dos colores opacos.
-double _contraste(Color a, Color b) {
+double _contrast(Color a, Color b) {
   final la = a.computeLuminance();
   final lb = b.computeLuminance();
-  final (claro, oscuro) = la > lb ? (la, lb) : (lb, la);
-  return (claro + 0.05) / (oscuro + 0.05);
+  final (light, dark) = la > lb ? (la, lb) : (lb, la);
+  return (light + 0.05) / (dark + 0.05);
 }
 
 /// Los fondos de chip del modo oscuro son translúcidos: se mide el color que
 /// realmente se ve sobre la superficie.
-Color _sobre(Color fondo, Color superficie) =>
-    Color.alphaBlend(fondo, superficie);
+Color _over(Color background, Color surface) =>
+    Color.alphaBlend(background, surface);
 
 void main() {
   group('Preferencia de apariencia', () {
     test('sin preferencia guardada sigue al sistema', () async {
       SharedPreferences.setMockInitialValues({});
-      expect(await TemaController.leerGuardado(), ThemeMode.system);
+      expect(await ThemeModeController.readSaved(), ThemeMode.system);
     });
 
     test('un valor desconocido también sigue al sistema', () async {
       SharedPreferences.setMockInitialValues({
-        TemaController.clavePreferencia: 'violeta',
+        ThemeModeController.preferenceKey: 'violeta',
       });
-      expect(await TemaController.leerGuardado(), ThemeMode.system);
+      expect(await ThemeModeController.readSaved(), ThemeMode.system);
     });
 
     test('cambiar el modo lo aplica y lo guarda', () async {
@@ -40,73 +40,75 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      await container.read(temaProvider.notifier).cambiar(ThemeMode.dark);
+      await container.read(themeModeProvider.notifier).change(ThemeMode.dark);
 
-      expect(container.read(temaProvider), ThemeMode.dark);
-      expect(await TemaController.leerGuardado(), ThemeMode.dark);
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+      expect(await ThemeModeController.readSaved(), ThemeMode.dark);
     });
 
     test('arranca con el modo leído antes de runApp', () {
       final container = ProviderContainer(
         overrides: [
-          temaProvider.overrideWith(() => TemaController(ThemeMode.light)),
+          themeModeProvider.overrideWith(
+            () => ThemeModeController(ThemeMode.light),
+          ),
         ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(temaProvider), ThemeMode.light);
+      expect(container.read(themeModeProvider), ThemeMode.light);
     });
   });
 
   group('Temas', () {
-    for (final (nombre, tema) in [
+    for (final (name, theme) in [
       ('claro', AppTheme.light()),
       ('oscuro', AppTheme.dark()),
     ]) {
-      test('el tema $nombre trae los colores propios de la app', () {
-        expect(tema.extension<AppColors>(), isNotNull);
+      test('el tema $name trae los colores propios de la app', () {
+        expect(theme.extension<AppColors>(), isNotNull);
         expect(
-          tema.scaffoldBackgroundColor,
-          tema.colorScheme.surfaceContainerLow,
+          theme.scaffoldBackgroundColor,
+          theme.colorScheme.surfaceContainerLow,
         );
       });
 
-      test('los textos del tema $nombre cumplen contraste AA', () {
-        final cs = tema.colorScheme;
-        final c = tema.extension<AppColors>()!;
-        final superficie = cs.surface;
+      test('los textos del tema $name cumplen contraste AA', () {
+        final cs = theme.colorScheme;
+        final c = theme.extension<AppColors>()!;
+        final surface = cs.surface;
 
-        final pares = <String, (Color, Color)>{
-          'texto principal': (cs.onSurface, superficie),
-          'texto secundario': (cs.onSurfaceVariant, superficie),
-          'texto intermedio': (c.textoIntermedio, superficie),
-          'marca sobre superficie': (cs.primary, superficie),
+        final pairs = <String, (Color, Color)>{
+          'texto principal': (cs.onSurface, surface),
+          'texto secundario': (cs.onSurfaceVariant, surface),
+          'texto intermedio': (c.intermediateText, surface),
+          'marca sobre superficie': (cs.primary, surface),
           'texto sobre la página': (cs.onSurface, cs.surfaceContainerLow),
-          'error': (cs.error, superficie),
-          for (final (etiqueta, par) in [
-            ('éxito', c.exito),
-            ('advertencia', c.advertencia),
-            ('peligro', c.peligro),
-            ('negocio', c.negocio),
-            ('blandas', c.blandas),
-            ('exploración', c.exploracion),
-            ('dictado', c.dictado),
+          'error': (cs.error, surface),
+          for (final (label, pair) in [
+            ('éxito', c.success),
+            ('advertencia', c.warning),
+            ('peligro', c.danger),
+            ('negocio', c.business),
+            ('blandas', c.softSkills),
+            ('exploración', c.exploration),
+            ('dictado', c.teaching),
             ('trainee', c.trainee),
             ('junior', c.junior),
             ('semisenior', c.semisenior),
             ('senior', c.senior),
             ('manager', c.manager),
           ])
-            'chip $etiqueta': (par.texto, _sobre(par.fondo, superficie)),
+            'chip $label': (pair.text, _over(pair.background, surface)),
         };
 
-        final insuficientes = [
-          for (final MapEntry(key: etiqueta, value: (texto, fondo))
-              in pares.entries)
-            if (_contraste(texto, fondo) < 4.5)
-              '$etiqueta: ${_contraste(texto, fondo).toStringAsFixed(2)}',
+        final insufficient = [
+          for (final MapEntry(key: label, value: (text, background))
+              in pairs.entries)
+            if (_contrast(text, background) < 4.5)
+              '$label: ${_contrast(text, background).toStringAsFixed(2)}',
         ];
-        expect(insuficientes, isEmpty, reason: 'tema $nombre');
+        expect(insufficient, isEmpty, reason: 'tema $name');
       });
     }
 
@@ -130,8 +132,8 @@ void main() {
             )
             .first,
       );
-      final decoracion = panel.decoration! as BoxDecoration;
-      expect(decoracion.color, AppTheme.dark().colorScheme.surface);
+      final decoration = panel.decoration! as BoxDecoration;
+      expect(decoration.color, AppTheme.dark().colorScheme.surface);
       expect(
         tester.widget<Text>(find.text('Sin datos')).style!.color,
         AppTheme.dark().colorScheme.onSurface,
@@ -141,25 +143,25 @@ void main() {
 
   test('no hay colores escritos fuera de lib/core/theme', () {
     final literal = RegExp(
-      r'Color\(0x|Color\.from(ARGB|RGBO)\(|Colors\.(?!transparent\b)\w+',
+      r'\bColor\(0x|\bColor\.from(ARGB|RGBO)\(|\bColors\.(?!transparent\b)\w+',
     );
-    final infracciones = <String>[];
-    for (final archivo in Directory('lib').listSync(recursive: true)) {
-      final ruta = archivo.path.replaceAll(r'\', '/');
-      if (archivo is! File ||
-          !ruta.endsWith('.dart') ||
-          ruta.startsWith('lib/core/theme/')) {
+    final violations = <String>[];
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      final route = file.path.replaceAll(r'\', '/');
+      if (file is! File ||
+          !route.endsWith('.dart') ||
+          route.startsWith('lib/core/theme/')) {
         continue;
       }
-      final lineas = archivo.readAsLinesSync();
-      for (var i = 0; i < lineas.length; i++) {
-        if (literal.hasMatch(lineas[i])) {
-          infracciones.add('$ruta:${i + 1}: ${lineas[i].trim()}');
+      final lines = file.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        if (literal.hasMatch(lines[i])) {
+          violations.add('$route:${i + 1}: ${lines[i].trim()}');
         }
       }
     }
     expect(
-      infracciones,
+      violations,
       isEmpty,
       reason:
           'Los colores salen del tema (context.colorScheme / context.colores).',

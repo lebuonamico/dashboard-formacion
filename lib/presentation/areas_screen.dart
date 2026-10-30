@@ -24,8 +24,8 @@ class AreasScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final resumenAsync = ref.watch(resumenAreasPeriodoProvider);
-    final areasFiltradasAsync = ref.watch(areasFiltradasProvider);
+    final summaryAsync = ref.watch(areasPeriodSummaryProvider);
+    final filteredAreasAsync = ref.watch(filteredAreasProvider);
     final requestedOrigin = GoRouterState.of(
       context,
     ).uri.queryParameters['origen'];
@@ -40,7 +40,7 @@ class AreasScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Áreas y equipos generales'),
           Expanded(
-            child: resumenAsync.when(
+            child: summaryAsync.when(
               skipLoadingOnRefresh: false,
               loading: () => Center(
                 child: CircularProgressIndicator(
@@ -51,10 +51,10 @@ class AreasScreen extends ConsumerWidget {
                 title: 'No pudimos cargar las áreas',
                 error: error,
               ),
-              data: (resumen) => FadeIn(
+              data: (summary) => FadeIn(
                 child: _AreasContent(
-                  resumen: resumen,
-                  areasFiltradasAsync: areasFiltradasAsync,
+                  summary: summary,
+                  filteredAreasAsync: filteredAreasAsync,
                   origin: origin,
                 ),
               ),
@@ -67,30 +67,29 @@ class AreasScreen extends ConsumerWidget {
 }
 
 class _AreasContent extends ConsumerWidget {
-  final ResumenAreasPeriodo resumen;
-  final AsyncValue<List<AreaGlobalViewModel>> areasFiltradasAsync;
+  final AreasPeriodSummary summary;
+  final AsyncValue<List<AreaGlobalViewModel>> filteredAreasAsync;
   final String? origin;
 
   const _AreasContent({
-    required this.resumen,
-    required this.areasFiltradasAsync,
+    required this.summary,
+    required this.filteredAreasAsync,
     required this.origin,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final areas = resumen.areas;
-    final busqueda = ref.watch(busquedaAreaProvider);
-    final estadoSeleccionado = ref.watch(filtroEstadoAreaProvider);
-    final alcanceSeleccionado = ref.watch(alcancePeriodoProvider);
-    final mesSeleccionado = ref.watch(filtroMesPeriodoProvider);
-    final anioSeleccionado = ref.watch(filtroAnioPeriodoProvider);
-    final esAnual = alcanceSeleccionado == AlcancePeriodo.anual;
-    final hayFiltrosActivos =
-        busqueda.trim().isNotEmpty || estadoSeleccionado != null;
+    final areas = summary.areas;
+    final search = ref.watch(searchAreaProvider);
+    final selectedStatus = ref.watch(areaStatusFilterProvider);
+    final selectedScope = ref.watch(periodScopeProvider);
+    final selectedMonth = ref.watch(periodMonthFilterProvider);
+    final selectedYear = ref.watch(periodYearFilterProvider);
+    final isAnnual = selectedScope == PeriodScope.annual;
+    final hasActiveFilters = search.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(
-      padding: paddingPantalla,
+      padding: screenPadding,
       children: [
         Text(
           'Vista general',
@@ -102,7 +101,7 @@ class _AreasContent extends ConsumerWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          resumen.tieneDatos
+          summary.hasData
               ? 'Seguimiento del avance de ${areas.length} áreas de formación.'
               : 'Seleccioná un período con datos cargados.',
           style: TextStyle(
@@ -111,16 +110,12 @@ class _AreasContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 18),
-        const PeriodoFilterPanel(incluidos: 'todas las áreas'),
+        const PeriodFilterPanel(included: 'todas las áreas'),
         const SizedBox(height: 22),
-        if (!resumen.tieneDatos)
-          EmptyDataState.periodoSinDatos(
+        if (!summary.hasData)
+          EmptyDataState.periodWithoutData(
             icon: Icons.apartment_outlined,
-            periodo: etiquetaPeriodo(
-              alcanceSeleccionado,
-              mesSeleccionado,
-              anioSeleccionado,
-            ),
+            period: periodLabel(selectedScope, selectedMonth, selectedYear),
           )
         else if (areas.isEmpty)
           const EmptyDataState(
@@ -131,38 +126,36 @@ class _AreasContent extends ConsumerWidget {
           )
         else ...[
           AreasKpiSection(
-            totalAreas: resumen.totalAreas,
-            totalColaboradores: resumen.colaboradores,
-            horasRealizadas: resumen.horasRealizadas,
-            horasObjetivo: resumen.horasObjetivo,
-            desvioHoras: resumen.desvioHoras,
-            cumplimientoGlobal: resumen.cumplimientoGlobal,
-            esAnual: esAnual,
-            anio: anioSeleccionado,
-            mes: mesSeleccionado,
-            variacion: ref
-                .watch(
-                  variacionCumplimientoProvider((area: null, equipo: null)),
-                )
+            totalAreas: summary.totalAreas,
+            totalEmployees: summary.employees,
+            completedHours: summary.completedHours,
+            targetHours: summary.targetHours,
+            hoursDeviation: summary.hoursDeviation,
+            complianceGlobal: summary.complianceGlobal,
+            isAnnual: isAnnual,
+            year: selectedYear,
+            month: selectedMonth,
+            variation: ref
+                .watch(complianceVariationProvider((area: null, team: null)))
                 .value,
-            proyeccion: ref
-                .watch(proyeccionAnualProvider((area: null, equipo: null)))
+            projection: ref
+                .watch(annualProjectionProvider((area: null, team: null)))
                 .value,
           ),
           const SizedBox(height: 16),
           _ChartsRow(
             statusChart: AreasStatusSummary(
-              total: resumen.totalAreas,
-              enObjetivo: resumen.enObjetivo,
-              enRiesgo: resumen.enRiesgo,
-              criticos: resumen.criticos,
+              total: summary.totalAreas,
+              onTarget: summary.onTarget,
+              atRisk: summary.atRisk,
+              critical: summary.critical,
             ),
             categoryChart: AreasCategoryDistribution(
-              horasNegocio: resumen.horasNegocio,
-              horasBlandas: resumen.horasBlandas,
-              horasLibres: resumen.horasLibres,
-              horasDictado: resumen.horasDictado,
-              esAnual: esAnual,
+              businessHours: summary.businessHours,
+              softSkillsHours: summary.softSkillsHours,
+              explorationHours: summary.explorationHours,
+              teachingHours: summary.teachingHours,
+              isAnnual: isAnnual,
             ),
           ),
           // Moodle vs CRM de todas las áreas, con los mismos colaboradores
@@ -170,20 +163,20 @@ class _AreasContent extends ConsumerWidget {
           if (ref.watch(teamComplianceProvider).value case final items?
               when items.isNotEmpty) ...[
             const SizedBox(height: 16),
-            ComparacionMoodleCrmCards(cumplimientos: items),
+            MoodleCrmComparisonCards(complianceList: items),
           ],
           const SizedBox(height: 24),
           FilterBar(
             scope: 'areas',
-            hasActiveFilters: hayFiltrosActivos,
+            hasActiveFilters: hasActiveFilters,
 
             onClear: () {
-              ref.read(busquedaAreaProvider.notifier).state = '';
-              ref.read(filtroEstadoAreaProvider.notifier).state = null;
+              ref.read(searchAreaProvider.notifier).state = '';
+              ref.read(areaStatusFilterProvider.notifier).state = null;
             },
           ),
           const SizedBox(height: 24),
-          areasFiltradasAsync.when(
+          filteredAreasAsync.when(
             loading: () => Center(
               child: CircularProgressIndicator(
                 color: context.colorScheme.primary,
@@ -193,15 +186,15 @@ class _AreasContent extends ConsumerWidget {
               title: 'No pudimos cargar las áreas',
               error: error,
             ),
-            data: (areasFiltradas) => AreasResults(
+            data: (filteredAreas) => AreasResults(
               key: ValueKey(
-                '$alcanceSeleccionado-$anioSeleccionado-$mesSeleccionado-'
-                '$busqueda-$estadoSeleccionado',
+                '$selectedScope-$selectedYear-$selectedMonth-'
+                '$search-$selectedStatus',
               ),
-              areas: areasFiltradas,
-              totalAreas: resumen.totalAreas,
-              esAnual: esAnual,
-              origen: origin,
+              areas: filteredAreas,
+              totalAreas: summary.totalAreas,
+              isAnnual: isAnnual,
+              origin: origin,
             ),
           ),
         ],

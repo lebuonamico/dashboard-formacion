@@ -4,61 +4,58 @@ import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/modelos/certificacion_moodle.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 
-abstract class CertificacionesMoodleRepository {
-  Future<List<CertificacionMoodle>> getCertificaciones({
-    String? legajo,
-    String? cursoId,
+abstract class LmsCertificationsRepository {
+  Future<List<LmsCertification>> getCertifications({
+    String? employeeId,
+    String? courseId,
   });
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
-  );
+  Future<void> replaceCertifications(List<LmsCertification> certifications);
 }
 
-extension CertificacionesMoodleUpsert on CertificacionesMoodleRepository {
-  Future<ResultadoUpsert> upsertCertificacionesConResultado(
-    List<CertificacionMoodle> items,
+extension LmsCertificationsUpsert on LmsCertificationsRepository {
+  Future<UpsertResult> upsertCertificationsWithResult(
+    List<LmsCertification> items,
   ) async {
-    if (items.isEmpty) return ResultadoUpsert.empty;
-    if (this is CountedUpsertRepository<CertificacionMoodle>) {
-      return (this as CountedUpsertRepository<CertificacionMoodle>)
-          .upsertConResultado(items);
+    if (items.isEmpty) return UpsertResult.empty;
+    if (this is CountedUpsertRepository<LmsCertification>) {
+      return (this as CountedUpsertRepository<LmsCertification>)
+          .upsertWithResult(items);
     }
-    await upsertCertificaciones(items);
-    return ResultadoUpsert(registrosProcesados: items.length);
+    await upsertCertifications(items);
+    return UpsertResult(processedRecords: items.length);
   }
 
-  Future<void> upsertCertificaciones(List<CertificacionMoodle> items) async {
+  Future<void> upsertCertifications(List<LmsCertification> items) async {
     if (items.isEmpty) return;
-    if (this is UpsertRepository<CertificacionMoodle>) {
-      await (this as UpsertRepository<CertificacionMoodle>).upsert(items);
+    if (this is UpsertRepository<LmsCertification>) {
+      await (this as UpsertRepository<LmsCertification>).upsert(items);
       return;
     }
-    final registros = [...await getCertificaciones(), ...items];
-    final idsPorNombre = idsCursosCertificaciones(registros);
-    final merged = <String, CertificacionMoodle>{};
-    for (final item in registros) {
-      merged[claveCertificacionMoodle(item, idsPorNombre)] = item;
+    final records = [...await getCertifications(), ...items];
+    final idsByName = certificationCourseIds(records);
+    final merged = <String, LmsCertification>{};
+    for (final item in records) {
+      merged[lmsCertificationKey(item, idsByName)] = item;
     }
-    await replaceCertificaciones(merged.values.toList());
+    await replaceCertifications(merged.values.toList());
   }
 }
 
-Map<String, String> idsCursosCertificaciones(
-  Iterable<CertificacionMoodle> items,
-) => {
-  for (final item in items)
-    if (item.cursoId?.trim().isNotEmpty == true &&
-        item.cursoNombre.trim().isNotEmpty)
-      normalizarNombreCurso(item.cursoNombre): item.cursoId!,
-};
+Map<String, String> certificationCourseIds(Iterable<LmsCertification> items) =>
+    {
+      for (final item in items)
+        if (item.courseId?.trim().isNotEmpty == true &&
+            item.courseName.trim().isNotEmpty)
+          normalizeCourseName(item.courseName): item.courseId!,
+    };
 
-String claveCertificacionMoodle(
-  CertificacionMoodle item,
-  Map<String, String> idsPorNombre,
+String lmsCertificationKey(
+  LmsCertification item,
+  Map<String, String> idsByName,
 ) => jsonEncode([
-  item.legajo,
-  item.cursoId?.trim().isNotEmpty == true
-      ? item.cursoId
-      : idsPorNombre[normalizarNombreCurso(item.cursoNombre)] ??
-            normalizarNombreCurso(item.cursoNombre),
+  item.employeeId,
+  item.courseId?.trim().isNotEmpty == true
+      ? item.courseId
+      : idsByName[normalizeCourseName(item.courseName)] ??
+            normalizeCourseName(item.courseName),
 ]);

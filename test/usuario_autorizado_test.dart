@@ -2,168 +2,163 @@ import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-final _alta = DateTime.utc(2026, 1, 15, 10);
-final _ahora = DateTime.utc(2026, 10, 3, 14, 30);
+final _creation = DateTime.utc(2026, 1, 15, 10);
+final _now = DateTime.utc(2026, 10, 3, 14, 30);
 
-UsuarioAutorizado _usuario({
+AuthorizedUser _user({
   String email = 'alguien@finnegans.com',
-  String rol = 'lider',
-  DateTime? ffBloqueo,
-  DateTime? ffEliminar,
-}) => UsuarioAutorizado(
+  String role = 'teamLead',
+  DateTime? blockedAt,
+  DateTime? deletedAt,
+}) => AuthorizedUser(
   email: email,
-  rol: rol,
-  activo: ffBloqueo == null && ffEliminar == null,
-  ffAlta: _alta,
-  ffBloqueo: ffBloqueo,
-  ffEliminar: ffEliminar,
+  role: role,
+  isActive: blockedAt == null && deletedAt == null,
+  createdAt: _creation,
+  blockedAt: blockedAt,
+  deletedAt: deletedAt,
 );
 
 void main() {
   group('RolUsuario.fromString', () {
     test('Reconoce name y label, con acentos, espacios y mayúsculas', () {
-      expect(RolUsuario.fromString('admin'), RolUsuario.admin);
-      expect(RolUsuario.fromString('  ADMIN '), RolUsuario.admin);
-      expect(RolUsuario.fromString('Administrador'), RolUsuario.admin);
-      expect(RolUsuario.fromString('academia'), RolUsuario.academia);
-      expect(RolUsuario.fromString('Área'), RolUsuario.area);
-      expect(RolUsuario.fromString('area'), RolUsuario.area);
-      expect(RolUsuario.fromString('lider'), RolUsuario.lider);
-      expect(RolUsuario.fromString('Líder de equipo'), RolUsuario.lider);
+      expect(UserRole.fromString('admin'), UserRole.admin);
+      expect(UserRole.fromString('  ADMIN '), UserRole.admin);
+      expect(UserRole.fromString('Administrador'), UserRole.admin);
+      expect(UserRole.fromString('academy'), UserRole.academy);
+      expect(UserRole.fromString('Academia'), UserRole.academy);
+      expect(UserRole.fromString('Área'), UserRole.areaLead);
+      expect(UserRole.fromString('areaLead'), UserRole.areaLead);
+      expect(UserRole.fromString('teamLead'), UserRole.teamLead);
+      expect(UserRole.fromString('Líder de equipo'), UserRole.teamLead);
     });
 
     test('Solo Administrador y Academia son gestores', () {
-      expect(RolUsuario.admin.esGestor, isTrue);
-      expect(RolUsuario.academia.esGestor, isTrue);
-      expect(RolUsuario.area.esGestor, isFalse);
-      expect(RolUsuario.lider.esGestor, isFalse);
+      expect(UserRole.admin.canManage, isTrue);
+      expect(UserRole.academy.canManage, isTrue);
+      expect(UserRole.areaLead.canManage, isFalse);
+      expect(UserRole.teamLead.canManage, isFalse);
     });
 
     test('Devuelve null ante lo irreconocible, sin caer en un rol', () {
-      for (final crudo in ['', '   ', 'usuario', 'superadmin', 'xyz']) {
-        expect(RolUsuario.fromString(crudo), isNull, reason: crudo);
+      for (final raw in ['', '   ', 'usuario', 'superadmin', 'xyz']) {
+        expect(UserRole.fromString(raw), isNull, reason: raw);
       }
-      expect(RolUsuario.fromString(null), isNull);
+      expect(UserRole.fromString(null), isNull);
     });
   });
 
   group('UsuarioAutorizado', () {
     test('Normaliza el email en el constructor', () {
       expect(
-        _usuario(email: '  Juan.Perez@Finnegans.COM  ').email,
+        _user(email: '  Juan.Perez@Finnegans.COM  ').email,
         'juan.perez@finnegans.com',
       );
     });
 
     test('rolConocido traduce lo válido y deja null lo legacy', () {
-      expect(_usuario(rol: 'admin').rolConocido, RolUsuario.admin);
-      expect(_usuario(rol: 'admin').esAdmin, isTrue);
-      expect(_usuario(rol: 'usuario').rolConocido, isNull);
-      expect(_usuario(rol: 'usuario').esAdmin, isFalse);
+      expect(_user(role: 'admin').knownRole, UserRole.admin);
+      expect(_user(role: 'admin').isAdmin, isTrue);
+      expect(_user(role: 'usuario').knownRole, isNull);
+      expect(_user(role: 'usuario').isAdmin, isFalse);
     });
 
     test('esMismoUsuario compara normalizado en los dos lados', () {
-      final usuario = _usuario(email: 'ana@finnegans.com');
-      expect(usuario.esMismoUsuario('ANA@finnegans.com'), isTrue);
-      expect(usuario.esMismoUsuario(' ana@finnegans.com '), isTrue);
-      expect(usuario.esMismoUsuario('otro@finnegans.com'), isFalse);
-      expect(usuario.esMismoUsuario(null), isFalse);
+      final user = _user(email: 'ana@finnegans.com');
+      expect(user.isSameUser('ANA@finnegans.com'), isTrue);
+      expect(user.isSameUser(' ana@finnegans.com '), isTrue);
+      expect(user.isSameUser('otro@finnegans.com'), isFalse);
+      expect(user.isSameUser(null), isFalse);
     });
   });
 
   group('Estado y regla de activo', () {
     test('Sin sellos está activo', () {
-      final usuario = _usuario();
-      expect(usuario.estado, EstadoUsuario.activo);
+      final user = _user();
+      expect(user.status, UserStatus.active);
     });
 
     test('Eliminado tiene precedencia sobre bloqueado', () {
-      final ambos = _usuario(ffBloqueo: _ahora, ffEliminar: _ahora);
-      expect(ambos.estado, EstadoUsuario.eliminado);
-      expect(_usuario(ffBloqueo: _ahora).estado, EstadoUsuario.bloqueado);
-      expect(_usuario(ffEliminar: _ahora).estado, EstadoUsuario.eliminado);
+      final both = _user(blockedAt: _now, deletedAt: _now);
+      expect(both.status, UserStatus.deleted);
+      expect(_user(blockedAt: _now).status, UserStatus.blocked);
+      expect(_user(deletedAt: _now).status, UserStatus.deleted);
     });
 
     test('eliminar sella la fecha y desactiva', () {
-      final eliminado = _usuario().eliminado(_ahora);
-      expect(eliminado.ffEliminar, _ahora);
-      expect(eliminado.activo, isFalse);
-      expect(eliminado.estado, EstadoUsuario.eliminado);
+      final deleted = _user().deleted(_now);
+      expect(deleted.deletedAt, _now);
+      expect(deleted.isActive, isFalse);
+      expect(deleted.status, UserStatus.deleted);
     });
 
     test('desbloquear limpia el sello y reactiva', () {
-      final usuario = _usuario(ffBloqueo: _ahora).desbloqueado();
-      expect(usuario.ffBloqueo, isNull);
-      expect(usuario.activo, isTrue);
-      expect(usuario.estado, EstadoUsuario.activo);
+      final user = _user(blockedAt: _now).unblocked();
+      expect(user.blockedAt, isNull);
+      expect(user.isActive, isTrue);
+      expect(user.status, UserStatus.active);
     });
 
     test('restaurar limpia el sello y reactiva', () {
-      final usuario = _usuario(ffEliminar: _ahora).restaurado();
-      expect(usuario.ffEliminar, isNull);
-      expect(usuario.activo, isTrue);
+      final user = _user(deletedAt: _now).restored();
+      expect(user.deletedAt, isNull);
+      expect(user.isActive, isTrue);
     });
 
     test('Desbloquear a alguien también eliminado no lo reactiva', () {
-      final usuario = _usuario(
-        ffBloqueo: _ahora,
-        ffEliminar: _ahora,
-      ).desbloqueado();
-      expect(usuario.ffBloqueo, isNull);
-      expect(usuario.ffEliminar, _ahora);
-      expect(usuario.activo, isFalse);
-      expect(usuario.estado, EstadoUsuario.eliminado);
+      final user = _user(blockedAt: _now, deletedAt: _now).unblocked();
+      expect(user.blockedAt, isNull);
+      expect(user.deletedAt, _now);
+      expect(user.isActive, isFalse);
+      expect(user.status, UserStatus.deleted);
     });
 
     test('Restaurar a alguien también bloqueado no lo reactiva', () {
-      final usuario = _usuario(
-        ffBloqueo: _ahora,
-        ffEliminar: _ahora,
-      ).restaurado();
-      expect(usuario.ffEliminar, isNull);
-      expect(usuario.ffBloqueo, _ahora);
-      expect(usuario.activo, isFalse);
-      expect(usuario.estado, EstadoUsuario.bloqueado);
+      final user = _user(blockedAt: _now, deletedAt: _now).restored();
+      expect(user.deletedAt, isNull);
+      expect(user.blockedAt, _now);
+      expect(user.isActive, isFalse);
+      expect(user.status, UserStatus.blocked);
     });
 
     test('Cambiar el rol conserva sellos y estado', () {
-      final bloqueado = _usuario(ffBloqueo: _ahora);
-      final conRol = bloqueado.conRol(RolUsuario.academia);
-      expect(conRol.rol, 'academia');
-      expect(conRol.ffBloqueo, _ahora);
-      expect(conRol.ffAlta, _alta);
-      expect(conRol.activo, isFalse);
+      final blocked = _user(blockedAt: _now);
+      final withRole = blocked.withRole(UserRole.academy);
+      expect(withRole.role, 'academy');
+      expect(withRole.blockedAt, _now);
+      expect(withRole.createdAt, _creation);
+      expect(withRole.isActive, isFalse);
     });
 
     test('Toda transición preserva email y ffAlta', () {
-      final base = _usuario(email: 'Ana@Finnegans.com');
-      for (final resultado in [
-        base.bloqueado(_ahora),
-        base.eliminado(_ahora),
-        base.desbloqueado(),
-        base.restaurado(),
-        base.conRol(RolUsuario.admin),
+      final base = _user(email: 'Ana@Finnegans.com');
+      for (final result in [
+        base.blocked(_now),
+        base.deleted(_now),
+        base.unblocked(),
+        base.restored(),
+        base.withRole(UserRole.admin),
       ]) {
-        expect(resultado.email, 'ana@finnegans.com');
-        expect(resultado.ffAlta, _alta);
+        expect(result.email, 'ana@finnegans.com');
+        expect(result.createdAt, _creation);
       }
     });
   });
 
   group('UsuarioAutorizado.nuevo', () {
     test('Nace activo, con ffAlta y sin sellos', () {
-      final usuario = UsuarioAutorizado.nuevo(
+      final user = AuthorizedUser.create(
         email: 'Nuevo@Finnegans.com',
-        rol: RolUsuario.academia,
-        ahora: _ahora,
+        role: UserRole.academy,
+        now: _now,
       );
-      expect(usuario.email, 'nuevo@finnegans.com');
-      expect(usuario.rol, 'academia');
-      expect(usuario.activo, isTrue);
-      expect(usuario.ffAlta, _ahora);
-      expect(usuario.ffBloqueo, isNull);
-      expect(usuario.ffEliminar, isNull);
-      expect(usuario.estado, EstadoUsuario.activo);
+      expect(user.email, 'nuevo@finnegans.com');
+      expect(user.role, 'academy');
+      expect(user.isActive, isTrue);
+      expect(user.createdAt, _now);
+      expect(user.blockedAt, isNull);
+      expect(user.deletedAt, isNull);
+      expect(user.status, UserStatus.active);
     });
   });
 }

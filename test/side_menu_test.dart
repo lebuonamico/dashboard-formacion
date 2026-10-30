@@ -11,24 +11,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 /// Sesión con Supabase habilitado y un rol fijo, sin cliente real.
-class _AuthConRol extends AuthController {
-  final RolUsuario _rol;
+class _AuthWithRole extends AuthController {
+  final UserRole _role;
 
-  _AuthConRol(this._rol) : super(null);
+  _AuthWithRole(this._role) : super(null);
 
   @override
   bool get enabled => true;
 
   @override
-  RolUsuario? get rolConocido => _rol;
+  UserRole? get knownRole => _role;
 
   @override
-  bool get esGestor => _rol.esGestor;
+  bool get canManage => _role.canManage;
 }
 
-Future<ProviderContainer> _mostrarPantalla(
+Future<ProviderContainer> _showScreen(
   WidgetTester tester, {
-  RolUsuario? rol,
+  UserRole? role,
 }) async {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1;
@@ -38,7 +38,7 @@ Future<ProviderContainer> _mostrarPantalla(
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith(
-        (ref) => rol == null ? AuthController(null) : _AuthConRol(rol),
+        (ref) => role == null ? AuthController(null) : _AuthWithRole(role),
       ),
     ],
   );
@@ -89,7 +89,7 @@ Future<ProviderContainer> _mostrarPantalla(
 
 final _toggle = find.byKey(const Key('side_menu_toggle'));
 
-double _anchoSideMenu(WidgetTester tester) =>
+double _widthSideMenu(WidgetTester tester) =>
     tester.getSize(find.byType(SideMenu)).width;
 
 void main() {
@@ -98,10 +98,10 @@ void main() {
   testWidgets('Arranca desplegada con el header alineado al top bar', (
     tester,
   ) async {
-    final container = await _mostrarPantalla(tester);
+    final container = await _showScreen(tester);
 
-    expect(container.read(sideMenuDesplegadoProvider), isTrue);
-    expect(_anchoSideMenu(tester), 260);
+    expect(container.read(sideMenuExpandedProvider), isTrue);
+    expect(_widthSideMenu(tester), 260);
     expect(find.text('Inicio'), findsWidgets);
 
     // La línea bajo el logo y la del top bar tienen que caer a la misma altura.
@@ -120,30 +120,30 @@ void main() {
   testWidgets('La pestaña oculta y vuelve a mostrar la sidebar', (
     tester,
   ) async {
-    final container = await _mostrarPantalla(tester);
+    final container = await _showScreen(tester);
 
     // Desplegada: la pestaña sale pegada al borde derecho (superpuesta 1px
     // para tapar la línea).
     expect(tester.getTopLeft(_toggle).dx, closeTo(259, 0.5));
-    final altoDesplegada = tester.getCenter(_toggle).dy;
+    final expandedHeight = tester.getCenter(_toggle).dy;
 
     await tester.tap(_toggle);
     await tester.pumpAndSettle();
 
-    expect(container.read(sideMenuDesplegadoProvider), isFalse);
-    expect(_anchoSideMenu(tester), 0);
+    expect(container.read(sideMenuExpandedProvider), isFalse);
+    expect(_widthSideMenu(tester), 0);
     expect(find.text('Cerrar sesión'), findsNothing);
     // Oculta: la pestaña sigue entera dentro de la pantalla, pegada al borde
     // izquierdo y a la misma altura (no centrada en la pantalla).
     expect(tester.getTopLeft(_toggle).dx, greaterThanOrEqualTo(0));
-    expect(tester.getCenter(_toggle).dy, altoDesplegada);
+    expect(tester.getCenter(_toggle).dy, expandedHeight);
     expect(tester.getTopLeft(find.byType(AppTopBar)).dx, 0);
 
     await tester.tap(_toggle);
     await tester.pumpAndSettle();
 
-    expect(container.read(sideMenuDesplegadoProvider), isTrue);
-    expect(_anchoSideMenu(tester), 260);
+    expect(container.read(sideMenuExpandedProvider), isTrue);
+    expect(_widthSideMenu(tester), 260);
     expect(find.text('Cerrar sesión'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -154,7 +154,7 @@ void main() {
   testWidgets('Hover muestra el tooltip y el clic oculta la sidebar', (
     tester,
   ) async {
-    final container = await _mostrarPantalla(tester);
+    final container = await _showScreen(tester);
 
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
@@ -167,8 +167,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(container.read(sideMenuDesplegadoProvider), isFalse);
-    expect(_anchoSideMenu(tester), 0);
+    expect(container.read(sideMenuExpandedProvider), isFalse);
+    expect(_widthSideMenu(tester), 0);
 
     await mouse.moveTo(tester.getCenter(_toggle));
     await tester.pumpAndSettle(const Duration(seconds: 1));
@@ -178,24 +178,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(_anchoSideMenu(tester), 260);
+    expect(_widthSideMenu(tester), 260);
   });
 
   group('Ítems según el rol', () {
     const areas = 'Áreas';
-    const configuracion = 'Configuración';
+    const settings = 'Configuración';
     const panel = 'Panel de administrador';
 
     testWidgets('En modo local se ve todo', (tester) async {
-      await _mostrarPantalla(tester);
-      for (final item in [areas, configuracion, panel]) {
+      await _showScreen(tester);
+      for (final item in [areas, settings, panel]) {
         expect(find.text(item), findsOneWidget, reason: item);
       }
     });
 
     testWidgets('Academia ve Configuración y el panel', (tester) async {
-      await _mostrarPantalla(tester, rol: RolUsuario.academia);
-      for (final item in [areas, configuracion, panel]) {
+      await _showScreen(tester, role: UserRole.academy);
+      for (final item in [areas, settings, panel]) {
         expect(find.text(item), findsOneWidget, reason: item);
       }
     });
@@ -203,17 +203,17 @@ void main() {
     testWidgets('Un usuario de área ve Áreas pero no lo administrativo', (
       tester,
     ) async {
-      await _mostrarPantalla(tester, rol: RolUsuario.area);
+      await _showScreen(tester, role: UserRole.areaLead);
       expect(find.text(areas), findsOneWidget);
-      expect(find.text(configuracion), findsNothing);
+      expect(find.text(settings), findsNothing);
       expect(find.text(panel), findsNothing);
       expect(find.text('Equipos'), findsOneWidget);
     });
 
     testWidgets('Un líder no ve Áreas ni lo administrativo', (tester) async {
-      await _mostrarPantalla(tester, rol: RolUsuario.lider);
+      await _showScreen(tester, role: UserRole.teamLead);
       expect(find.text(areas), findsNothing);
-      expect(find.text(configuracion), findsNothing);
+      expect(find.text(settings), findsNothing);
       expect(find.text(panel), findsNothing);
       expect(find.text('Equipos'), findsOneWidget);
       expect(find.text('Empleados'), findsOneWidget);

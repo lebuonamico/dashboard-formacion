@@ -11,112 +11,111 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Edita las horas mensuales requeridas por categoría para cada seniority.
 /// Cada guardado es una versión que rige desde el mes elegido: los meses
 /// anteriores conservan el plan que tenían.
-class PlanFormacionEditor extends ConsumerStatefulWidget {
-  const PlanFormacionEditor({super.key});
+class TrainingPlanEditor extends ConsumerStatefulWidget {
+  const TrainingPlanEditor({super.key});
 
   @override
-  ConsumerState<PlanFormacionEditor> createState() =>
-      _PlanFormacionEditorState();
+  ConsumerState<TrainingPlanEditor> createState() => _TrainingPlanEditorState();
 }
 
-class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
-  static const _anchoSeniority = 170.0;
-  static const _anchoHoras = 104.0;
-  static const _anchoTotal = 90.0;
+class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
+  static const _widthSeniority = 170.0;
+  static const _hoursWidth = 104.0;
+  static const _widthTotal = 90.0;
 
-  final _controladores = {
+  final _controllers = {
     for (final seniority in Seniority.values)
-      for (final tipo in TipoCurso.values)
-        (seniority, tipo): TextEditingController(),
+      for (final type in CourseCategory.values)
+        (seniority, type): TextEditingController(),
   };
 
-  late int _anio;
-  late int _mes;
-  PlanesFormacion? _planes;
+  late int _year;
+  late int _month;
+  TrainingPlanHistory? _plans;
 
   /// Plan vigente en el mes elegido: contra él se marcan los cambios.
-  PlanFormacion? _base;
-  bool _guardando = false;
+  TrainingPlan? _base;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    final hoy = DateTime.now();
-    _anio = hoy.year;
-    _mes = hoy.month;
+    final today = DateTime.now();
+    _year = today.year;
+    _month = today.month;
     // El formulario se carga cada vez que cambian los planes guardados (al
     // abrir la pantalla y después de guardar).
-    ref.listenManual(planesFormacionProvider, (_, siguiente) {
-      if (siguiente case AsyncData(:final value)) {
-        _planes = value;
-        _cargar(value.vigenteEn(_anio, _mes));
+    ref.listenManual(trainingPlanHistoryProvider, (_, next) {
+      if (next case AsyncData(:final value)) {
+        _plans = value;
+        _load(value.currentIn(_year, _month));
       }
     }, fireImmediately: true);
   }
 
   @override
   void dispose() {
-    for (final controlador in _controladores.values) {
-      controlador.dispose();
+    for (final controller in _controllers.values) {
+      controller.dispose();
     }
     super.dispose();
   }
 
   /// Pone el plan en el formulario y lo toma como base de los cambios.
-  void _cargar(PlanFormacion plan, {bool comoBase = true}) {
-    if (comoBase) _base = plan;
-    for (final MapEntry(key: (seniority, tipo), value: controlador)
-        in _controladores.entries) {
-      controlador.text = _texto(plan.horasRequeridas(seniority)[tipo]!);
+  void _load(TrainingPlan plan, {bool asBase = true}) {
+    if (asBase) _base = plan;
+    for (final MapEntry(key: (seniority, type), value: controller)
+        in _controllers.entries) {
+      controller.text = _text(plan.requiredHours(seniority)[type]!);
     }
   }
 
-  static String _texto(double horas) => horas == horas.roundToDouble()
-      ? horas.toStringAsFixed(0)
-      : horas.toString().replaceAll('.', ',');
+  static String _text(double hours) => hours == hours.roundToDouble()
+      ? hours.toStringAsFixed(0)
+      : hours.toString().replaceAll('.', ',');
 
   /// Acepta coma decimal. Se redondea a 2 decimales, como la base.
-  static double? _horas(String texto) {
-    final valor = double.tryParse(texto.trim().replaceAll(',', '.'));
-    return valor == null ? null : (valor * 100).round() / 100;
+  static double? _hours(String text) {
+    final value = double.tryParse(text.trim().replaceAll(',', '.'));
+    return value == null ? null : (value * 100).round() / 100;
   }
 
-  double? _valor(Seniority seniority, TipoCurso tipo) =>
-      _horas(_controladores[(seniority, tipo)]!.text);
+  double? _value(Seniority seniority, CourseCategory type) =>
+      _hours(_controllers[(seniority, type)]!.text);
 
   /// El plan del formulario, o `null` si algún campo es inválido.
-  PlanFormacion? get _planEditado {
-    final horas = <Seniority, Map<TipoCurso, double>>{};
+  TrainingPlan? get _editedPlan {
+    final hours = <Seniority, Map<CourseCategory, double>>{};
     for (final seniority in Seniority.values) {
-      for (final tipo in TipoCurso.values) {
-        final valor = _valor(seniority, tipo);
-        if (PlanFormacion.errorHoras(valor) != null) return null;
-        (horas[seniority] ??= {})[tipo] = valor!;
+      for (final type in CourseCategory.values) {
+        final value = _value(seniority, type);
+        if (TrainingPlan.hoursError(value) != null) return null;
+        (hours[seniority] ??= {})[type] = value!;
       }
     }
-    return PlanFormacion(horas);
+    return TrainingPlan(hours);
   }
 
-  bool get _hayCambios => _planEditado != _base;
+  bool get _hasChanges => _editedPlan != _base;
 
-  bool get _mesPasado {
-    final hoy = DateTime.now();
-    return DateTime(_anio, _mes).isBefore(DateTime(hoy.year, hoy.month));
+  bool get _pastMonth {
+    final today = DateTime.now();
+    return DateTime(_year, _month).isBefore(DateTime(today.year, today.month));
   }
 
-  Future<void> _elegirMes(int anio, int mes) async {
-    if (anio == _anio && mes == _mes) return;
-    if (!await _confirmarDescarte()) return;
+  Future<void> _chooseMonth(int year, int month) async {
+    if (year == _year && month == _month) return;
+    if (!await _confirmDiscard()) return;
     setState(() {
-      _anio = anio;
-      _mes = mes;
-      _cargar(_planes!.vigenteEn(anio, mes));
+      _year = year;
+      _month = month;
+      _load(_plans!.currentIn(year, month));
     });
   }
 
-  Future<bool> _confirmarDescarte() async {
-    if (!_hayCambios) return true;
-    final descartar = await showDialog<bool>(
+  Future<bool> _confirmDiscard() async {
+    if (!_hasChanges) return true;
+    final discard = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Descartar cambios'),
@@ -135,27 +134,24 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
         ],
       ),
     );
-    return descartar ?? false;
+    return discard ?? false;
   }
 
-  Future<void> _guardar(PlanFormacion plan) async {
+  Future<void> _save(TrainingPlan plan) async {
     final messenger = ScaffoldMessenger.of(context);
-    final vigencia = '${nombreMes(_mes)} $_anio';
-    setState(() => _guardando = true);
+    final validity = '${monthName(_month)} $_year';
+    setState(() => _saving = true);
     try {
       await ref
-          .read(planFormacionRepositoryProvider)
-          .guardarVersion(
-            VersionPlanFormacion(
-              vigenteDesde: DateTime(_anio, _mes),
-              plan: plan,
-            ),
+          .read(trainingPlanRepositoryProvider)
+          .saveVersion(
+            TrainingPlanVersion(validFrom: DateTime(_year, _month), plan: plan),
           );
       // Recalcula todo el cumplimiento y recarga el formulario.
-      ref.invalidate(planesFormacionProvider);
-      await ref.read(planesFormacionProvider.future);
+      ref.invalidate(trainingPlanHistoryProvider);
+      await ref.read(trainingPlanHistoryProvider.future);
       messenger.showSnackBar(
-        SnackBar(content: Text('Plan guardado: rige desde $vigencia.')),
+        SnackBar(content: Text('Plan guardado: rige desde $validity.')),
       );
     } on FormatException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
@@ -164,38 +160,38 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
         SnackBar(content: Text('No se pudo guardar el plan: $error')),
       );
     } finally {
-      if (mounted) setState(() => _guardando = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final planesAsync = ref.watch(planesFormacionProvider);
-    final planes = _planes;
-    if (planesAsync.hasError && planes == null) {
+    final plansAsync = ref.watch(trainingPlanHistoryProvider);
+    final plans = _plans;
+    if (plansAsync.hasError && plans == null) {
       return Text(
-        'No se pudo cargar el plan de formación: ${planesAsync.error}',
-        style: TextStyle(color: context.colores.peligro.texto),
+        'No se pudo cargar el plan de formación: ${plansAsync.error}',
+        style: TextStyle(color: context.colors.danger.text),
       );
     }
-    if (planes == null || _base == null) {
+    if (plans == null || _base == null) {
       return const Padding(
         padding: EdgeInsets.all(16),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final planEditado = _planEditado;
-    final hayCambios = planEditado != _base;
+    final editedPlan = _editedPlan;
+    final hasChanges = editedPlan != _base;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildVigencia(planes),
+        _buildValidity(plans),
         const SizedBox(height: 16),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: _buildTabla(),
+          child: _buildTable(),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -205,28 +201,27 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
           children: [
             TextButton.icon(
               key: const Key('plan_restaurar'),
-              onPressed: _guardando
+              onPressed: _saving
                   ? null
                   : () => setState(
-                      () =>
-                          _cargar(PlanFormacion.porDefecto(), comoBase: false),
+                      () => _load(TrainingPlan.byDefault(), asBase: false),
                     ),
               icon: const Icon(Icons.restart_alt, size: 18),
               label: const Text('Restaurar valores por defecto'),
             ),
             TextButton(
               key: const Key('plan_descartar'),
-              onPressed: hayCambios && !_guardando
-                  ? () => setState(() => _cargar(_base!))
+              onPressed: hasChanges && !_saving
+                  ? () => setState(() => _load(_base!))
                   : null,
               child: const Text('Descartar cambios'),
             ),
             FilledButton.icon(
               key: const Key('plan_guardar'),
-              onPressed: planEditado != null && hayCambios && !_guardando
-                  ? () => _guardar(planEditado)
+              onPressed: editedPlan != null && hasChanges && !_saving
+                  ? () => _save(editedPlan)
                   : null,
-              icon: _guardando
+              icon: _saving
                   ? const SizedBox.square(
                       dimension: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
@@ -240,20 +235,20 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
     );
   }
 
-  Widget _buildVigencia(PlanesFormacion planes) {
+  Widget _buildValidity(TrainingPlanHistory plans) {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final hoy = DateTime.now();
-    final primerAnio = [
-      hoy.year - 1,
-      ...planes.versiones.map((version) => version.vigenteDesde.year),
+    final colors = context.colors;
+    final today = DateTime.now();
+    final firstYear = [
+      today.year - 1,
+      ...plans.versions.map((version) => version.validFrom.year),
     ].reduce((a, b) => a < b ? a : b);
-    final anios = [for (var a = primerAnio; a <= hoy.year + 1; a++) a];
-    final vigente = planes.versionVigenteEn(_anio, _mes);
-    final siguiente = planes.versiones
-        .where((version) => version.vigenteDesde.isAfter(DateTime(_anio, _mes)))
+    final years = [for (var a = firstYear; a <= today.year + 1; a++) a];
+    final current = plans.currentVersionIn(_year, _month);
+    final next = plans.versions
+        .where((version) => version.validFrom.isAfter(DateTime(_year, _month)))
         .firstOrNull;
-    final estiloNota = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
+    final noteStyle = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,45 +267,46 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
             ),
             DropdownButton<int>(
               key: const Key('plan_mes'),
-              value: _mes,
+              value: _month,
               items: [
                 for (var m = 1; m <= 12; m++)
-                  DropdownMenuItem(value: m, child: Text(nombreMes(m))),
+                  DropdownMenuItem(value: m, child: Text(monthName(m))),
               ],
-              onChanged: _guardando
+              onChanged: _saving
                   ? null
-                  : (mes) => mes == null ? null : _elegirMes(_anio, mes),
+                  : (month) =>
+                        month == null ? null : _chooseMonth(_year, month),
             ),
             DropdownButton<int>(
               key: const Key('plan_anio'),
-              value: _anio,
+              value: _year,
               items: [
-                for (final anio in anios)
-                  DropdownMenuItem(value: anio, child: Text('$anio')),
+                for (final year in years)
+                  DropdownMenuItem(value: year, child: Text('$year')),
               ],
-              onChanged: _guardando
+              onChanged: _saving
                   ? null
-                  : (anio) => anio == null ? null : _elegirMes(anio, _mes),
+                  : (year) => year == null ? null : _chooseMonth(year, _month),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          vigente == null
+          current == null
               ? 'Hasta ahora ese mes usa los valores por defecto.'
-              : vigente.vigenteDesde == DateTime(_anio, _mes)
+              : current.validFrom == DateTime(_year, _month)
               ? 'Estás editando la versión que rige desde ese mes.'
               : 'Hasta ahora ese mes usa la versión de '
-                    '${_etiquetaMes(vigente.vigenteDesde)}.',
-          style: estiloNota,
+                    '${_monthLabel(current.validFrom)}.',
+          style: noteStyle,
         ),
-        if (siguiente != null)
+        if (next != null)
           Text(
-            'Lo que guardes rige hasta ${_etiquetaMes(siguiente.vigenteDesde)}, '
+            'Lo que guardes rige hasta ${_monthLabel(next.validFrom)}, '
             'cuando empieza la versión siguiente.',
-            style: estiloNota,
+            style: noteStyle,
           ),
-        if (_mesPasado)
+        if (_pastMonth)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Row(
@@ -319,36 +315,33 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
                 Icon(
                   Icons.warning_amber_rounded,
                   size: 16,
-                  color: colores.advertencia.texto,
+                  color: colors.warning.text,
                 ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     'Es un mes pasado: guardar recalcula los meses ya '
-                    'evaluados desde ${nombreMes(_mes)} $_anio.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colores.advertencia.texto,
-                    ),
+                    'evaluados desde ${monthName(_month)} $_year.',
+                    style: TextStyle(fontSize: 13, color: colors.warning.text),
                   ),
                 ),
               ],
             ),
           ),
-        if (planes.versiones.isNotEmpty) ...[
+        if (plans.versions.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final version in planes.versiones)
+              for (final version in plans.versions)
                 ActionChip(
-                  label: Text('Desde ${_etiquetaMes(version.vigenteDesde)}'),
-                  onPressed: _guardando
+                  label: Text('Desde ${_monthLabel(version.validFrom)}'),
+                  onPressed: _saving
                       ? null
-                      : () => _elegirMes(
-                          version.vigenteDesde.year,
-                          version.vigenteDesde.month,
+                      : () => _chooseMonth(
+                          version.validFrom.year,
+                          version.validFrom.month,
                         ),
                 ),
             ],
@@ -358,13 +351,13 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
     );
   }
 
-  static String _etiquetaMes(DateTime fecha) =>
-      '${nombreMes(fecha.month).toLowerCase()} ${fecha.year}';
+  static String _monthLabel(DateTime date) =>
+      '${monthName(date.month).toLowerCase()} ${date.year}';
 
-  Widget _buildTabla() {
+  Widget _buildTable() {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final estiloEncabezado = TextStyle(
+    final colors = context.colors;
+    final headerStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w600,
       color: cs.onSurfaceVariant,
@@ -373,35 +366,35 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
     return Table(
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       columnWidths: {
-        0: const FixedColumnWidth(_anchoSeniority),
-        for (var i = 1; i <= TipoCurso.values.length; i++)
-          i: const FixedColumnWidth(_anchoHoras),
-        TipoCurso.values.length + 1: const FixedColumnWidth(_anchoTotal),
+        0: const FixedColumnWidth(_widthSeniority),
+        for (var i = 1; i <= CourseCategory.values.length; i++)
+          i: const FixedColumnWidth(_hoursWidth),
+        CourseCategory.values.length + 1: const FixedColumnWidth(_widthTotal),
       },
       children: [
         TableRow(
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('Seniority', style: estiloEncabezado),
+              child: Text('Seniority', style: headerStyle),
             ),
-            for (final tipo in TipoCurso.values)
+            for (final type in CourseCategory.values)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8, right: 12),
                 child: Tooltip(
-                  message: tipo.label,
+                  message: type.label,
                   child: Row(
                     children: [
                       Container(
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: colores.categoria(tipo).texto,
+                          color: colors.category(type).text,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(tipo.labelCorto, style: estiloEncabezado),
+                      Text(type.shortLabel, style: headerStyle),
                     ],
                   ),
                 ),
@@ -411,25 +404,25 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
               child: Text(
                 'Total',
                 textAlign: TextAlign.end,
-                style: estiloEncabezado,
+                style: headerStyle,
               ),
             ),
           ],
         ),
-        for (final seniority in Seniority.values) _fila(seniority),
+        for (final seniority in Seniority.values) _row(seniority),
       ],
     );
   }
 
-  TableRow _fila(Seniority seniority) {
+  TableRow _row(Seniority seniority) {
     final cs = context.colorScheme;
-    final valores = [
-      for (final tipo in TipoCurso.values) _valor(seniority, tipo),
+    final values = [
+      for (final type in CourseCategory.values) _value(seniority, type),
     ];
     // Con un campo inválido no hay total que mostrar.
     final total =
-        valores.every((valor) => PlanFormacion.errorHoras(valor) == null)
-        ? valores.fold<double>(0, (suma, valor) => suma + valor!)
+        values.every((value) => TrainingPlan.hoursError(value) == null)
+        ? values.fold<double>(0, (sum, value) => sum + value!)
         : null;
 
     return TableRow(
@@ -441,7 +434,7 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
             child: SeniorityChip(seniority: seniority),
           ),
         ),
-        for (final tipo in TipoCurso.values) _campo(seniority, tipo),
+        for (final type in CourseCategory.values) _field(seniority, type),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -451,12 +444,12 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
                 child: Icon(
                   Icons.info_outline,
                   size: 16,
-                  color: context.colores.advertencia.texto,
+                  color: context.colors.warning.text,
                 ),
               ),
             const SizedBox(width: 4),
             Text(
-              total == null ? '—' : '${_texto(total)} h',
+              total == null ? '—' : '${_text(total)} h',
               key: Key('plan_total_${seniority.name}'),
               style: TextStyle(
                 fontSize: 14,
@@ -470,19 +463,19 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
     );
   }
 
-  Widget _campo(Seniority seniority, TipoCurso tipo) {
+  Widget _field(Seniority seniority, CourseCategory type) {
     final cs = context.colorScheme;
-    final valor = _valor(seniority, tipo);
-    final error = PlanFormacion.errorHoras(valor);
-    final modificado =
-        error == null && valor != _base!.horasRequeridas(seniority)[tipo];
+    final value = _value(seniority, type);
+    final error = TrainingPlan.hoursError(value);
+    final modified =
+        error == null && value != _base!.requiredHours(seniority)[type];
 
     return Padding(
       padding: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
       child: TextField(
-        key: Key('plan_${seniority.name}_${tipo.name}'),
-        controller: _controladores[(seniority, tipo)],
-        enabled: !_guardando,
+        key: Key('plan_${seniority.name}_${type.name}'),
+        controller: _controllers[(seniority, type)],
+        enabled: !_saving,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textAlign: TextAlign.end,
         onChanged: (_) => setState(() {}),
@@ -491,7 +484,7 @@ class _PlanFormacionEditorState extends ConsumerState<PlanFormacionEditor> {
           suffixText: 'h',
           errorText: error,
           errorMaxLines: 2,
-          filled: modificado,
+          filled: modified,
           fillColor: cs.primaryContainer.withValues(alpha: 0.45),
           border: const OutlineInputBorder(),
         ),

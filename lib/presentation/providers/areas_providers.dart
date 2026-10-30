@@ -9,180 +9,182 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
 /// Resumen de un área en el período, para las tarjetas de la pantalla Áreas.
 class AreaGlobalViewModel {
-  final String nombre;
-  final List<String> equiposGenerales;
-  final int cantidadIntegrantes;
-  final int integrantesEnObjetivo;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final double porcentajeCumplimiento;
+  final String name;
+  final List<String> generalTeams;
+  final int memberCount;
+  final int membersOnTarget;
+  final double completedHours;
+  final double targetHours;
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final double compliancePercentage;
 
   /// El estado del área sólo mira el porcentaje de horas, igual que el
   /// Dashboard. No exige que todos los integrantes cumplan, como en Equipos.
-  final EstadoSemaforo semaforo;
+  final ComplianceLevel level;
 
   /// Líderes de área asignados en el panel, o `null` si no tiene.
-  final String? lideres;
+  final String? leaders;
 
   const AreaGlobalViewModel({
-    required this.nombre,
-    required this.equiposGenerales,
-    required this.cantidadIntegrantes,
-    required this.integrantesEnObjetivo,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    required this.porcentajeCumplimiento,
-    required this.semaforo,
-    this.lideres,
+    required this.name,
+    required this.generalTeams,
+    required this.memberCount,
+    required this.membersOnTarget,
+    required this.completedHours,
+    required this.targetHours,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    required this.compliancePercentage,
+    required this.level,
+    this.leaders,
   });
 
-  double get desvioHoras => horasRealizadas - horasObjetivo;
+  double get hoursDeviation => completedHours - targetHours;
 }
 
 /// Totales del período que consume la pantalla de Áreas.
-class ResumenAreasPeriodo {
-  final bool tieneDatos;
+class AreasPeriodSummary {
+  final bool hasData;
   final List<AreaGlobalViewModel> areas;
-  final int colaboradores;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final int enObjetivo;
-  final int enRiesgo;
-  final int criticos;
+  final int employees;
+  final double completedHours;
+  final double targetHours;
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final int onTarget;
+  final int atRisk;
+  final int critical;
 
-  const ResumenAreasPeriodo({
-    this.tieneDatos = true,
+  const AreasPeriodSummary({
+    this.hasData = true,
     required this.areas,
-    required this.colaboradores,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    required this.enObjetivo,
-    required this.enRiesgo,
-    required this.criticos,
+    required this.employees,
+    required this.completedHours,
+    required this.targetHours,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    required this.onTarget,
+    required this.atRisk,
+    required this.critical,
   });
 
-  const ResumenAreasPeriodo.sinDatos()
+  const AreasPeriodSummary.noData()
     : this(
-        tieneDatos: false,
+        hasData: false,
         areas: const [],
-        colaboradores: 0,
-        horasRealizadas: 0,
-        horasObjetivo: 0,
-        horasNegocio: 0,
-        horasBlandas: 0,
-        horasLibres: 0,
-        horasDictado: 0,
-        enObjetivo: 0,
-        enRiesgo: 0,
-        criticos: 0,
+        employees: 0,
+        completedHours: 0,
+        targetHours: 0,
+        businessHours: 0,
+        softSkillsHours: 0,
+        explorationHours: 0,
+        teachingHours: 0,
+        onTarget: 0,
+        atRisk: 0,
+        critical: 0,
       );
 
   int get totalAreas => areas.length;
-  double get desvioHoras => horasRealizadas - horasObjetivo;
-  double get cumplimientoGlobal =>
-      horasObjetivo == 0 ? 0 : horasRealizadas / horasObjetivo * 100;
+  double get hoursDeviation => completedHours - targetHours;
+  double get complianceGlobal =>
+      targetHours == 0 ? 0 : completedHours / targetHours * 100;
 }
 
 // Filtros propios de Áreas: buscar acá no filtra la pantalla de Equipos.
-final busquedaAreaProvider = StateProvider<String>((ref) => '');
-final filtroEstadoAreaProvider = StateProvider<EstadoSemaforo?>((ref) => null);
+final searchAreaProvider = StateProvider<String>((ref) => '');
+final areaStatusFilterProvider = StateProvider<ComplianceLevel?>((ref) => null);
 
-final resumenAreasPeriodoProvider = FutureProvider<ResumenAreasPeriodo>((
+final areasPeriodSummaryProvider = FutureProvider<AreasPeriodSummary>((
   ref,
 ) async {
   if (!await ref.watch(hasTeamPeriodDataProvider.future)) {
-    return const ResumenAreasPeriodo.sinDatos();
+    return const AreasPeriodSummary.noData();
   }
   // Mismo cálculo que Equipos: el período global y la nómina elegible.
-  final cumplimientos = await ref.watch(teamComplianceProvider.future);
-  final lideres = await ref.watch(etiquetasLideresProvider.future);
+  final complianceList = await ref.watch(teamComplianceProvider.future);
+  final leaders = await ref.watch(leaderLabelsProvider.future);
 
-  final agrupado = <String, List<CumplimientoEmpleado>>{};
-  for (final item in cumplimientos) {
-    agrupado.putIfAbsent(item.empleado.area, () => []).add(item);
+  final grouped = <String, List<EmployeeCompliance>>{};
+  for (final item in complianceList) {
+    grouped.putIfAbsent(item.employee.area, () => []).add(item);
   }
 
   final areas = [
-    for (final entry in agrupado.entries)
-      _resumirArea(entry.key, entry.value, lideres: lideres?.deArea(entry.key)),
-  ]..sort(_compararAreasPorPrioridad);
+    for (final entry in grouped.entries)
+      _summarizeArea(
+        entry.key,
+        entry.value,
+        leaders: leaders?.forArea(entry.key),
+      ),
+  ]..sort(_compareAreasByPriority);
 
-  var horasRealizadas = 0.0;
-  var horasObjetivo = 0.0;
-  var horasNegocio = 0.0;
-  var horasBlandas = 0.0;
-  var horasLibres = 0.0;
-  var horasDictado = 0.0;
+  var completedHours = 0.0;
+  var targetHours = 0.0;
+  var businessHours = 0.0;
+  var softSkillsHours = 0.0;
+  var explorationHours = 0.0;
+  var teachingHours = 0.0;
   for (final area in areas) {
-    horasRealizadas += area.horasRealizadas;
-    horasObjetivo += area.horasObjetivo;
-    horasNegocio += area.horasNegocio;
-    horasBlandas += area.horasBlandas;
-    horasLibres += area.horasLibres;
-    horasDictado += area.horasDictado;
+    completedHours += area.completedHours;
+    targetHours += area.targetHours;
+    businessHours += area.businessHours;
+    softSkillsHours += area.softSkillsHours;
+    explorationHours += area.explorationHours;
+    teachingHours += area.teachingHours;
   }
 
-  return ResumenAreasPeriodo(
+  return AreasPeriodSummary(
     areas: areas,
-    // En el anual un legajo puede aparecer una vez por equipo: se cuenta una
+    // En el anual un legajo puede aparecer una vez por team: se cuenta una
     // sola vez.
-    colaboradores: cumplimientos
-        .map((item) => item.empleado.legajo)
+    employees: complianceList
+        .map((item) => item.employee.employeeId)
         .toSet()
         .length,
-    horasRealizadas: horasRealizadas,
-    horasObjetivo: horasObjetivo,
-    horasNegocio: horasNegocio,
-    horasBlandas: horasBlandas,
-    horasLibres: horasLibres,
-    horasDictado: horasDictado,
-    enObjetivo: areas.where((a) => a.semaforo == EstadoSemaforo.verde).length,
-    enRiesgo: areas.where((a) => a.semaforo == EstadoSemaforo.amarillo).length,
-    criticos: areas.where((a) => a.semaforo == EstadoSemaforo.rojo).length,
+    completedHours: completedHours,
+    targetHours: targetHours,
+    businessHours: businessHours,
+    softSkillsHours: softSkillsHours,
+    explorationHours: explorationHours,
+    teachingHours: teachingHours,
+    onTarget: areas.where((a) => a.level == ComplianceLevel.onTarget).length,
+    atRisk: areas.where((a) => a.level == ComplianceLevel.atRisk).length,
+    critical: areas.where((a) => a.level == ComplianceLevel.critical).length,
   );
 });
 
-final areasFiltradasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
+final filteredAreasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
   ref,
 ) {
-  final resumenAsync = ref.watch(resumenAreasPeriodoProvider);
-  final query = ref.watch(busquedaAreaProvider).trim().toLowerCase();
-  final estado = ref.watch(filtroEstadoAreaProvider);
+  final summaryAsync = ref.watch(areasPeriodSummaryProvider);
+  final query = ref.watch(searchAreaProvider).trim().toLowerCase();
+  final status = ref.watch(areaStatusFilterProvider);
   final selection = ref.watch(dataFilterSelectionProvider('areas'));
 
-  return resumenAsync.whenData((resumen) {
-    return resumen.areas.where((area) {
-      final coincideBusqueda =
+  return summaryAsync.whenData((summary) {
+    return summary.areas.where((area) {
+      final matchesSearch =
           query.isEmpty ||
-          area.nombre.toLowerCase().contains(query) ||
-          area.equiposGenerales.any(
-            (equipo) => equipo.toLowerCase().contains(query),
-          );
-      final coincideEstado = estado == null || area.semaforo == estado;
+          area.name.toLowerCase().contains(query) ||
+          area.generalTeams.any((team) => team.toLowerCase().contains(query));
+      final matchesStatus = status == null || area.level == status;
 
-      return coincideBusqueda &&
-          coincideEstado &&
-          (area.equiposGenerales.isEmpty ? [''] : area.equiposGenerales).any(
-            (equipo) => matchesDataFilters(selection, {
-              'Área': area.nombre,
-              'Equipo': equipo,
-              'Estado': area.semaforo.label,
+      return matchesSearch &&
+          matchesStatus &&
+          (area.generalTeams.isEmpty ? [''] : area.generalTeams).any(
+            (team) => matchesDataFilters(selection, {
+              'Área': area.name,
+              'Equipo': team,
+              'Estado': area.level.label,
             }),
           );
     }).toList();
@@ -191,150 +193,131 @@ final areasFiltradasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
 
 /// Área seleccionada junto con sus equipos y los integrantes evaluados en el
 /// período.
-class DetalleAreaViewModel {
+class AreaDetailViewModel {
   final AreaGlobalViewModel area;
-  final List<TeamOverview> equipos;
-  final List<CumplimientoEmpleado> miembros;
+  final List<TeamOverview> teams;
+  final List<EmployeeCompliance> members;
 
-  const DetalleAreaViewModel({
+  const AreaDetailViewModel({
     required this.area,
-    required this.equipos,
-    required this.miembros,
+    required this.teams,
+    required this.members,
   });
 }
 
 /// Estados de la tabla de integrantes del detalle: `cumplido`, `riesgo`,
 /// `critico`; conjunto vacío = todos. Se descarta al salir de la pantalla.
-final filtroEstadoMiembroAreaProvider = StateProvider.autoDispose<Set<String>>(
+final areaMemberStatusFilterProvider = StateProvider.autoDispose<Set<String>>(
   (ref) => {},
 );
 
-final detalleAreaProvider =
-    FutureProvider.family<DetalleAreaViewModel?, String>((
-      ref,
-      nombreArea,
-    ) async {
-      final cumplimientos = await ref.watch(teamComplianceProvider.future);
-      final buscada = nombreArea.trim().toLowerCase();
+final areaDetailProvider = FutureProvider.family<AreaDetailViewModel?, String>((
+  ref,
+  areaName,
+) async {
+  final complianceList = await ref.watch(teamComplianceProvider.future);
+  final searched = areaName.trim().toLowerCase();
 
-      final miembros =
-          cumplimientos
-              .where(
-                (item) => item.empleado.area.trim().toLowerCase() == buscada,
-              )
-              .toList()
-            ..sort(
-              (a, b) => a.empleado.nombreCompleto.compareTo(
-                b.empleado.nombreCompleto,
-              ),
-            );
-      if (miembros.isEmpty) return null;
+  final members =
+      complianceList
+          .where((item) => item.employee.area.trim().toLowerCase() == searched)
+          .toList()
+        ..sort((a, b) => a.employee.fullName.compareTo(b.employee.fullName));
+  if (members.isEmpty) return null;
 
-      // Los equipos salen del mismo cálculo que la pantalla de Equipos, así
-      // las tarjetas muestran los mismos números en las dos pantallas.
-      final resumenEquipos = await ref.watch(
-        teamsPeriodSummaryProvider.future,
-      );
-      final equipos = resumenEquipos.teams
-          .where((equipo) => equipo.area.trim().toLowerCase() == buscada)
-          .toList();
+  // Los equipos salen del mismo cálculo que la pantalla de Equipos, así
+  // las tarjetas muestran los mismos números en las dos pantallas.
+  final teamsSummary = await ref.watch(teamsPeriodSummaryProvider.future);
+  final teams = teamsSummary.teams
+      .where((team) => team.area.trim().toLowerCase() == searched)
+      .toList();
 
-      final lideres = await ref.watch(etiquetasLideresProvider.future);
-      final nombre = miembros.first.empleado.area;
+  final leaders = await ref.watch(leaderLabelsProvider.future);
+  final name = members.first.employee.area;
 
-      return DetalleAreaViewModel(
-        area: _resumirArea(nombre, miembros, lideres: lideres?.deArea(nombre)),
-        equipos: equipos,
-        miembros: miembros,
-      );
-    });
+  return AreaDetailViewModel(
+    area: _summarizeArea(name, members, leaders: leaders?.forArea(name)),
+    teams: teams,
+    members: members,
+  );
+});
 
-AreaGlobalViewModel _resumirArea(
+AreaGlobalViewModel _summarizeArea(
   String area,
-  List<CumplimientoEmpleado> miembros, {
-  String? lideres,
+  List<EmployeeCompliance> members, {
+  String? leaders,
 }) {
-  final legajos = miembros.map((m) => m.empleado.legajo).toSet();
+  final employeeIds = members.map((m) => m.employee.employeeId).toSet();
   // Un legajo con alguna entrada pendiente no cuenta como en objetivo.
-  final legajosPendientes = miembros
-      .where((m) => !m.cumpleObjetivo)
-      .map((m) => m.empleado.legajo)
+  final pendingEmployeeIds = members
+      .where((m) => !m.meetsTarget)
+      .map((m) => m.employee.employeeId)
       .toSet();
-  final horasRealizadas = miembros.fold<double>(
+  final completedHours = members.fold<double>(
     0,
-    (total, item) => total + item.totalHorasValidas,
+    (total, item) => total + item.totalCreditedHours,
   );
-  final horasObjetivo = miembros.fold<double>(
+  final targetHours = members.fold<double>(
     0,
-    (total, item) => total + item.totalHorasRequeridas,
+    (total, item) => total + item.totalRequiredHours,
   );
-  final porcentaje = horasObjetivo == 0
+  final percentage = targetHours == 0
       ? 100.0
-      : (horasRealizadas / horasObjetivo) * 100;
-  final equiposGenerales =
-      miembros
-          .map((miembro) => miembro.empleado.equipo.trim())
-          .where((equipo) => equipo.isNotEmpty)
+      : (completedHours / targetHours) * 100;
+  final generalTeams =
+      members
+          .map((member) => member.employee.team.trim())
+          .where((team) => team.isNotEmpty)
           .toSet()
           .toList()
         ..sort();
 
   return AreaGlobalViewModel(
-    nombre: area,
-    equiposGenerales: equiposGenerales,
-    cantidadIntegrantes: legajos.length,
-    integrantesEnObjetivo: legajos.difference(legajosPendientes).length,
-    horasRealizadas: horasRealizadas,
-    horasObjetivo: horasObjetivo,
-    horasNegocio: _sumarHorasCategoria(
-      miembros,
-      TipoCurso.habilidadesDeNegocio,
-    ),
-    horasBlandas: _sumarHorasCategoria(miembros, TipoCurso.habilidadesBlandas),
-    horasLibres: _sumarHorasCategoria(miembros, TipoCurso.libresExploracion),
-    horasDictado: _sumarHorasCategoria(
-      miembros,
-      TipoCurso.dictadoCapacitaciones,
-    ),
-    porcentajeCumplimiento: porcentaje,
-    semaforo: EstadoSemaforo.desdePorcentaje(porcentaje),
-    lideres: lideres,
+    name: area,
+    generalTeams: generalTeams,
+    memberCount: employeeIds.length,
+    membersOnTarget: employeeIds.difference(pendingEmployeeIds).length,
+    completedHours: completedHours,
+    targetHours: targetHours,
+    businessHours: _sumCategoryHours(members, CourseCategory.businessSkills),
+    softSkillsHours: _sumCategoryHours(members, CourseCategory.softSkills),
+    explorationHours: _sumCategoryHours(members, CourseCategory.exploration),
+    teachingHours: _sumCategoryHours(members, CourseCategory.teaching),
+    compliancePercentage: percentage,
+    level: ComplianceLevel.fromPercentage(percentage),
+    leaders: leaders,
   );
 }
 
-double _sumarHorasCategoria(
-  List<CumplimientoEmpleado> miembros,
-  TipoCurso tipo,
+double _sumCategoryHours(
+  List<EmployeeCompliance> members,
+  CourseCategory type,
 ) {
-  return miembros.fold<double>(
+  return members.fold<double>(
     0,
-    (total, miembro) => total + miembro.horasAplicablesAlObjetivo(tipo),
+    (total, member) => total + member.applicableHours(type),
   );
 }
 
 /// Lo que peor está, primero: críticas, en riesgo y en objetivo; dentro de
 /// cada estado por porcentaje ascendente y después por nombre.
-int _compararAreasPorPrioridad(AreaGlobalViewModel a, AreaGlobalViewModel b) {
-  final estado = _ordenSemaforo(
-    a.semaforo,
-  ).compareTo(_ordenSemaforo(b.semaforo));
-  if (estado != 0) return estado;
+int _compareAreasByPriority(AreaGlobalViewModel a, AreaGlobalViewModel b) {
+  final status = _levelOrder(a.level).compareTo(_levelOrder(b.level));
+  if (status != 0) return status;
 
-  final cumplimiento = a.porcentajeCumplimiento.compareTo(
-    b.porcentajeCumplimiento,
-  );
-  if (cumplimiento != 0) return cumplimiento;
+  final compliance = a.compliancePercentage.compareTo(b.compliancePercentage);
+  if (compliance != 0) return compliance;
 
-  return a.nombre.compareTo(b.nombre);
+  return a.name.compareTo(b.name);
 }
 
-int _ordenSemaforo(EstadoSemaforo semaforo) {
-  switch (semaforo) {
-    case EstadoSemaforo.rojo:
+int _levelOrder(ComplianceLevel trafficLight) {
+  switch (trafficLight) {
+    case ComplianceLevel.critical:
       return 0;
-    case EstadoSemaforo.amarillo:
+    case ComplianceLevel.atRisk:
       return 1;
-    case EstadoSemaforo.verde:
+    case ComplianceLevel.onTarget:
       return 2;
   }
 }

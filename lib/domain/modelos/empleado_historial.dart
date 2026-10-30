@@ -3,79 +3,79 @@ import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 
 /// Vigencia existente en public.empleado_historial; no genera historia nueva.
-class EmpleadoHistorial {
-  final String legajo;
+class EmployeeHistoryEntry {
+  final String employeeId;
   final Seniority seniority;
   final String area;
-  final String equipo;
-  final String gerente;
-  final bool activo;
-  final DateTime vigenteDesde;
-  final DateTime? vigenteHasta;
+  final String team;
+  final String manager;
+  final bool isActive;
+  final DateTime validFrom;
+  final DateTime? validTo;
 
-  const EmpleadoHistorial({
-    required this.legajo,
+  const EmployeeHistoryEntry({
+    required this.employeeId,
     required this.seniority,
     required this.area,
-    required this.equipo,
-    required this.gerente,
-    required this.activo,
-    required this.vigenteDesde,
-    this.vigenteHasta,
+    required this.team,
+    required this.manager,
+    required this.isActive,
+    required this.validFrom,
+    this.validTo,
   });
 
-  factory EmpleadoHistorial.fromJson(Map<String, dynamic> json) {
+  factory EmployeeHistoryEntry.fromJson(Map<String, dynamic> json) {
     if (json['activo'] is! bool ||
         (json['legajo']?.toString().trim() ?? '').isEmpty) {
       throw const FormatException('Estado inválido en empleado_historial.');
     }
-    final desde = fechaObligatoria(json['vigente_desde']?.toString() ?? '');
-    final hasta = json['vigente_hasta'] == null
+    final from = requiredDate(json['vigente_desde']?.toString() ?? '');
+    final until = json['vigente_hasta'] == null
         ? null
-        : fechaObligatoria(json['vigente_hasta'].toString());
-    if (hasta != null && hasta.isBefore(desde)) {
+        : requiredDate(json['vigente_hasta'].toString());
+    if (until != null && until.isBefore(from)) {
       throw const FormatException('Intervalo inválido en empleado_historial.');
     }
-    final textoSeniority = json['seniority']?.toString() ?? '';
-    String normalizar(String texto) => texto
+    final seniorityText = json['seniority']?.toString() ?? '';
+    String normalize(String text) => text
         .trim()
         .toLowerCase()
         .replaceAll('ñ', 'n')
         .replaceAll(RegExp(r'[^a-z0-9]+'), '');
-    final normalizado = normalizar(textoSeniority);
-    final configurado = Seniority.values.any(
+    final normalized = normalize(seniorityText);
+    final configured = Seniority.values.any(
       (seniority) =>
-          normalizar(seniority.name) == normalizado ||
-          normalizar(seniority.label) == normalizado,
+          normalize(seniority.name) == normalized ||
+          normalize(seniority.label) == normalized,
     );
     final alias = RegExp(
       r'^trainee(?:[123]|i{1,3})?$|^t$'
       r'|^(?:junior|jr|j|senior|senor|sr|s)(?:[123]|i{1,3})?$'
       r'|^(?:semisenior|semisenor|ssr|ss)(?:[123]|i{1,3})$'
       r'|^(?:manager|gerente|m)$',
-    ).hasMatch(normalizado);
-    if (!configurado && !alias) {
+    ).hasMatch(normalized);
+    if (!configured && !alias) {
       throw FormatException(
-        'Seniority inválido en empleado_historial: "$textoSeniority".',
+        'Seniority inválido en empleado_historial: "$seniorityText".',
       );
     }
-    return EmpleadoHistorial(
-      legajo: json['legajo'].toString(),
-      seniority: Seniority.fromString(textoSeniority),
+    return EmployeeHistoryEntry(
+      employeeId: json['legajo'].toString(),
+      seniority: Seniority.fromString(seniorityText),
       area: json['sector']?.toString() ?? '',
-      equipo: json['equipo_general']?.toString() ?? '',
-      gerente: json['gerente']?.toString() ?? '',
-      activo: json['activo'] as bool,
-      vigenteDesde: desde,
-      vigenteHasta: hasta,
+      team: json['equipo_general']?.toString() ?? '',
+      manager: json['gerente']?.toString() ?? '',
+      isActive: json['activo'] as bool,
+      validFrom: from,
+      validTo: until,
     );
   }
 
-  Empleado reconstruir(Empleado empleado) => empleado.copyWith(
+  Employee rebuild(Employee employee) => employee.copyWith(
     seniority: seniority,
     area: area,
-    equipo: equipo,
-    gerente: gerente,
-    activo: activo,
+    team: team,
+    manager: manager,
+    active: isActive,
   );
 }

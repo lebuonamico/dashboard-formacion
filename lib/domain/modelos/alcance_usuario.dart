@@ -7,59 +7,58 @@ import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 /// Es el mismo criterio que `public.empleado_visible()` en la base, que es la
 /// que manda: acá sirve para que la app no dependa de que el RLS esté
 /// encendido y para poder probarlo sin Supabase. Compara por clave de nómina
-/// ([EstructuraOrganizacional.claveNomina]), igual que la base.
-class AlcanceUsuario {
-  final bool esTotal;
+/// ([OrgStructure.payrollKey]), igual que la base.
+class UserScope {
+  final bool isTotal;
   final Set<String> _areas;
-  final Set<(String, String)> _equipos;
+  final Set<(String, String)> _teams;
 
-  const AlcanceUsuario.total()
-    : esTotal = true,
+  const UserScope.total()
+    : isTotal = true,
       _areas = const {},
-      _equipos = const {};
+      _teams = const {};
 
-  const AlcanceUsuario.ninguno()
-    : esTotal = false,
+  const UserScope.none()
+    : isTotal = false,
       _areas = const {},
-      _equipos = const {};
+      _teams = const {};
 
-  const AlcanceUsuario._(this._areas, this._equipos) : esTotal = false;
+  const UserScope._(this._areas, this._teams) : isTotal = false;
 
   /// Administrador y Academia ven todo. `area` ve las áreas que lidera y
   /// `lider` los equipos que lidera. Cualquier otro rol, nada.
-  factory AlcanceUsuario.de({
-    required RolUsuario? rol,
+  factory UserScope.of({
+    required UserRole? role,
     required String? email,
-    required EstructuraOrganizacional? estructura,
+    required OrgStructure? structure,
   }) {
-    if (rol != null && rol.esGestor) return const AlcanceUsuario.total();
-    if (email == null || estructura == null) {
-      return const AlcanceUsuario.ninguno();
+    if (role != null && role.canManage) return const UserScope.total();
+    if (email == null || structure == null) {
+      return const UserScope.none();
     }
-    switch (rol) {
-      case RolUsuario.area:
-        return AlcanceUsuario._({
-          for (final area in estructura.areasLideradasPor(email))
-            area.claveNomina,
+    switch (role) {
+      case UserRole.areaLead:
+        return UserScope._({
+          for (final area in structure.ledAreasBy(email)) area.payrollKey,
         }, const {});
-      case RolUsuario.lider:
-        return AlcanceUsuario._(const {}, {
-          for (final liderado in estructura.equiposLideradosPor(email))
-            (liderado.area.claveNomina, liderado.equipo.claveNomina),
+      case UserRole.teamLead:
+        return UserScope._(const {}, {
+          for (final led in structure.teamsLedBy(email))
+            (led.area.payrollKey, led.team.payrollKey),
         });
       default:
-        return const AlcanceUsuario.ninguno();
+        return const UserScope.none();
     }
   }
 
   /// Si ve a un empleado con ese Sector y ese Equipo de la nómina.
-  bool incluye(String sector, String equipo) {
-    if (esTotal) return true;
-    final area = EstructuraOrganizacional.claveNomina(sector);
+  bool includes(String sector, String team) {
+    if (isTotal) return true;
+    final area = OrgStructure.payrollKey(sector);
     return _areas.contains(area) ||
-        _equipos.contains((area, EstructuraOrganizacional.claveNomina(equipo)));
+        _teams.contains((area, OrgStructure.payrollKey(team)));
   }
 
-  bool incluyeEmpleado(Empleado empleado) =>
-      incluye(empleado.area, empleado.equipo);
+  bool includesEmployee(Employee employee) =>
+      includes(employee.area, employee.team);
 }

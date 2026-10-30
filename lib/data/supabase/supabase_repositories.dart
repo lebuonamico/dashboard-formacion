@@ -1,3 +1,4 @@
+import 'package:app_finnegans/data/supabase/supabase_codes.dart';
 import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,8 +24,8 @@ class _Table {
 
   Future<List<Map<String, dynamic>>> read({
     Map<String, Object> equals = const {},
-    DateTime? desde,
-    DateTime? hasta,
+    DateTime? fromDate,
+    DateTime? until,
   }) async {
     PostgrestTransformBuilder<PostgrestList> page(int from, int to) {
       var query = client
@@ -33,11 +34,11 @@ class _Table {
       for (final entry in equals.entries) {
         query = query.eq(mapping.column(entry.key), entry.value);
       }
-      if (desde != null) {
-        query = query.gte(mapping.column('fecha'), desde.toIso8601String());
+      if (fromDate != null) {
+        query = query.gte(mapping.column('fecha'), fromDate.toIso8601String());
       }
-      if (hasta != null) {
-        query = query.lt(mapping.column('fecha'), hasta.toIso8601String());
+      if (until != null) {
+        query = query.lt(mapping.column('fecha'), until.toIso8601String());
       }
       var ordered = query.order(mapping.column(mapping.conflictFields.first));
       for (final field in mapping.conflictFields.skip(1)) {
@@ -115,8 +116,8 @@ class _Table {
     return existingKeys;
   }
 
-  Future<ResultadoUpsert> upsert(List<Map<String, dynamic>> records) async {
-    if (records.isEmpty) return ResultadoUpsert.empty;
+  Future<UpsertResult> upsert(List<Map<String, dynamic>> records) async {
+    if (records.isEmpty) return UpsertResult.empty;
     final uniqueRows = <String, Map<String, dynamic>>{};
     for (final record in records) {
       final row = mapping.encode(record);
@@ -133,22 +134,22 @@ class _Table {
     await client
         .from(mapping.table)
         .upsert(rows, onConflict: mapping.onConflict);
-    return ResultadoUpsert(
-      registrosProcesados: records.length,
-      insertados: rows.length - existingKeys.length,
-      actualizados: existingKeys.length,
+    return UpsertResult(
+      processedRecords: records.length,
+      inserted: rows.length - existingKeys.length,
+      updated: existingKeys.length,
     );
   }
 }
 
-class SupabaseEmpleadosRepository
+class SupabaseEmployeesRepository
     implements
-        EmpleadosRepository,
-        CountedUpsertRepository<Empleado>,
-        FotoVigenteRepository<Empleado>,
-        EmpleadosHistorialRepository {
+        EmployeesRepository,
+        CountedUpsertRepository<Employee>,
+        SnapshotRepository<Employee>,
+        EmployeeHistoryRepository {
   final _Table _table;
-  SupabaseEmpleadosRepository(
+  SupabaseEmployeesRepository(
     SupabaseClient client,
     SupabaseTableMapping mapping,
   ) : _table = _Table(client, mapping) {
@@ -165,51 +166,49 @@ class SupabaseEmpleadosRepository
     ]);
   }
   @override
-  Future<List<Empleado>> getEmpleados({
-    String? legajo,
-    String? equipo,
+  Future<List<Employee>> getEmployees({
+    String? employeeId,
+    String? team,
     String? sector,
   }) async => (await _table.read(
-    equals: {'legajo': ?legajo, 'equipo': ?equipo, 'area': ?sector},
-  )).map(Empleado.fromJson).toList();
+    equals: {'legajo': ?employeeId, 'equipo': ?team, 'area': ?sector},
+  )).map(Employee.fromJson).toList();
   @override
-  Future<void> upsert(List<Empleado> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<Employee> items) async {
+    await upsertWithResult(items);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(List<Empleado> items) =>
+  Future<UpsertResult> upsertWithResult(List<Employee> items) =>
       _table.upsert(items.map((e) => e.toJson()).toList());
   @override
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
-    List<Empleado> items,
-  ) async {
+  Future<UpsertResult> syncSnapshotWithResult(List<Employee> items) async {
     _table.mapping.requireFields(['activo']);
-    if (items.isEmpty || items.any((item) => item.legajo.trim().isEmpty)) {
+    if (items.isEmpty || items.any((item) => item.employeeId.trim().isEmpty)) {
       throw const FormatException(
         'La foto de Nómina está vacía o tiene claves inválidas.',
       );
     }
-    final presentes = items.map((item) => item.legajo).toSet();
-    final anteriores = await getEmpleados();
-    final cambios = [
-      for (final item in items) item.copyWith(activo: true),
-      for (final item in anteriores)
-        if (item.activo && !presentes.contains(item.legajo))
-          item.copyWith(activo: false),
+    final present = items.map((item) => item.employeeId).toSet();
+    final previous = await getEmployees();
+    final changes = [
+      for (final item in items) item.copyWith(active: true),
+      for (final item in previous)
+        if (item.isActive && !present.contains(item.employeeId))
+          item.copyWith(active: false),
     ];
     // Leandro: llama a upsertConResultado para guardar presentes y bajas en una escritura con el trigger de historial existente.
-    final resultado = await upsertConResultado(cambios);
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: resultado.insertados,
-      actualizados: resultado.actualizados,
+    final result = await upsertWithResult(changes);
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: result.inserted,
+      updated: result.updated,
     );
   }
 
   @override
-  Future<List<EmpleadoHistorial>> getHistorialEmpleados() async {
-    final historial = <EmpleadoHistorial>[];
+  Future<List<EmployeeHistoryEntry>> getEmployeeHistory() async {
+    final history = <EmployeeHistoryEntry>[];
     const pageSize = 500;
     for (var offset = 0; ; offset += pageSize) {
       final rows = await _table.client
@@ -221,27 +220,27 @@ class SupabaseEmpleadosRepository
           .order('vigente_desde')
           .order('id')
           .range(offset, offset + pageSize - 1);
-      historial.addAll(rows.map(EmpleadoHistorial.fromJson));
+      history.addAll(rows.map(EmployeeHistoryEntry.fromJson));
       if (rows.length < pageSize) break;
     }
-    return historial;
+    return history;
   }
 
   @override
-  Future<void> replaceEmpleados(List<Empleado> empleados) => upsert(empleados);
+  Future<void> replaceEmployees(List<Employee> employees) => upsert(employees);
   @override
   Future<void> resetToMock() async => throw UnsupportedError(
     'No se eliminan datos remotos para restaurar mocks.',
   );
 }
 
-class SupabaseCursosRepository
+class SupabaseCoursesRepository
     implements
-        CursosRepository,
-        CountedUpsertRepository<Curso>,
-        FotoVigenteRepository<Curso> {
+        CoursesRepository,
+        CountedUpsertRepository<Course>,
+        SnapshotRepository<Course> {
   final _Table _table;
-  SupabaseCursosRepository(SupabaseClient client, SupabaseTableMapping mapping)
+  SupabaseCoursesRepository(SupabaseClient client, SupabaseTableMapping mapping)
     : _table = _Table(client, mapping) {
     mapping.requireFields(['id', 'nombre', 'clasificacion', 'cargaHorariaHs']);
   }
@@ -249,61 +248,68 @@ class SupabaseCursosRepository
   /// El catálogo es chico y lo leen la pantalla de cursos, las horas, las
   /// finalizaciones y las importaciones: se pide una vez y se reutiliza hasta
   /// que esta app lo modifique.
-  Future<List<Curso>>? _catalogo;
+  Future<List<Course>>? _catalog;
 
-  Future<List<Curso>> _leerCatalogo() {
-    final lectura = _catalogo ??= _table.read().then(
-      (rows) => rows.map(Curso.fromJson).toList(),
+  Future<List<Course>> _readCatalog() {
+    final read = _catalog ??= _table.read().then(
+      (rows) => rows
+          .map(
+            (row) => Course.fromJson({
+              ...row,
+              'clasificacion':
+                  courseCategoryFromDb(row['clasificacion']) ??
+                  row['clasificacion'],
+            }),
+          )
+          .toList(),
     );
     // Un fallo no queda guardado: el próximo pedido vuelve a intentar.
-    lectura.catchError((Object _) {
-      if (identical(_catalogo, lectura)) _catalogo = null;
-      return const <Curso>[];
+    read.catchError((Object _) {
+      if (identical(_catalog, read)) _catalog = null;
+      return const <Course>[];
     });
-    return lectura;
+    return read;
   }
 
   @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async {
-    final buscado = nombre?.trim().toLowerCase();
+  Future<List<Course>> getCourses({String? id, String? name}) async {
+    final searched = name?.trim().toLowerCase();
     return [
-      for (final curso in await _leerCatalogo())
-        if ((id == null || curso.id == id) &&
-            (buscado == null || curso.nombre.trim().toLowerCase() == buscado))
-          curso,
+      for (final course in await _readCatalog())
+        if ((id == null || course.id == id) &&
+            (searched == null || course.name.trim().toLowerCase() == searched))
+          course,
     ];
   }
 
   @override
-  Future<void> upsert(List<Curso> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<Course> items) async {
+    await upsertWithResult(items);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(List<Curso> items) async {
+  Future<UpsertResult> upsertWithResult(List<Course> items) async {
     try {
       return await _table.upsert(
         items
             .map(
               (c) => {
                 'id': c.id,
-                'nombre': c.nombre.trim(),
-                'clasificacion': c.clasificacion.name,
-                'cargaHorariaHs': c.cargaHorariaHs,
-                'activo': c.activo,
+                'nombre': c.name.trim(),
+                'clasificacion': courseCategoryToDb(c.category),
+                'cargaHorariaHs': c.workloadHours,
+                'activo': c.isActive,
               },
             )
             .toList(),
       );
     } finally {
-      _catalogo = null;
+      _catalog = null;
     }
   }
 
   @override
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
-    List<Curso> items,
-  ) async {
+  Future<UpsertResult> syncSnapshotWithResult(List<Course> items) async {
     _table.mapping.requireFields(['activo']);
     if (items.isEmpty || items.any((item) => item.id.trim().isEmpty)) {
       throw const FormatException(
@@ -311,39 +317,39 @@ class SupabaseCursosRepository
       );
     }
     // Se compara contra la base actual, no contra lo leído antes.
-    _catalogo = null;
-    final anteriores = await getCursos();
+    _catalog = null;
+    final previous = await getCourses();
     // Un curso que ya existe con el mismo nombre se actualiza con su ID
     // actual: el nombre es único en la base y horas y finalizaciones
     // apuntan a ese ID. Los que no existen se insertan con el ID del archivo.
-    final idPorNombre = {
-      for (final curso in anteriores)
-        normalizarNombreCurso(curso.nombre): curso.id,
+    final idByName = {
+      for (final course in previous)
+        normalizeCourseName(course.name): course.id,
     };
-    final vigentes = [
+    final current = [
       for (final item in items)
         item.copyWith(
-          id: idPorNombre[normalizarNombreCurso(item.nombre)],
-          activo: true,
+          id: idByName[normalizeCourseName(item.name)],
+          active: true,
         ),
     ];
-    final presentes = vigentes.map((item) => item.id).toSet();
-    final cambios = [
-      ...vigentes,
-      for (final item in anteriores)
-        if (item.activo && !presentes.contains(item.id))
-          item.copyWith(activo: false),
+    final present = current.map((item) => item.id).toSet();
+    final changes = [
+      ...current,
+      for (final item in previous)
+        if (item.isActive && !present.contains(item.id))
+          item.copyWith(active: false),
     ];
-    final resultado = await upsertConResultado(cambios);
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: resultado.insertados,
-      actualizados: resultado.actualizados,
+    final result = await upsertWithResult(changes);
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: result.inserted,
+      updated: result.updated,
     );
   }
 
   @override
-  Future<void> replaceCursos(List<Curso> cursos) => upsert(cursos);
+  Future<void> replaceCourses(List<Course> courses) => upsert(courses);
   @override
   Future<void> resetToMock() async => throw UnsupportedError(
     'No se eliminan datos remotos para restaurar mocks.',
@@ -352,36 +358,34 @@ class SupabaseCursosRepository
 
 Future<void> _hydrateCourses(
   List<Map<String, dynamic>> rows,
-  CursosRepository cursos,
+  CoursesRepository courses,
 ) async {
   if (rows.isEmpty) return;
   // Una sola lectura del catálogo en vez de una consulta por curso.
   final names = {
-    for (final curso in await cursos.getCursos()) curso.id: curso.nombre,
+    for (final course in await courses.getCourses()) course.id: course.name,
   };
   for (final row in rows) {
     final id = row['cursoId']?.toString();
     if (id == null || id.isEmpty) {
       throw const FormatException('Falta la FK del curso.');
     }
-    final nombre = names[id];
-    if (nombre == null) {
+    final name = names[id];
+    if (name == null) {
       throw FormatException('Curso inexistente o inaccesible: $id.');
     }
-    row['cursoNombre'] = nombre;
+    row['cursoNombre'] = name;
   }
 }
 
-class SupabaseCargaDeHorasCRMRepository
-    implements
-        CargaDeHorasCRMRepository,
-        CountedUpsertRepository<CargaDeHorasCRM> {
+class SupabaseCrmTimeEntriesRepository
+    implements CrmTimeEntriesRepository, CountedUpsertRepository<CrmTimeEntry> {
   final _Table _table;
-  final CursosRepository cursos;
-  SupabaseCargaDeHorasCRMRepository(
+  final CoursesRepository courses;
+  SupabaseCrmTimeEntriesRepository(
     SupabaseClient client,
     SupabaseTableMapping mapping,
-    this.cursos,
+    this.courses,
   ) : _table = _Table(client, mapping) {
     mapping.requireFields([
       'id',
@@ -398,63 +402,61 @@ class SupabaseCargaDeHorasCRMRepository
     ]);
   }
   @override
-  Future<List<CargaDeHorasCRM>> getCargasDeHoras({
-    String? empleadoLegajo,
-    String? cursoId,
-    DateTime? desde,
-    DateTime? hasta,
+  Future<List<CrmTimeEntry>> getTimeEntries({
+    String? employeeId,
+    String? courseId,
+    DateTime? from,
+    DateTime? until,
   }) async {
     final rows = await _table.read(
-      equals: {'empleadoLegajo': ?empleadoLegajo, 'cursoId': ?cursoId},
-      desde: desde,
-      hasta: hasta,
+      equals: {'empleadoLegajo': ?employeeId, 'cursoId': ?courseId},
+      fromDate: from,
+      until: until,
     );
-    await _hydrateCourses(rows, cursos);
-    return rows.map(CargaDeHorasCRM.fromJson).toList();
+    await _hydrateCourses(rows, courses);
+    return rows.map(CrmTimeEntry.fromJson).toList();
   }
 
   @override
-  Future<void> upsert(List<CargaDeHorasCRM> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<CrmTimeEntry> items) async {
+    await upsertWithResult(items);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(
-    List<CargaDeHorasCRM> items,
-  ) async {
-    if (items.isEmpty) return ResultadoUpsert.empty;
-    final catalog = <String, Curso>{};
+  Future<UpsertResult> upsertWithResult(List<CrmTimeEntry> items) async {
+    if (items.isEmpty) return UpsertResult.empty;
+    final catalog = <String, Course>{};
     final rows = <Map<String, dynamic>>[];
     for (final item in items) {
-      final nombre = normalizarNombreCurso(item.cursoNombre);
-      final curso = catalog[nombre] ??= resolverCurso(
-        item.cursoNombre,
-        await cursos.getCursos(nombre: item.cursoNombre),
+      final name = normalizeCourseName(item.courseName);
+      final course = catalog[name] ??= courseResolver(
+        item.courseName,
+        await courses.getCourses(name: item.courseName),
       );
-      rows.add({...item.toJson(), 'cursoId': curso.id}..remove('tipo'));
+      rows.add({...item.toJson(), 'cursoId': course.id}..remove('tipo'));
     }
     return _table.upsert(rows);
   }
 
   @override
-  Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) =>
-      upsert(cargas);
+  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) =>
+      upsert(timeEntries);
   @override
   Future<void> resetToMock() async => throw UnsupportedError(
     'No se eliminan datos remotos para restaurar mocks.',
   );
 }
 
-class SupabaseCertificacionesMoodleRepository
+class SupabaseLmsCertificationsRepository
     implements
-        CertificacionesMoodleRepository,
-        CountedUpsertRepository<CertificacionMoodle> {
+        LmsCertificationsRepository,
+        CountedUpsertRepository<LmsCertification> {
   final _Table _table;
-  final CursosRepository cursos;
-  SupabaseCertificacionesMoodleRepository(
+  final CoursesRepository courses;
+  SupabaseLmsCertificationsRepository(
     SupabaseClient client,
     SupabaseTableMapping mapping,
-    this.cursos,
+    this.courses,
   ) : _table = _Table(client, mapping) {
     mapping.requireFields([
       'legajo',
@@ -464,45 +466,42 @@ class SupabaseCertificacionesMoodleRepository
     ]);
   }
   @override
-  Future<List<CertificacionMoodle>> getCertificaciones({
-    String? legajo,
-    String? cursoId,
+  Future<List<LmsCertification>> getCertifications({
+    String? employeeId,
+    String? courseId,
   }) async {
     final rows = await _table.read(
-      equals: {'legajo': ?legajo, 'cursoId': ?cursoId},
+      equals: {'legajo': ?employeeId, 'cursoId': ?courseId},
     );
-    await _hydrateCourses(rows, cursos);
-    return rows.map(CertificacionMoodle.fromJson).toList();
+    await _hydrateCourses(rows, courses);
+    return rows.map(LmsCertification.fromJson).toList();
   }
 
   @override
-  Future<void> upsert(List<CertificacionMoodle> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<LmsCertification> items) async {
+    await upsertWithResult(items);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(
-    List<CertificacionMoodle> items,
-  ) async {
-    if (items.isEmpty) return ResultadoUpsert.empty;
-    final catalog = <String, Curso>{};
+  Future<UpsertResult> upsertWithResult(List<LmsCertification> items) async {
+    if (items.isEmpty) return UpsertResult.empty;
+    final catalog = <String, Course>{};
     final rows = <Map<String, dynamic>>[];
     for (final item in items) {
-      if (item.finalizoCurso && item.fechaFinalizacion == null) {
+      if (item.isCompleted && item.completedAt == null) {
         throw const FormatException('Falta la fecha de finalización.');
       }
-      final nombre = normalizarNombreCurso(item.cursoNombre);
-      final curso = catalog[nombre] ??= resolverCurso(
-        item.cursoNombre,
-        await cursos.getCursos(nombre: item.cursoNombre),
+      final name = normalizeCourseName(item.courseName);
+      final course = catalog[name] ??= courseResolver(
+        item.courseName,
+        await courses.getCourses(name: item.courseName),
       );
-      rows.add({...item.toJson(), 'cursoId': curso.id});
+      rows.add({...item.toJson(), 'cursoId': course.id});
     }
     return _table.upsert(rows);
   }
 
   @override
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
-  ) => upsert(certificaciones);
+  Future<void> replaceCertifications(List<LmsCertification> certifications) =>
+      upsert(certifications);
 }

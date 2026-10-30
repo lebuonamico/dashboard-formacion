@@ -19,32 +19,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Pestaña "Áreas y equipos" del panel. Las áreas y los equipos vienen de la
 /// importación de nómina y acá solo se consultan; lo único que se cambia son
 /// sus líderes.
-class AdminEstructura extends ConsumerStatefulWidget {
-  const AdminEstructura({super.key});
+class AdminStructure extends ConsumerStatefulWidget {
+  const AdminStructure({super.key});
 
   @override
-  ConsumerState<AdminEstructura> createState() => _AdminEstructuraState();
+  ConsumerState<AdminStructure> createState() => _AdminStructureState();
 }
 
-class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
-  String? _accionEnCurso;
+class _AdminStructureState extends ConsumerState<AdminStructure> {
+  String? _actionInProgress;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    if (ref.watch(estructuraRepositoryProvider) == null) {
-      return const _Aviso(
-        icono: Icons.cloud_off_outlined,
-        titulo: 'Las áreas y los equipos no están disponibles',
-        mensaje:
+    if (ref.watch(orgStructureRepositoryProvider) == null) {
+      return const _Notice(
+        icon: Icons.cloud_off_outlined,
+        title: 'Las áreas y los equipos no están disponibles',
+        message:
             'Esta versión de la aplicación no está conectada a la base, así '
             'que no hay líderes para asignar.',
       );
     }
-    final estructura = ref.watch(estructuraProvider);
+    final structure = ref.watch(orgStructureProvider);
 
     return ListView(
-      padding: paddingPantalla,
+      padding: screenPadding,
       children: [
         Text(
           'Áreas y equipos',
@@ -70,53 +70,49 @@ class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
               'Buscar área o equipo',
               Icons.search,
             ),
-            onChanged: (valor) =>
-                ref.read(busquedaEstructuraAdminProvider.notifier).state =
-                    valor,
+            onChanged: (value) =>
+                ref.read(adminStructureSearchProvider.notifier).state = value,
           ),
         ),
         const SizedBox(height: 20),
-        estructura.when(
+        structure.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 72),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => _Aviso(
-            icono: Icons.error_outline,
-            titulo: 'No pudimos cargar las áreas y los equipos',
-            mensaje: error is FormatException
+          error: (error, _) => _Notice(
+            icon: Icons.error_outline,
+            title: 'No pudimos cargar las áreas y los equipos',
+            message: error is FormatException
                 ? error.message
                 : 'Revisá tu conexión e intentá nuevamente.',
             color: cs.error,
           ),
-          data: (datos) => FadeIn(child: _listado(datos!)),
+          data: (data) => FadeIn(child: _list(data!)),
         ),
       ],
     );
   }
 
-  Widget _listado(EstructuraOrganizacional estructura) {
-    final consulta = ref
-        .watch(busquedaEstructuraAdminProvider)
-        .trim()
-        .toLowerCase();
-    final conteos = _Conteos(ref.watch(empleadosProvider).value ?? const []);
-    final nombres = _nombrePorEmail();
-    final areas = estructura.areasOrdenadas.where((area) {
-      if (consulta.isEmpty) return true;
-      return area.nombre.toLowerCase().contains(consulta) ||
-          estructura
-              .equiposDe(area.id)
-              .any((equipo) => equipo.nombre.toLowerCase().contains(consulta));
+  Widget _list(OrgStructure structure) {
+    final query = ref.watch(adminStructureSearchProvider).trim().toLowerCase();
+    final counts = _Counts(ref.watch(employeesProvider).value ?? const []);
+    final names = _nameByEmail();
+    final areas = structure.sortedAreas.where((area) {
+      if (query.isEmpty) return true;
+      return area.name.toLowerCase().contains(query) ||
+          structure
+              .teamsOf(area.id)
+              .any((team) => team.name.toLowerCase().contains(query));
     }).toList();
 
     if (areas.isEmpty) {
-      return _Aviso(
-        icono: Icons.account_tree_outlined,
-        titulo: consulta.isEmpty
+      return _Notice(
+        icon: Icons.account_tree_outlined,
+        title: query.isEmpty
             ? 'Todavía no hay áreas'
             : 'Ningún área o equipo coincide con la búsqueda',
-        mensaje: consulta.isEmpty
+        message: query.isEmpty
             ? 'Se crean al importar la nómina desde Configuración.'
             : 'Probá con otro nombre.',
       );
@@ -125,14 +121,14 @@ class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
     return Column(
       children: [
         for (final area in areas) ...[
-          _TarjetaArea(
+          _CardArea(
             area: area,
-            equipos: estructura.equiposDe(area.id),
-            conteos: conteos,
-            nombrePorEmail: nombres,
-            habilitado: _accionEnCurso == null,
-            onLideres: () => _lideresArea(area),
-            onLideresEquipo: (equipo) => _lideresEquipo(equipo),
+            teams: structure.teamsOf(area.id),
+            counts: counts,
+            nameByEmail: names,
+            enabled: _actionInProgress == null,
+            onLeaders: () => _leadersArea(area),
+            onTeamLeaders: (team) => _teamLeaders(team),
           ),
           const SizedBox(height: 16),
         ],
@@ -140,58 +136,56 @@ class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
     );
   }
 
-  Map<String, String> _nombrePorEmail() => {
-    for (final empleado in ref.watch(empleadosProvider).value ?? const [])
-      if (empleado.mail.trim().isNotEmpty)
-        EstructuraOrganizacional.normalizarEmail(empleado.mail):
-            empleado.nombreCompleto,
+  Map<String, String> _nameByEmail() => {
+    for (final employee
+        in ref.watch(employeesProvider).value ?? const <Employee>[])
+      if (employee.email.trim().isNotEmpty)
+        OrgStructure.normalizeEmail(employee.email): employee.fullName,
   };
 
-  Future<void> _lideresArea(Area area) async {
-    final elegidos = await _elegirLideres(
-      titulo: 'Líderes de ${area.nombre}',
-      subtitulo:
+  Future<void> _leadersArea(Area area) async {
+    final chosen = await _chooseLeaders(
+      title: 'Líderes de ${area.name}',
+      subtitle:
           'Ven todos los equipos del área. Solo se pueden elegir usuarios '
           'activos con el rol Área.',
-      rol: RolUsuario.area,
-      actuales: area.lideres,
+      role: UserRole.areaLead,
+      current: area.leaders,
     );
-    if (elegidos == null) return;
-    await _ejecutar(
-      clave: 'lideres_area',
-      exito: 'Se actualizaron los líderes de ${area.nombre}.',
-      accion: (repositorio) =>
-          repositorio.asignarLideresArea(area.id, elegidos),
+    if (chosen == null) return;
+    await _run(
+      key: 'lideres_area',
+      success: 'Se actualizaron los líderes de ${area.name}.',
+      action: (repository) => repository.assignLeadersArea(area.id, chosen),
     );
   }
 
-  Future<void> _lideresEquipo(Equipo equipo) async {
-    final elegidos = await _elegirLideres(
-      titulo: 'Líderes de ${equipo.nombre}',
-      subtitulo:
+  Future<void> _teamLeaders(Team team) async {
+    final chosen = await _chooseLeaders(
+      title: 'Líderes de ${team.name}',
+      subtitle:
           'Ven a los integrantes del equipo. Solo se pueden elegir usuarios '
           'activos con el rol Líder de equipo.',
-      rol: RolUsuario.lider,
-      actuales: equipo.lideres,
+      role: UserRole.teamLead,
+      current: team.leaders,
     );
-    if (elegidos == null) return;
-    await _ejecutar(
-      clave: 'lideres_equipo',
-      exito: 'Se actualizaron los líderes de ${equipo.nombre}.',
-      accion: (repositorio) =>
-          repositorio.asignarLideresEquipo(equipo.id, elegidos),
+    if (chosen == null) return;
+    await _run(
+      key: 'lideres_equipo',
+      success: 'Se actualizaron los líderes de ${team.name}.',
+      action: (repository) => repository.assignTeamLeaders(team.id, chosen),
     );
   }
 
-  Future<Set<String>?> _elegirLideres({
-    required String titulo,
-    required String subtitulo,
-    required RolUsuario rol,
-    required Set<String> actuales,
+  Future<Set<String>?> _chooseLeaders({
+    required String title,
+    required String subtitle,
+    required UserRole role,
+    required Set<String> current,
   }) async {
-    final List<UsuarioAutorizado> usuarios;
+    final List<AuthorizedUser> users;
     try {
-      usuarios = await ref.read(usuariosAutorizadosProvider.future);
+      users = await ref.read(authorizedUsersProvider.future);
     } on Object catch (error) {
       if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -206,36 +200,36 @@ class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
       return null;
     }
     if (!mounted) return null;
-    return mostrarDialogoLideres(
+    return showLeadersDialog(
       context,
-      titulo: titulo,
-      subtitulo: subtitulo,
-      rol: rol,
-      usuarios: usuarios,
-      seleccionados: actuales,
-      nombrePorEmail: _nombrePorEmail(),
+      title: title,
+      subtitle: subtitle,
+      role: role,
+      users: users,
+      selected: current,
+      nameByEmail: _nameByEmail(),
     );
   }
 
-  Future<void> _ejecutar({
-    required String clave,
-    required String exito,
-    required Future<void> Function(EstructuraRepository) accion,
+  Future<void> _run({
+    required String key,
+    required String success,
+    required Future<void> Function(OrgStructureRepository) action,
   }) async {
-    if (_accionEnCurso != null) return;
-    final repositorio = ref.read(estructuraRepositoryProvider);
-    if (repositorio == null) return;
-    setState(() => _accionEnCurso = clave);
+    if (_actionInProgress != null) return;
+    final repository = ref.read(orgStructureRepositoryProvider);
+    if (repository == null) return;
+    setState(() => _actionInProgress = key);
     try {
-      await accion(repositorio);
+      await action(repository);
       // Los líderes definen qué ve cada uno y se muestran en Equipos y
       // Áreas: recargar la estructura actualiza todo.
-      ref.invalidate(estructuraProvider);
-      await ref.read(estructuraProvider.future);
+      ref.invalidate(orgStructureProvider);
+      await ref.read(orgStructureProvider.future);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(exito)));
+      ).showSnackBar(SnackBar(content: Text(success)));
     } on FormatException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -250,63 +244,60 @@ class _AdminEstructuraState extends ConsumerState<AdminEstructura> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _accionEnCurso = null);
+      if (mounted) setState(() => _actionInProgress = null);
     }
   }
 }
 
 /// Colaboradores activos por área y por equipo, por clave de nómina.
-class _Conteos {
-  final Map<String, int> _porArea = {};
-  final Map<(String, String), int> _porEquipo = {};
+class _Counts {
+  final Map<String, int> _byArea = {};
+  final Map<(String, String), int> _byTeam = {};
 
-  _Conteos(Iterable<Empleado> empleados) {
-    for (final empleado in empleados) {
-      if (!empleado.activo) continue;
-      final area = EstructuraOrganizacional.claveNomina(empleado.area);
-      _porArea[area] = (_porArea[area] ?? 0) + 1;
-      final equipo = (
-        area,
-        EstructuraOrganizacional.claveNomina(empleado.equipo),
-      );
-      _porEquipo[equipo] = (_porEquipo[equipo] ?? 0) + 1;
+  _Counts(Iterable<Employee> employees) {
+    for (final employee in employees) {
+      if (!employee.isActive) continue;
+      final area = OrgStructure.payrollKey(employee.area);
+      _byArea[area] = (_byArea[area] ?? 0) + 1;
+      final team = (area, OrgStructure.payrollKey(employee.team));
+      _byTeam[team] = (_byTeam[team] ?? 0) + 1;
     }
   }
 
-  int deArea(Area area) => _porArea[area.claveNomina] ?? 0;
+  int forArea(Area area) => _byArea[area.payrollKey] ?? 0;
 
-  int deEquipo(Area area, Equipo equipo) =>
-      _porEquipo[(area.claveNomina, equipo.claveNomina)] ?? 0;
+  int forTeam(Area area, Team team) =>
+      _byTeam[(area.payrollKey, team.payrollKey)] ?? 0;
 }
 
-String _colaboradores(int cantidad) =>
-    '$cantidad ${cantidad == 1 ? 'colaborador' : 'colaboradores'}';
+String _employees(int count) =>
+    '$count ${count == 1 ? 'colaborador' : 'colaboradores'}';
 
-class _TarjetaArea extends StatelessWidget {
+class _CardArea extends StatelessWidget {
   final Area area;
-  final List<Equipo> equipos;
-  final _Conteos conteos;
-  final Map<String, String> nombrePorEmail;
-  final bool habilitado;
-  final VoidCallback onLideres;
-  final ValueChanged<Equipo> onLideresEquipo;
+  final List<Team> teams;
+  final _Counts counts;
+  final Map<String, String> nameByEmail;
+  final bool enabled;
+  final VoidCallback onLeaders;
+  final ValueChanged<Team> onTeamLeaders;
 
-  const _TarjetaArea({
+  const _CardArea({
     required this.area,
-    required this.equipos,
-    required this.conteos,
-    required this.nombrePorEmail,
-    required this.habilitado,
-    required this.onLideres,
-    required this.onLideresEquipo,
+    required this.teams,
+    required this.counts,
+    required this.nameByEmail,
+    required this.enabled,
+    required this.onLeaders,
+    required this.onTeamLeaders,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final detalle =
-        '${equipos.length} ${equipos.length == 1 ? 'equipo' : 'equipos'} · '
-        '${_colaboradores(conteos.deArea(area))}';
+    final detail =
+        '${teams.length} ${teams.length == 1 ? 'equipo' : 'equipos'} · '
+        '${_employees(counts.forArea(area))}';
 
     return Container(
       key: Key('estructura_area_${area.id}'),
@@ -326,7 +317,7 @@ class _TarjetaArea extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      area.nombre,
+                      area.name,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -335,7 +326,7 @@ class _TarjetaArea extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      detalle,
+                      detail,
                       style: TextStyle(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
@@ -347,17 +338,17 @@ class _TarjetaArea extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _Lideres(
-            clave: 'estructura_lideres_area_${area.id}',
-            etiqueta: 'Líderes de área',
-            emails: area.lideres,
-            nombrePorEmail: nombrePorEmail,
-            habilitado: habilitado,
-            onEditar: onLideres,
+          _Leaders(
+            itemKey: 'estructura_lideres_area_${area.id}',
+            label: 'Líderes de área',
+            emails: area.leaders,
+            nameByEmail: nameByEmail,
+            enabled: enabled,
+            onEdit: onLeaders,
           ),
           const SizedBox(height: 12),
           Divider(height: 1, color: cs.outlineVariant),
-          if (equipos.isEmpty)
+          if (teams.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
@@ -365,13 +356,13 @@ class _TarjetaArea extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
             ),
-          for (final equipo in equipos)
-            _FilaEquipo(
-              equipo: equipo,
-              colaboradores: conteos.deEquipo(area, equipo),
-              nombrePorEmail: nombrePorEmail,
-              habilitado: habilitado,
-              onLideres: () => onLideresEquipo(equipo),
+          for (final team in teams)
+            _TeamRow(
+              team: team,
+              employees: counts.forTeam(area, team),
+              nameByEmail: nameByEmail,
+              enabled: enabled,
+              onLeaders: () => onTeamLeaders(team),
             ),
         ],
       ),
@@ -379,19 +370,19 @@ class _TarjetaArea extends StatelessWidget {
   }
 }
 
-class _FilaEquipo extends StatelessWidget {
-  final Equipo equipo;
-  final int colaboradores;
-  final Map<String, String> nombrePorEmail;
-  final bool habilitado;
-  final VoidCallback onLideres;
+class _TeamRow extends StatelessWidget {
+  final Team team;
+  final int employees;
+  final Map<String, String> nameByEmail;
+  final bool enabled;
+  final VoidCallback onLeaders;
 
-  const _FilaEquipo({
-    required this.equipo,
-    required this.colaboradores,
-    required this.nombrePorEmail,
-    required this.habilitado,
-    required this.onLideres,
+  const _TeamRow({
+    required this.team,
+    required this.employees,
+    required this.nameByEmail,
+    required this.enabled,
+    required this.onLeaders,
   });
 
   @override
@@ -399,7 +390,7 @@ class _FilaEquipo extends StatelessWidget {
     final cs = context.colorScheme;
 
     return Padding(
-      key: Key('estructura_equipo_${equipo.id}'),
+      key: Key('estructura_equipo_${team.id}'),
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,7 +410,7 @@ class _FilaEquipo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  equipo.nombre,
+                  team.name,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -428,9 +419,9 @@ class _FilaEquipo extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  colaboradores == 0
+                  employees == 0
                       ? 'Sin colaboradores activos en la nómina'
-                      : _colaboradores(colaboradores),
+                      : _employees(employees),
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],
@@ -438,13 +429,13 @@ class _FilaEquipo extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _Lideres(
-              clave: 'estructura_lideres_equipo_${equipo.id}',
-              etiqueta: 'Líderes',
-              emails: equipo.lideres,
-              nombrePorEmail: nombrePorEmail,
-              habilitado: habilitado,
-              onEditar: onLideres,
+            child: _Leaders(
+              itemKey: 'estructura_lideres_equipo_${team.id}',
+              label: 'Líderes',
+              emails: team.leaders,
+              nameByEmail: nameByEmail,
+              enabled: enabled,
+              onEdit: onLeaders,
             ),
           ),
         ],
@@ -453,28 +444,28 @@ class _FilaEquipo extends StatelessWidget {
   }
 }
 
-class _Lideres extends StatelessWidget {
-  final String clave;
-  final String etiqueta;
+class _Leaders extends StatelessWidget {
+  final String itemKey;
+  final String label;
   final Set<String> emails;
-  final Map<String, String> nombrePorEmail;
-  final bool habilitado;
-  final VoidCallback onEditar;
+  final Map<String, String> nameByEmail;
+  final bool enabled;
+  final VoidCallback onEdit;
 
-  const _Lideres({
-    required this.clave,
-    required this.etiqueta,
+  const _Leaders({
+    required this.itemKey,
+    required this.label,
     required this.emails,
-    required this.nombrePorEmail,
-    required this.habilitado,
-    required this.onEditar,
+    required this.nameByEmail,
+    required this.enabled,
+    required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final ordenados = emails.toList()..sort();
+    final colors = context.colors;
+    final sorted = emails.toList()..sort();
 
     return Wrap(
       spacing: 6,
@@ -482,51 +473,51 @@ class _Lideres extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
-          '$etiqueta:',
+          '$label:',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: cs.onSurfaceVariant,
           ),
         ),
-        if (ordenados.isEmpty)
+        if (sorted.isEmpty)
           Text(
             'Sin líderes asignados',
-            style: TextStyle(fontSize: 12, color: colores.textoTenue),
+            style: TextStyle(fontSize: 12, color: colors.faintText),
           ),
-        for (final email in ordenados)
+        for (final email in sorted)
           Tooltip(
             message: email,
-            child: EtiquetaColor(
-              texto: nombrePorEmail[email] ?? email,
-              colores: ParColores(cs.onPrimaryContainer, cs.primaryContainer),
-              icono: Icons.person_outline,
+            child: ColorLabel(
+              text: nameByEmail[email] ?? email,
+              colors: ColorPair(cs.onPrimaryContainer, cs.primaryContainer),
+              icon: Icons.person_outline,
             ),
           ),
         TextButton(
-          key: Key(clave),
-          onPressed: habilitado ? onEditar : null,
+          key: Key(itemKey),
+          onPressed: enabled ? onEdit : null,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             minimumSize: const Size(0, 30),
           ),
-          child: Text(ordenados.isEmpty ? 'Asignar' : 'Editar'),
+          child: Text(sorted.isEmpty ? 'Asignar' : 'Editar'),
         ),
       ],
     );
   }
 }
 
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String mensaje;
+class _Notice extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
   final Color? color;
 
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.mensaje,
+  const _Notice({
+    required this.icon,
+    required this.title,
+    required this.message,
     this.color,
   });
 
@@ -542,10 +533,10 @@ class _Aviso extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icono, size: 34, color: color ?? cs.onSurfaceVariant),
+            Icon(icon, size: 34, color: color ?? cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
-              titulo,
+              title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -555,7 +546,7 @@ class _Aviso extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              mensaje,
+              message,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),

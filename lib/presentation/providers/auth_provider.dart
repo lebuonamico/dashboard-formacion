@@ -1,3 +1,4 @@
+import 'package:app_finnegans/data/supabase/supabase_codes.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -18,7 +19,7 @@ class AuthController extends ChangeNotifier {
   bool _authorizationDenied = false;
   bool isSigningIn = false;
   bool isValidatingAuthorization = false;
-  String? rol;
+  String? role;
   (String, String?)? _authorizedUser;
   (String, String?)? _validatingUser;
   Future<void>? _authorizationFuture;
@@ -65,32 +66,31 @@ class AuthController extends ChangeNotifier {
   String? get email => isAuthorized ? _authorizedUser?.$2 : null;
 
   /// Nombre que Google completa en los metadatos del usuario de Supabase.
-  String? get nombre => _metadato(const ['full_name', 'name']);
+  String? get name => _metadata(const ['full_name', 'name']);
 
   /// Foto de perfil de Google, si la cuenta tiene una.
-  String? get fotoUrl => _metadato(const ['avatar_url', 'picture']);
+  String? get photoUrl => _metadata(const ['avatar_url', 'picture']);
 
-  String? _metadato(List<String> claves) {
+  String? _metadata(List<String> keys) {
     if (!isAuthorized) return null;
     final metadata = _client?.auth.currentUser?.userMetadata;
     if (metadata == null) return null;
-    for (final clave in claves) {
-      final valor = metadata[clave];
-      if (valor is String && valor.trim().isNotEmpty) return valor.trim();
+    for (final key in keys) {
+      final value = metadata[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
     }
     return null;
   }
 
-  bool get esAdmin => isAuthorized && rol == RolUsuario.admin.name;
+  bool get isAdmin => isAuthorized && role == UserRole.admin.name;
 
   /// Rol de la sesión autorizada, o `null` si no hay sesión o el rol guardado
   /// no es uno de los conocidos.
-  RolUsuario? get rolConocido =>
-      isAuthorized ? RolUsuario.fromString(rol) : null;
+  UserRole? get knownRole => isAuthorized ? UserRole.fromString(role) : null;
 
   /// Administrador o Academia: ven toda la empresa, importan archivos y
   /// entran al panel de administración.
-  bool get esGestor => rolConocido?.esGestor ?? false;
+  bool get canManage => knownRole?.canManage ?? false;
 
   void _clearAuthorization() {
     _authorizationRevision++;
@@ -98,7 +98,7 @@ class AuthController extends ChangeNotifier {
     _validatingUser = null;
     _authorizationFuture = null;
     isValidatingAuthorization = false;
-    rol = null;
+    role = null;
   }
 
   void _updateSession() {
@@ -127,7 +127,7 @@ class AuthController extends ChangeNotifier {
     }
     final revision = ++_authorizationRevision;
     _authorizedUser = null;
-    rol = null;
+    role = null;
     error = null;
     _validatingUser = user;
     isValidatingAuthorization = true;
@@ -159,7 +159,8 @@ class AuthController extends ChangeNotifier {
           row['activo'] == true &&
           row['ff_eliminar'] == null &&
           row['ff_bloqueo'] == null) {
-        rol = row['rol'] as String?;
+        final storedRole = row['rol'] as String?;
+        role = storedRole == null ? null : userRoleFromDb(storedRole);
         _authorizedUser = user;
         _authorizationDenied = false;
         clearAccessRejection();
@@ -192,17 +193,17 @@ class AuthController extends ChangeNotifier {
     final isLogin = path == '/' || path == '/login';
     if (!isAuthorized) return path == '/login' ? null : '/login';
     if (isLogin) return '/dashboard';
-    if (!esGestor &&
+    if (!canManage &&
         (path.startsWith('/admin') || path.startsWith('/configuracion'))) {
       return '/dashboard';
     }
     // Un líder no ve la pantalla de Áreas ni el detalle de un área, pero sí
     // el de sus equipos, que cuelga de /areas/:area/equipos/:equipo.
-    final segmentos = path.split('/').where((s) => s.isNotEmpty).toList();
-    if (rolConocido == RolUsuario.lider &&
-        segmentos.isNotEmpty &&
-        segmentos.first == 'areas' &&
-        segmentos.length <= 2) {
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+    if (knownRole == UserRole.teamLead &&
+        segments.isNotEmpty &&
+        segments.first == 'areas' &&
+        segments.length <= 2) {
       return '/equipos';
     }
     return null;

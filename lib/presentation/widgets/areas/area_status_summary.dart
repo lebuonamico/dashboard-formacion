@@ -4,21 +4,21 @@ import 'package:flutter/material.dart';
 
 class AreasStatusSummary extends StatelessWidget {
   final int total;
-  final int enObjetivo;
-  final int enRiesgo;
-  final int criticos;
+  final int onTarget;
+  final int atRisk;
+  final int critical;
 
   const AreasStatusSummary({
     super.key,
     required this.total,
-    required this.enObjetivo,
-    required this.enRiesgo,
-    required this.criticos,
+    required this.onTarget,
+    required this.atRisk,
+    required this.critical,
   });
 
   @override
   Widget build(BuildContext context) {
-    final requierenAtencion = enRiesgo + criticos;
+    final needAttention = atRisk + critical;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -29,7 +29,7 @@ class AreasStatusSummary extends StatelessWidget {
         children: [
           SizedBox(
             height: 44,
-            child: _StatusHeading(requierenAtencion: requierenAtencion),
+            child: _StatusHeading(needAttention: needAttention),
           ),
           const SizedBox(height: 12),
           Flexible(
@@ -43,25 +43,25 @@ class AreasStatusSummary extends StatelessWidget {
                   slices: [
                     AreasDonutSlice(
                       label: 'En objetivo',
-                      value: enObjetivo.toDouble(),
-                      color: context.colores.exito.texto,
-                      backgroundColor: context.colores.exito.fondo,
+                      value: onTarget.toDouble(),
+                      color: context.colors.success.text,
+                      backgroundColor: context.colors.success.background,
                       help:
                           'Áreas con 100% o más de las horas objetivo del período.',
                     ),
                     AreasDonutSlice(
                       label: 'En riesgo',
-                      value: enRiesgo.toDouble(),
-                      color: context.colores.advertencia.texto,
-                      backgroundColor: context.colores.advertencia.fondo,
+                      value: atRisk.toDouble(),
+                      color: context.colors.warning.text,
+                      backgroundColor: context.colors.warning.background,
                       help:
                           'Áreas con al menos 70% de las horas objetivo, pero sin llegar al 100%.',
                     ),
                     AreasDonutSlice(
                       label: 'Críticas',
-                      value: criticos.toDouble(),
-                      color: context.colores.peligro.texto,
-                      backgroundColor: context.colores.peligro.fondo,
+                      value: critical.toDouble(),
+                      color: context.colors.danger.text,
+                      backgroundColor: context.colors.danger.background,
                       help:
                           'Áreas por debajo del 70% de las horas objetivo del período.',
                     ),
@@ -77,9 +77,9 @@ class AreasStatusSummary extends StatelessWidget {
 }
 
 class _StatusHeading extends StatelessWidget {
-  final int requierenAtencion;
+  final int needAttention;
 
-  const _StatusHeading({required this.requierenAtencion});
+  const _StatusHeading({required this.needAttention});
 
   @override
   Widget build(BuildContext context) {
@@ -111,9 +111,9 @@ class _StatusHeading extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          requierenAtencion == 0
+          needAttention == 0
               ? 'No hay áreas que requieran atención.'
-              : '$requierenAtencion ${requierenAtencion == 1 ? 'área requiere' : 'áreas requieren'} atención.',
+              : '$needAttention ${needAttention == 1 ? 'área requiere' : 'áreas requieren'} atención.',
           style: TextStyle(
             fontSize: 13,
             color: context.colorScheme.onSurfaceVariant,

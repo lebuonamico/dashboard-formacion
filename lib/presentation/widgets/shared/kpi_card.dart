@@ -17,13 +17,13 @@ class KpiCardRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final ancho = constraints.maxWidth;
-        final columns = ancho >= 1300
+        final width = constraints.maxWidth;
+        final columns = width >= 1300
             ? 5
-            : ancho >= 1050
+            : width >= 1050
             // Con 5 cards, 3 + 2 queda mejor que 4 + 1.
             ? (cards.length == 5 ? 3 : 4)
-            : ancho >= 680
+            : width >= 680
             ? 2
             : 1;
         return GridView.builder(
@@ -47,37 +47,37 @@ class KpiCardRow extends StatelessWidget {
 /// del año y cuántos puntos subió o bajó contra el mes anterior; en el
 /// mensual, el del mes y la variación de horas por persona contra el anterior.
 /// [color] reemplaza al del semáforo cuando la sección tiene su propio estado.
-Widget cumplimientoKpiCard(
+Widget complianceKpiCard(
   BuildContext context, {
-  required bool esAnual,
-  required int anio,
-  required int mes,
-  required double porcentaje,
-  VariacionCumplimiento? variacion,
+  required bool isAnnual,
+  required int year,
+  required int month,
+  required double percentage,
+  ComplianceVariation? variation,
   Color? color,
 }) {
   final colorCard =
-      color ?? EstadoSemaforo.desdePorcentaje(porcentaje).colores(context).texto;
-  if (esAnual) {
+      color ?? ComplianceLevel.fromPercentage(percentage).colors(context).text;
+  if (isAnnual) {
     return DashboardKpiCard(
-      title: 'CUMPLIMIENTO · AÑO $anio',
-      value: formatearPorcentaje(porcentaje),
+      title: 'CUMPLIMIENTO · AÑO $year',
+      value: formatPercentage(percentage),
       suffix: 'acumulado del año',
-      suffixDebajo: true,
-      progress: (porcentaje / 100).clamp(0.0, 1.0),
+      suffixBelow: true,
+      progress: (percentage / 100).clamp(0.0, 1.0),
       progressLabel: 'Acumulado del año',
       footer: '',
-      badge: variacion?.puntos == null
+      badge: variation?.points == null
           ? null
-          : badgeVariacion(
+          : variationBadge(
               context,
-              variacion!.puntos!,
+              variation!.points!,
               'pts',
               key: const Key('kpi_variacion_mes'),
             ),
       icon: Icons.event_available_outlined,
       color: colorCard,
-      ayuda:
+      help:
           'Horas válidas acumuladas en el año sobre la suma de los objetivos '
           'de los meses con datos. Los meses sin registros CRM ni LMS no '
           'cuentan. El recuadro muestra cuántos puntos cambió contra el '
@@ -85,29 +85,29 @@ Widget cumplimientoKpiCard(
     );
   }
 
-  final anterior = variacion?.horasPersonaAnterior;
+  final previous = variation?.previousHoursPerPerson;
   return DashboardKpiCard(
-    title: 'CUMPLIMIENTO · ${nombreMes(mes).toUpperCase()}',
-    value: formatearPorcentaje(porcentaje),
+    title: 'CUMPLIMIENTO · ${monthName(month).toUpperCase()}',
+    value: formatPercentage(percentage),
     suffix: 'del objetivo del mes',
-    progress: (porcentaje / 100).clamp(0.0, 1.0),
-    progressLabel: variacion == null
+    progress: (percentage / 100).clamp(0.0, 1.0),
+    progressLabel: variation == null
         ? ''
-        : '${variacion.horasPersona.toStringAsFixed(1)} h por persona',
-    footer: anterior == null
+        : '${variation.hoursPerPerson.toStringAsFixed(1)} h por persona',
+    footer: previous == null
         ? 'Sin datos del mes anterior'
-        : 'Mes anterior: ${anterior.toStringAsFixed(1)} h',
-    badge: variacion?.horas == null
+        : 'Mes anterior: ${previous.toStringAsFixed(1)} h',
+    badge: variation?.hours == null
         ? null
-        : badgeVariacion(
+        : variationBadge(
             context,
-            variacion!.horas!,
+            variation!.hours!,
             'h',
             key: const Key('kpi_variacion_mes'),
           ),
     icon: Icons.event_available_outlined,
     color: colorCard,
-    ayuda:
+    help:
         'Horas válidas del mes sobre el objetivo del mes de los colaboradores '
         'elegibles, según su seniority. Cada persona suma como máximo su '
         'objetivo en cada categoría. El recuadro compara las horas por '
@@ -118,42 +118,42 @@ Widget cumplimientoKpiCard(
 /// Card de proyección a fin de año con el criterio del inicio: porcentaje de
 /// la meta, variación contra el mes anterior, horas por persona, estado,
 /// cuántos llegan y el ajuste necesario.
-Widget proyeccionKpiCard(BuildContext context, ProyeccionAnual proyeccion) {
-  final colores = proyeccion.estado.colores(context);
-  final meta = proyeccion.meta;
-  final cerrado = proyeccion.mesesRestantes == 0;
+Widget projectionKpiCard(BuildContext context, AnnualProjection projection) {
+  final colors = projection.status.colors(context);
+  final goal = projection.goal;
+  final closed = projection.remainingMonths == 0;
 
   return DashboardKpiCard(
     title: 'PROYECCIÓN ANUAL',
-    value: formatearPorcentaje(proyeccion.porcentaje),
+    value: formatPercentage(projection.percentage),
     suffix:
-        '${proyeccion.proyeccion.toStringAsFixed(0)} / '
-        '${meta.toStringAsFixed(0)} h por persona',
-    suffixDebajo: true,
-    progress: meta == 0 ? 1 : (proyeccion.proyeccion / meta).clamp(0.0, 1.0),
+        '${projection.projection.toStringAsFixed(0)} / '
+        '${goal.toStringAsFixed(0)} h por persona',
+    suffixBelow: true,
+    progress: goal == 0 ? 1 : (projection.projection / goal).clamp(0.0, 1.0),
     progressLabel:
-        '${proyeccion.estado.label} · ${proyeccion.llegan} de '
-        '${proyeccion.colaboradores} ${cerrado ? 'cumplieron' : 'llegan'}',
-    footer: cerrado
-        ? 'Año cerrado: ${formatearPorcentaje(proyeccion.porcentaje)} de la meta'
-        : proyeccion.ajuste > 0
-        ? 'Ajuste: +${proyeccion.ajuste.toStringAsFixed(1)} h/mes por persona'
+        '${projection.status.label} · ${projection.arrive} de '
+        '${projection.employeeCount} ${closed ? 'cumplieron' : 'llegan'}',
+    footer: closed
+        ? 'Año cerrado: ${formatPercentage(projection.percentage)} de la meta'
+        : projection.adjustment > 0
+        ? 'Ajuste: +${projection.adjustment.toStringAsFixed(1)} h/mes por persona'
         : 'En camino a la meta',
-    badge: proyeccion.variacionProyeccion == null
+    badge: projection.projectionVariation == null
         ? null
-        : badgeVariacion(
+        : variationBadge(
             context,
-            proyeccion.variacionProyeccion!,
+            projection.projectionVariation!,
             'pts',
             key: const Key('kpi_variacion_proyeccion'),
           ),
-    icon: switch (proyeccion.estado) {
-      EstadoProyeccion.enCamino => Icons.trending_up,
-      EstadoProyeccion.alcanzable => Icons.trending_flat,
-      EstadoProyeccion.enRiesgo => Icons.trending_down,
+    icon: switch (projection.status) {
+      ProjectionStatus.onTrack => Icons.trending_up,
+      ProjectionStatus.reachable => Icons.trending_flat,
+      ProjectionStatus.atRisk => Icons.trending_down,
     },
-    color: colores.texto,
-    ayuda:
+    color: colors.text,
+    help:
         'Estimación a diciembre: lo acumulado más la tendencia de cada '
         'colaborador según sus meses con datos, sobre la meta del año. Las '
         'horas de una persona no cubren a otra, ni las de una categoría a '
@@ -164,31 +164,31 @@ Widget proyeccionKpiCard(BuildContext context, ProyeccionAnual proyeccion) {
 }
 
 /// "▲ +2.3 pts vs mes anterior" en verde, o "▼ -1.0 pts …" en rojo.
-Widget badgeVariacion(
+Widget variationBadge(
   BuildContext context,
-  double valor,
-  String unidad, {
+  double value,
+  String unit, {
   Key? key,
 }) {
-  final mejoro = valor >= 0;
+  final improved = value >= 0;
   return DashboardKpiBadge(
     key: key,
-    texto:
-        '${mejoro ? '▲ +' : '▼ '}${valor.toStringAsFixed(1)} $unidad '
+    text:
+        '${improved ? '▲ +' : '▼ '}${value.toStringAsFixed(1)} $unit '
         'vs mes anterior',
-    colores: mejoro ? context.colores.exito : context.colores.peligro,
+    colors: improved ? context.colors.success : context.colors.danger,
   );
 }
 
 /// Recuadro chico dentro de una card: estado o variación.
 class DashboardKpiBadge extends StatelessWidget {
-  final String texto;
-  final ParColores colores;
+  final String text;
+  final ColorPair colors;
 
   const DashboardKpiBadge({
     super.key,
-    required this.texto,
-    required this.colores,
+    required this.text,
+    required this.colors,
   });
 
   @override
@@ -196,17 +196,17 @@ class DashboardKpiBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: colores.fondo,
+        color: colors.background,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        texto,
+        text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: colores.texto,
+          color: colors.text,
         ),
       ),
     );
@@ -227,13 +227,13 @@ class DashboardKpiCard extends StatelessWidget {
 
   /// Muestra el texto gris debajo del valor en lugar de al lado, para cuando
   /// no entra junto al recuadro.
-  final bool suffixDebajo;
+  final bool suffixBelow;
   final IconData icon;
   final Color color;
 
   /// Qué muestra la card y cómo se calcula. Aparece al pasar el mouse o
   /// tocar el ícono de información junto al título.
-  final String? ayuda;
+  final String? help;
 
   const DashboardKpiCard({
     super.key,
@@ -245,13 +245,13 @@ class DashboardKpiCard extends StatelessWidget {
     required this.footer,
     this.secondaryText,
     this.badge,
-    this.suffixDebajo = false,
+    this.suffixBelow = false,
     required this.icon,
     required this.color,
-    this.ayuda,
+    this.help,
   });
 
-  Widget _textoSuffix(BuildContext context) => Text(
+  Widget _textSuffix(BuildContext context) => Text(
     suffix,
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
@@ -262,7 +262,7 @@ class DashboardKpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      decoration: context.panel(sombra: true),
+      decoration: context.panel(shadow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -281,16 +281,16 @@ class DashboardKpiCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (ayuda case final ayuda?) ...[
+              if (help case final help?) ...[
                 Tooltip(
-                  message: ayuda,
+                  message: help,
                   triggerMode: TooltipTriggerMode.tap,
                   showDuration: const Duration(seconds: 8),
                   constraints: const BoxConstraints(maxWidth: 320),
                   child: Icon(
                     Icons.info_outline,
                     size: 15,
-                    color: context.colores.textoTenue,
+                    color: context.colors.faintText,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -307,7 +307,7 @@ class DashboardKpiCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: context.colores.exito.texto,
+                color: context.colors.success.text,
               ),
             ),
           ],
@@ -325,27 +325,24 @@ class DashboardKpiCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 5),
-              if (suffixDebajo)
+              if (suffixBelow)
                 const Spacer()
               else
-                Flexible(child: _textoSuffix(context)),
+                Flexible(child: _textSuffix(context)),
               if (badge != null) ...[
                 const SizedBox(width: 6),
                 Flexible(child: badge!),
               ],
             ],
           ),
-          if (suffixDebajo) ...[
-            const SizedBox(height: 2),
-            _textoSuffix(context),
-          ],
+          if (suffixBelow) ...[const SizedBox(height: 2), _textSuffix(context)],
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: context.colores.graficoPista,
+              backgroundColor: context.colors.chartTrack,
               color: color,
             ),
           ),
@@ -385,30 +382,30 @@ class DashboardKpiCard extends StatelessWidget {
 }
 
 /// Quiénes cuentan en el período, para las cards de colaboradores.
-const ayudaNominaElegible =
+const eligiblePayrollHelp =
     'Colaboradores de la nómina elegibles en el período: ya habían ingresado '
     'y estaban activos al cierre del mes (en el anual, en algún mes con '
     'datos).';
 
-const ayudaHorasValidasMes =
+const monthCreditedHoursHelp =
     'Horas que cuentan para el objetivo del mes: cursos de Negocio y Blandas '
     'finalizados en el LMS, con la carga horaria del catálogo, y horas de '
     'Libres y Dictado cargadas en el CRM. Cada persona suma como máximo su '
     'objetivo en cada categoría.';
 
-const ayudaHorasValidasAnual =
+const annualCreditedHoursHelp =
     'Suma de las horas válidas de los meses con datos del año: cursos de '
     'Negocio y Blandas finalizados en el LMS y horas de Libres y Dictado del '
     'CRM. Un mes fuerte compensa uno flojo; cada persona suma como máximo su '
     'objetivo anual en cada categoría.';
 
 /// Integrantes de un área o equipo y cuántos cumplieron.
-String ayudaIntegrantes(String seccion) =>
-    'Colaboradores elegibles $seccion en el período. Abajo, cuántos '
+String membersHelp(String section) =>
+    'Colaboradores elegibles $section en el período. Abajo, cuántos '
     'cumplieron el objetivo en todas sus categorías.';
 
 /// Objetivo de horas de un área o equipo.
-String ayudaObjetivo(String seccion) =>
-    'Horas que $seccion debía hacer según el plan de formación para la '
+String targetHelp(String section) =>
+    'Horas que $section debía hacer según el plan de formación para la '
     'seniority de cada integrante. En el anual, la suma de los objetivos de '
     'los meses con datos.';

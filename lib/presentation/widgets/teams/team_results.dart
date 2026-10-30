@@ -105,14 +105,14 @@ class _TeamResultsState extends State<TeamResults> {
               const _EmptySearch()
             else ...[
               if (pageCount > 1) ...[
-                PaginacionResultados(
-                  paginaActual: safePage,
-                  cantidadPaginas: pageCount,
-                  desde: startIndex + 1,
-                  hasta: endIndex,
-                  totalResultados: widget.teams.length,
-                  etiquetaResultados: 'equipos',
-                  icono: Icons.view_module_outlined,
+                ResultsPagination(
+                  currentPage: safePage,
+                  pageCount: pageCount,
+                  from: startIndex + 1,
+                  until: endIndex,
+                  totalResults: widget.teams.length,
+                  resultsLabel: 'equipos',
+                  icon: Icons.view_module_outlined,
                   onPrevious: safePage == 0
                       ? null
                       : () => setState(() => _currentPage = safePage - 1),

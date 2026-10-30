@@ -4,116 +4,116 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/domain/servicios/proyeccion_service.dart';
 
 /// Qué sección de la app resume el reporte.
-enum TipoReporte {
-  general('Reporte general', tituloDesglose: 'Cumplimiento por área'),
-  area('Reporte de área', tituloDesglose: 'Cumplimiento por equipo'),
-  equipo('Reporte de equipo');
+enum ReportType {
+  general('Reporte general', breakdownTitle: 'Cumplimiento por área'),
+  area('Reporte de área', breakdownTitle: 'Cumplimiento por equipo'),
+  team('Reporte de equipo');
 
   final String label;
 
   /// Título de la tabla de desglose; `null` si el reporte no tiene desglose.
-  final String? tituloDesglose;
+  final String? breakdownTitle;
 
-  const TipoReporte(this.label, {this.tituloDesglose});
+  const ReportType(this.label, {this.breakdownTitle});
 }
 
 /// Semáforo de una fila del reporte, ya resuelto por quien lo arma.
-enum NivelReporte {
+enum ReportLevel {
   ok,
-  atencion,
-  critico;
+  attention,
+  critical;
 
   /// Mismos cortes que el semáforo de la app.
-  static NivelReporte desdePorcentaje(double porcentaje) => porcentaje >= 100
-      ? NivelReporte.ok
-      : porcentaje >= 70
-      ? NivelReporte.atencion
-      : NivelReporte.critico;
+  static ReportLevel fromPercentage(double percentage) => percentage >= 100
+      ? ReportLevel.ok
+      : percentage >= 70
+      ? ReportLevel.attention
+      : ReportLevel.critical;
 }
 
 /// Qué dato de ubicación acompaña a cada integrante en la tabla.
-enum UbicacionIntegrante { ninguna, equipo, areaYEquipo }
+enum MemberLocation { none, team, teamAreaY }
 
-typedef HorasCategoriaReporte = ({
-  TipoCurso tipo,
+typedef ReportCategoryHours = ({
+  CourseCategory tipo,
   double validas,
   double objetivo,
 });
 
 /// Una fila del desglose: áreas en el general, equipos en el de área.
-class FilaDesgloseReporte {
-  final String nombre;
-  final int integrantes;
-  final double horas;
-  final double objetivo;
-  final double porcentaje;
-  final String estado;
-  final NivelReporte nivel;
+class ReportBreakdownRow {
+  final String name;
+  final int memberCount;
+  final double hours;
+  final double target;
+  final double percentage;
+  final String status;
+  final ReportLevel level;
 
-  const FilaDesgloseReporte({
-    required this.nombre,
-    required this.integrantes,
-    required this.horas,
-    required this.objetivo,
-    required this.porcentaje,
-    required this.estado,
-    required this.nivel,
+  const ReportBreakdownRow({
+    required this.name,
+    required this.memberCount,
+    required this.hours,
+    required this.target,
+    required this.percentage,
+    required this.status,
+    required this.level,
   });
 }
 
 /// Todo lo que muestra el reporte, con los mismos números que la pantalla.
-class ReporteFormacion {
-  final TipoReporte tipo;
-  final String titulo;
+class TrainingReport {
+  final ReportType type;
+  final String title;
 
   /// Líneas cortas bajo el título: área, líder, etc.
-  final List<String> detalles;
-  final String periodo;
+  final List<String> details;
+  final String period;
 
-  final int integrantes;
-  final int enObjetivo;
-  final double horas;
-  final double objetivo;
-  final double porcentaje;
-  final String estado;
-  final NivelReporte nivel;
+  final int memberCount;
+  final int onTarget;
+  final double hours;
+  final double target;
+  final double percentage;
+  final String status;
+  final ReportLevel level;
 
-  final ProyeccionAnual? proyeccion;
-  final List<CumplimientoEmpleado> miembros;
-  final List<FilaDesgloseReporte> desglose;
+  final AnnualProjection? projection;
+  final List<EmployeeCompliance> members;
+  final List<ReportBreakdownRow> breakdown;
 
   /// Horas válidas por persona de los últimos meses (solo el general).
-  final List<({DateTime mes, double horas})> evolucion;
+  final List<({DateTime month, double hours})> evolution;
 
-  const ReporteFormacion({
-    required this.tipo,
-    required this.titulo,
-    this.detalles = const [],
-    required this.periodo,
-    required this.integrantes,
-    required this.enObjetivo,
-    required this.horas,
-    required this.objetivo,
-    required this.porcentaje,
-    required this.estado,
-    required this.nivel,
-    this.proyeccion,
-    required this.miembros,
-    this.desglose = const [],
-    this.evolucion = const [],
+  const TrainingReport({
+    required this.type,
+    required this.title,
+    this.details = const [],
+    required this.period,
+    required this.memberCount,
+    required this.onTarget,
+    required this.hours,
+    required this.target,
+    required this.percentage,
+    required this.status,
+    required this.level,
+    this.projection,
+    required this.members,
+    this.breakdown = const [],
+    this.evolution = const [],
   });
 
   /// En el general la nómina es larga: se listan solo los críticos.
-  bool get soloCriticos => tipo == TipoReporte.general;
+  bool get criticalOnly => type == ReportType.general;
 
-  UbicacionIntegrante get ubicacionIntegrante => switch (tipo) {
-    TipoReporte.general => UbicacionIntegrante.areaYEquipo,
-    TipoReporte.area => UbicacionIntegrante.equipo,
-    TipoReporte.equipo => UbicacionIntegrante.ninguna,
+  MemberLocation get memberLocation => switch (type) {
+    ReportType.general => MemberLocation.teamAreaY,
+    ReportType.area => MemberLocation.team,
+    ReportType.team => MemberLocation.none,
   };
 
-  String get nombreArchivo {
-    final base = '${tipo.label} $titulo $periodo'
+  String get fileName {
+    final base = '${type.label} $title $period'
         .toLowerCase()
         .replaceAll(RegExp(r'[áà]'), 'a')
         .replaceAll(RegExp(r'[éè]'), 'e')
@@ -127,52 +127,51 @@ class ReporteFormacion {
   }
 
   /// Cuántas personas evaluadas caen en cada nivel del semáforo.
-  Map<NivelReporte, int> get conteoPorNivel {
-    final conteo = {for (final nivel in NivelReporte.values) nivel: 0};
-    for (final miembro in miembros) {
-      final nivel = NivelReporte.desdePorcentaje(miembro.porcentajeTotal);
-      conteo[nivel] = conteo[nivel]! + 1;
+  Map<ReportLevel, int> get countByLevel {
+    final count = {for (final level in ReportLevel.values) level: 0};
+    for (final member in members) {
+      final level = ReportLevel.fromPercentage(member.totalPercentage);
+      count[level] = count[level]! + 1;
     }
-    return conteo;
+    return count;
   }
 
   /// Cada persona suma hasta su objetivo en cada categoría, y nada en las que
   /// su seniority no pide: son las horas que cuentan para la meta.
-  List<HorasCategoriaReporte> get horasPorCategoria {
-    double suma(double Function(CumplimientoEmpleado) valor) =>
-        miembros.fold(0, (t, m) => t + valor(m));
+  List<ReportCategoryHours> get hoursByCategory {
+    double sum(double Function(EmployeeCompliance) value) =>
+        members.fold(0, (t, m) => t + value(m));
     return [
-      for (final tipo in TipoCurso.values)
+      for (final type in CourseCategory.values)
         (
-          tipo: tipo,
-          validas: suma((m) => m.horasAplicablesAlObjetivo(tipo)),
-          objetivo: suma((m) => m.horasRequeridas[tipo] ?? 0),
+          tipo: type,
+          validas: sum((m) => m.applicableHours(type)),
+          objetivo: sum((m) => m.requiredHours[type] ?? 0),
         ),
     ];
   }
 
-  ComparacionMoodleCrm get comparacionFuentes =>
-      ComparacionMoodleCrm.desde(miembros);
+  MoodleCrmComparison get sourceComparison => MoodleCrmComparison.from(members);
 
   /// De menor a mayor cumplimiento, y por nombre a igual porcentaje.
-  List<CumplimientoEmpleado> get integrantesListados {
-    final ordenados = [...miembros]
+  List<EmployeeCompliance> get listedMembers {
+    final sorted = [...members]
       ..sort((a, b) {
-        final porcentaje = a.porcentajeTotal.compareTo(b.porcentajeTotal);
-        return porcentaje != 0
-            ? porcentaje
-            : a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto);
+        final percentage = a.totalPercentage.compareTo(b.totalPercentage);
+        return percentage != 0
+            ? percentage
+            : a.employee.fullName.compareTo(b.employee.fullName);
       });
-    if (!soloCriticos) return ordenados;
+    if (!criticalOnly) return sorted;
     return [
-      for (final m in ordenados)
-        if (NivelReporte.desdePorcentaje(m.porcentajeTotal) ==
-            NivelReporte.critico)
+      for (final m in sorted)
+        if (ReportLevel.fromPercentage(m.totalPercentage) ==
+            ReportLevel.critical)
           m,
     ];
   }
 
   /// De menor a mayor cumplimiento: lo que peor está, primero.
-  List<FilaDesgloseReporte> get desgloseOrdenado =>
-      [...desglose]..sort((a, b) => a.porcentaje.compareTo(b.porcentaje));
+  List<ReportBreakdownRow> get sortedBreakdown =>
+      [...breakdown]..sort((a, b) => a.percentage.compareTo(b.percentage));
 }

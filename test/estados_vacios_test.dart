@@ -29,47 +29,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _anio = 2026;
-const _mes = 6;
+const _year = 2026;
+const _month = 6;
 
-final _empleado = Empleado(
-  legajo: '100',
-  nombre: 'Ana',
-  apellido: 'Pérez',
+final _employee = Employee(
+  employeeId: '100',
+  firstName: 'Ana',
+  lastName: 'Pérez',
   seniority: Seniority.junior1,
   area: 'Tecnología',
-  mail: 'ana@finnegans.com',
-  equipo: 'Plataforma',
-  gerente: 'Beto',
-  fechaIngreso: DateTime(2020, 1, 1),
+  email: 'ana@finnegans.com',
+  team: 'Plataforma',
+  manager: 'Beto',
+  hireDate: DateTime(2020, 1, 1),
 );
 
-final _curso = Curso(
+final _course = Course(
   id: '1',
-  nombre: 'Negociación',
-  clasificacion: TipoCurso.habilidadesDeNegocio,
-  areaCurso: '',
-  instructorLegajo: '',
-  cargaHorariaHs: 4,
+  name: 'Negociación',
+  category: CourseCategory.businessSkills,
+  courseArea: '',
+  instructorEmployeeId: '',
+  workloadHours: 4,
 );
 
-CargaDeHorasCRM _carga(DateTime fecha) => CargaDeHorasCRM(
-  id: 'tx-${fecha.month}',
-  cursoNombre: _curso.nombre,
-  empleadoLegajo: _empleado.legajo,
-  fecha: fecha,
-  horasTotales: 2,
-  tipo: TipoCargaDeHoras.tomada,
+CrmTimeEntry _timeEntry(DateTime date) => CrmTimeEntry(
+  id: 'tx-${date.month}',
+  courseName: _course.name,
+  employeeId: _employee.employeeId,
+  date: date,
+  hours: 2,
+  kind: TimeEntryKind.taken,
 );
 
-Future<ProviderContainer> _mostrar(
+Future<ProviderContainer> _show(
   WidgetTester tester, {
-  required String ruta,
-  required Widget Function(GoRouterState state) pantalla,
-  List<Empleado>? empleados,
-  List<Curso>? cursos,
-  List<CargaDeHorasCRM> cargas = const [],
-  List<CertificacionMoodle> certificaciones = const [],
+  required String route,
+  required Widget Function(GoRouterState state) screen,
+  List<Employee>? employees,
+  List<Course>? courses,
+  List<CrmTimeEntry> timeEntries = const [],
+  List<LmsCertification> certifications = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(2400, 2000);
@@ -80,28 +80,26 @@ Future<ProviderContainer> _mostrar(
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith((ref) => AuthController(null)),
-      empleadosProvider.overrideWith((ref) async => empleados ?? [_empleado]),
-      empleadoHistorialProvider.overrideWith((ref) async => null),
-      cursosProvider.overrideWith((ref) async => cursos ?? [_curso]),
-      cargasDeHorasCRMProvider.overrideWith((ref) async => cargas),
-      cargasDashboardProvider.overrideWith((ref) async => cargas),
-      certificacionesMoodleProvider.overrideWith(
-        (ref) async => certificaciones,
-      ),
-      alcancePeriodoProvider.overrideWith((ref) => AlcancePeriodo.mensual),
-      filtroMesPeriodoProvider.overrideWith((ref) => _mes),
-      filtroAnioPeriodoProvider.overrideWith((ref) => _anio),
+      employeesProvider.overrideWith((ref) async => employees ?? [_employee]),
+      employeeHistoryProvider.overrideWith((ref) async => null),
+      coursesProvider.overrideWith((ref) async => courses ?? [_course]),
+      crmTimeEntriesProvider.overrideWith((ref) async => timeEntries),
+      dashboardTimeEntriesProvider.overrideWith((ref) async => timeEntries),
+      lmsCertificationsProvider.overrideWith((ref) async => certifications),
+      periodScopeProvider.overrideWith((ref) => PeriodScope.monthly),
+      periodMonthFilterProvider.overrideWith((ref) => _month),
+      periodYearFilterProvider.overrideWith((ref) => _year),
     ],
     retry: (_, _) => null,
   );
   addTearDown(container.dispose);
 
   final router = GoRouter(
-    initialLocation: ruta,
+    initialLocation: route,
     routes: [
       GoRoute(
-        path: ruta.split('?').first,
-        builder: (context, state) => pantalla(state),
+        path: route.split('?').first,
+        builder: (context, state) => screen(state),
       ),
     ],
   );
@@ -135,11 +133,11 @@ void main() {
     testWidgets('sin registros en el período muestra el aviso y no los KPIs', (
       tester,
     ) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/dashboard',
-        pantalla: (_) => const DashboardScreen(),
-        cargas: [_carga(DateTime(_anio, 3, 10))],
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, 3, 10))],
       );
 
       expect(
@@ -150,11 +148,11 @@ void main() {
     });
 
     testWidgets('con registros en el período muestra los KPIs', (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/dashboard',
-        pantalla: (_) => const DashboardScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
       expect(find.textContaining('No hay datos cargados'), findsNothing);
@@ -164,73 +162,73 @@ void main() {
     });
 
     testWidgets('usa la misma base que Equipos', (tester) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/dashboard',
-        pantalla: (_) => const DashboardScreen(),
-        empleados: [
-          _empleado,
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        employees: [
+          _employee,
           // Ni el inactivo ni el que no tiene fecha de ingreso son elegibles.
-          Empleado(
-            legajo: '200',
-            nombre: 'Baja',
-            apellido: 'Inactiva',
+          Employee(
+            employeeId: '200',
+            firstName: 'Baja',
+            lastName: 'Inactiva',
             seniority: Seniority.junior1,
             area: 'Tecnología',
-            mail: 'baja@finnegans.com',
-            equipo: 'Plataforma',
-            gerente: 'Beto',
-            fechaIngreso: DateTime(2020, 1, 1),
-            activo: false,
+            email: 'baja@finnegans.com',
+            team: 'Plataforma',
+            manager: 'Beto',
+            hireDate: DateTime(2020, 1, 1),
+            isActive: false,
           ),
-          Empleado(
-            legajo: '300',
-            nombre: 'Sin',
-            apellido: 'Ingreso',
+          Employee(
+            employeeId: '300',
+            firstName: 'Sin',
+            lastName: 'Ingreso',
             seniority: Seniority.junior1,
             area: 'Tecnología',
-            mail: 'sin@finnegans.com',
-            equipo: 'Plataforma',
-            gerente: 'Beto',
+            email: 'sin@finnegans.com',
+            team: 'Plataforma',
+            manager: 'Beto',
           ),
         ],
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
         // Finalizó en marzo: no valida las horas CRM de junio.
-        certificaciones: [
-          CertificacionMoodle(
-            legajo: _empleado.legajo,
-            cursoNombre: _curso.nombre,
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime(_anio, 3, 20),
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, 3, 20),
           ),
         ],
       );
 
-      final cumplimientos = await container.read(
-        cumplimientoDashboardProvider.future,
+      final complianceList = await container.read(
+        dashboardComplianceProvider.future,
       );
-      final resumenEquipos = await container.read(
+      final teamsSummary = await container.read(
         teamsPeriodSummaryProvider.future,
       );
-      final horasDashboard = cumplimientos.fold<double>(
+      final dashboardHours = complianceList.fold<double>(
         0,
-        (total, item) => total + item.totalHorasValidas,
+        (total, item) => total + item.totalCreditedHours,
       );
 
-      expect(cumplimientos.map((item) => item.empleado.legajo).toSet(), {
-        _empleado.legajo,
+      expect(complianceList.map((item) => item.employee.employeeId).toSet(), {
+        _employee.employeeId,
       });
-      expect(resumenEquipos.employeeCount, 1);
-      expect(horasDashboard, resumenEquipos.completedHours);
-      expect(horasDashboard, 0);
+      expect(teamsSummary.employeeCount, 1);
+      expect(dashboardHours, teamsSummary.completedHours);
+      expect(dashboardHours, 0);
       // La card de horas muestra solo las válidas para el objetivo.
-      final cardHoras = find.ancestor(
+      final hoursCard = find.ancestor(
         of: find.textContaining('HORAS VÁLIDAS'),
         matching: find.byType(DashboardKpiCard),
       );
-      expect(cardHoras, findsOneWidget);
+      expect(hoursCard, findsOneWidget);
       expect(
-        find.descendant(of: cardHoras, matching: find.text('0.0 h')),
+        find.descendant(of: hoursCard, matching: find.text('0.0 h')),
         findsOneWidget,
       );
     });
@@ -240,11 +238,7 @@ void main() {
     testWidgets('sin registros en el período muestra el aviso del período', (
       tester,
     ) async {
-      await _mostrar(
-        tester,
-        ruta: '/areas',
-        pantalla: (_) => const AreasScreen(),
-      );
+      await _show(tester, route: '/areas', screen: (_) => const AreasScreen());
 
       expect(
         find.text('No hay datos cargados para Junio 2026.'),
@@ -255,15 +249,15 @@ void main() {
     testWidgets(
       'una búsqueda sin coincidencias no se confunde con falta de datos',
       (tester) async {
-        final container = await _mostrar(
+        final container = await _show(
           tester,
-          ruta: '/areas',
-          pantalla: (_) => const AreasScreen(),
-          cargas: [_carga(DateTime(_anio, _mes, 10))],
+          route: '/areas',
+          screen: (_) => const AreasScreen(),
+          timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
         );
         expect(find.text('Tecnología'), findsOneWidget);
 
-        container.read(busquedaAreaProvider.notifier).state = 'inexistente';
+        container.read(searchAreaProvider.notifier).state = 'inexistente';
         await tester.pumpAndSettle();
 
         expect(
@@ -277,11 +271,11 @@ void main() {
     testWidgets('con registros en el período muestra KPIs y tarjetas', (
       tester,
     ) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/areas',
-        pantalla: (_) => const AreasScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
       expect(find.text('ÁREAS ACTIVAS'), findsOneWidget);
@@ -294,16 +288,16 @@ void main() {
     testWidgets('el filtro por estado deja afuera las áreas que no coinciden', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/areas',
-        pantalla: (_) => const AreasScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
       // Sin certificación LMS las horas no cuentan: el área queda crítica.
-      container.read(filtroEstadoAreaProvider.notifier).state =
-          EstadoSemaforo.verde;
+      container.read(areaStatusFilterProvider.notifier).state =
+          ComplianceLevel.onTarget;
       await tester.pumpAndSettle();
 
       expect(find.text('Ver área'), findsNothing);
@@ -318,10 +312,10 @@ void main() {
     testWidgets('sin registros en el período muestra el aviso del período', (
       tester,
     ) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/area',
-        pantalla: (_) => const AreaDetalleScreen(nombreArea: 'Tecnología'),
+        route: '/area',
+        screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
       );
 
       expect(
@@ -334,11 +328,11 @@ void main() {
     testWidgets('con registros muestra KPIs, avance, equipos e integrantes', (
       tester,
     ) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/area',
-        pantalla: (_) => const AreaDetalleScreen(nombreArea: 'Tecnología'),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/area',
+        screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
       expect(find.text('OBJETIVO DEL PERÍODO'), findsOneWidget);
@@ -355,10 +349,10 @@ void main() {
   testWidgets(
     'El detalle de equipo sin datos del período no muestra un error',
     (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/equipo',
-        pantalla: (_) =>
+        route: '/equipo',
+        screen: (_) =>
             const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
       );
 
@@ -373,31 +367,31 @@ void main() {
   testWidgets(
     'El detalle de equipo lista integrantes sin checkbox y la fila es clickeable',
     (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/equipo',
-        pantalla: (_) =>
+        route: '/equipo',
+        screen: (_) =>
             const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
       expect(find.text('Integrantes (1)'), findsOneWidget);
       expect(find.text('Ana Pérez'), findsOneWidget);
       expect(find.byType(Checkbox), findsNothing);
 
-      final tabla = tester.widget<DataTable>(find.byType(DataTable));
-      expect(tabla.showCheckboxColumn, isFalse);
-      expect(tabla.rows.first.onSelectChanged, isNotNull);
+      final table = tester.widget<DataTable>(find.byType(DataTable));
+      expect(table.showCheckboxColumn, isFalse);
+      expect(table.rows.first.onSelectChanged, isNotNull);
     },
   );
 
   group('Empleados', () {
     testWidgets('sin nómina importada lo indica', (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/empleados',
-        pantalla: (_) => const EmpleadosScreen(),
-        empleados: const [],
+        route: '/empleados',
+        screen: (_) => const EmployeesScreen(),
+        employees: const [],
       );
 
       expect(find.text('No hay empleados cargados.'), findsOneWidget);
@@ -406,13 +400,13 @@ void main() {
     testWidgets('con nómina y búsqueda sin coincidencias lo distingue', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/empleados',
-        pantalla: (_) => const EmpleadosScreen(),
+        route: '/empleados',
+        screen: (_) => const EmployeesScreen(),
       );
 
-      container.read(busquedaEmpleadoProvider.notifier).state = 'inexistente';
+      container.read(employeeSearchProvider.notifier).state = 'inexistente';
       await tester.pumpAndSettle();
 
       expect(
@@ -423,24 +417,24 @@ void main() {
     });
 
     testWidgets('con muchos empleados pagina el directorio', (tester) async {
-      final empleados = [
+      final employees = [
         for (var i = 0; i < 80; i++)
-          Empleado(
-            legajo: '${1000 + i}',
-            nombre: 'Empleado',
-            apellido: '$i',
+          Employee(
+            employeeId: '${1000 + i}',
+            firstName: 'Empleado',
+            lastName: '$i',
             seniority: Seniority.values[i % Seniority.values.length],
             area: 'Tecnología',
-            mail: 'empleado$i@finnegans.com',
-            equipo: 'Plataforma',
-            gerente: 'Beto',
+            email: 'empleado$i@finnegans.com',
+            team: 'Plataforma',
+            manager: 'Beto',
           ),
       ];
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/empleados',
-        pantalla: (_) => const EmpleadosScreen(),
-        empleados: empleados,
+        route: '/empleados',
+        screen: (_) => const EmployeesScreen(),
+        employees: employees,
       );
 
       expect(find.textContaining('de 80 empleados'), findsOneWidget);
@@ -455,11 +449,11 @@ void main() {
 
   group('Cursos', () {
     testWidgets('sin catálogo importado lo indica', (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/cursos',
-        pantalla: (_) => const CursosScreen(),
-        cursos: const [],
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
+        courses: const [],
       );
 
       expect(find.text('No hay cursos cargados.'), findsOneWidget);
@@ -468,13 +462,13 @@ void main() {
     testWidgets('con catálogo y búsqueda sin coincidencias lo distingue', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/cursos',
-        pantalla: (_) => const CursosScreen(),
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
       );
 
-      container.read(busquedaCursoProvider.notifier).state = 'inexistente';
+      container.read(courseSearchProvider.notifier).state = 'inexistente';
       await tester.pumpAndSettle();
 
       expect(
@@ -487,10 +481,10 @@ void main() {
 
   group('Carga de horas CRM', () {
     testWidgets('sin reporte importado lo indica', (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/cursadas',
-        pantalla: (_) => const CursadasScreen(),
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
       );
 
       expect(find.text('No hay horas CRM cargadas.'), findsOneWidget);
@@ -499,15 +493,14 @@ void main() {
     testWidgets('con cargas y búsqueda sin coincidencias lo distingue', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/cursadas',
-        pantalla: (_) => const CursadasScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(busquedaCargaDeHorasProvider.notifier).state =
-          'inexistente';
+      container.read(timeEntrySearchProvider.notifier).state = 'inexistente';
       await tester.pumpAndSettle();
 
       expect(
@@ -520,15 +513,14 @@ void main() {
     testWidgets('con cargas y un área sin coincidencias lo distingue', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/cursadas',
-        pantalla: (_) => const CursadasScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(busquedaCargaDeHorasProvider.notifier).state =
-          'Inexistente';
+      container.read(timeEntrySearchProvider.notifier).state = 'Inexistente';
       await tester.pumpAndSettle();
 
       expect(
@@ -540,15 +532,14 @@ void main() {
     testWidgets('buscar por el área del colaborador encuentra la carga', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/cursadas',
-        pantalla: (_) => const CursadasScreen(),
-        cargas: [_carga(DateTime(_anio, _mes, 10))],
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(busquedaCargaDeHorasProvider.notifier).state =
-          'tecnología';
+      container.read(timeEntrySearchProvider.notifier).state = 'tecnología';
       await tester.pumpAndSettle();
 
       expect(
@@ -559,22 +550,22 @@ void main() {
     });
 
     testWidgets('con muchas cargas pagina los registros', (tester) async {
-      final cargas = [
+      final timeEntries = [
         for (var i = 0; i < 80; i++)
-          CargaDeHorasCRM(
+          CrmTimeEntry(
             id: 'tx-$i',
-            cursoNombre: _curso.nombre,
-            empleadoLegajo: _empleado.legajo,
-            fecha: DateTime(_anio, _mes, 1 + i % 28),
-            horasTotales: 1,
-            tipo: TipoCargaDeHoras.tomada,
+            courseName: _course.name,
+            employeeId: _employee.employeeId,
+            date: DateTime(_year, _month, 1 + i % 28),
+            hours: 1,
+            kind: TimeEntryKind.taken,
           ),
       ];
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/cursadas',
-        pantalla: (_) => const CursadasScreen(),
-        cargas: cargas,
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: timeEntries,
       );
 
       expect(find.textContaining('de 80 registros'), findsOneWidget);
@@ -589,10 +580,10 @@ void main() {
 
   group('Certificaciones', () {
     testWidgets('sin finalizaciones importadas lo indica', (tester) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/certificaciones',
-        pantalla: (_) => const CertificacionScreen(),
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
       );
 
       expect(find.text('No hay certificaciones LMS cargadas.'), findsOneWidget);
@@ -601,21 +592,21 @@ void main() {
     testWidgets(
       'con finalizaciones y búsqueda sin coincidencias lo distingue',
       (tester) async {
-        final container = await _mostrar(
+        final container = await _show(
           tester,
-          ruta: '/certificaciones',
-          pantalla: (_) => const CertificacionScreen(),
-          certificaciones: [
-            CertificacionMoodle(
-              legajo: _empleado.legajo,
-              cursoNombre: _curso.nombre,
-              finalizoCurso: true,
-              fechaFinalizacion: DateTime(_anio, _mes, 20),
+          route: '/certificaciones',
+          screen: (_) => const CertificationsScreen(),
+          certifications: [
+            LmsCertification(
+              employeeId: _employee.employeeId,
+              courseName: _course.name,
+              isCompleted: true,
+              completedAt: DateTime(_year, _month, 20),
             ),
           ],
         );
 
-        container.read(busquedaCertificacionMoodleProvider.notifier).state =
+        container.read(lmsCertificationSearchProvider.notifier).state =
             'inexistente';
         await tester.pumpAndSettle();
 
@@ -630,23 +621,23 @@ void main() {
     testWidgets('el filtro por estado deja afuera las que no coinciden', (
       tester,
     ) async {
-      final container = await _mostrar(
+      final container = await _show(
         tester,
-        ruta: '/certificaciones',
-        pantalla: (_) => const CertificacionScreen(),
-        certificaciones: [
-          CertificacionMoodle(
-            legajo: _empleado.legajo,
-            cursoNombre: _curso.nombre,
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime(_anio, _mes, 20),
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 20),
           ),
         ],
       );
       expect(find.text('Ana Pérez'), findsOneWidget);
       expect(find.text('20/06/2026'), findsOneWidget);
 
-      container.read(filtroEstadoCertificacionProvider.notifier).state = false;
+      container.read(certificationStatusFilterProvider.notifier).state = false;
       await tester.pumpAndSettle();
 
       expect(
@@ -658,21 +649,21 @@ void main() {
     testWidgets('avisa cuando el curso o el legajo quedan fuera del cálculo', (
       tester,
     ) async {
-      await _mostrar(
+      await _show(
         tester,
-        ruta: '/certificaciones',
-        pantalla: (_) => const CertificacionScreen(),
-        certificaciones: [
-          CertificacionMoodle(
-            legajo: _empleado.legajo,
-            cursoNombre: 'Curso que no está en el catálogo',
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime(_anio, _mes, 20),
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: 'Curso que no está en el catálogo',
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 20),
           ),
-          CertificacionMoodle(
-            legajo: '999',
-            cursoNombre: _curso.nombre,
-            finalizoCurso: false,
+          LmsCertification(
+            employeeId: '999',
+            courseName: _course.name,
+            isCompleted: false,
           ),
         ],
       );

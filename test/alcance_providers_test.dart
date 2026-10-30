@@ -28,231 +28,228 @@ import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _anio = 2026;
+const _year = 2026;
 
-class _EmpleadosFake implements EmpleadosRepository {
-  final List<Empleado> empleados;
-  _EmpleadosFake(this.empleados);
+class _FakeEmployees implements EmployeesRepository {
+  final List<Employee> employees;
+  _FakeEmployees(this.employees);
 
   @override
-  Future<List<Empleado>> getEmpleados({
-    String? legajo,
-    String? equipo,
+  Future<List<Employee>> getEmployees({
+    String? employeeId,
+    String? team,
     String? sector,
-  }) async => empleados;
+  }) async => employees;
 
   @override
-  Future<void> replaceEmpleados(List<Empleado> empleados) async {}
-
-  @override
-  Future<void> resetToMock() async {}
-}
-
-class _EmpleadosConHistorialFake extends _EmpleadosFake
-    implements EmpleadosHistorialRepository {
-  final List<EmpleadoHistorial> historial;
-  _EmpleadosConHistorialFake(super.empleados, this.historial);
-
-  @override
-  Future<List<EmpleadoHistorial>> getHistorialEmpleados() async => historial;
-}
-
-class _CursosFake implements CursosRepository {
-  @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async => [_curso];
-
-  @override
-  Future<void> replaceCursos(List<Curso> cursos) async {}
+  Future<void> replaceEmployees(List<Employee> employees) async {}
 
   @override
   Future<void> resetToMock() async {}
 }
 
-class _CargasFake implements CargaDeHorasCRMRepository {
-  final List<CargaDeHorasCRM> cargas;
-  _CargasFake(this.cargas);
+class _FakeEmployeesWithHistory extends _FakeEmployees
+    implements EmployeeHistoryRepository {
+  final List<EmployeeHistoryEntry> history;
+  _FakeEmployeesWithHistory(super.employees, this.history);
 
   @override
-  Future<List<CargaDeHorasCRM>> getCargasDeHoras({
-    String? empleadoLegajo,
-    String? cursoId,
-    DateTime? desde,
-    DateTime? hasta,
-  }) async => cargas
+  Future<List<EmployeeHistoryEntry>> getEmployeeHistory() async => history;
+}
+
+class _FakeCourses implements CoursesRepository {
+  @override
+  Future<List<Course>> getCourses({String? id, String? name}) async => [
+    _course,
+  ];
+
+  @override
+  Future<void> replaceCourses(List<Course> courses) async {}
+
+  @override
+  Future<void> resetToMock() async {}
+}
+
+class _FakeTimeEntries implements CrmTimeEntriesRepository {
+  final List<CrmTimeEntry> timeEntries;
+  _FakeTimeEntries(this.timeEntries);
+
+  @override
+  Future<List<CrmTimeEntry>> getTimeEntries({
+    String? employeeId,
+    String? courseId,
+    DateTime? from,
+    DateTime? until,
+  }) async => timeEntries
       .where(
-        (carga) =>
-            (desde == null || !carga.fecha.isBefore(desde)) &&
-            (hasta == null || carga.fecha.isBefore(hasta)),
+        (timeEntry) =>
+            (from == null || !timeEntry.date.isBefore(from)) &&
+            (until == null || timeEntry.date.isBefore(until)),
       )
       .toList();
 
   @override
-  Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) async {}
+  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {}
 
   @override
   Future<void> resetToMock() async {}
 }
 
-class _CertificacionesFake implements CertificacionesMoodleRepository {
-  final List<CertificacionMoodle> certificaciones;
-  _CertificacionesFake(this.certificaciones);
+class _FakeCertifications implements LmsCertificationsRepository {
+  final List<LmsCertification> certifications;
+  _FakeCertifications(this.certifications);
 
   @override
-  Future<List<CertificacionMoodle>> getCertificaciones({
-    String? legajo,
-    String? cursoId,
-  }) async => certificaciones;
+  Future<List<LmsCertification>> getCertifications({
+    String? employeeId,
+    String? courseId,
+  }) async => certifications;
 
   @override
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
+  Future<void> replaceCertifications(
+    List<LmsCertification> certifications,
   ) async {}
 }
 
-class _EstructuraFake implements EstructuraRepository {
-  final EstructuraOrganizacional estructura;
-  _EstructuraFake(this.estructura);
+class _FakeStructure implements OrgStructureRepository {
+  final OrgStructure structure;
+  _FakeStructure(this.structure);
 
   @override
-  Future<EstructuraOrganizacional> getEstructura() async => estructura;
+  Future<OrgStructure> getStructure() async => structure;
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName}');
 }
 
-final _curso = Curso(
+final _course = Course(
   id: '1',
-  nombre: 'Negociación',
-  clasificacion: TipoCurso.habilidadesDeNegocio,
-  areaCurso: '',
-  instructorLegajo: '',
-  cargaHorariaHs: 4,
+  name: 'Negociación',
+  category: CourseCategory.businessSkills,
+  courseArea: '',
+  instructorEmployeeId: '',
+  workloadHours: 4,
 );
 
-Empleado _empleado(String legajo, String sector, String equipo) => Empleado(
-  legajo: legajo,
-  nombre: 'Persona',
-  apellido: legajo,
+Employee _employee(String employeeId, String sector, String team) => Employee(
+  employeeId: employeeId,
+  firstName: 'Persona',
+  lastName: employeeId,
   seniority: Seniority.junior1,
   area: sector,
-  mail: 'persona$legajo@finnegans.com',
-  equipo: equipo,
-  gerente: 'Gerente $equipo',
-  fechaIngreso: DateTime(2020, 1, 1),
+  email: 'persona$employeeId@finnegans.com',
+  team: team,
+  manager: 'Gerente $team',
+  hireDate: DateTime(2020, 1, 1),
 );
 
 /// 1 y 2 en PLATAFORMA CORE y BACKEND, de PRODUCTOS TECNOLÓGICOS; 3 en SOPORTE
 /// y 4 sin equipo, de SERVICIOS.
-final _empleados = [
-  Empleado(
-    legajo: '1',
-    nombre: 'Lía',
-    apellido: 'Líder',
+final _employees = [
+  Employee(
+    employeeId: '1',
+    firstName: 'Lía',
+    lastName: 'Líder',
     seniority: Seniority.junior1,
     area: 'PRODUCTOS TECNOLÓGICOS',
-    mail: 'Lider@finnegans.com',
-    equipo: 'PLATAFORMA CORE',
-    gerente: 'Gerente Core',
-    fechaIngreso: DateTime(2020, 1, 1),
+    email: 'Lider@finnegans.com',
+    team: 'PLATAFORMA CORE',
+    manager: 'Gerente Core',
+    hireDate: DateTime(2020, 1, 1),
   ),
-  _empleado('2', 'PRODUCTOS TECNOLÓGICOS', 'BACKEND'),
-  _empleado('3', 'SERVICIOS', 'SOPORTE'),
-  _empleado('4', 'SERVICIOS', ''),
+  _employee('2', 'PRODUCTOS TECNOLÓGICOS', 'BACKEND'),
+  _employee('3', 'SERVICIOS', 'SOPORTE'),
+  _employee('4', 'SERVICIOS', ''),
 ];
 
-EstructuraOrganizacional _estructura({
-  Set<String> lideresCore = const {'lider@finnegans.com'},
-}) => EstructuraOrganizacional(
+OrgStructure _structure({
+  Set<String> coreLeaders = const {'lider@finnegans.com'},
+}) => OrgStructure(
   areas: [
-    Area(id: '1', nombre: 'PRODUCTOS TECNOLÓGICOS'),
-    Area(id: '2', nombre: 'SERVICIOS', lideres: {'area@finnegans.com'}),
+    Area(id: '1', name: 'PRODUCTOS TECNOLÓGICOS'),
+    Area(id: '2', name: 'SERVICIOS', leaders: {'area@finnegans.com'}),
   ],
-  equipos: [
-    Equipo(
-      id: '10',
-      areaId: '1',
-      nombre: 'PLATAFORMA CORE',
-      lideres: lideresCore,
-    ),
-    Equipo(id: '11', areaId: '1', nombre: 'BACKEND'),
-    Equipo(id: '20', areaId: '2', nombre: 'SOPORTE'),
+  teams: [
+    Team(id: '10', areaId: '1', name: 'PLATAFORMA CORE', leaders: coreLeaders),
+    Team(id: '11', areaId: '1', name: 'BACKEND'),
+    Team(id: '20', areaId: '2', name: 'SOPORTE'),
   ],
 );
 
-List<CargaDeHorasCRM> _cargas(Iterable<String> legajos, int mes) => [
-  for (final legajo in legajos)
-    CargaDeHorasCRM(
-      id: 'tx-$legajo-$mes',
-      cursoNombre: _curso.nombre,
-      empleadoLegajo: legajo,
-      fecha: DateTime(_anio, mes, 10),
-      horasTotales: 4,
-      tipo: TipoCargaDeHoras.tomada,
+List<CrmTimeEntry> _timeEntries(Iterable<String> employeeIds, int month) => [
+  for (final employeeId in employeeIds)
+    CrmTimeEntry(
+      id: 'tx-$employeeId-$month',
+      courseName: _course.name,
+      employeeId: employeeId,
+      date: DateTime(_year, month, 10),
+      hours: 4,
+      kind: TimeEntryKind.taken,
     ),
 ];
 
-List<CertificacionMoodle> _finalizaciones(Iterable<String> legajos, int mes) =>
+List<LmsCertification> _completions(Iterable<String> employeeIds, int month) =>
     [
-      for (final legajo in legajos)
-        CertificacionMoodle(
-          legajo: legajo,
-          cursoNombre: _curso.nombre,
-          finalizoCurso: true,
-          fechaFinalizacion: DateTime(_anio, mes, 20),
+      for (final employeeId in employeeIds)
+        LmsCertification(
+          employeeId: employeeId,
+          courseName: _course.name,
+          isCompleted: true,
+          completedAt: DateTime(_year, month, 20),
         ),
     ];
 
 /// Sin versiones: rige el plan por defecto, como antes de poder editarlo.
-class _PlanFake implements PlanFormacionRepository {
+class _PlanFake implements TrainingPlanRepository {
   @override
-  Future<PlanesFormacion> getPlanes() async =>
-      const PlanesFormacion.sinVersiones();
+  Future<TrainingPlanHistory> getPlans() async =>
+      const TrainingPlanHistory.empty();
 
   @override
-  Future<void> guardarVersion(VersionPlanFormacion version) async {}
+  Future<void> saveVersion(TrainingPlanVersion version) async {}
 }
 
 ProviderContainer _container({
-  required bool habilitada,
+  required bool enabled,
   String? email,
-  String? rol,
-  EstructuraOrganizacional? estructura,
-  List<Empleado>? empleados,
-  List<EmpleadoHistorial>? historial,
-  List<CargaDeHorasCRM>? cargas,
-  List<CertificacionMoodle>? certificaciones,
-  int mes = 6,
+  String? role,
+  OrgStructure? structure,
+  List<Employee>? employees,
+  List<EmployeeHistoryEntry>? history,
+  List<CrmTimeEntry>? timeEntries,
+  List<LmsCertification>? certifications,
+  int month = 6,
 }) {
-  final nomina = empleados ?? _empleados;
-  final legajos = nomina.map((empleado) => empleado.legajo);
+  final payroll = employees ?? _employees;
+  final employeeIds = payroll.map((employee) => employee.employeeId);
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith((ref) => AuthController(null)),
-      sesionDatosProvider.overrideWithValue((
-        habilitada: habilitada,
+      sessionDataProvider.overrideWithValue((
+        enabled: enabled,
         email: email,
-        rol: rol,
+        role: role,
       )),
-      estructuraRepositoryProvider.overrideWithValue(
-        estructura == null ? null : _EstructuraFake(estructura),
+      orgStructureRepositoryProvider.overrideWithValue(
+        structure == null ? null : _FakeStructure(structure),
       ),
-      empleadosRepositoryProvider.overrideWithValue(
-        historial == null
-            ? _EmpleadosFake(nomina)
-            : _EmpleadosConHistorialFake(nomina, historial),
+      employeesRepositoryProvider.overrideWithValue(
+        history == null
+            ? _FakeEmployees(payroll)
+            : _FakeEmployeesWithHistory(payroll, history),
       ),
-      cursosRepositoryProvider.overrideWithValue(_CursosFake()),
-      planFormacionRepositoryProvider.overrideWithValue(_PlanFake()),
-      cargaDeHorasCRMRepositoryProvider.overrideWithValue(
-        _CargasFake(cargas ?? _cargas(legajos, 6)),
+      coursesRepositoryProvider.overrideWithValue(_FakeCourses()),
+      trainingPlanRepositoryProvider.overrideWithValue(_PlanFake()),
+      crmTimeEntriesRepositoryProvider.overrideWithValue(
+        _FakeTimeEntries(timeEntries ?? _timeEntries(employeeIds, 6)),
       ),
-      certificacionesMoodleRepositoryProvider.overrideWithValue(
-        _CertificacionesFake(certificaciones ?? _finalizaciones(legajos, 6)),
+      lmsCertificationsRepositoryProvider.overrideWithValue(
+        _FakeCertifications(certifications ?? _completions(employeeIds, 6)),
       ),
-      alcancePeriodoProvider.overrideWith((ref) => AlcancePeriodo.mensual),
-      filtroMesPeriodoProvider.overrideWith((ref) => mes),
-      filtroAnioPeriodoProvider.overrideWith((ref) => _anio),
+      periodScopeProvider.overrideWith((ref) => PeriodScope.monthly),
+      periodMonthFilterProvider.overrideWith((ref) => month),
+      periodYearFilterProvider.overrideWith((ref) => _year),
     ],
   );
   addTearDown(container.dispose);
@@ -264,50 +261,50 @@ void main() {
 
   test('Un líder ve solo su equipo', () async {
     final container = _container(
-      habilitada: true,
+      enabled: true,
       email: 'lider@finnegans.com',
-      rol: 'lider',
-      estructura: _estructura(),
+      role: 'teamLead',
+      structure: _structure(),
     );
 
-    final empleados = await container.read(empleadosProvider.future);
-    expect(empleados.map((e) => e.legajo), ['1']);
+    final employees = await container.read(employeesProvider.future);
+    expect(employees.map((e) => e.employeeId), ['1']);
 
-    final cargas = await container.read(cargasDeHorasCRMProvider.future);
-    expect(cargas.map((c) => c.empleadoLegajo), ['1']);
-    final dashboard = await container.read(cargasDashboardProvider.future);
-    expect(dashboard.map((c) => c.empleadoLegajo), ['1']);
-    final certificaciones = await container.read(
-      certificacionesMoodleProvider.future,
+    final timeEntries = await container.read(crmTimeEntriesProvider.future);
+    expect(timeEntries.map((c) => c.employeeId), ['1']);
+    final dashboard = await container.read(dashboardTimeEntriesProvider.future);
+    expect(dashboard.map((c) => c.employeeId), ['1']);
+    final certifications = await container.read(
+      lmsCertificationsProvider.future,
     );
-    expect(certificaciones.map((c) => c.legajo), ['1']);
+    expect(certifications.map((c) => c.employeeId), ['1']);
 
-    final resumen = await container.read(teamsPeriodSummaryProvider.future);
-    expect(resumen.teams, hasLength(1));
-    expect(resumen.teams.single.name, 'PLATAFORMA CORE');
-    expect(resumen.teams.single.area, 'PRODUCTOS TECNOLÓGICOS');
+    final summary = await container.read(teamsPeriodSummaryProvider.future);
+    expect(summary.teams, hasLength(1));
+    expect(summary.teams.single.name, 'PLATAFORMA CORE');
+    expect(summary.teams.single.area, 'PRODUCTOS TECNOLÓGICOS');
     // El email del líder coincide con el de la nómina: se ve su nombre.
-    expect(resumen.teams.single.leader, 'Lía Líder');
+    expect(summary.teams.single.leader, 'Lía Líder');
   });
 
   test('Un usuario de área ve toda su área, sin equipo incluidos', () async {
     final container = _container(
-      habilitada: true,
+      enabled: true,
       email: 'Area@Finnegans.com',
-      rol: 'area',
-      estructura: _estructura(),
+      role: 'areaLead',
+      structure: _structure(),
     );
 
-    final empleados = await container.read(empleadosProvider.future);
-    expect(empleados.map((e) => e.legajo), ['3', '4']);
+    final employees = await container.read(employeesProvider.future);
+    expect(employees.map((e) => e.employeeId), ['3', '4']);
 
-    final areas = await container.read(resumenAreasPeriodoProvider.future);
-    expect(areas.areas.map((area) => area.nombre), ['SERVICIOS']);
+    final areas = await container.read(areasPeriodSummaryProvider.future);
+    expect(areas.areas.map((area) => area.name), ['SERVICIOS']);
     // No hay empleado con ese email: se muestra el email.
-    expect(areas.areas.single.lideres, 'area@finnegans.com');
+    expect(areas.areas.single.leaders, 'area@finnegans.com');
 
-    final equipos = await container.read(teamsPeriodSummaryProvider.future);
-    expect(equipos.teams.map((equipo) => equipo.name).toSet(), {
+    final teams = await container.read(teamsPeriodSummaryProvider.future);
+    expect(teams.teams.map((team) => team.name).toSet(), {
       'SOPORTE',
       'Sin equipo asignado',
     });
@@ -317,24 +314,20 @@ void main() {
     'Academia ve toda la empresa y los equipos sin líder caen al Gerente',
     () async {
       final container = _container(
-        habilitada: true,
+        enabled: true,
         email: 'academia@finnegans.com',
-        rol: 'academia',
-        estructura: _estructura(),
+        role: 'academy',
+        structure: _structure(),
       );
 
-      expect(await container.read(legajosVisiblesProvider.future), isNull);
-      final empleados = await container.read(empleadosProvider.future);
-      expect(empleados.map((e) => e.legajo), ['1', '2', '3', '4']);
+      expect(await container.read(visibleEmployeeIdsProvider.future), isNull);
+      final employees = await container.read(employeesProvider.future);
+      expect(employees.map((e) => e.employeeId), ['1', '2', '3', '4']);
 
-      final resumen = await container.read(
-        teamsPeriodSummaryProvider.future,
-      );
-      final backend = resumen.teams.firstWhere((e) => e.name == 'BACKEND');
+      final summary = await container.read(teamsPeriodSummaryProvider.future);
+      final backend = summary.teams.firstWhere((e) => e.name == 'BACKEND');
       expect(backend.leader, 'Gerente BACKEND');
-      final core = resumen.teams.firstWhere(
-        (e) => e.name == 'PLATAFORMA CORE',
-      );
+      final core = summary.teams.firstWhere((e) => e.name == 'PLATAFORMA CORE');
       expect(core.leader, 'Lía Líder');
     },
   );
@@ -343,36 +336,36 @@ void main() {
     'El contexto del asistente IA conserva el alcance de la sesión',
     () async {
       final container = _container(
-        habilitada: true,
+        enabled: true,
         email: 'lider@finnegans.com',
-        rol: 'lider',
-        estructura: _estructura(),
+        role: 'teamLead',
+        structure: _structure(),
       );
 
-      final contexto = await container.read(prepararContextoIaProvider)(
-        const DestinoAsistente(ModuloAsistente.dashboard),
+      final context = await container.read(prepareAiContextProvider)(
+        const AssistantDestination(AssistantModule.dashboard),
         '¿Cómo viene el cumplimiento general?',
       );
 
-      final resultado =
-          (contexto.datos['resultados'] as List).single as Map<String, Object?>;
-      expect(resultado['tiene_datos'], isTrue);
-      expect((resultado['global'] as Map)['colaboradores'], 1);
-      expect((resultado['dashboard'] as Map)['colaboradores'], 1);
+      final result =
+          (context.data['resultados'] as List).single as Map<String, Object?>;
+      expect(result['tiene_datos'], isTrue);
+      expect((result['global'] as Map)['colaboradores'], 1);
+      expect((result['dashboard'] as Map)['colaboradores'], 1);
     },
   );
 
   test('Un líder sin equipos asignados no ve datos', () async {
     final container = _container(
-      habilitada: true,
+      enabled: true,
       email: 'nuevo@finnegans.com',
-      rol: 'lider',
-      estructura: _estructura(),
+      role: 'teamLead',
+      structure: _structure(),
     );
 
-    expect(await container.read(empleadosProvider.future), isEmpty);
-    expect(await container.read(cargasDeHorasCRMProvider.future), isEmpty);
-    expect(await container.read(certificacionesMoodleProvider.future), isEmpty);
+    expect(await container.read(employeesProvider.future), isEmpty);
+    expect(await container.read(crmTimeEntriesProvider.future), isEmpty);
+    expect(await container.read(lmsCertificationsProvider.future), isEmpty);
   });
 
   test(
@@ -380,43 +373,43 @@ void main() {
     () async {
       // Lidera PLATAFORMA CORE, pero en la nómina figura en SOPORTE.
       final container = _container(
-        habilitada: true,
+        enabled: true,
         email: 'PERSONA3@finnegans.com',
-        rol: 'lider',
-        estructura: _estructura(lideresCore: {'persona3@finnegans.com'}),
+        role: 'teamLead',
+        structure: _structure(coreLeaders: {'persona3@finnegans.com'}),
       );
 
-      final empleados = await container.read(empleadosProvider.future);
-      expect(empleados.map((e) => e.legajo), ['1']);
-      final propio = await container.read(empleadoDeSesionProvider.future);
-      expect(propio!.legajo, '3');
-      expect(propio.equipo, 'SOPORTE');
-      expect(propio.area, 'SERVICIOS');
+      final employees = await container.read(employeesProvider.future);
+      expect(employees.map((e) => e.employeeId), ['1']);
+      final own = await container.read(sessionEmployeeProvider.future);
+      expect(own!.employeeId, '3');
+      expect(own.team, 'SOPORTE');
+      expect(own.area, 'SERVICIOS');
     },
   );
 
   test('Sin fila en la nómina, Pertenece a queda vacío', () async {
     final container = _container(
-      habilitada: true,
+      enabled: true,
       email: 'externo@gmail.com',
-      rol: 'lider',
-      estructura: _estructura(),
+      role: 'teamLead',
+      structure: _structure(),
     );
-    expect(await container.read(empleadoDeSesionProvider.future), isNull);
+    expect(await container.read(sessionEmployeeProvider.future), isNull);
   });
 
   test('En modo local se ve todo y no hay sesión que buscar', () async {
-    final container = _container(habilitada: false);
+    final container = _container(enabled: false);
 
-    expect(await container.read(estructuraProvider.future), isNull);
-    expect(await container.read(legajosVisiblesProvider.future), isNull);
-    expect(await container.read(empleadoDeSesionProvider.future), isNull);
-    final empleados = await container.read(empleadosProvider.future);
-    expect(empleados.map((e) => e.legajo), ['1', '2', '3', '4']);
+    expect(await container.read(orgStructureProvider.future), isNull);
+    expect(await container.read(visibleEmployeeIdsProvider.future), isNull);
+    expect(await container.read(sessionEmployeeProvider.future), isNull);
+    final employees = await container.read(employeesProvider.future);
+    expect(employees.map((e) => e.employeeId), ['1', '2', '3', '4']);
 
-    final resumen = await container.read(teamsPeriodSummaryProvider.future);
+    final summary = await container.read(teamsPeriodSummaryProvider.future);
     expect(
-      resumen.teams.firstWhere((e) => e.name == 'PLATAFORMA CORE').leader,
+      summary.teams.firstWhere((e) => e.name == 'PLATAFORMA CORE').leader,
       'Gerente Core',
     );
   });
@@ -424,77 +417,77 @@ void main() {
   group('Con historial', () {
     // La persona 2 hoy está en PLATAFORMA CORE, pero hasta junio estuvo en
     // BACKEND.
-    final historial = [
-      EmpleadoHistorial(
-        legajo: '1',
+    final history = [
+      EmployeeHistoryEntry(
+        employeeId: '1',
         seniority: Seniority.junior1,
         area: 'PRODUCTOS TECNOLÓGICOS',
-        equipo: 'PLATAFORMA CORE',
-        gerente: 'Gerente Core',
-        activo: true,
-        vigenteDesde: DateTime(2020, 1, 1),
+        team: 'PLATAFORMA CORE',
+        manager: 'Gerente Core',
+        isActive: true,
+        validFrom: DateTime(2020, 1, 1),
       ),
-      EmpleadoHistorial(
-        legajo: '2',
+      EmployeeHistoryEntry(
+        employeeId: '2',
         seniority: Seniority.junior1,
         area: 'PRODUCTOS TECNOLÓGICOS',
-        equipo: 'BACKEND',
-        gerente: 'Gerente BACKEND',
-        activo: true,
-        vigenteDesde: DateTime(2020, 1, 1),
-        vigenteHasta: DateTime(_anio, 7, 1),
+        team: 'BACKEND',
+        manager: 'Gerente BACKEND',
+        isActive: true,
+        validFrom: DateTime(2020, 1, 1),
+        validTo: DateTime(_year, 7, 1),
       ),
-      EmpleadoHistorial(
-        legajo: '2',
+      EmployeeHistoryEntry(
+        employeeId: '2',
         seniority: Seniority.junior1,
         area: 'PRODUCTOS TECNOLÓGICOS',
-        equipo: 'PLATAFORMA CORE',
-        gerente: 'Gerente Core',
-        activo: true,
-        vigenteDesde: DateTime(_anio, 7, 1),
+        team: 'PLATAFORMA CORE',
+        manager: 'Gerente Core',
+        isActive: true,
+        validFrom: DateTime(_year, 7, 1),
       ),
     ];
 
-    ProviderContainer contenedor(int mes) => _container(
-      habilitada: true,
+    ProviderContainer container(int month) => _container(
+      enabled: true,
       email: 'lider@finnegans.com',
-      rol: 'lider',
-      estructura: _estructura(),
+      role: 'teamLead',
+      structure: _structure(),
       // La nómina actual pone a la persona 2 en PLATAFORMA CORE.
-      empleados: [
-        _empleados[0],
-        _empleado('2', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
+      employees: [
+        _employees[0],
+        _employee('2', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
       ],
-      historial: historial,
-      cargas: [
-        ..._cargas(['1', '2'], 6),
-        ..._cargas(['1', '2'], 7),
+      history: history,
+      timeEntries: [
+        ..._timeEntries(['1', '2'], 6),
+        ..._timeEntries(['1', '2'], 7),
       ],
-      certificaciones: [
-        ..._finalizaciones(['1', '2'], 6),
-        ..._finalizaciones(['1', '2'], 7),
+      certifications: [
+        ..._completions(['1', '2'], 6),
+        ..._completions(['1', '2'], 7),
       ],
-      mes: mes,
+      month: month,
     );
 
     test(
       'El líder ve a alguien solo en los meses en que estuvo en su equipo',
       () async {
-        final junio = contenedor(6);
-        final cumplimientosJunio = await junio.read(
+        final june = container(6);
+        final juneComplianceList = await june.read(
           teamComplianceProvider.future,
         );
-        expect(cumplimientosJunio.map((c) => c.empleado.legajo), ['1']);
+        expect(juneComplianceList.map((c) => c.employee.employeeId), ['1']);
 
-        final julio = contenedor(7);
-        final cumplimientosJulio = await julio.read(
+        final july = container(7);
+        final julyComplianceList = await july.read(
           teamComplianceProvider.future,
         );
-        expect(cumplimientosJulio.map((c) => c.empleado.legajo).toSet(), {
+        expect(julyComplianceList.map((c) => c.employee.employeeId).toSet(), {
           '1',
           '2',
         });
-        expect(cumplimientosJulio.map((c) => c.empleado.equipo).toSet(), {
+        expect(julyComplianceList.map((c) => c.employee.team).toSet(), {
           'PLATAFORMA CORE',
         });
       },
@@ -505,15 +498,14 @@ void main() {
       () async {
         // Su contenedor no tiene padre: si armara su propia sesión, en junio
         // contaría también a la persona 2, que estaba en Backend.
-        final contexto = await contenedor(6).read(prepararContextoIaProvider)(
-          const DestinoAsistente(ModuloAsistente.dashboard),
+        final context = await container(6).read(prepareAiContextProvider)(
+          const AssistantDestination(AssistantModule.dashboard),
           '¿Cómo viene el cumplimiento general?',
         );
 
-        final resultado =
-            (contexto.datos['resultados'] as List).single
-                as Map<String, Object?>;
-        expect((resultado['global'] as Map)['colaboradores'], 1);
+        final result =
+            (context.data['resultados'] as List).single as Map<String, Object?>;
+        expect((result['global'] as Map)['colaboradores'], 1);
       },
     );
   });

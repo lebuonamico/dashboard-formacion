@@ -6,69 +6,68 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
-const sinDatosParaReporte = 'No hay datos cargados para este período.';
+const noReportData = 'No hay datos cargados para este período.';
 
 /// Botón compacto que imprime el reporte de la pantalla. Queda deshabilitado
-/// mientras [reporte] carga; sin datos o con error avisa al tocarlo.
-class BotonImprimirReporte extends ConsumerStatefulWidget {
-  final ProviderListenable<AsyncValue<ReporteFormacion?>> reporte;
+/// mientras [report] carga; sin datos o con error avisa al tocarlo.
+class PrintReportButton extends ConsumerStatefulWidget {
+  final ProviderListenable<AsyncValue<TrainingReport?>> report;
 
-  const BotonImprimirReporte({super.key, required this.reporte});
+  const PrintReportButton({super.key, required this.report});
 
   @override
-  ConsumerState<BotonImprimirReporte> createState() =>
-      _BotonImprimirReporteState();
+  ConsumerState<PrintReportButton> createState() => _PrintReportButtonState();
 }
 
-class _BotonImprimirReporteState extends ConsumerState<BotonImprimirReporte> {
-  bool _generando = false;
+class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
+  bool _generating = false;
 
-  Future<void> _imprimir(ReporteFormacion reporte) async {
+  Future<void> _print(TrainingReport report) async {
     final messenger = ScaffoldMessenger.of(context);
-    setState(() => _generando = true);
+    setState(() => _generating = true);
     try {
-      await ref.read(imprimirReporteProvider)(reporte);
+      await ref.read(printReportProvider)(report);
     } catch (error) {
       messenger.showSnackBar(
         SnackBar(content: Text('No se pudo generar el reporte: $error')),
       );
     } finally {
-      if (mounted) setState(() => _generando = false);
+      if (mounted) setState(() => _generating = false);
     }
   }
 
-  void _avisar(String mensaje) => ScaffoldMessenger.of(
+  void _notify(String message) => ScaffoldMessenger.of(
     context,
-  ).showSnackBar(SnackBar(content: Text(mensaje)));
+  ).showSnackBar(SnackBar(content: Text(message)));
 
   @override
   Widget build(BuildContext context) {
-    final reporteAsync = ref.watch(widget.reporte);
+    final reportAsync = ref.watch(widget.report);
     // Al cambiar el período queda el valor anterior mientras recarga: no se
     // imprime hasta tener el del período elegido.
-    final cargando = reporteAsync.isLoading;
-    final ayuda = switch (reporteAsync) {
+    final loading = reportAsync.isLoading;
+    final help = switch (reportAsync) {
       AsyncValue(isLoading: true) => 'Cargando datos…',
       AsyncValue(hasError: true) => 'No se pudieron cargar los datos',
-      AsyncValue(value: null) => sinDatosParaReporte,
+      AsyncValue(value: null) => noReportData,
       _ => 'Genera un PDF con los datos de esta pantalla',
     };
     final cs = context.colorScheme;
 
     return Tooltip(
-      message: ayuda,
+      message: help,
       child: OutlinedButton.icon(
         // Sin datos o con error sigue habilitado para explicar por qué no
         // hay reporte, en vez de quedar mudo.
-        onPressed: _generando || cargando
+        onPressed: _generating || loading
             ? null
-            : () => switch (reporteAsync) {
-                AsyncValue(:final error?) => _avisar(
+            : () => switch (reportAsync) {
+                AsyncValue(:final error?) => _notify(
                   'No se pudieron cargar los datos. '
-                  '${mensajeErrorCarga(error)}',
+                  '${timeEntryErrorMessage(error)}',
                 ),
-                AsyncValue(value: final reporte?) => _imprimir(reporte),
-                _ => _avisar(sinDatosParaReporte),
+                AsyncValue(value: final report?) => _print(report),
+                _ => _notify(noReportData),
               },
         style: OutlinedButton.styleFrom(
           visualDensity: VisualDensity.compact,
@@ -78,14 +77,14 @@ class _BotonImprimirReporteState extends ConsumerState<BotonImprimirReporte> {
           side: BorderSide(color: cs.outlineVariant),
           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
-        icon: _generando
+        icon: _generating
             ? const SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.print_outlined, size: 16),
-        label: Text(_generando ? 'Generando…' : 'Imprimir reporte'),
+        label: Text(_generating ? 'Generando…' : 'Imprimir reporte'),
       ),
     );
   }

@@ -5,23 +5,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardMonthlyHours extends StatelessWidget {
   /// Horas válidas promedio por colaborador de cada mes.
-  final AsyncValue<List<({DateTime mes, double horas})>> evolucionAsync;
+  final AsyncValue<List<({DateTime month, double hours})>> evolutionAsync;
 
-  const DashboardMonthlyHours({super.key, required this.evolucionAsync});
+  const DashboardMonthlyHours({super.key, required this.evolutionAsync});
 
   @override
   Widget build(BuildContext context) {
-    return evolucionAsync.when(
+    return evolutionAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
       ),
-      data: (meses) {
-        if (meses.isEmpty) return const SizedBox.shrink();
+      data: (monthList) {
+        if (monthList.isEmpty) return const SizedBox.shrink();
 
-        final months = _MonthlyHoursSummary.from(meses);
+        final months = _MonthlyHoursSummary.from(monthList);
         return _MonthlyHoursCard(summary: months);
       },
     );
@@ -42,13 +42,13 @@ class _MonthlyHoursSummary {
   const _MonthlyHoursSummary({required this.points, required this.target});
 
   factory _MonthlyHoursSummary.from(
-    List<({DateTime mes, double horas})> meses,
+    List<({DateTime month, double hours})> months,
   ) {
     final points = [
-      for (final item in meses)
+      for (final item in months)
         _MonthlyHoursPoint(
-          label: _monthLabel(item.mes.month),
-          hours: item.horas,
+          label: _monthLabel(item.month.month),
+          hours: item.hours,
         ),
     ];
 
@@ -68,7 +68,7 @@ class _MonthlyHoursCard extends StatelessWidget {
     return Container(
       height: 280,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: context.panel(sombra: true),
+      decoration: context.panel(shadow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -160,7 +160,7 @@ class _MonthlyHoursChart extends StatelessWidget {
         points: points,
         target: target,
         cs: context.colorScheme,
-        colores: context.colores,
+        colors: context.colors,
       ),
       child: const SizedBox.expand(),
     );
@@ -173,13 +173,13 @@ class _MonthlyHoursPainter extends CustomPainter {
 
   /// El painter no tiene BuildContext: recibe los colores del tema activo.
   final ColorScheme cs;
-  final AppColors colores;
+  final AppColors colors;
 
   const _MonthlyHoursPainter({
     required this.points,
     required this.target,
     required this.cs,
-    required this.colores,
+    required this.colors,
   });
 
   @override
@@ -200,7 +200,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       ..color = cs.outlineVariant
       ..strokeWidth = 1;
     final targetPaint = Paint()
-      ..color = colores.textoTenue
+      ..color = colors.faintText
       ..strokeWidth = 1;
 
     for (var index = 0; index <= 2; index++) {
@@ -244,7 +244,7 @@ class _MonthlyHoursPainter extends CustomPainter {
         TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: colores.textoIntermedio,
+          color: colors.intermediateText,
         ),
       );
       _drawCenteredText(
@@ -288,7 +288,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       oldDelegate.points != points ||
       oldDelegate.target != target ||
       oldDelegate.cs != cs ||
-      oldDelegate.colores != colores;
+      oldDelegate.colors != colors;
 }
 
 String _monthLabel(int month) {

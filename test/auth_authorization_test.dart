@@ -132,8 +132,8 @@ void main() {
 
       expect(auth.hasValidSession, isTrue);
       expect(auth.isValidatingAuthorization, isFalse);
-      expect(auth.rol, 'admin');
-      expect(auth.esAdmin, isTrue);
+      expect(auth.role, 'admin');
+      expect(auth.isAdmin, isTrue);
       expect(auth.email, 'test@example.com');
       expect(auth.error, isNull);
       expect(auth.redirect('/login'), '/dashboard');
@@ -152,8 +152,8 @@ void main() {
 
       await auth.signOut();
       expect(auth.isAuthorized, isFalse);
-      expect(auth.rol, isNull);
-      expect(auth.esAdmin, isFalse);
+      expect(auth.role, isNull);
+      expect(auth.isAdmin, isFalse);
       expect(auth.email, isNull);
       expect(auth.redirect('/dashboard'), '/login');
     },
@@ -172,8 +172,8 @@ void main() {
       await fixture.signIn();
       await _waitUntil(() => auth.isAuthorized);
 
-      expect(auth.esAdmin, isFalse);
-      expect(auth.esGestor, isTrue);
+      expect(auth.isAdmin, isFalse);
+      expect(auth.canManage, isTrue);
       expect(auth.redirect('/admin'), isNull);
       expect(auth.redirect('/dashboard'), isNull);
       expect(auth.redirect('/configuracion'), isNull);
@@ -192,7 +192,7 @@ void main() {
     await fixture.signIn();
     await _waitUntil(() => auth.isAuthorized);
 
-    expect(auth.esGestor, isFalse);
+    expect(auth.canManage, isFalse);
     expect(auth.redirect('/admin'), '/dashboard');
     expect(auth.redirect('/configuracion'), '/dashboard');
     expect(auth.redirect('/areas'), isNull);
@@ -211,7 +211,7 @@ void main() {
     await fixture.signIn();
     await _waitUntil(() => auth.isAuthorized);
 
-    expect(auth.esGestor, isFalse);
+    expect(auth.canManage, isFalse);
     expect(auth.redirect('/admin'), '/dashboard');
     expect(auth.redirect('/configuracion'), '/dashboard');
     expect(auth.redirect('/areas'), '/equipos');
@@ -232,9 +232,9 @@ void main() {
     await fixture.signIn();
     await _waitUntil(() => auth.isAuthorized);
 
-    expect(auth.rol, 'superadmin');
-    expect(auth.esAdmin, isFalse);
-    expect(auth.esGestor, isFalse);
+    expect(auth.role, 'superadmin');
+    expect(auth.isAdmin, isFalse);
+    expect(auth.canManage, isFalse);
     expect(auth.redirect('/admin'), '/dashboard');
     expect(auth.redirect('/configuracion'), '/dashboard');
   });
@@ -275,7 +275,7 @@ void main() {
       expect(auth.isAuthorized, isFalse);
       expect(auth.hasValidSession, isFalse);
       expect(fixture.client.auth.currentSession, isNull);
-      expect(auth.rol, isNull);
+      expect(auth.role, isNull);
       expect(auth.redirect('/dashboard'), '/login');
       expect(auth.redirect('/login'), isNull);
       final logout = fixture.logoutRequests.single;
@@ -310,7 +310,7 @@ void main() {
 
       expect(auth.hasValidSession, isTrue);
       expect(auth.isAuthorized, isFalse);
-      expect(auth.rol, isNull);
+      expect(auth.role, isNull);
       expect(auth.error, isNot(_deniedMessage));
       expect(auth.error, contains('No se pudo validar la autorización'));
       expect(auth.redirect('/dashboard'), '/login');
@@ -323,7 +323,7 @@ void main() {
       await auth.signInWithGoogle();
 
       expect(auth.isAuthorized, isTrue);
-      expect(auth.rol, 'usuario');
+      expect(auth.role, 'usuario');
       expect(auth.error, isNull);
       expect(auth.redirect('/login'), '/dashboard');
       expect(fixture.authorizationRequests, hasLength(2));
@@ -347,7 +347,7 @@ void main() {
       expect(auth.hasValidSession, isTrue);
       expect(auth.isValidatingAuthorization, isTrue);
       expect(auth.isAuthorized, isFalse);
-      expect(auth.rol, isNull);
+      expect(auth.role, isNull);
       expect(auth.redirect('/dashboard'), '/login');
       expect(auth.redirect('/login'), isNull);
       final request = await started.future;
@@ -390,7 +390,7 @@ void main() {
       expect(auth.hasValidSession, isFalse);
       expect(auth.isAuthorized, isFalse);
       expect(auth.isValidatingAuthorization, isFalse);
-      expect(auth.rol, isNull);
+      expect(auth.role, isNull);
       expect(auth.redirect('/dashboard'), '/login');
     },
   );

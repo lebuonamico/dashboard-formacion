@@ -20,10 +20,10 @@ class TeamDetailKpiSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final year = ref.watch(filtroAnioPeriodoProvider);
-    final month = ref.watch(filtroMesPeriodoProvider);
+    final year = ref.watch(periodYearFilterProvider);
+    final month = ref.watch(periodMonthFilterProvider);
     final projection = ref
-        .watch(proyeccionAnualProvider((area: team.area, equipo: team.name)))
+        .watch(annualProjectionProvider((area: team.area, team: team.name)))
         .value;
 
     return KpiCardRow(
@@ -40,15 +40,15 @@ class TeamDetailKpiSection extends ConsumerWidget {
           footer: '',
           icon: Icons.people_outline,
           color: context.colorScheme.primary,
-          ayuda: ayudaIntegrantes('del equipo'),
+          help: membersHelp('del equipo'),
         ),
-        horasValidasKpiCard(
+        creditedHoursKpiCard(
           context,
-          esAnual: isAnnual,
-          anio: year,
-          mes: month,
-          horas: team.completedHours,
-          objetivo: team.targetHours,
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          hours: team.completedHours,
+          target: team.targetHours,
         ),
         DashboardKpiCard(
           title: 'OBJETIVO DEL PERÍODO',
@@ -60,27 +60,24 @@ class TeamDetailKpiSection extends ConsumerWidget {
               : 'Objetivo del mes',
           footer: '',
           icon: Icons.flag_outlined,
-          color: context.colores.acentoVioleta,
-          ayuda: ayudaObjetivo('el equipo'),
+          color: context.colors.violetAccent,
+          help: targetHelp('el equipo'),
         ),
 
-        cumplimientoKpiCard(
+        complianceKpiCard(
           context,
-          esAnual: isAnnual,
-          anio: year,
-          mes: month,
-          porcentaje: team.completionPercentage,
-          variacion: ref
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          percentage: team.completionPercentage,
+          variation: ref
               .watch(
-                variacionCumplimientoProvider((
-                  area: team.area,
-                  equipo: team.name,
-                )),
+                complianceVariationProvider((area: team.area, team: team.name)),
               )
               .value,
-          color: team.status.colores(context).texto,
+          color: team.status.colors(context).text,
         ),
-        if (projection != null) proyeccionKpiCard(context, projection),
+        if (projection != null) projectionKpiCard(context, projection),
       ],
     );
   }

@@ -1,78 +1,66 @@
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 
 /// Columnas por las que se pueden ordenar las tablas de integrantes.
-enum OrdenMiembros {
-  legajo,
-  colaborador,
-  equipo,
-  seniority,
-  horas,
-  cumplimiento,
-}
+enum MemberSort { employeeId, employee, team, seniority, hours, compliance }
 
 /// Columna activa y sentido del orden de una tabla de integrantes.
-class EstadoOrdenMiembros {
-  final OrdenMiembros? columna;
-  final bool ascendente;
+class MemberSortState {
+  final MemberSort? column;
+  final bool ascending;
 
-  const EstadoOrdenMiembros({this.columna, this.ascendente = true});
+  const MemberSortState({this.column, this.ascending = true});
 
   /// Primer click en una columna: ascendente; click en la misma: invierte.
-  EstadoOrdenMiembros alternar(OrdenMiembros nueva) => EstadoOrdenMiembros(
-    columna: nueva,
-    ascendente: columna == nueva ? !ascendente : true,
+  MemberSortState toggle(MemberSort newValue) => MemberSortState(
+    column: newValue,
+    ascending: column == newValue ? !ascending : true,
   );
 
   /// Copia ordenada; sin columna activa devuelve el orden original.
-  List<CumplimientoEmpleado> aplicar(List<CumplimientoEmpleado> miembros) {
-    final actual = columna;
-    if (actual == null) return miembros;
-    final ordenados = [...miembros];
-    ordenados.sort((a, b) {
-      final resultado = _comparar(actual, a, b);
+  List<EmployeeCompliance> apply(List<EmployeeCompliance> members) {
+    final current = column;
+    if (current == null) return members;
+    final sorted = [...members];
+    sorted.sort((a, b) {
+      final result = _compare(current, a, b);
       // A igual valor, por nombre para que el orden sea estable.
-      final desempate = resultado != 0
-          ? resultado
-          : a.empleado.nombreCompleto.toLowerCase().compareTo(
-              b.empleado.nombreCompleto.toLowerCase(),
+      final tiebreak = result != 0
+          ? result
+          : a.employee.fullName.toLowerCase().compareTo(
+              b.employee.fullName.toLowerCase(),
             );
-      return ascendente ? desempate : -desempate;
+      return ascending ? tiebreak : -tiebreak;
     });
-    return ordenados;
+    return sorted;
   }
 
-  static int _comparar(
-    OrdenMiembros columna,
-    CumplimientoEmpleado a,
-    CumplimientoEmpleado b,
-  ) => switch (columna) {
-    OrdenMiembros.legajo => _compararLegajo(
-      a.empleado.legajo,
-      b.empleado.legajo,
+  static int _compare(
+    MemberSort column,
+    EmployeeCompliance a,
+    EmployeeCompliance b,
+  ) => switch (column) {
+    MemberSort.employeeId => _compareEmployeeId(
+      a.employee.employeeId,
+      b.employee.employeeId,
     ),
-    OrdenMiembros.colaborador =>
-      a.empleado.nombreCompleto.toLowerCase().compareTo(
-        b.empleado.nombreCompleto.toLowerCase(),
-      ),
-    OrdenMiembros.equipo => a.empleado.equipo.trim().toLowerCase().compareTo(
-      b.empleado.equipo.trim().toLowerCase(),
+    MemberSort.employee => a.employee.fullName.toLowerCase().compareTo(
+      b.employee.fullName.toLowerCase(),
     ),
-    OrdenMiembros.seniority => a.empleado.seniority.index.compareTo(
-      b.empleado.seniority.index,
+    MemberSort.team => a.employee.team.trim().toLowerCase().compareTo(
+      b.employee.team.trim().toLowerCase(),
     ),
-    OrdenMiembros.horas => a.totalHorasValidas.compareTo(
-      b.totalHorasValidas,
+    MemberSort.seniority => a.employee.seniority.index.compareTo(
+      b.employee.seniority.index,
     ),
-    OrdenMiembros.cumplimiento => a.porcentajeTotal.compareTo(
-      b.porcentajeTotal,
-    ),
+    MemberSort.hours => a.totalCreditedHours.compareTo(b.totalCreditedHours),
+    MemberSort.compliance => a.totalPercentage.compareTo(b.totalPercentage),
   };
 
   /// Legajos numéricos por valor ("9" antes que "10"); el resto como texto.
-  static int _compararLegajo(String a, String b) {
-    final numeroA = int.tryParse(a.trim());
-    final numeroB = int.tryParse(b.trim());
-    if (numeroA != null && numeroB != null) return numeroA.compareTo(numeroB);
+  static int _compareEmployeeId(String a, String b) {
+    final numberA = int.tryParse(a.trim());
+    final numberB = int.tryParse(b.trim());
+    if (numberA != null && numberB != null) return numberA.compareTo(numberB);
     return a.compareTo(b);
   }
 }

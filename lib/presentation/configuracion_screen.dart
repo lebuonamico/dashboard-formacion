@@ -30,30 +30,29 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/widgets/configuracion/plan_formacion_editor.dart';
 
-class ConfiguracionScreen extends ConsumerStatefulWidget {
-  const ConfiguracionScreen({super.key});
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
 
   @override
-  ConsumerState<ConfiguracionScreen> createState() =>
-      _ConfiguracionScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
-  final _importacionesEnCurso = <String>{};
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _inProgressImports = <String>{};
 
-  bool _iniciarImportacion(String tipo) {
-    if (_importacionesEnCurso.contains(tipo)) return false;
-    setState(() => _importacionesEnCurso.add(tipo));
+  bool _startImport(String type) {
+    if (_inProgressImports.contains(type)) return false;
+    setState(() => _inProgressImports.add(type));
     return true;
   }
 
-  void _terminarImportacion(String tipo) {
-    if (mounted) setState(() => _importacionesEnCurso.remove(tipo));
+  void _finishImport(String type) {
+    if (mounted) setState(() => _inProgressImports.remove(type));
   }
 
-  Widget _iconoImportacion(String tipo) => _importacionesEnCurso.contains(tipo)
+  Widget _importIcon(String type) => _inProgressImports.contains(type)
       ? SizedBox.square(
-          key: Key('loading_$tipo'),
+          key: Key('loading_$type'),
           dimension: 18,
           child: const CircularProgressIndicator(strokeWidth: 2),
         )
@@ -68,17 +67,17 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           // Contenido de Configuración
           Expanded(
             child: ListView(
-              padding: paddingPantalla,
+              padding: screenPadding,
               children: [
-                _buildSeccionImportacion(context),
+                _buildImportSection(context),
                 const SizedBox(height: 24),
-                _buildSeccionCursos(context),
+                _buildCoursesSection(context),
                 const SizedBox(height: 24),
-                _buildSeccionCargaDeHoras(context),
+                _buildTimeEntriesSection(context),
                 const SizedBox(height: 24),
-                _buildSeccionCargaLms(context),
+                _buildLmsSection(context),
                 const SizedBox(height: 24),
-                _buildSeccionPlanFormacion(),
+                _buildTrainingPlanSection(),
               ],
             ),
           ),
@@ -87,17 +86,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSeccionImportacion(BuildContext context) {
+  Widget _buildImportSection(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de nómina de empleados',
-      subtitulo:
-          'Importá un archivo Excel o CSV con los datos de los empleados',
+      title: 'Carga de nómina de empleados',
+      subtitle: 'Importá un archivo Excel o CSV con los datos de los empleados',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: _IconoSeccion(
-            icono: Icons.table_chart_outlined,
-            colores: ParColores(
+          leading: _SectionIcon(
+            icon: Icons.table_chart_outlined,
+            colors: ColorPair(
               context.colorScheme.onPrimaryContainer,
               context.colorScheme.primaryContainer,
             ),
@@ -111,10 +109,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_nomina'),
-            onPressed: _importacionesEnCurso.contains('nomina')
+            onPressed: _inProgressImports.contains('nomina')
                 ? null
-                : _importarArchivo,
-            icon: _iconoImportacion('nomina'),
+                : _importPayrollFile,
+            icon: _importIcon('nomina'),
             label: const Text('Cargar nómina'),
           ),
         ),
@@ -122,16 +120,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSeccionCursos(BuildContext context) {
+  Widget _buildCoursesSection(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de cursos',
-      subtitulo: 'Importá el catálogo de cursos desde Excel / CSV',
+      title: 'Carga de cursos',
+      subtitle: 'Importá el catálogo de cursos desde Excel / CSV',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: _IconoSeccion(
-            icono: Icons.school_outlined,
-            colores: context.colores.exito,
+          leading: _SectionIcon(
+            icon: Icons.school_outlined,
+            colors: context.colors.success,
           ),
           title: const Text(
             'Importar cursos desde Excel / CSV',
@@ -142,10 +140,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_cursos'),
-            onPressed: _importacionesEnCurso.contains('cursos')
+            onPressed: _inProgressImports.contains('cursos')
                 ? null
-                : _importarCursosArchivo,
-            icon: _iconoImportacion('cursos'),
+                : _importCoursesFile,
+            icon: _importIcon('cursos'),
             label: const Text('Cargar cursos'),
           ),
         ),
@@ -153,16 +151,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSeccionCargaDeHoras(BuildContext context) {
+  Widget _buildTimeEntriesSection(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Carga de horas CRM',
-      subtitulo: 'Importá las horas tomadas y dictadas desde el reporte de CRM',
+      title: 'Carga de horas CRM',
+      subtitle: 'Importá las horas tomadas y dictadas desde el reporte de CRM',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: _IconoSeccion(
-            icono: Icons.schedule,
-            colores: context.colores.dictado,
+          leading: _SectionIcon(
+            icon: Icons.schedule,
+            colors: context.colors.teaching,
           ),
           title: const Text(
             'Importar carga de horas desde Excel / CSV',
@@ -173,10 +171,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_horas'),
-            onPressed: _importacionesEnCurso.contains('horas')
+            onPressed: _inProgressImports.contains('horas')
                 ? null
-                : _importarCargaDeHoras,
-            icon: _iconoImportacion('horas'),
+                : _importTimeEntries,
+            icon: _importIcon('horas'),
             label: const Text('Cargar horas'),
           ),
         ),
@@ -184,16 +182,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSeccionCargaLms(BuildContext context) {
+  Widget _buildLmsSection(BuildContext context) {
     return _ConfigCard(
-      titulo: 'Certificaciones LMS',
-      subtitulo: 'Importá el estado y la fecha de finalización desde Excel',
+      title: 'Certificaciones LMS',
+      subtitle: 'Importá el estado y la fecha de finalización desde Excel',
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: _IconoSeccion(
-            icono: Icons.verified_outlined,
-            colores: context.colores.exito,
+          leading: _SectionIcon(
+            icon: Icons.verified_outlined,
+            colors: context.colors.success,
           ),
           title: const Text(
             'Importar certificaciones LMS desde Excel',
@@ -204,10 +202,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           ),
           trailing: OutlinedButton.icon(
             key: const Key('importar_finalizaciones'),
-            onPressed: _importacionesEnCurso.contains('finalizaciones')
+            onPressed: _inProgressImports.contains('finalizaciones')
                 ? null
-                : _importarCertificacionesMoodle,
-            icon: _iconoImportacion('finalizaciones'),
+                : _importLmsCertifications,
+            icon: _importIcon('finalizaciones'),
             label: const Text('Cargar Excel'),
           ),
         ),
@@ -215,18 +213,18 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     );
   }
 
-  Widget _buildSeccionPlanFormacion() {
+  Widget _buildTrainingPlanSection() {
     return const _ConfigCard(
-      titulo: 'Objetivo de formación por seniority',
-      subtitulo:
+      title: 'Objetivo de formación por seniority',
+      subtitle:
           'Horas mensuales requeridas por categoría. Cada cambio rige desde '
           'el mes que elijas: los meses anteriores conservan su objetivo.',
-      children: [PlanFormacionEditor()],
+      children: [TrainingPlanEditor()],
     );
   }
 
-  Future<void> _importarCertificacionesMoodle() async {
-    if (!_iniciarImportacion('finalizaciones')) return;
+  Future<void> _importLmsCertifications() async {
+    if (!_startImport('finalizaciones')) return;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       await WidgetsBinding.instance.endOfFrame;
@@ -237,28 +235,28 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final certificaciones = <CertificacionMoodle>[];
+      final certifications = <LmsCertification>[];
       await container
-          .read(importacionServiceProvider)
-          .ejecutar(
-            tipoArchivo: 'finalizaciones',
-            nombreArchivo: result.files.single.name,
-            procesar: () async {
-              final rowsPorHoja = _leerExcel(result.files.single.bytes!);
-              for (final rows in rowsPorHoja.values) {
+          .read(importAuditServiceProvider)
+          .run(
+            fileType: 'finalizaciones',
+            fileName: result.files.single.name,
+            process: () async {
+              final rowsBySheet = _readExcel(result.files.single.bytes!);
+              for (final rows in rowsBySheet.values) {
                 if (rows.length < 2) continue;
-                final headerIndex = _buscarFilaCertificacionesMoodle(rows);
+                final headerIndex = _findLmsCertificationsRow(rows);
                 if (headerIndex == -1) continue;
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
-                final legajoIndex = _buscarColumna(headers, const [
+                final employeeIdIndex = _findColumn(headers, const [
                   'idempleadolegajo',
                   'idempleado',
                   'nlegajo',
                   'legajo',
                 ]);
-                final cursoIndex = _buscarColumna(headers, const [
+                final courseIndex = _findColumn(headers, const [
                   'nombredelcurso',
                   'nombrecurso',
                   'coursename',
@@ -266,84 +264,81 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'fullname',
                   'curso',
                 ]);
-                final finalizoIndex = _buscarColumna(headers, const [
+                final completedIndex = _findColumn(headers, const [
                   'finalizoelcurso',
                   'finalizocurso',
                   'completado',
                   'completed',
                 ]);
-                final fechaFinalizacionIndex = _buscarColumna(headers, const [
+                final completedAtIndex = _findColumn(headers, const [
                   'fechadefinalizacion',
                   'fechafinalizacion',
                   'completiondate',
                   'datecompleted',
                   'timecompleted',
                 ]);
-                if (fechaFinalizacionIndex == -1) {
+                if (completedAtIndex == -1) {
                   throw const FormatException(
                     'Falta la columna Fecha de finalización en el Excel de Moodle.',
                   );
                 }
                 for (final row in rows.skip(headerIndex + 1)) {
                   if ([
-                    legajoIndex,
-                    cursoIndex,
-                    finalizoIndex,
-                    fechaFinalizacionIndex,
+                    employeeIdIndex,
+                    courseIndex,
+                    completedIndex,
+                    completedAtIndex,
                   ].any((index) => index < 0 || index >= row.length)) {
                     continue;
                   }
-                  final legajo = row[legajoIndex].toString().trim();
-                  final cursoNombre = row[cursoIndex].toString().trim();
-                  final finalizo = _booleanoMoodle(
-                    row[finalizoIndex].toString(),
+                  final employeeId = row[employeeIdIndex].toString().trim();
+                  final courseName = row[courseIndex].toString().trim();
+                  final completed = _booleanMoodle(
+                    row[completedIndex].toString(),
                   );
-                  final fechaFinalizacion = _fechaMoodle(
-                    row[fechaFinalizacionIndex].toString(),
+                  final completedAt = _dateMoodle(
+                    row[completedAtIndex].toString(),
                   );
-                  if (row[fechaFinalizacionIndex]
-                          .toString()
-                          .trim()
-                          .isNotEmpty &&
-                      fechaFinalizacion == null) {
+                  if (row[completedAtIndex].toString().trim().isNotEmpty &&
+                      completedAt == null) {
                     throw FormatException(
-                      'Fecha de finalización inválida para el legajo $legajo: ${row[fechaFinalizacionIndex]}.',
+                      'Fecha de finalización inválida para el legajo $employeeId: ${row[completedAtIndex]}.',
                     );
                   }
-                  if (legajo.isEmpty ||
-                      cursoNombre.isEmpty ||
-                      finalizo == null) {
+                  if (employeeId.isEmpty ||
+                      courseName.isEmpty ||
+                      completed == null) {
                     continue;
                   }
-                  if (finalizo && fechaFinalizacion == null) {
+                  if (completed && completedAt == null) {
                     throw FormatException(
-                      'Falta una fecha de finalización válida para el legajo $legajo y el curso $cursoNombre.',
+                      'Falta una fecha de finalización válida para el legajo $employeeId y el curso $courseName.',
                     );
                   }
-                  certificaciones.add(
-                    CertificacionMoodle(
-                      legajo: legajo,
-                      cursoNombre: cursoNombre,
-                      finalizoCurso: finalizo,
-                      fechaFinalizacion: fechaFinalizacion,
+                  certifications.add(
+                    LmsCertification(
+                      employeeId: employeeId,
+                      courseName: courseName,
+                      isCompleted: completed,
+                      completedAt: completedAt,
                     ),
                   );
                 }
               }
 
-              if (certificaciones.isEmpty) {
+              if (certifications.isEmpty) {
                 throw const FormatException(
                   'No se encontraron filas LMS válidas en el Excel.',
                 );
               }
               return container
-                  .read(certificacionesMoodleRepositoryProvider)
-                  .upsertCertificacionesConResultado(certificaciones);
+                  .read(lmsCertificationsRepositoryProvider)
+                  .upsertCertificationsWithResult(certifications);
             },
-            refrescar: () async {
-              container.invalidate(certificacionesMoodleProvider);
+            refresh: () async {
+              container.invalidate(lmsCertificationsProvider);
               await Future.wait([
-                container.read(certificacionesMoodleProvider.future),
+                container.read(lmsCertificationsProvider.future),
               ]);
             },
           );
@@ -351,7 +346,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Se importaron ${certificaciones.length} certificaciones LMS.',
+            'Se importaron ${certifications.length} certificaciones LMS.',
           ),
         ),
       );
@@ -366,23 +361,23 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
     } finally {
-      _terminarImportacion('finalizaciones');
+      _finishImport('finalizaciones');
     }
   }
 
-  int _buscarFilaCertificacionesMoodle(List<List<dynamic>> rows) {
+  int _findLmsCertificationsRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
           .map((cell) => _normalize(cell.toString()))
           .toList();
-      if (_buscarColumna(headers, const [
+      if (_findColumn(headers, const [
                 'idempleadolegajo',
                 'idempleado',
                 'nlegajo',
                 'legajo',
               ]) !=
               -1 &&
-          _buscarColumna(headers, const [
+          _findColumn(headers, const [
                 'nombredelcurso',
                 'nombrecurso',
                 'coursename',
@@ -391,14 +386,14 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 'curso',
               ]) !=
               -1 &&
-          _buscarColumna(headers, const [
+          _findColumn(headers, const [
                 'finalizoelcurso',
                 'finalizocurso',
                 'completado',
                 'completed',
               ]) !=
               -1 &&
-          _buscarColumna(headers, const [
+          _findColumn(headers, const [
                 'fechadefinalizacion',
                 'fechafinalizacion',
                 'completiondate',
@@ -412,7 +407,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  bool? _booleanoMoodle(String value) {
+  bool? _booleanMoodle(String value) {
     return switch (_normalize(value)) {
       'true' || 'verdadero' || 'si' || 's' || '1' || 'yes' || 'y' => true,
       'false' ||
@@ -426,10 +421,10 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     };
   }
 
-  DateTime? _fechaMoodle(String value) => fechaImportacion(value);
+  DateTime? _dateMoodle(String value) => importDate(value);
 
-  Future<void> _importarArchivo() async {
-    if (!_iniciarImportacion('nomina')) return;
+  Future<void> _importPayrollFile() async {
+    if (!_startImport('nomina')) return;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       await WidgetsBinding.instance.endOfFrame;
@@ -440,16 +435,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      var registrosImportados = 0;
+      var importedRecords = 0;
       await container
-          .read(importacionServiceProvider)
-          .ejecutar(
-            tipoArchivo: 'nomina',
-            nombreArchivo: result.files.single.name,
-            procesar: () async {
+          .read(importAuditServiceProvider)
+          .run(
+            fileType: 'nomina',
+            fileName: result.files.single.name,
+            process: () async {
               final extension = result.files.single.extension?.toLowerCase();
-              final rowsPorHoja = extension == 'xlsx'
-                  ? _leerExcel(result.files.single.bytes!)
+              final rowsBySheet = extension == 'xlsx'
+                  ? _readExcel(result.files.single.bytes!)
                   : {
                       'CSV': const CsvToListConverter(shouldParseNumbers: false)
                           .convert(
@@ -458,53 +453,59 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                                 .replaceFirst('\ufeff', ''),
                           ),
                     };
-              final empleadosRepository = container.read(
-                empleadosRepositoryProvider,
+              final employeesRepository = container.read(
+                employeesRepositoryProvider,
               );
-              final cursosRepository = container.read(cursosRepositoryProvider);
-              final cargaDeHorasRepository = container.read(
-                cargaDeHorasCRMRepositoryProvider,
+              final coursesRepository = container.read(
+                coursesRepositoryProvider,
+              );
+              final timeEntriesRepository = container.read(
+                crmTimeEntriesRepositoryProvider,
               );
 
-              var empleadosImportados = <Empleado>[];
-              var cursosImportados = <Curso>[];
-              var cargasDeHorasImportadas = <CargaDeHorasCRM>[];
-              final empleadosValidados = <String, String>{};
+              var importedEmployees = <Employee>[];
+              var importedCourses = <Course>[];
+              var importedTimeEntries = <CrmTimeEntry>[];
+              final validatedEmployees = <String, String>{};
 
-              for (final hoja in rowsPorHoja.entries) {
-                final rows = hoja.value;
-                if (!rows.any(_filaConDatos)) continue;
-                final headerIndex = _buscarFilaEncabezados(rows);
+              for (final sheet in rowsBySheet.entries) {
+                final rows = sheet.value;
+                if (!rows.any(_rowWithData)) continue;
+                final headerIndex = _findHeadersRow(rows);
                 if (headerIndex == -1) {
                   throw FormatException(
-                    'No se reconocen los encabezados de nómina en la hoja "${hoja.key}". No se sincronizó la nómina.',
+                    'No se reconocen los encabezados de nómina en la hoja "${sheet.key}". No se sincronizó la nómina.',
                   );
                 }
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
-                _validarEncabezadosMaestro(headers, hoja.key);
-                final seniorityIndex = _buscarColumnaSeniority(
+                _validateMasterHeaders(headers, sheet.key);
+                final seniorityIndex = _findColumnSeniority(
                   headers,
                   rows,
                   headerIndex,
                 );
                 if (seniorityIndex == -1 ||
-                    _buscarColumna(headers, const [
+                    _findColumn(headers, const [
                           'fechadeingreso',
                           'fechaingreso',
                         ]) ==
                         -1) {
                   throw FormatException(
-                    'Faltan las columnas Seniority o Fecha de ingreso en la hoja "${hoja.key}".',
+                    'Faltan las columnas Seniority o Fecha de ingreso en la hoja "${sheet.key}".',
                   );
                 }
 
-                for (var fila = headerIndex + 1; fila < rows.length; fila++) {
-                  final row = rows[fila];
-                  if (!_filaConDatos(row)) continue;
-                  final ubicacion = 'hoja "${hoja.key}", fila ${fila + 1}';
-                  _validarColumnasFila(row, headers, ubicacion);
+                for (
+                  var dataRow = headerIndex + 1;
+                  dataRow < rows.length;
+                  dataRow++
+                ) {
+                  final row = rows[dataRow];
+                  if (!_rowWithData(row)) continue;
+                  final location = 'hoja "${sheet.key}", fila ${dataRow + 1}';
+                  _validateRowColumns(row, headers, location);
                   final normalizedData = <String, String>{};
                   for (
                     var index = 0;
@@ -520,7 +521,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                           headers.contains('idempleado')) &&
                       (headers.contains('nombre') ||
                           headers.contains('nombreyapellido'))) {
-                    final empleadoData = _toCanonicalKeys(normalizedData, {
+                    final employeeData = _toCanonicalKeys(normalizedData, {
                       'nlegajo': 'legajo',
                       'idempleado': 'legajo',
                       'nombreyapellido': 'nombre',
@@ -550,80 +551,80 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       'supervisor': 'gerente',
                       'reportaa': 'gerente',
                       for (final header in headers)
-                        if (_esColumnaSeniority(header)) header: 'seniority',
+                        if (_isColumnSeniority(header)) header: 'seniority',
                     });
-                    if (empleadoData['legajo']?.toString().trim().isEmpty ??
+                    if (employeeData['legajo']?.toString().trim().isEmpty ??
                         true) {
-                      throw FormatException('Falta el legajo en $ubicacion.');
+                      throw FormatException('Falta el legajo en $location.');
                     }
-                    if (empleadoData['nombre']?.toString().trim().isEmpty ??
+                    if (employeeData['nombre']?.toString().trim().isEmpty ??
                         true) {
-                      throw FormatException('Falta el nombre en $ubicacion.');
+                      throw FormatException('Falta el nombre en $location.');
                     }
-                    final seniorityTexto = seniorityIndex < row.length
+                    final seniorityText = seniorityIndex < row.length
                         ? row[seniorityIndex].toString().trim()
                         : '';
-                    empleadoData['seniority'] = _seniorityDesdeTexto(
-                      seniorityTexto,
-                      ubicacion,
+                    employeeData['seniority'] = _seniorityFromText(
+                      seniorityText,
+                      location,
                     ).name;
-                    final fechaIngreso =
-                        empleadoData['fechaIngreso']?.toString() ?? '';
-                    final fecha = fechaImportacion(fechaIngreso);
-                    if (fecha == null) {
+                    final hireDate =
+                        employeeData['fechaIngreso']?.toString() ?? '';
+                    final date = importDate(hireDate);
+                    if (date == null) {
                       throw FormatException(
-                        'Fecha de ingreso inválida en $ubicacion: "$fechaIngreso".',
+                        'Fecha de ingreso inválida en $location: "$hireDate".',
                       );
                     }
-                    empleadoData['fechaIngreso'] = fecha.toIso8601String();
-                    final empleado = Empleado.fromJson(empleadoData);
-                    _validarDuplicadoMaestro(
-                      empleadosValidados,
-                      empleado.legajo,
-                      empleado.toJson(),
+                    employeeData['fechaIngreso'] = date.toIso8601String();
+                    final employee = Employee.fromJson(employeeData);
+                    _validateMasterDuplicate(
+                      validatedEmployees,
+                      employee.employeeId,
+                      employee.toJson(),
                       'legajo',
-                      ubicacion,
+                      location,
                     );
-                    empleadosImportados = _reemplazarPorId(
-                      empleadosImportados,
-                      empleado,
-                      (item) => item.legajo,
+                    importedEmployees = _replaceById(
+                      importedEmployees,
+                      employee,
+                      (item) => item.employeeId,
                     );
                   } else if ((headers.contains('cursonombre') ||
                           headers.contains('nombrecurso') ||
                           headers.contains('curso')) &&
                       headers.contains('empleadolegajo')) {
-                    final cargaData = _toCanonicalKeys(normalizedData, {
+                    final timeEntryData = _toCanonicalKeys(normalizedData, {
                       'cursonombre': 'cursoNombre',
                       'nombrecurso': 'cursoNombre',
                       'curso': 'cursoNombre',
                       'empleadolegajo': 'empleadoLegajo',
                       'horastotales': 'horasTotales',
                     });
-                    final carga = CargaDeHorasCRM.fromJson({
-                      ...cargaData,
-                      'tipo': TipoCargaDeHoras.tomada.name,
+                    final timeEntry = CrmTimeEntry.fromJson({
+                      ...timeEntryData,
+                      'tipo': TimeEntryKind.taken.name,
                     });
-                    if (carga.id.isNotEmpty) {
-                      cargasDeHorasImportadas = _reemplazarPorId(
-                        cargasDeHorasImportadas,
-                        carga,
+                    if (timeEntry.id.isNotEmpty) {
+                      importedTimeEntries = _replaceById(
+                        importedTimeEntries,
+                        timeEntry,
                         (item) => item.id,
                       );
                     }
                   } else if (headers.contains('id') &&
                       headers.contains('nombre') &&
                       headers.contains('tipo')) {
-                    final curso = Curso.fromJson(
+                    final course = Course.fromJson(
                       _toCanonicalKeys(normalizedData, {
                         'areacurso': 'areaCurso',
                         'instructorlegajo': 'instructorLegajo',
                         'cargahorariahs': 'cargaHorariaHs',
                       }),
                     );
-                    cursosImportados = _reemplazarPorId(
-                      cursosImportados,
-                      curso,
+                    importedCourses = _replaceById(
+                      importedCourses,
+                      course,
                       (item) => item.id,
                     );
                   } else {
@@ -631,51 +632,52 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       'Encabezados no reconocidos en una hoja del archivo.',
                     );
                   }
-                  registrosImportados++;
+                  importedRecords++;
                 }
               }
-              if (registrosImportados == 0) {
+              if (importedRecords == 0) {
                 throw const FormatException('El archivo no tiene registros.');
               }
 
               // Las áreas y los equipos nuevos de la nómina se crean antes de
               // sincronizarla, así un fallo acá no deja empleados a medio
               // escribir. Los que ya existen no se repiten.
-              final estructuraRepository = container.read(
-                estructuraRepositoryProvider,
+              final orgStructureRepository = container.read(
+                orgStructureRepositoryProvider,
               );
-              if (estructuraRepository != null) {
-                final estructura = await estructuraRepository.getEstructura();
-                await estructuraRepository.registrarFaltantes(
-                  estructura.faltantesDeNomina(empleadosImportados),
+              if (orgStructureRepository != null) {
+                final structure = await orgStructureRepository.getStructure();
+                await orgStructureRepository.registerMissing(
+                  structure.missingFromPayroll(importedEmployees),
                 );
               }
 
-              var resumen = ResultadoUpsert.empty;
+              var summary = UpsertResult.empty;
               // Leandro: llama a la sincronización de nómina para actualizar la foto vigente solo después de validar el archivo completo.
-              resumen += await empleadosRepository
-                  .sincronizarFotoVigenteConResultado(empleadosImportados);
-              resumen += await cursosRepository.upsertCursosConResultado(
-                cursosImportados,
+              summary += await employeesRepository.syncSnapshotWithResult(
+                importedEmployees,
               );
-              resumen += await cargaDeHorasRepository
-                  .upsertCargasDeHorasConResultado(cargasDeHorasImportadas);
-              return ResultadoUpsert(
-                registrosProcesados: registrosImportados,
-                insertados: resumen.insertados,
-                actualizados: resumen.actualizados,
+              summary += await coursesRepository.upsertCoursesWithResult(
+                importedCourses,
+              );
+              summary += await timeEntriesRepository
+                  .upsertTimeEntriesWithResult(importedTimeEntries);
+              return UpsertResult(
+                processedRecords: importedRecords,
+                inserted: summary.inserted,
+                updated: summary.updated,
               );
             },
-            refrescar: () async {
+            refresh: () async {
               // La nómina no cambia cursos, horas ni finalizaciones: lo que
               // depende de quién ve a quién se recalcula solo desde la nómina.
-              container.invalidate(estructuraProvider);
-              container.invalidate(nominaProvider);
-              container.invalidate(empleadoHistorialProvider);
+              container.invalidate(orgStructureProvider);
+              container.invalidate(payrollProvider);
+              container.invalidate(employeeHistoryProvider);
               await Future.wait([
-                container.read(estructuraProvider.future),
-                container.read(empleadosProvider.future),
-                container.read(empleadoHistorialProvider.future),
+                container.read(orgStructureProvider.future),
+                container.read(employeesProvider.future),
+                container.read(employeeHistoryProvider.future),
               ]);
             },
           );
@@ -683,7 +685,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Se importaron $registrosImportados registros desde ${result.files.single.name}.',
+            'Se importaron $importedRecords registros desde ${result.files.single.name}.',
           ),
         ),
       );
@@ -698,12 +700,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
     } finally {
-      _terminarImportacion('nomina');
+      _finishImport('nomina');
     }
   }
 
-  Future<void> _importarCursosArchivo() async {
-    if (!_iniciarImportacion('cursos')) return;
+  Future<void> _importCoursesFile() async {
+    if (!_startImport('cursos')) return;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       await WidgetsBinding.instance.endOfFrame;
@@ -714,16 +716,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final cursosImportados = <Curso>[];
+      final importedCourses = <Course>[];
       await container
-          .read(importacionServiceProvider)
-          .ejecutar(
-            tipoArchivo: 'cursos_lms',
-            nombreArchivo: result.files.single.name,
-            procesar: () async {
+          .read(importAuditServiceProvider)
+          .run(
+            fileType: 'cursos_lms',
+            fileName: result.files.single.name,
+            process: () async {
               final extension = result.files.single.extension?.toLowerCase();
-              final rowsPorHoja = extension == 'xlsx'
-                  ? _leerExcel(result.files.single.bytes!)
+              final rowsBySheet = extension == 'xlsx'
+                  ? _readExcel(result.files.single.bytes!)
                   : {
                       'CSV': const CsvToListConverter(shouldParseNumbers: false)
                           .convert(
@@ -732,23 +734,23 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                                 .replaceFirst('\ufeff', ''),
                           ),
                     };
-              final repository = container.read(cursosRepositoryProvider);
-              final cursosValidados = <String, String>{};
+              final repository = container.read(coursesRepositoryProvider);
+              final validatedCourses = <String, String>{};
 
-              for (final hoja in rowsPorHoja.entries) {
-                final rows = hoja.value;
-                if (!rows.any(_filaConDatos)) continue;
-                final headerIndex = _buscarFilaCursos(rows);
+              for (final sheet in rowsBySheet.entries) {
+                final rows = sheet.value;
+                if (!rows.any(_rowWithData)) continue;
+                final headerIndex = _findCoursesRow(rows);
                 if (headerIndex == -1) {
                   throw FormatException(
-                    'No se encontraron cursos con encabezados válidos en la hoja "${hoja.key}". No se sincronizó el catálogo.',
+                    'No se encontraron cursos con encabezados válidos en la hoja "${sheet.key}". No se sincronizó el catálogo.',
                   );
                 }
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
-                _validarEncabezadosMaestro(headers, hoja.key);
-                final idIndex = _buscarColumna(headers, const [
+                _validateMasterHeaders(headers, sheet.key);
+                final idIndex = _findColumn(headers, const [
                   'id',
                   'cursoid',
                   'courseid',
@@ -758,7 +760,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'courseshortname',
                   'codigo',
                 ]);
-                final nombreIndex = _buscarColumna(headers, const [
+                final nameIndex = _findColumn(headers, const [
                   'nombre',
                   'nombrecurso',
                   'course',
@@ -768,10 +770,8 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'nombrecompleto',
                   'titulo',
                 ]);
-                final tipoIndex = _buscarColumna(headers, const [
-                  'clasificacion',
-                ]);
-                final horasIndex = _buscarColumna(headers, const [
+                final typeIndex = _findColumn(headers, const ['clasificacion']);
+                final hoursIndex = _findColumn(headers, const [
                   'cargahorariahs',
                   'cargahoraria',
                   'horas',
@@ -779,88 +779,88 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                 ]);
                 if ([
                   idIndex,
-                  nombreIndex,
-                  tipoIndex,
-                  horasIndex,
+                  nameIndex,
+                  typeIndex,
+                  hoursIndex,
                 ].any((index) => index == -1)) {
                   throw FormatException(
-                    'Faltan columnas obligatorias de ID, nombre, clasificación o carga horaria en la hoja "${hoja.key}".',
+                    'Faltan columnas obligatorias de ID, nombre, clasificación o carga horaria en la hoja "${sheet.key}".',
                   );
                 }
 
-                for (var fila = headerIndex + 1; fila < rows.length; fila++) {
-                  final row = rows[fila];
-                  if (!_filaConDatos(row)) continue;
-                  final ubicacion = 'hoja "${hoja.key}", fila ${fila + 1}';
-                  _validarColumnasFila(row, headers, ubicacion);
+                for (
+                  var dataRow = headerIndex + 1;
+                  dataRow < rows.length;
+                  dataRow++
+                ) {
+                  final row = rows[dataRow];
+                  if (!_rowWithData(row)) continue;
+                  final location = 'hoja "${sheet.key}", fila ${dataRow + 1}';
+                  _validateRowColumns(row, headers, location);
                   if ([
                     idIndex,
-                    nombreIndex,
-                    tipoIndex,
-                    horasIndex,
+                    nameIndex,
+                    typeIndex,
+                    hoursIndex,
                   ].any((index) => index >= row.length)) {
                     throw FormatException(
-                      'Faltan datos obligatorios del curso en $ubicacion.',
+                      'Faltan datos obligatorios del curso en $location.',
                     );
                   }
                   final id = row[idIndex].toString().trim();
-                  final nombre = row[nombreIndex].toString().trim();
-                  if (id.isEmpty || nombre.isEmpty) {
+                  final name = row[nameIndex].toString().trim();
+                  if (id.isEmpty || name.isEmpty) {
                     throw FormatException(
-                      'Falta el ID o nombre del curso en $ubicacion.',
+                      'Falta el ID o nombre del curso en $location.',
                     );
                   }
-                  final horasTexto = row[horasIndex].toString().trim();
-                  final horas = double.tryParse(
-                    horasTexto.replaceAll(',', '.'),
-                  );
-                  if (horas == null || !horas.isFinite || horas < 0) {
+                  final hoursText = row[hoursIndex].toString().trim();
+                  final hours = double.tryParse(hoursText.replaceAll(',', '.'));
+                  if (hours == null || !hours.isFinite || hours < 0) {
                     throw FormatException(
-                      'Carga horaria inválida en $ubicacion: "$horasTexto".',
+                      'Carga horaria inválida en $location: "$hoursText".',
                     );
                   }
-                  final curso = Curso(
+                  final course = Course(
                     id: id,
-                    nombre: nombre,
-                    clasificacion: _tipoCursoDesdeTexto(
-                      row[tipoIndex].toString(),
-                      ubicacion,
+                    name: name,
+                    category: _courseCategoryFromText(
+                      row[typeIndex].toString(),
+                      location,
                     ),
-                    areaCurso: '',
-                    instructorLegajo: '',
-                    cargaHorariaHs: horas,
+                    courseArea: '',
+                    instructorEmployeeId: '',
+                    workloadHours: hours,
                   );
-                  _validarDuplicadoMaestro(
-                    cursosValidados,
-                    curso.id,
-                    curso.toJson(),
+                  _validateMasterDuplicate(
+                    validatedCourses,
+                    course.id,
+                    course.toJson(),
                     'ID de curso',
-                    ubicacion,
+                    location,
                   );
-                  cursosImportados.add(curso);
+                  importedCourses.add(course);
                 }
               }
 
-              if (cursosImportados.isEmpty) {
+              if (importedCourses.isEmpty) {
                 throw const FormatException(
                   'No se encontraron cursos. Verificá las columnas de ID y nombre.',
                 );
               }
               // Leandro: llama a la sincronización del catálogo para dar altas, bajas y reactivaciones después de validar todas las hojas.
-              return repository.sincronizarFotoVigenteConResultado(
-                cursosImportados,
-              );
+              return repository.syncSnapshotWithResult(importedCourses);
             },
-            refrescar: () async {
-              container.invalidate(cursosProvider);
-              container.invalidate(cargasDeHorasCRMProvider);
-              container.invalidate(cargasDashboardProvider);
-              container.invalidate(certificacionesMoodleProvider);
+            refresh: () async {
+              container.invalidate(coursesProvider);
+              container.invalidate(crmTimeEntriesProvider);
+              container.invalidate(dashboardTimeEntriesProvider);
+              container.invalidate(lmsCertificationsProvider);
               await Future.wait([
-                container.read(cursosProvider.future),
-                container.read(cargasDeHorasCRMProvider.future),
-                container.read(cargasDashboardProvider.future),
-                container.read(certificacionesMoodleProvider.future),
+                container.read(coursesProvider.future),
+                container.read(crmTimeEntriesProvider.future),
+                container.read(dashboardTimeEntriesProvider.future),
+                container.read(lmsCertificationsProvider.future),
               ]);
             },
           );
@@ -868,7 +868,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Se cargaron ${cursosImportados.length} cursos desde ${result.files.single.name}.',
+            'Se cargaron ${importedCourses.length} cursos desde ${result.files.single.name}.',
           ),
         ),
       );
@@ -883,12 +883,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
     } finally {
-      _terminarImportacion('cursos');
+      _finishImport('cursos');
     }
   }
 
-  Future<void> _importarCargaDeHoras() async {
-    if (!_iniciarImportacion('horas')) return;
+  Future<void> _importTimeEntries() async {
+    if (!_startImport('horas')) return;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       await WidgetsBinding.instance.endOfFrame;
@@ -899,16 +899,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final cargasImportadas = <CargaDeHorasCRM>[];
+      final importedTimeEntries = <CrmTimeEntry>[];
       await container
-          .read(importacionServiceProvider)
-          .ejecutar(
-            tipoArchivo: 'horas_crm',
-            nombreArchivo: result.files.single.name,
-            procesar: () async {
+          .read(importAuditServiceProvider)
+          .run(
+            fileType: 'horas_crm',
+            fileName: result.files.single.name,
+            process: () async {
               final extension = result.files.single.extension?.toLowerCase();
-              final rowsPorHoja = extension == 'xlsx'
-                  ? _leerExcel(result.files.single.bytes!)
+              final rowsBySheet = extension == 'xlsx'
+                  ? _readExcel(result.files.single.bytes!)
                   : {
                       'CSV': const CsvToListConverter(shouldParseNumbers: false)
                           .convert(
@@ -918,32 +918,34 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                           ),
                     };
               final repository = container.read(
-                cargaDeHorasCRMRepositoryProvider,
+                crmTimeEntriesRepositoryProvider,
               );
-              final cursosRepository = container.read(cursosRepositoryProvider);
-              final cursosPorNombre = <String, Curso>{};
+              final coursesRepository = container.read(
+                coursesRepositoryProvider,
+              );
+              final coursesByName = <String, Course>{};
 
-              var encabezadoReconocido = false;
+              var recognizedHeader = false;
 
-              for (final rows in rowsPorHoja.values) {
+              for (final rows in rowsBySheet.values) {
                 if (rows.length < 2) continue;
-                final headerIndex = _buscarFilaCargaDeHoras(rows);
+                final headerIndex = _findTimeEntryRow(rows);
                 if (headerIndex == -1) continue;
-                encabezadoReconocido = true;
+                recognizedHeader = true;
                 final headers = rows[headerIndex]
                     .map((header) => _normalize(header.toString()))
                     .toList();
-                final idIndex = _buscarColumnaCRM(headers, 'id');
-                final legajoIndex = _buscarColumnaCRM(headers, 'legajo');
-                final fechaIndex = _buscarColumnaCRM(headers, 'fecha');
-                final cursoIndex = headers.indexOf('curso');
-                final horasIndex = _buscarColumnaCRM(headers, 'horas');
+                final idIndex = _findColumnCrm(headers, 'id');
+                final employeeIdIndex = _findColumnCrm(headers, 'legajo');
+                final dateIndex = _findColumnCrm(headers, 'fecha');
+                final courseIndex = headers.indexOf('curso');
+                final hoursIndex = _findColumnCrm(headers, 'horas');
                 if ([
                   idIndex,
-                  legajoIndex,
-                  fechaIndex,
-                  cursoIndex,
-                  horasIndex,
+                  employeeIdIndex,
+                  dateIndex,
+                  courseIndex,
+                  hoursIndex,
                 ].any((index) => index == -1)) {
                   continue;
                 }
@@ -954,63 +956,63 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   }
                   if ([
                     idIndex,
-                    legajoIndex,
-                    fechaIndex,
-                    cursoIndex,
-                    horasIndex,
+                    employeeIdIndex,
+                    dateIndex,
+                    courseIndex,
+                    hoursIndex,
                   ].any((index) => index >= row.length)) {
                     throw const FormatException(
                       'Fila CRM incompleta: faltan columnas obligatorias.',
                     );
                   }
-                  final nombreCurso = row[cursoIndex].toString().trim();
-                  final curso =
-                      cursosPorNombre[normalizarNombreCurso(
-                        nombreCurso,
-                      )] ??= resolverCurso(
-                        nombreCurso,
-                        await cursosRepository.getCursos(nombre: nombreCurso),
+                  final courseName = row[courseIndex].toString().trim();
+                  final course =
+                      coursesByName[normalizeCourseName(
+                        courseName,
+                      )] ??= courseResolver(
+                        courseName,
+                        await coursesRepository.getCourses(name: courseName),
                       );
-                  final fecha = _fechaDesdeCelda(row[fechaIndex].toString());
-                  String? fuente(String campo) {
-                    final index = headers.indexOf(campo);
+                  final date = _dateFromCell(row[dateIndex].toString());
+                  String? source(String field) {
+                    final index = headers.indexOf(field);
                     return index < 0 || index >= row.length
                         ? null
                         : row[index].toString().trim();
                   }
 
-                  final horas =
+                  final hours =
                       double.tryParse(
-                        row[horasIndex].toString().replaceAll(',', '.'),
+                        row[hoursIndex].toString().replaceAll(',', '.'),
                       ) ??
                       0;
-                  if (horas <= 0) continue;
+                  if (hours <= 0) continue;
                   final id = row[idIndex].toString().trim();
-                  final legajo = row[legajoIndex].toString().trim();
-                  if (id.isEmpty || legajo.isEmpty) continue;
+                  final employeeId = row[employeeIdIndex].toString().trim();
+                  if (id.isEmpty || employeeId.isEmpty) continue;
 
-                  cargasImportadas.add(
-                    CargaDeHorasCRM(
+                  importedTimeEntries.add(
+                    CrmTimeEntry(
                       id: id,
-                      cursoNombre: curso.nombre,
-                      cursoId: curso.id,
-                      caso: fuente('caso'),
-                      descripcionCurso: fuente('descripcioncurso'),
-                      clasificacion: fuente('clasificacion'),
-                      proyecto: fuente('proyecto'),
-                      proyectoItem: fuente('proyectoitem'),
-                      descripcion: fuente('descripcion'),
-                      empleadoLegajo: legajo,
-                      fecha: fecha,
-                      horasTotales: horas,
-                      tipo: TipoCargaDeHoras.tomada,
+                      courseName: course.name,
+                      courseId: course.id,
+                      caseRef: source('caso'),
+                      courseDescription: source('descripcioncurso'),
+                      classification: source('clasificacion'),
+                      project: source('proyecto'),
+                      projectItem: source('proyectoitem'),
+                      description: source('descripcion'),
+                      employeeId: employeeId,
+                      date: date,
+                      hours: hours,
+                      kind: TimeEntryKind.taken,
                     ),
                   );
                 }
               }
 
-              if (cargasImportadas.isEmpty) {
-                if (!encabezadoReconocido) {
+              if (importedTimeEntries.isEmpty) {
+                if (!recognizedHeader) {
                   throw const FormatException(
                     'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, fecha, curso y horas total.',
                   );
@@ -1019,16 +1021,16 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                   'El archivo no tiene registros CRM válidos.',
                 );
               }
-              return repository.upsertCargasDeHorasConResultado(
-                cargasImportadas,
+              return repository.upsertTimeEntriesWithResult(
+                importedTimeEntries,
               );
             },
-            refrescar: () async {
-              container.invalidate(cargasDeHorasCRMProvider);
-              container.invalidate(cargasDashboardProvider);
+            refresh: () async {
+              container.invalidate(crmTimeEntriesProvider);
+              container.invalidate(dashboardTimeEntriesProvider);
               await Future.wait([
-                container.read(cargasDeHorasCRMProvider.future),
-                container.read(cargasDashboardProvider.future),
+                container.read(crmTimeEntriesProvider.future),
+                container.read(dashboardTimeEntriesProvider.future),
               ]);
             },
           );
@@ -1036,7 +1038,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Se cargaron ${cargasImportadas.length} registros desde ${result.files.single.name}.',
+            'Se cargaron ${importedTimeEntries.length} registros desde ${result.files.single.name}.',
           ),
         ),
       );
@@ -1051,46 +1053,42 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         SnackBar(content: Text('No se pudo importar el archivo: $error')),
       );
     } finally {
-      _terminarImportacion('horas');
+      _finishImport('horas');
     }
   }
 
-  Map<String, List<List<dynamic>>> _leerExcel(List<int> bytes) {
+  Map<String, List<List<dynamic>>> _readExcel(List<int> bytes) {
     final workbook = excel.Excel.decodeBytes(bytes);
     return {
       for (final entry in workbook.tables.entries)
         entry.key: entry.value.rows
-            .map((row) => row.map((cell) => _valorCelda(cell?.value)).toList())
+            .map((row) => row.map((cell) => _cellValue(cell?.value)).toList())
             .toList(),
     };
   }
 
-  String _valorCelda(excel.CellValue? value) {
+  String _cellValue(excel.CellValue? value) {
     if (value == null) return '';
-    if (value is excel.TextCellValue) return _textoSpan(value.value);
+    if (value is excel.TextCellValue) return _textSpan(value.value);
     if (value is excel.IntCellValue) return value.value.toString();
     if (value is excel.DoubleCellValue) return value.value.toString();
     if (value is excel.BoolCellValue) return value.value.toString();
     return value.toString();
   }
 
-  String _textoSpan(excel.TextSpan span) {
+  String _textSpan(excel.TextSpan span) {
     return (span.text ?? '') +
-        (span.children ?? const <excel.TextSpan>[]).map(_textoSpan).join();
+        (span.children ?? const <excel.TextSpan>[]).map(_textSpan).join();
   }
 
-  List<T> _reemplazarPorId<T>(
-    List<T> actuales,
-    T nuevo,
-    String Function(T) id,
-  ) {
-    final index = actuales.indexWhere((item) => id(item) == id(nuevo));
-    if (index == -1) return [...actuales, nuevo];
-    final resultado = [...actuales]..[index] = nuevo;
-    return resultado;
+  List<T> _replaceById<T>(List<T> current, T newValue, String Function(T) id) {
+    final index = current.indexWhere((item) => id(item) == id(newValue));
+    if (index == -1) return [...current, newValue];
+    final result = [...current]..[index] = newValue;
+    return result;
   }
 
-  int _buscarFilaEncabezados(List<List<dynamic>> rows) {
+  int _findHeadersRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
           .map((cell) => _normalize(cell.toString()))
@@ -1105,12 +1103,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
     return -1;
   }
 
-  int _buscarFilaCursos(List<List<dynamic>> rows) {
+  int _findCoursesRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
           .map((cell) => _normalize(cell.toString()))
           .toSet();
-      final tieneId = headers.any(
+      final hasId = headers.any(
         const {
           'id',
           'cursoid',
@@ -1122,7 +1120,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'codigo',
         }.contains,
       );
-      final tieneNombre = headers.any(
+      final hasName = headers.any(
         const {
           'nombre',
           'nombrecurso',
@@ -1134,127 +1132,127 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
           'titulo',
         }.contains,
       );
-      if (tieneId && tieneNombre) return index;
+      if (hasId && hasName) return index;
     }
     return -1;
   }
 
-  int _buscarFilaCargaDeHoras(List<List<dynamic>> rows) {
+  int _findTimeEntryRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
           .map((cell) => _normalize(cell.toString()))
           .toSet();
-      if (_buscarColumnaCRM(headers.toList(), 'id') != -1 &&
-          _buscarColumnaCRM(headers.toList(), 'legajo') != -1 &&
+      if (_findColumnCrm(headers.toList(), 'id') != -1 &&
+          _findColumnCrm(headers.toList(), 'legajo') != -1 &&
           headers.contains('curso') &&
-          _buscarColumnaCRM(headers.toList(), 'fecha') != -1 &&
-          _buscarColumnaCRM(headers.toList(), 'horas') != -1) {
+          _findColumnCrm(headers.toList(), 'fecha') != -1 &&
+          _findColumnCrm(headers.toList(), 'horas') != -1) {
         return index;
       }
     }
     return -1;
   }
 
-  int _buscarColumnaCRM(List<String> headers, String campo) {
+  int _findColumnCrm(List<String> headers, String field) {
     for (var index = 0; index < headers.length; index++) {
       final header = headers[index];
-      final coincide = switch (campo) {
+      final matches = switch (field) {
         'id' => header.contains('transaccion') && header.contains('id'),
         'legajo' => header.contains('legajo'),
         'fecha' => header == 'fecha' || header.contains('fecha'),
         'horas' => header.contains('hora') && header.contains('total'),
         _ => false,
       };
-      if (coincide) return index;
+      if (matches) return index;
     }
     return -1;
   }
 
-  DateTime _fechaDesdeCelda(String value) => fechaObligatoria(value);
+  DateTime _dateFromCell(String value) => requiredDate(value);
 
-  int _buscarColumna(List<String> headers, List<String> posibles) {
-    for (final posible in posibles) {
-      final index = headers.indexOf(posible);
+  int _findColumn(List<String> headers, List<String> possible) {
+    for (final possible in possible) {
+      final index = headers.indexOf(possible);
       if (index != -1) return index;
     }
     return -1;
   }
 
   // Misma regla que la Clasificación del CRM.
-  TipoCurso _tipoCursoDesdeTexto(String value, String ubicacion) {
-    final tipo = TipoCurso.desdeTexto(value);
-    if (tipo == null) {
-      throw FormatException('Clasificación inválida en $ubicacion: "$value".');
+  CourseCategory _courseCategoryFromText(String value, String location) {
+    final type = CourseCategory.fromText(value);
+    if (type == null) {
+      throw FormatException('Clasificación inválida en $location: "$value".');
     }
-    return tipo;
+    return type;
   }
 
-  bool _filaConDatos(List<dynamic> row) =>
+  bool _rowWithData(List<dynamic> row) =>
       row.any((cell) => cell.toString().trim().isNotEmpty);
 
-  void _validarEncabezadosMaestro(List<String> headers, String hoja) {
-    final vistos = <String>{};
+  void _validateMasterHeaders(List<String> headers, String sheet) {
+    final seen = <String>{};
     for (final header in headers.where((header) => header.isNotEmpty)) {
-      if (!vistos.add(header)) {
+      if (!seen.add(header)) {
         throw FormatException(
-          'Encabezado duplicado "$header" en la hoja "$hoja".',
+          'Encabezado duplicado "$header" en la hoja "$sheet".',
         );
       }
     }
   }
 
-  void _validarColumnasFila(
+  void _validateRowColumns(
     List<dynamic> row,
     List<String> headers,
-    String ubicacion,
+    String location,
   ) {
     for (var index = 0; index < row.length; index++) {
       if (row[index].toString().trim().isEmpty) continue;
       if (index >= headers.length || headers[index].isEmpty) {
         throw FormatException(
-          'Hay datos sin encabezado de columna en $ubicacion.',
+          'Hay datos sin encabezado de columna en $location.',
         );
       }
     }
   }
 
-  void _validarDuplicadoMaestro(
-    Map<String, String> validados,
+  void _validateMasterDuplicate(
+    Map<String, String> validated,
     String id,
     Map<String, dynamic> data,
-    String campo,
-    String ubicacion,
+    String field,
+    String location,
   ) {
-    final contenido = jsonEncode(data);
-    final anterior = validados[id];
-    if (anterior != null && anterior != contenido) {
+    final content = jsonEncode(data);
+    final previous = validated[id];
+    if (previous != null && previous != content) {
       throw FormatException(
-        'El $campo "$id" tiene datos contradictorios en $ubicacion.',
+        'El $field "$id" tiene datos contradictorios en $location.',
       );
     }
-    validados[id] = contenido;
+    validated[id] = content;
   }
 
-  Seniority _seniorityDesdeTexto(String value, String ubicacion) {
+  Seniority _seniorityFromText(String value, String location) {
     final normalized = _normalize(value);
-    final configurado = Seniority.values.any(
+    final configured = Seniority.values.any(
       (seniority) =>
           _normalize(seniority.name) == normalized ||
           _normalize(seniority.label) == normalized,
     );
-    final aliasValido = RegExp(
+    final validAlias = RegExp(
       r'^trainee(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$|^t$'
       r'|^(?:junior|jr|j|senior|senor|sr|s)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$'
       r'|^(?:semisenior|semisenor|ssr|ss)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)$'
       r'|^(?:manager|gerente|m)$',
     ).hasMatch(normalized);
-    if (!configurado && !aliasValido) {
-      throw FormatException('Seniority inválido en $ubicacion: "$value".');
+    if (!configured && !validAlias) {
+      throw FormatException('Seniority inválido en $location: "$value".');
     }
     return Seniority.fromString(value);
   }
 
-  bool _esColumnaSeniority(String header) {
+  bool _isColumnSeniority(String header) {
     return header == 'seniority' ||
         header == 'senority' ||
         header.contains('seniority') ||
@@ -1267,12 +1265,12 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
         header == 'grado';
   }
 
-  int _buscarColumnaSeniority(
+  int _findColumnSeniority(
     List<String> headers,
     List<List<dynamic>> rows,
     int headerIndex,
   ) {
-    const encabezadosEspecificos = {
+    const specificHeaders = {
       'seniority',
       'senority',
       'nivelseniority',
@@ -1280,39 +1278,37 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
       'senioridad',
       'niveljerarquico',
     };
-    final indiceEspecifico = headers.indexWhere(
-      encabezadosEspecificos.contains,
-    );
-    if (indiceEspecifico != -1) return indiceEspecifico;
+    final specificIndex = headers.indexWhere(specificHeaders.contains);
+    if (specificIndex != -1) return specificIndex;
 
     for (var index = 0; index < headers.length; index++) {
       final header = headers[index];
-      if (_esColumnaSeniority(header)) {
+      if (_isColumnSeniority(header)) {
         return index;
       }
     }
 
-    var mejorIndice = -1;
-    var mayorCantidadCoincidencias = 0;
+    var bestIndex = -1;
+    var highestMatchCount = 0;
     for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
-      final cantidadCoincidencias = rows
+      final matchCount = rows
           .skip(headerIndex + 1)
           .take(50)
           .where((row) => columnIndex < row.length)
           .map((row) => row[columnIndex].toString())
-          .where(_pareceValorSeniority)
+          .where(_looksLikeSeniorityValue)
           .length;
-      if (cantidadCoincidencias > mayorCantidadCoincidencias) {
-        mayorCantidadCoincidencias = cantidadCoincidencias;
-        mejorIndice = columnIndex;
+      if (matchCount > highestMatchCount) {
+        highestMatchCount = matchCount;
+        bestIndex = columnIndex;
       }
     }
-    if (mayorCantidadCoincidencias > 0) return mejorIndice;
+    if (highestMatchCount > 0) return bestIndex;
 
     return -1;
   }
 
-  bool _pareceValorSeniority(String value) {
+  bool _looksLikeSeniorityValue(String value) {
     final normalized = _normalize(value);
     return RegExp(
       r'^(?:senior|senor|sr|ssr|ss|junior|jr|j[123]|trainee|manager|gerente)',
@@ -1341,13 +1337,13 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
 }
 
 class _ConfigCard extends StatelessWidget {
-  final String titulo;
-  final String subtitulo;
+  final String title;
+  final String subtitle;
   final List<Widget> children;
 
   const _ConfigCard({
-    required this.titulo,
-    required this.subtitulo,
+    required this.title,
+    required this.subtitle,
     required this.children,
   });
 
@@ -1360,7 +1356,7 @@ class _ConfigCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            titulo,
+            title,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -1369,7 +1365,7 @@ class _ConfigCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            subtitulo,
+            subtitle,
             style: TextStyle(
               fontSize: 13,
               color: context.colorScheme.onSurfaceVariant,
@@ -1384,21 +1380,21 @@ class _ConfigCard extends StatelessWidget {
 }
 
 /// Ícono de cada sección de importación sobre un fondo suave de su color.
-class _IconoSeccion extends StatelessWidget {
-  final IconData icono;
-  final ParColores colores;
+class _SectionIcon extends StatelessWidget {
+  final IconData icon;
+  final ColorPair colors;
 
-  const _IconoSeccion({required this.icono, required this.colores});
+  const _SectionIcon({required this.icon, required this.colors});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: colores.fondo,
+        color: colors.background,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Icon(icono, color: colores.texto),
+      child: Icon(icon, color: colors.text),
     );
   }
 }

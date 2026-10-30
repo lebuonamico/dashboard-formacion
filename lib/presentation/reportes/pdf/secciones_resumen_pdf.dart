@@ -13,151 +13,150 @@ import 'package:pdf/widgets.dart' as pw;
 /// Las mismas tarjetas que la pantalla: integrantes, horas, cumplimiento y,
 /// si hay, la proyección a diciembre.
 class KpisPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
+  final TrainingReport report;
 
-  KpisPdf(this.reporte);
+  KpisPdf(this.report);
 
   @override
   pw.Widget build(pw.Context context) {
-    final r = reporte;
-    final faltan = (r.objetivo - r.horas).clamp(0.0, double.infinity);
-    final tarjetas = [
-      _TarjetaKpiPdf(
-        titulo: 'INTEGRANTES',
-        valor: '${r.integrantes}',
-        detalle: '${r.enObjetivo} en objetivo',
-        progreso: r.integrantes == 0 ? 0 : r.enObjetivo / r.integrantes,
-        color: ColoresReportePdf.marca,
+    final r = report;
+    final missing = (r.target - r.hours).clamp(0.0, double.infinity);
+    final cards = [
+      _CardKpiPdf(
+        title: 'INTEGRANTES',
+        value: '${r.memberCount}',
+        detail: '${r.onTarget} en objetivo',
+        progress: r.memberCount == 0 ? 0 : r.onTarget / r.memberCount,
+        color: PdfReportColors.brand,
       ),
-      _TarjetaKpiPdf(
-        titulo: 'HORAS VÁLIDAS',
-        valor: horasPdf(r.horas),
-        detalle:
-            'de ${horasEnterasPdf(r.objetivo)} · faltan ${horasPdf(faltan)}',
-        progreso: r.objetivo == 0 ? 0 : r.horas / r.objetivo,
-        color: ColoresReportePdf.marca,
+      _CardKpiPdf(
+        title: 'HORAS VÁLIDAS',
+        value: pdfHours(r.hours),
+        detail: 'de ${pdfWholeHours(r.target)} · faltan ${pdfHours(missing)}',
+        progress: r.target == 0 ? 0 : r.hours / r.target,
+        color: PdfReportColors.brand,
       ),
-      _TarjetaKpiPdf(
-        titulo: 'CUMPLIMIENTO',
-        valor: formatearPorcentaje(r.porcentaje),
-        detalle: r.estado,
-        progreso: r.porcentaje / 100,
-        color: r.nivel.color,
-        colorValor: r.nivel.color,
+      _CardKpiPdf(
+        title: 'CUMPLIMIENTO',
+        value: formatPercentage(r.percentage),
+        detail: r.status,
+        progress: r.percentage / 100,
+        color: r.level.color,
+        valueColor: r.level.color,
       ),
-      if (r.proyeccion case final p?)
-        _TarjetaKpiPdf(
-          titulo: 'PROYECCIÓN A DIC.',
-          valor: formatearPorcentaje(p.porcentaje),
-          detalle:
-              '${p.estado.label} · ${p.llegan} de ${p.colaboradores} llegan',
-          progreso: p.porcentaje / 100,
-          color: switch (p.estado) {
-            EstadoProyeccion.enCamino => NivelReporte.ok.color,
-            EstadoProyeccion.alcanzable => NivelReporte.atencion.color,
-            EstadoProyeccion.enRiesgo => NivelReporte.critico.color,
+      if (r.projection case final p?)
+        _CardKpiPdf(
+          title: 'PROYECCIÓN A DIC.',
+          value: formatPercentage(p.percentage),
+          detail:
+              '${p.status.label} · ${p.arrive} de ${p.employeeCount} llegan',
+          progress: p.percentage / 100,
+          color: switch (p.status) {
+            ProjectionStatus.onTrack => ReportLevel.ok.color,
+            ProjectionStatus.reachable => ReportLevel.attention.color,
+            ProjectionStatus.atRisk => ReportLevel.critical.color,
           },
         ),
     ];
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        for (final (i, tarjeta) in tarjetas.indexed) ...[
+        for (final (i, card) in cards.indexed) ...[
           if (i > 0) pw.SizedBox(width: 8),
-          pw.Expanded(child: tarjeta),
+          pw.Expanded(child: card),
         ],
       ],
     );
   }
 }
 
-class _TarjetaKpiPdf extends pw.StatelessWidget {
-  final String titulo;
-  final String valor;
-  final String detalle;
-  final double progreso;
+class _CardKpiPdf extends pw.StatelessWidget {
+  final String title;
+  final String value;
+  final String detail;
+  final double progress;
   final PdfColor color;
-  final PdfColor? colorValor;
+  final PdfColor? valueColor;
 
-  _TarjetaKpiPdf({
-    required this.titulo,
-    required this.valor,
-    required this.detalle,
-    required this.progreso,
+  _CardKpiPdf({
+    required this.title,
+    required this.value,
+    required this.detail,
+    required this.progress,
     required this.color,
-    this.colorValor,
+    this.valueColor,
   });
 
   @override
   pw.Widget build(pw.Context context) => pw.Container(
     padding: const pw.EdgeInsets.fromLTRB(10, 9, 10, 10),
     decoration: pw.BoxDecoration(
-      color: ColoresReportePdf.fondoSuave,
+      color: PdfReportColors.softBackground,
       borderRadius: pw.BorderRadius.circular(6),
-      border: pw.Border.all(color: ColoresReportePdf.linea),
+      border: pw.Border.all(color: PdfReportColors.line),
     ),
     child: pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
-          titulo,
+          title,
           style: pw.TextStyle(
-            fontWeight: negrita,
+            fontWeight: bold,
             fontSize: 6.5,
             letterSpacing: 0.6,
-            color: ColoresReportePdf.tintaSuave,
+            color: PdfReportColors.softInk,
           ),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          valor,
+          value,
           style: pw.TextStyle(
-            fontWeight: negrita,
+            fontWeight: bold,
             fontSize: 17,
-            color: colorValor ?? ColoresReportePdf.tinta,
+            color: valueColor ?? PdfReportColors.ink,
           ),
         ),
         pw.SizedBox(height: 2),
         pw.Text(
-          detalle,
+          detail,
           maxLines: 1,
           style: const pw.TextStyle(
             fontSize: 7.5,
-            color: ColoresReportePdf.tintaSuave,
+            color: PdfReportColors.softInk,
           ),
         ),
         pw.SizedBox(height: 6),
-        BarraProgresoPdf(progreso, color, alto: 4),
+        PdfProgressBar(progress, color, height: 4),
       ],
     ),
   );
 }
 
 /// Cómo se reparten las personas evaluadas en el semáforo.
-class EstadoPersonasPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
+class PdfPeopleStatus extends pw.StatelessWidget {
+  final TrainingReport report;
 
-  EstadoPersonasPdf(this.reporte);
+  PdfPeopleStatus(this.report);
 
-  static const _etiquetas = {
-    NivelReporte.ok: 'Cumple (100%)',
-    NivelReporte.atencion: 'Atención (70 a 99%)',
-    NivelReporte.critico: 'No cumple (menos de 70%)',
+  static const _labels = {
+    ReportLevel.ok: 'Cumple (100%)',
+    ReportLevel.attention: 'Atención (70 a 99%)',
+    ReportLevel.critical: 'No cumple (menos de 70%)',
   };
 
   @override
   pw.Widget build(pw.Context context) {
-    final conteo = reporte.conteoPorNivel;
-    final total = reporte.miembros.length;
-    int porcentaje(NivelReporte nivel) =>
-        total == 0 ? 0 : (conteo[nivel]! / total * 100).round();
+    final count = report.countByLevel;
+    final total = report.members.length;
+    int percentage(ReportLevel level) =>
+        total == 0 ? 0 : (count[level]! / total * 100).round();
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        TituloSeccionPdf(
+        PdfSectionTitle(
           'Estado de cumplimiento',
-          bajada:
+          lowered:
               'Cómo se reparten las $total personas evaluadas en el semáforo',
         ),
         // Barra apilada: una lectura rápida de la proporción.
@@ -166,21 +165,21 @@ class EstadoPersonasPdf extends pw.StatelessWidget {
           verticalRadius: 4,
           child: pw.Row(
             children: [
-              for (final nivel in NivelReporte.values)
-                if (conteo[nivel]! > 0)
+              for (final level in ReportLevel.values)
+                if (count[level]! > 0)
                   pw.Expanded(
-                    flex: conteo[nivel]!,
+                    flex: count[level]!,
                     child: pw.Container(
                       height: 14,
-                      color: nivel.color,
+                      color: level.color,
                       alignment: pw.Alignment.center,
-                      child: conteo[nivel]! / total >= 0.08
+                      child: count[level]! / total >= 0.08
                           ? pw.Text(
-                              '${porcentaje(nivel)}%',
+                              '${percentage(level)}%',
                               style: pw.TextStyle(
-                                fontWeight: negrita,
+                                fontWeight: bold,
                                 fontSize: 7,
-                                color: ColoresReportePdf.blanco,
+                                color: PdfReportColors.white,
                               ),
                             )
                           : null,
@@ -192,17 +191,14 @@ class EstadoPersonasPdf extends pw.StatelessWidget {
         pw.SizedBox(height: 8),
         pw.Row(
           children: [
-            for (final nivel in NivelReporte.values) ...[
-              PuntoColorPdf(nivel.color),
+            for (final level in ReportLevel.values) ...[
+              PdfColorDot(level.color),
+              pw.SizedBox(width: 4),
+              pw.Text(_labels[level]!, style: const pw.TextStyle(fontSize: 8)),
               pw.SizedBox(width: 4),
               pw.Text(
-                _etiquetas[nivel]!,
-                style: const pw.TextStyle(fontSize: 8),
-              ),
-              pw.SizedBox(width: 4),
-              pw.Text(
-                '${conteo[nivel]} (${porcentaje(nivel)}%)',
-                style: pw.TextStyle(fontWeight: negrita, fontSize: 8),
+                '${count[level]} (${percentage(level)}%)',
+                style: pw.TextStyle(fontWeight: bold, fontSize: 8),
               ),
               pw.SizedBox(width: 16),
             ],
@@ -214,131 +210,128 @@ class EstadoPersonasPdf extends pw.StatelessWidget {
 }
 
 /// Horas válidas contra objetivo en cada categoría, con una fila de total.
-class CategoriasPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
+class PdfCategories extends pw.StatelessWidget {
+  final TrainingReport report;
 
-  CategoriasPdf(this.reporte);
+  PdfCategories(this.report);
 
   @override
   pw.Widget build(pw.Context context) {
-    final categorias = reporte.horasPorCategoria;
-    final totalValidas = categorias.fold<double>(0, (t, c) => t + c.validas);
-    final totalObjetivo = categorias.fold<double>(0, (t, c) => t + c.objetivo);
+    final categories = report.hoursByCategory;
+    final totalCredited = categories.fold<double>(0, (t, c) => t + c.validas);
+    final totalTarget = categories.fold<double>(0, (t, c) => t + c.objetivo);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        TituloSeccionPdf(
+        PdfSectionTitle(
           'Horas por categoría',
-          bajada:
+          lowered:
               'Horas válidas para la meta: cada persona suma hasta su objetivo en cada categoría.',
         ),
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
           decoration: const pw.BoxDecoration(
             border: pw.Border(
-              bottom: pw.BorderSide(color: ColoresReportePdf.tinta, width: 0.8),
+              bottom: pw.BorderSide(color: PdfReportColors.ink, width: 0.8),
             ),
           ),
           child: pw.Row(
             children: [
-              _encabezado('CATEGORÍA', ancho: 150),
-              _encabezado('VÁLIDAS', ancho: 70, derecha: true),
-              _encabezado('OBJETIVO', ancho: 70, derecha: true),
+              _header('CATEGORÍA', width: 150),
+              _header('VÁLIDAS', width: 70, right: true),
+              _header('OBJETIVO', width: 70, right: true),
               pw.SizedBox(width: 16),
-              _encabezado('AVANCE'),
-              _encabezado('%', ancho: 40, derecha: true),
+              _header('AVANCE'),
+              _header('%', width: 40, right: true),
             ],
           ),
         ),
-        for (final c in categorias)
-          _fila(
-            nombre: pw.Row(
+        for (final c in categories)
+          _row(
+            name: pw.Row(
               children: [
-                PuntoColorPdf(ColoresReportePdf.categoria[c.tipo]!),
+                PdfColorDot(PdfReportColors.category[c.tipo]!),
                 pw.SizedBox(width: 6),
                 pw.Text(c.tipo.label, style: const pw.TextStyle(fontSize: 8.5)),
               ],
             ),
-            validas: c.validas,
-            objetivo: c.objetivo,
-            color: ColoresReportePdf.categoria[c.tipo]!,
+            valid: c.validas,
+            target: c.objetivo,
+            color: PdfReportColors.category[c.tipo]!,
           ),
-        _fila(
-          nombre: pw.Text(
+        _row(
+          name: pw.Text(
             'Total',
-            style: pw.TextStyle(fontWeight: negrita, fontSize: 8.5),
+            style: pw.TextStyle(fontWeight: bold, fontSize: 8.5),
           ),
-          validas: totalValidas,
-          objetivo: totalObjetivo,
-          color: ColoresReportePdf.tinta,
+          valid: totalCredited,
+          target: totalTarget,
+          color: PdfReportColors.ink,
           total: true,
         ),
       ],
     );
   }
 
-  pw.Widget _encabezado(String texto, {double? ancho, bool derecha = false}) {
+  pw.Widget _header(String text, {double? width, bool right = false}) {
     final t = pw.Text(
-      texto,
-      textAlign: derecha ? pw.TextAlign.right : pw.TextAlign.left,
+      text,
+      textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
       style: pw.TextStyle(
-        fontWeight: negrita,
+        fontWeight: bold,
         fontSize: 7,
-        color: ColoresReportePdf.tintaSuave,
+        color: PdfReportColors.softInk,
       ),
     );
-    return ancho == null
+    return width == null
         ? pw.Expanded(child: t)
-        : pw.SizedBox(width: ancho, child: t);
+        : pw.SizedBox(width: width, child: t);
   }
 
-  pw.Widget _fila({
-    required pw.Widget nombre,
-    required double validas,
-    required double objetivo,
+  pw.Widget _row({
+    required pw.Widget name,
+    required double valid,
+    required double target,
     required PdfColor color,
     bool total = false,
   }) {
-    final progreso = objetivo == 0 ? 1.0 : validas / objetivo;
-    final estilo = pw.TextStyle(
-      fontWeight: total ? negrita : null,
-      fontSize: 8.5,
-    );
+    final progress = target == 0 ? 1.0 : valid / target;
+    final style = pw.TextStyle(fontWeight: total ? bold : null, fontSize: 8.5);
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       decoration: pw.BoxDecoration(
-        color: total ? ColoresReportePdf.fondoSuave : null,
+        color: total ? PdfReportColors.softBackground : null,
         border: const pw.Border(
-          bottom: pw.BorderSide(color: ColoresReportePdf.linea),
+          bottom: pw.BorderSide(color: PdfReportColors.line),
         ),
       ),
       child: pw.Row(
         children: [
-          pw.SizedBox(width: 150, child: nombre),
+          pw.SizedBox(width: 150, child: name),
           pw.SizedBox(
             width: 70,
             child: pw.Text(
-              horasPdf(validas),
-              style: estilo,
+              pdfHours(valid),
+              style: style,
               textAlign: pw.TextAlign.right,
             ),
           ),
           pw.SizedBox(
             width: 70,
             child: pw.Text(
-              horasPdf(objetivo),
-              style: estilo.copyWith(color: ColoresReportePdf.tintaSuave),
+              pdfHours(target),
+              style: style.copyWith(color: PdfReportColors.softInk),
               textAlign: pw.TextAlign.right,
             ),
           ),
           pw.SizedBox(width: 16),
-          pw.Expanded(child: BarraProgresoPdf(progreso, color)),
+          pw.Expanded(child: PdfProgressBar(progress, color)),
           pw.SizedBox(
             width: 40,
             child: pw.Text(
-              objetivo == 0 ? '-' : formatearPorcentaje(progreso * 100),
-              style: estilo.copyWith(fontWeight: negrita),
+              target == 0 ? '-' : formatPercentage(progress * 100),
+              style: style.copyWith(fontWeight: bold),
               textAlign: pw.TextAlign.right,
             ),
           ),
@@ -349,22 +342,22 @@ class CategoriasPdf extends pw.StatelessWidget {
 }
 
 /// Horas de cada fuente sin tope, y cuánto difieren donde las dos existen.
-class FuentesPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
+class PdfSources extends pw.StatelessWidget {
+  final TrainingReport report;
 
-  FuentesPdf(this.reporte);
+  PdfSources(this.report);
 
   @override
   pw.Widget build(pw.Context context) {
-    final c = reporte.comparacionFuentes;
-    const comparables = ComparacionMoodleCrm.comparables;
+    final c = report.sourceComparison;
+    const comparables = MoodleCrmComparison.comparables;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        TituloSeccionPdf(
+        PdfSectionTitle(
           'Moodle vs CRM',
-          bajada:
+          lowered:
               'Horas registradas en cada fuente, sin tope. Libres y Dictado solo existen en CRM.',
         ),
         pw.Table(
@@ -375,53 +368,53 @@ class FuentesPdf extends pw.StatelessWidget {
             3: pw.FlexColumnWidth(1),
           },
           border: const pw.TableBorder(
-            horizontalInside: pw.BorderSide(color: ColoresReportePdf.linea),
-            bottom: pw.BorderSide(color: ColoresReportePdf.linea),
+            horizontalInside: pw.BorderSide(color: PdfReportColors.line),
+            bottom: pw.BorderSide(color: PdfReportColors.line),
           ),
           children: [
             pw.TableRow(
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                  bottom: pw.BorderSide(
-                    color: ColoresReportePdf.tinta,
-                    width: 0.8,
-                  ),
+                  bottom: pw.BorderSide(color: PdfReportColors.ink, width: 0.8),
                 ),
               ),
               children: [
-                _encabezado('CATEGORÍA', derecha: false),
-                _encabezado('MOODLE (LMS)'),
-                _encabezado('CRM'),
-                _encabezado('DIFERENCIA'),
+                _header('CATEGORÍA', right: false),
+                _header('MOODLE (LMS)'),
+                _header('CRM'),
+                _header('DIFERENCIA'),
               ],
             ),
-            for (final tipo in TipoCurso.values)
+            for (final type in CourseCategory.values)
               pw.TableRow(
                 children: [
-                  _nombre(tipo.label),
-                  comparables.contains(tipo)
-                      ? _celda(horasPdf(c.moodle[tipo] ?? 0))
-                      : _celda('-', color: ColoresReportePdf.tintaSuave),
-                  _celda(horasPdf(c.crm[tipo] ?? 0)),
-                  _celda(
-                    comparables.contains(tipo)
-                        ? diferenciaHorasPdf(
-                            (c.crm[tipo] ?? 0) - (c.moodle[tipo] ?? 0),
+                  _name(type.label),
+                  comparables.contains(type)
+                      ? _cell(pdfHours(c.moodle[type] ?? 0))
+                      : _cell('-', color: PdfReportColors.softInk),
+                  _cell(pdfHours(c.crm[type] ?? 0)),
+                  _cell(
+                    comparables.contains(type)
+                        ? hoursDifferencePdf(
+                            (c.crm[type] ?? 0) - (c.moodle[type] ?? 0),
                           )
                         : '-',
-                    color: ColoresReportePdf.tintaSuave,
+                    color: PdfReportColors.softInk,
                   ),
                 ],
               ),
             pw.TableRow(
               decoration: const pw.BoxDecoration(
-                color: ColoresReportePdf.fondoSuave,
+                color: PdfReportColors.softBackground,
               ),
               children: [
-                _nombre('Total', resaltado: true),
-                _celda(horasPdf(c.totalMoodle(comparables)), resaltado: true),
-                _celda(horasPdf(c.totalCrm(TipoCurso.values)), resaltado: true),
-                _celda(''),
+                _name('Total', highlighted: true),
+                _cell(pdfHours(c.totalMoodle(comparables)), highlighted: true),
+                _cell(
+                  pdfHours(c.totalCrm(CourseCategory.values)),
+                  highlighted: true,
+                ),
+                _cell(''),
               ],
             ),
           ],
@@ -430,11 +423,11 @@ class FuentesPdf extends pw.StatelessWidget {
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           decoration: pw.BoxDecoration(
-            color: ColoresReportePdf.marcaFondo,
+            color: PdfReportColors.brandBackground,
             borderRadius: pw.BorderRadius.circular(4),
           ),
           child: pw.Text(
-            _textoDiferencia(c),
+            _differenceText(c),
             style: const pw.TextStyle(fontSize: 8),
           ),
         ),
@@ -442,110 +435,111 @@ class FuentesPdf extends pw.StatelessWidget {
     );
   }
 
-  static String _textoDiferencia(ComparacionMoodleCrm c) {
-    if (c.coinciden) return 'En Negocio y Blandas las dos fuentes coinciden.';
-    final diferencia = c.diferenciaComparable;
-    final signo = diferencia > 0 ? '+' : '-';
-    final porcentaje = switch (c.diferenciaPorcentual) {
-      final p? => ' ($signo${p.abs().toStringAsFixed(0)}%)',
+  static String _differenceText(MoodleCrmComparison c) {
+    if (c.match) return 'En Negocio y Blandas las dos fuentes coinciden.';
+    final difference = c.differenceComparable;
+    final sign = difference > 0 ? '+' : '-';
+    final percentage = switch (c.percentageDifference) {
+      final p? => ' ($sign${p.abs().toStringAsFixed(0)}%)',
       null => '',
     };
-    return 'En Negocio y Blandas, CRM registra ${horasPdf(diferencia.abs())} '
-        '${diferencia > 0 ? 'más' : 'menos'} que Moodle$porcentaje.';
+    return 'En Negocio y Blandas, CRM registra ${pdfHours(difference.abs())} '
+        '${difference > 0 ? 'más' : 'menos'} que Moodle$percentage.';
   }
 
   static const _padding = pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8);
 
-  pw.Widget _celda(String texto, {bool resaltado = false, PdfColor? color}) =>
+  pw.Widget _cell(String text, {bool highlighted = false, PdfColor? color}) =>
       pw.Padding(
         padding: _padding,
         child: pw.Text(
-          texto,
+          text,
           textAlign: pw.TextAlign.right,
           style: pw.TextStyle(
-            fontWeight: resaltado ? negrita : null,
+            fontWeight: highlighted ? bold : null,
             fontSize: 8.5,
             color: color,
           ),
         ),
       );
 
-  pw.Widget _nombre(String texto, {bool resaltado = false}) => pw.Padding(
+  pw.Widget _name(String text, {bool highlighted = false}) => pw.Padding(
     padding: _padding,
     child: pw.Text(
-      texto,
-      style: pw.TextStyle(
-        fontWeight: resaltado ? negrita : null,
-        fontSize: 8.5,
-      ),
+      text,
+      style: pw.TextStyle(fontWeight: highlighted ? bold : null, fontSize: 8.5),
     ),
   );
 
-  pw.Widget _encabezado(String texto, {bool derecha = true}) => pw.Padding(
+  pw.Widget _header(String text, {bool right = true}) => pw.Padding(
     padding: _padding,
     child: pw.Text(
-      texto,
-      textAlign: derecha ? pw.TextAlign.right : pw.TextAlign.left,
+      text,
+      textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
       style: pw.TextStyle(
-        fontWeight: negrita,
+        fontWeight: bold,
         fontSize: 7,
-        color: ColoresReportePdf.tintaSuave,
+        color: PdfReportColors.softInk,
       ),
     ),
   );
 }
 
 /// Horas válidas promedio por colaborador de los últimos meses.
-class EvolucionPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
+class PdfEvolution extends pw.StatelessWidget {
+  final TrainingReport report;
 
-  EvolucionPdf(this.reporte);
+  PdfEvolution(this.report);
 
-  static const _alto = 70.0;
+  static const _height = 70.0;
 
   @override
   pw.Widget build(pw.Context context) {
-    final evolucion = reporte.evolucion;
-    final maximo = evolucion.fold<double>(
+    final evolution = report.evolution;
+    final maximum = evolution.fold<double>(
       0,
-      (m, punto) => punto.horas > m ? punto.horas : m,
+      (m, point) => point.hours > m ? point.hours : m,
     );
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        TituloSeccionPdf(
+        PdfSectionTitle(
           'Evolución mensual',
-          bajada: 'Horas válidas promedio por colaborador en los últimos meses',
+          lowered:
+              'Horas válidas promedio por colaborador en los últimos meses',
         ),
         pw.Container(
           padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 8),
           decoration: pw.BoxDecoration(
-            color: ColoresReportePdf.fondoSuave,
+            color: PdfReportColors.softBackground,
             borderRadius: pw.BorderRadius.circular(6),
-            border: pw.Border.all(color: ColoresReportePdf.linea),
+            border: pw.Border.all(color: PdfReportColors.line),
           ),
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              for (final (i, punto) in evolucion.indexed)
+              for (final (i, point) in evolution.indexed)
                 pw.Expanded(
                   child: pw.Column(
                     children: [
                       pw.Text(
-                        horasPdf(punto.horas),
-                        style: pw.TextStyle(fontWeight: negrita, fontSize: 8),
+                        pdfHours(point.hours),
+                        style: pw.TextStyle(fontWeight: bold, fontSize: 8),
                       ),
                       pw.SizedBox(height: 3),
                       pw.Container(
                         width: 36,
-                        height: maximo == 0
+                        height: maximum == 0
                             ? 1
-                            : (_alto * punto.horas / maximo).clamp(1.0, _alto),
+                            : (_height * point.hours / maximum).clamp(
+                                1.0,
+                                _height,
+                              ),
                         decoration: pw.BoxDecoration(
                           // El último mes es el del período elegido.
-                          color: i == evolucion.length - 1
-                              ? ColoresReportePdf.marca
-                              : ColoresReportePdf.pista,
+                          color: i == evolution.length - 1
+                              ? PdfReportColors.brand
+                              : PdfReportColors.track,
                           borderRadius: const pw.BorderRadius.vertical(
                             top: pw.Radius.circular(3),
                           ),
@@ -553,10 +547,10 @@ class EvolucionPdf extends pw.StatelessWidget {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        '${nombreMes(punto.mes.month)} ${punto.mes.year}',
+                        '${monthName(point.month.month)} ${point.month.year}',
                         style: const pw.TextStyle(
                           fontSize: 7.5,
-                          color: ColoresReportePdf.tintaSuave,
+                          color: PdfReportColors.softInk,
                         ),
                       ),
                     ],

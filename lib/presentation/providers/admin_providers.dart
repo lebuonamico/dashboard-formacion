@@ -6,93 +6,90 @@ import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/presentation/providers/core_providers.dart';
 
-enum AccesoAdmin { permitido, denegado, sinSupabase }
+enum AccessAdmin { allowed, denied, noSupabase }
 
-final accesoAdminProvider = Provider<AccesoAdmin>((ref) {
+final accessAdminProvider = Provider<AccessAdmin>((ref) {
   final auth = ref.watch(authControllerProvider);
-  if (ref.watch(usuariosAutorizadosRepositoryProvider) == null) {
-    return AccesoAdmin.sinSupabase;
+  if (ref.watch(authorizedUsersRepositoryProvider) == null) {
+    return AccessAdmin.noSupabase;
   }
-  return auth.esGestor ? AccesoAdmin.permitido : AccesoAdmin.denegado;
+  return auth.canManage ? AccessAdmin.allowed : AccessAdmin.denied;
 });
 
-final usuariosAutorizadosProvider =
-    FutureProvider.autoDispose<List<UsuarioAutorizado>>((ref) async {
-      final repositorio = ref.watch(usuariosAutorizadosRepositoryProvider);
-      if (repositorio == null) {
+final authorizedUsersProvider =
+    FutureProvider.autoDispose<List<AuthorizedUser>>((ref) async {
+      final repository = ref.watch(authorizedUsersRepositoryProvider);
+      if (repository == null) {
         throw const FormatException(
           'El panel de administración no está disponible en esta versión.',
         );
       }
-      return repositorio.getUsuarios();
+      return repository.getUsers();
     });
 
-final busquedaUsuarioAdminProvider = StateProvider.autoDispose<String>(
-  (ref) => '',
-);
-final filtroRolAdminProvider = StateProvider.autoDispose<RolUsuario?>(
+final searchUserAdminProvider = StateProvider.autoDispose<String>((ref) => '');
+final adminRoleFilterProvider = StateProvider.autoDispose<UserRole?>(
   (ref) => null,
 );
 
-final filtroEstadoAdminProvider = StateProvider.autoDispose<EstadoUsuario?>(
+final adminStatusFilterProvider = StateProvider.autoDispose<UserStatus?>(
   (ref) => null,
 );
-final emailSeleccionadoAdminProvider = StateProvider.autoDispose<String?>(
+final selectedAdminEmailProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
-final filtrosAdminActivosProvider = Provider.autoDispose<bool>(
+final activeAdminFiltersProvider = Provider.autoDispose<bool>(
   (ref) =>
-      ref.watch(busquedaUsuarioAdminProvider).trim().isNotEmpty ||
-      ref.watch(filtroRolAdminProvider) != null ||
-      ref.watch(filtroEstadoAdminProvider) != null ||
+      ref.watch(searchUserAdminProvider).trim().isNotEmpty ||
+      ref.watch(adminRoleFilterProvider) != null ||
+      ref.watch(adminStatusFilterProvider) != null ||
       ref.watch(dataFilterSelectionProvider('admin')).isNotEmpty,
 );
 
-final usuariosAdminFiltradosProvider =
-    Provider.autoDispose<AsyncValue<List<UsuarioAutorizado>>>((ref) {
-      final usuarios = ref.watch(usuariosAutorizadosProvider);
-      final busqueda = ref.watch(busquedaUsuarioAdminProvider).trim();
-      final rol = ref.watch(filtroRolAdminProvider);
-      final estado = ref.watch(filtroEstadoAdminProvider);
+final filteredAdminUsersProvider =
+    Provider.autoDispose<AsyncValue<List<AuthorizedUser>>>((ref) {
+      final users = ref.watch(authorizedUsersProvider);
+      final search = ref.watch(searchUserAdminProvider).trim();
+      final role = ref.watch(adminRoleFilterProvider);
+      final status = ref.watch(adminStatusFilterProvider);
       final selection = ref.watch(dataFilterSelectionProvider('admin'));
 
-      return usuarios.whenData((lista) {
-        final consulta = busqueda.toLowerCase();
-        return lista.where((usuario) {
-          final coincideTexto =
-              consulta.isEmpty || usuario.email.toLowerCase() == consulta;
-          final coincideRol = rol == null || usuario.rolConocido == rol;
-          final coincideEstado = estado == null || usuario.estado == estado;
-          return coincideTexto &&
-              coincideRol &&
-              coincideEstado &&
-              matchesDataFilters(selection, adminFilterRow(usuario));
+      return users.whenData((items) {
+        final query = search.toLowerCase();
+        return items.where((user) {
+          final matchesText =
+              query.isEmpty || user.email.toLowerCase() == query;
+          final matchesRole = role == null || user.knownRole == role;
+          final matchesStatus = status == null || user.status == status;
+          return matchesText &&
+              matchesRole &&
+              matchesStatus &&
+              matchesDataFilters(selection, adminFilterRow(user));
         }).toList();
       });
     });
 
-final usuarioSeleccionadoAdminProvider =
-    Provider.autoDispose<UsuarioAutorizado?>((ref) {
-      final email = ref.watch(emailSeleccionadoAdminProvider);
-      if (email == null) return null;
-      final lista = ref.watch(usuariosAutorizadosProvider).value;
-      if (lista == null) return null;
-      for (final usuario in lista) {
-        if (usuario.email == email) return usuario;
-      }
-      return null;
-    });
+final selectedAdminUserProvider = Provider.autoDispose<AuthorizedUser?>((ref) {
+  final email = ref.watch(selectedAdminEmailProvider);
+  if (email == null) return null;
+  final items = ref.watch(authorizedUsersProvider).value;
+  if (items == null) return null;
+  for (final user in items) {
+    if (user.email == email) return user;
+  }
+  return null;
+});
 
 /// Búsqueda de la pestaña "Áreas y equipos". Se descarta al salir del panel.
-final busquedaEstructuraAdminProvider = StateProvider.autoDispose<String>(
+final adminStructureSearchProvider = StateProvider.autoDispose<String>(
   (ref) => '',
 );
 
-final seleccionFueraDelFiltroAdminProvider = Provider.autoDispose<bool>((ref) {
-  final seleccionado = ref.watch(usuarioSeleccionadoAdminProvider);
-  if (seleccionado == null) return false;
-  final filtrados = ref.watch(usuariosAdminFiltradosProvider).value;
-  if (filtrados == null) return false;
-  return !filtrados.any((usuario) => usuario.email == seleccionado.email);
+final adminSelectionOutsideFilterProvider = Provider.autoDispose<bool>((ref) {
+  final selected = ref.watch(selectedAdminUserProvider);
+  if (selected == null) return false;
+  final filtered = ref.watch(filteredAdminUsersProvider).value;
+  if (filtered == null) return false;
+  return !filtered.any((user) => user.email == selected.email);
 });

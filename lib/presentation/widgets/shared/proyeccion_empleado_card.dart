@@ -8,22 +8,22 @@ import 'package:flutter/material.dart';
 
 /// Proyección a fin de año de un colaborador: si llega con su tendencia y,
 /// si no, cuántas horas le faltan en cada habilidad de su plan.
-class ProyeccionEmpleadoCard extends StatelessWidget {
-  final ProyeccionEmpleado proyeccion;
-  final int anio;
+class EmployeeProjectionCard extends StatelessWidget {
+  final EmployeeProjection projection;
+  final int year;
 
-  const ProyeccionEmpleadoCard({
+  const EmployeeProjectionCard({
     super.key,
-    required this.proyeccion,
-    required this.anio,
+    required this.projection,
+    required this.year,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colores = proyeccion.estado.colores(context);
-    final cerrado = proyeccion.mesesRestantes == 0;
-    final faltantes = proyeccion.faltantes;
+    final colors = projection.status.colors(context);
+    final closed = projection.remainingMonths == 0;
+    final missing = projection.missing;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -35,31 +35,31 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                formatearPorcentaje(proyeccion.porcentaje),
+                formatPercentage(projection.percentage),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
                 ),
               ),
-              if (proyeccion.variacion case final variacion?) ...[
+              if (projection.variation case final variation?) ...[
                 const SizedBox(width: 8),
-                badgeVariacion(context, variacion, 'pts'),
+                variationBadge(context, variation, 'pts'),
               ],
               const Spacer(),
               Container(
                 key: const Key('proyeccion_empleado_estado'),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: colores.fondo,
+                  color: colors.background,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  proyeccion.estado.label,
+                  projection.status.label,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: colores.texto,
+                    color: colors.text,
                   ),
                 ),
               ),
@@ -67,29 +67,29 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${proyeccion.proyeccion.toStringAsFixed(0)} / '
-            '${proyeccion.meta.toStringAsFixed(0)} h proyectadas a diciembre',
+            '${projection.projection.toStringAsFixed(0)} / '
+            '${projection.goal.toStringAsFixed(0)} h proyectadas a diciembre',
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 4),
           Text(
-            'Corte: ${nombreMes(proyeccion.mesCorte)} $anio · tendencia de sus '
+            'Corte: ${monthName(projection.cutoffMonth)} $year · tendencia de sus '
             'horas en los meses con datos',
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
-          if (faltantes.isEmpty)
+          if (missing.isEmpty)
             Row(
               children: [
                 Icon(
                   Icons.check_circle_outline,
                   size: 18,
-                  color: context.colores.exito.texto,
+                  color: context.colors.success.text,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    cerrado
+                    closed
                         ? 'Cumplió todas las habilidades de su plan.'
                         : 'Con su tendencia cumple todas las habilidades de su plan.',
                     style: TextStyle(fontSize: 14, color: cs.onSurface),
@@ -99,7 +99,7 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
             )
           else ...[
             Text(
-              cerrado
+              closed
                   ? 'No llegó a cumplir:'
                   : 'Para llegar a diciembre tiene que reforzar:',
               style: TextStyle(
@@ -109,7 +109,7 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            for (final categoria in faltantes)
+            for (final category in missing)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
@@ -117,16 +117,16 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
                     Icon(
                       Icons.arrow_upward_rounded,
                       size: 16,
-                      color: context.colores.peligro.texto,
+                      color: context.colors.danger.text,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${categoria.tipo.label} · '
-                        '${cerrado ? 'faltaron' : 'faltan'} '
-                        '${categoria.falta.toStringAsFixed(1)} h'
-                        '${cerrado ? '' : ' (+${(categoria.falta / proyeccion.mesesRestantes).toStringAsFixed(1)} h/mes)'}',
-                        key: Key('proyeccion_falta_${categoria.tipo.name}'),
+                        '${category.type.label} · '
+                        '${closed ? 'faltaron' : 'faltan'} '
+                        '${category.missing.toStringAsFixed(1)} h'
+                        '${closed ? '' : ' (+${(category.missing / projection.remainingMonths).toStringAsFixed(1)} h/mes)'}',
+                        key: Key('proyeccion_falta_${category.type.name}'),
                         style: TextStyle(fontSize: 14, color: cs.onSurface),
                       ),
                     ),
@@ -141,17 +141,17 @@ class ProyeccionEmpleadoCard extends StatelessWidget {
             spacing: 20,
             runSpacing: 8,
             children: [
-              for (final categoria in proyeccion.categorias)
+              for (final category in projection.categories)
                 Text(
-                  '${categoria.tipo.label}: '
-                  '${categoria.acumulado.toStringAsFixed(1)} / '
-                  '${categoria.meta.toStringAsFixed(0)} h · proyecta '
-                  '${categoria.proyectado.toStringAsFixed(1)} h '
-                  '${categoria.llega ? '✓' : ''}',
+                  '${category.type.label}: '
+                  '${category.accumulated.toStringAsFixed(1)} / '
+                  '${category.goal.toStringAsFixed(0)} h · proyecta '
+                  '${category.projected.toStringAsFixed(1)} h '
+                  '${category.arrives ? '✓' : ''}',
                   style: TextStyle(
                     fontSize: 12,
-                    color: categoria.llega
-                        ? context.colores.exito.texto
+                    color: category.arrives
+                        ? context.colors.success.text
                         : cs.onSurfaceVariant,
                   ),
                 ),

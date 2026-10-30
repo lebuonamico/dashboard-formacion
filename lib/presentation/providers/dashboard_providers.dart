@@ -9,23 +9,24 @@ import 'package:app_finnegans/presentation/providers/core_providers.dart';
 import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 
-final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
+final dashboardTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((
   ref,
 ) async {
-  final alcance = ref.watch(alcancePeriodoProvider);
-  final mes = ref.watch(filtroMesPeriodoProvider);
-  final anio = ref.watch(filtroAnioPeriodoProvider);
+  final scope = ref.watch(periodScopeProvider);
+  final month = ref.watch(periodMonthFilterProvider);
+  final year = ref.watch(periodYearFilterProvider);
 
-  final desde = DateTime(anio, alcance == AlcancePeriodo.anual ? 1 : mes);
-  final hasta = alcance == AlcancePeriodo.anual
-      ? DateTime(anio + 1)
-      : DateTime(anio, mes + 1);
+  final from = DateTime(year, scope == PeriodScope.annual ? 1 : month);
+  final until = scope == PeriodScope.annual
+      ? DateTime(year + 1)
+      : DateTime(year, month + 1);
   // Las horas ya están en memoria (con el alcance del usuario): cambiar el
   // período filtra, no vuelve a consultar la base.
-  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-  return cargas
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  return timeEntries
       .where(
-        (carga) => !carga.fecha.isBefore(desde) && carga.fecha.isBefore(hasta),
+        (timeEntry) =>
+            !timeEntry.date.isBefore(from) && timeEntry.date.isBefore(until),
       )
       .toList();
 });
@@ -34,116 +35,113 @@ final cargasDashboardProvider = FutureProvider<List<CargaDeHorasCRM>>((
 /// certificaciones finalizadas en el período y, en el anual, la suma de los
 /// meses con datos contra sus objetivos mensuales. Así los KPIs del Dashboard
 /// coinciden con los de las otras pantallas.
-final cumplimientoDashboardProvider =
-    FutureProvider<List<CumplimientoEmpleado>>((ref) {
-      return ref.watch(teamComplianceProvider.future);
-    });
+final dashboardComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
+  ref,
+) {
+  return ref.watch(teamComplianceProvider.future);
+});
 
 /// Meses que se evaluaron en el período: 1 en el mensual; en el anual, los
 /// meses con registros CRM o LMS, igual que el acumulado de Equipos.
-final mesesEvaluadosDashboardProvider = FutureProvider<int>((ref) async {
-  if (ref.watch(alcancePeriodoProvider) == AlcancePeriodo.mensual) return 1;
+final dashboardEvaluatedMonthsProvider = FutureProvider<int>((ref) async {
+  if (ref.watch(periodScopeProvider) == PeriodScope.monthly) return 1;
 
-  final anio = ref.watch(filtroAnioPeriodoProvider);
-  final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  final equiposService = ref.read(teamsServiceProvider);
-  var meses = 0;
-  for (var mes = 1; mes <= 12; mes++) {
-    if (equiposService.periods.hasDataInPeriod(
-      timeEntries: cargas,
-      certifications: certificaciones,
-      year: anio,
-      month: mes,
+  final year = ref.watch(periodYearFilterProvider);
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  final certifications = await ref.watch(lmsCertificationsProvider.future);
+  final teamsService = ref.read(teamsServiceProvider);
+  var months = 0;
+  for (var month = 1; month <= 12; month++) {
+    if (teamsService.periods.hasDataInPeriod(
+      timeEntries: timeEntries,
+      certifications: certifications,
+      year: year,
+      month: month,
       isAnnual: false,
     )) {
-      meses++;
+      months++;
     }
   }
   // Nunca 0, para poder dividir el ritmo mensual.
-  return meses == 0 ? 1 : meses;
+  return months == 0 ? 1 : months;
 });
 
 /// Horas válidas promedio por colaborador elegible en los 4 meses que terminan
 /// en el período elegido (en el anual, el último mes del año con datos).
-final evolucionMensualDashboardProvider =
-    FutureProvider<List<({DateTime mes, double horas})>>((ref) async {
-      final alcance = ref.watch(alcancePeriodoProvider);
-      final mesElegido = ref.watch(filtroMesPeriodoProvider);
-      final anio = ref.watch(filtroAnioPeriodoProvider);
-      final empleados = await ref.watch(empleadosProvider.future);
-      final historial = await ref.watch(empleadoHistorialProvider.future);
-      final cursos = await ref.watch(cursosProvider.future);
-      final cargas = await ref.watch(cargasDeHorasCRMProvider.future);
-      final certificaciones = await ref.watch(
-        certificacionesMoodleProvider.future,
+final dashboardMonthlyEvolutionProvider =
+    FutureProvider<List<({DateTime month, double hours})>>((ref) async {
+      final scope = ref.watch(periodScopeProvider);
+      final chosenMonth = ref.watch(periodMonthFilterProvider);
+      final year = ref.watch(periodYearFilterProvider);
+      final employees = await ref.watch(employeesProvider.future);
+      final history = await ref.watch(employeeHistoryProvider.future);
+      final courses = await ref.watch(coursesProvider.future);
+      final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+      final certifications = await ref.watch(lmsCertificationsProvider.future);
+      final userScope = await ref.watch(userScopeProvider.future);
+      final include = userScope.isTotal ? null : userScope.includesEmployee;
+      final complianceService = await ref.watch(
+        complianceServiceProvider.future,
       );
-      final alcanceUsuario = await ref.watch(alcanceUsuarioProvider.future);
-      final incluir = alcanceUsuario.esTotal
-          ? null
-          : alcanceUsuario.incluyeEmpleado;
-      final cumplimientoService = await ref.watch(
-        cumplimientoServiceProvider.future,
-      );
-      final equiposService = ref.read(teamsServiceProvider);
+      final teamsService = ref.read(teamsServiceProvider);
 
-      bool tieneDatos(DateTime fecha) => equiposService.periods.hasDataInPeriod(
-        timeEntries: cargas,
-        certifications: certificaciones,
-        year: fecha.year,
-        month: fecha.month,
+      bool hasData(DateTime date) => teamsService.periods.hasDataInPeriod(
+        timeEntries: timeEntries,
+        certifications: certifications,
+        year: date.year,
+        month: date.month,
         isAnnual: false,
       );
 
-      var mesFinal = DateTime(anio, mesElegido);
-      if (alcance == AlcancePeriodo.anual) {
-        mesFinal = DateTime(anio, 12);
-        while (mesFinal.month > 1 && !tieneDatos(mesFinal)) {
-          mesFinal = DateTime(anio, mesFinal.month - 1);
+      var finalMonth = DateTime(year, chosenMonth);
+      if (scope == PeriodScope.annual) {
+        finalMonth = DateTime(year, 12);
+        while (finalMonth.month > 1 && !hasData(finalMonth)) {
+          finalMonth = DateTime(year, finalMonth.month - 1);
         }
-        if (!tieneDatos(mesFinal)) mesFinal = DateTime(anio, 12);
+        if (!hasData(finalMonth)) finalMonth = DateTime(year, 12);
       }
 
       return [
         for (var offset = 3; offset >= 0; offset--)
           (() {
-            final fecha = DateTime(mesFinal.year, mesFinal.month - offset);
-            if (!tieneDatos(fecha)) return (mes: fecha, horas: 0.0);
-            final cumplimientos = equiposService.periods
+            final date = DateTime(finalMonth.year, finalMonth.month - offset);
+            if (!hasData(date)) return (month: date, hours: 0.0);
+            final complianceList = teamsService.periods
                 .calculateMonthlyCompliance(
-                  employees: empleados,
-                  history: historial,
-                  courses: cursos,
-                  timeEntries: cargas,
-                  certifications: certificaciones,
-                  year: fecha.year,
-                  month: fecha.month,
-                  complianceService: cumplimientoService,
-                  includeEmployee: incluir,
+                  employees: employees,
+                  history: history,
+                  courses: courses,
+                  timeEntries: timeEntries,
+                  certifications: certifications,
+                  year: date.year,
+                  month: date.month,
+                  complianceService: complianceService,
+                  includeEmployee: include,
                 );
-            if (cumplimientos.isEmpty) return (mes: fecha, horas: 0.0);
-            final total = cumplimientos.fold<double>(
+            if (complianceList.isEmpty) return (month: date, hours: 0.0);
+            final total = complianceList.fold<double>(
               0,
-              (t, item) => t + item.totalHorasValidas,
+              (t, item) => t + item.totalCreditedHours,
             );
-            return (mes: fecha, horas: total / cumplimientos.length);
+            return (month: date, hours: total / complianceList.length);
           })(),
       ];
     });
 
-final cumplimientoGlobalProvider = FutureProvider<List<CumplimientoEmpleado>>((
+final globalComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
   ref,
 ) async {
-  final empleados = await ref.watch(empleadosProvider.future);
-  final cursos = await ref.watch(cursosProvider.future);
-  final cargasDeHoras = await ref.watch(cargasDeHorasCRMProvider.future);
-  final certificaciones = await ref.watch(certificacionesMoodleProvider.future);
-  final service = await ref.watch(cumplimientoServiceProvider.future);
+  final employees = await ref.watch(employeesProvider.future);
+  final courses = await ref.watch(coursesProvider.future);
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  final certifications = await ref.watch(lmsCertificationsProvider.future);
+  final service = await ref.watch(complianceServiceProvider.future);
 
-  return service.calcularCumplimientoGlobal(
-    empleados: empleados,
-    cursos: cursos,
-    cargasDeHoras: cargasDeHoras,
-    certificacionesMoodle: certificaciones,
+  return service.calculateComplianceGlobal(
+    employees: employees,
+    courses: courses,
+    timeEntries: timeEntries,
+    lmsCertifications: certifications,
   );
 });

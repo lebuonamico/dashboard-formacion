@@ -8,28 +8,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Selector de período conectado a los providers globales.
 /// Cualquier pantalla que lo use comparte el mismo período.
-class PeriodoFilterPanel extends ConsumerWidget {
+class PeriodFilterPanel extends ConsumerWidget {
   /// Qué entra al cálculo del período, para el texto de ayuda.
-  final String incluidos;
+  final String included;
 
   /// Se muestra junto al título, como el botón para imprimir el reporte.
-  final Widget? accion;
+  final Widget? action;
 
-  const PeriodoFilterPanel({
+  const PeriodFilterPanel({
     super.key,
-    this.incluidos = 'todos los equipos',
-    this.accion,
+    this.included = 'todos los equipos',
+    this.action,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final alcance = ref.watch(alcancePeriodoProvider);
-    final mes = ref.watch(filtroMesPeriodoProvider);
-    final anio = ref.watch(filtroAnioPeriodoProvider);
-    final aniosDisponibles = ref
+    final selectedScope = ref.watch(periodScopeProvider);
+    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodYearFilterProvider);
+    final availableYears = ref
         .watch(availableTeamYearsProvider)
-        .maybeWhen(data: (anios) => anios, orElse: () => [anio]);
-    final yearOptions = {...aniosDisponibles, anio}.toList()
+        .maybeWhen(data: (years) => years, orElse: () => [year]);
+    final yearOptions = {...availableYears, year}.toList()
       ..sort((a, b) => b.compareTo(a));
 
     return Container(
@@ -38,39 +38,39 @@ class PeriodoFilterPanel extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final title = _PeriodTitle(
-            esAnual: alcance == AlcancePeriodo.anual,
-            incluidos: incluidos,
-            accion: accion,
+            isAnnual: selectedScope == PeriodScope.annual,
+            included: included,
+            action: action,
           );
           // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
-          final scopeControl = PeriodoSegmentedControl<AlcancePeriodo>(
-            selected: alcance,
-            options: AlcancePeriodo.values,
+          final scopeControl = PeriodSegmentedControl<PeriodScope>(
+            selected: selectedScope,
+            options: PeriodScope.values,
             labelBuilder: (scope) => scope.label,
             onChanged: (value) =>
-                ref.read(alcancePeriodoProvider.notifier).state = value,
+                ref.read(periodScopeProvider.notifier).state = value,
             selectedColor: context.colorScheme.primary,
             unselectedColor: context.colorScheme.surface,
             selectedForegroundColor: context.colorScheme.onPrimary,
             unselectedForegroundColor: context.colorScheme.onSurface,
           );
           // El anual abarca todo el año: el mes solo se elige en mensual.
-          final esMensual = alcance == AlcancePeriodo.mensual;
+          final isMonthly = selectedScope == PeriodScope.monthly;
           // Leandro: llama a _MonthField para seleccionar el mes del período.
           final monthField = _MonthField(
-            selectedMonth: mes,
+            selectedMonth: month,
             onChanged: (value) {
               if (value == null) return;
-              ref.read(filtroMesPeriodoProvider.notifier).state = value;
+              ref.read(periodMonthFilterProvider.notifier).state = value;
             },
           );
           // Leandro: llama a _YearField para seleccionar el año del período.
           final yearField = _YearField(
-            selectedYear: anio,
+            selectedYear: year,
             yearOptions: yearOptions,
             onChanged: (value) {
               if (value == null) return;
-              ref.read(filtroAnioPeriodoProvider.notifier).state = value;
+              ref.read(periodYearFilterProvider.notifier).state = value;
             },
           );
           if (constraints.maxWidth < 820) {
@@ -80,10 +80,7 @@ class PeriodoFilterPanel extends ConsumerWidget {
                 title,
                 const SizedBox(height: 12),
                 scopeControl,
-                if (esMensual) ...[
-                  const SizedBox(height: 12),
-                  monthField,
-                ],
+                if (isMonthly) ...[const SizedBox(height: 12), monthField],
                 const SizedBox(height: 12),
                 yearField,
               ],
@@ -95,7 +92,7 @@ class PeriodoFilterPanel extends ConsumerWidget {
               Expanded(child: title),
               const SizedBox(width: 16),
               scopeControl,
-              if (esMensual) ...[
+              if (isMonthly) ...[
                 const SizedBox(width: 12),
                 SizedBox(width: 170, child: monthField),
               ],
@@ -110,14 +107,14 @@ class PeriodoFilterPanel extends ConsumerWidget {
 }
 
 class _PeriodTitle extends StatelessWidget {
-  final bool esAnual;
-  final String incluidos;
-  final Widget? accion;
+  final bool isAnnual;
+  final String included;
+  final Widget? action;
 
   const _PeriodTitle({
-    required this.esAnual,
-    required this.incluidos,
-    this.accion,
+    required this.isAnnual,
+    required this.included,
+    this.action,
   });
 
   @override
@@ -133,16 +130,16 @@ class _PeriodTitle extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Tooltip(
-          message: esAnual
+          message: isAnnual
               ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
-              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $incluidos con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
+              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $included con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
           child: Icon(
             Icons.info_outline,
             size: 16,
             color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           ),
         ),
-        if (accion case final accion?) ...[const SizedBox(width: 12), accion],
+        if (action case final action?) ...[const SizedBox(width: 12), action],
       ],
     );
   }
@@ -164,7 +161,7 @@ class _MonthField extends StatelessWidget {
           .map(
             (month) => DropdownMenuItem<int>(
               value: month,
-              child: Text(nombreMes(month), overflow: TextOverflow.ellipsis),
+              child: Text(monthName(month), overflow: TextOverflow.ellipsis),
             ),
           )
           .toList(),

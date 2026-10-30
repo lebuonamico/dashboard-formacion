@@ -14,41 +14,41 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// antes: animar la opacidad de una imagen no reconstruye nada.
 ///
 /// Va en `MaterialApp.builder`, con `themeAnimationDuration: Duration.zero`.
-class TransicionTema extends ConsumerStatefulWidget {
+class ThemeTransition extends ConsumerStatefulWidget {
   final Widget child;
 
-  const TransicionTema({super.key, required this.child});
+  const ThemeTransition({super.key, required this.child});
 
   @override
-  ConsumerState<TransicionTema> createState() => _TransicionTemaState();
+  ConsumerState<ThemeTransition> createState() => _ThemeTransitionState();
 }
 
-class _TransicionTemaState extends ConsumerState<TransicionTema>
+class _ThemeTransitionState extends ConsumerState<ThemeTransition>
     with SingleTickerProviderStateMixin {
-  static const _duracion = Duration(milliseconds: 350);
+  static const _duration = Duration(milliseconds: 350);
 
-  final _pantalla = GlobalKey();
-  late final _fundido = AnimationController(vsync: this, duration: _duracion)
-    ..addStatusListener((estado) {
-      if (estado == AnimationStatus.completed) _liberarCaptura();
+  final _screen = GlobalKey();
+  late final _fade = AnimationController(vsync: this, duration: _duration)
+    ..addStatusListener((status) {
+      if (status == AnimationStatus.completed) _releaseCapture();
     });
-  late final _opacidad = ReverseAnimation(
-    CurvedAnimation(parent: _fundido, curve: Curves.easeInOut),
+  late final _opacity = ReverseAnimation(
+    CurvedAnimation(parent: _fade, curve: Curves.easeInOut),
   );
 
   /// Cómo se veía la app con el tema anterior, mientras se desvanece.
-  ui.Image? _captura;
+  ui.Image? _snapshot;
 
   /// El listener corre apenas cambia la preferencia, antes de que la app se
   /// reconstruya: la capa todavía tiene pintado el tema anterior.
-  void _capturar() {
+  void _capture() {
     if (MediaQuery.disableAnimationsOf(context)) return;
-    final limite = _pantalla.currentContext?.findRenderObject();
-    if (limite is! RenderRepaintBoundary || !limite.hasSize) return;
+    final limit = _screen.currentContext?.findRenderObject();
+    if (limit is! RenderRepaintBoundary || !limit.hasSize) return;
 
-    final ui.Image imagen;
+    final ui.Image image;
     try {
-      imagen = limite.toImageSync(
+      image = limit.toImageSync(
         pixelRatio: MediaQuery.devicePixelRatioOf(context),
       );
     } on Object {
@@ -56,43 +56,43 @@ class _TransicionTemaState extends ConsumerState<TransicionTema>
       // fundido: nunca bloquea el cambio.
       return;
     }
-    _captura?.dispose();
-    setState(() => _captura = imagen);
-    _fundido.forward(from: 0);
+    _snapshot?.dispose();
+    setState(() => _snapshot = image);
+    _fade.forward(from: 0);
   }
 
-  void _liberarCaptura() {
+  void _releaseCapture() {
     if (!mounted) return;
     setState(() {
-      _captura?.dispose();
-      _captura = null;
+      _snapshot?.dispose();
+      _snapshot = null;
     });
   }
 
   @override
   void dispose() {
-    _fundido.dispose();
-    _captura?.dispose();
+    _fade.dispose();
+    _snapshot?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(temaProvider, (anterior, actual) {
-      if (anterior != actual) _capturar();
+    ref.listen(themeModeProvider, (previous, current) {
+      if (previous != current) _capture();
     });
 
     return Stack(
       alignment: Alignment.topLeft,
       children: [
-        RepaintBoundary(key: _pantalla, child: widget.child),
-        if (_captura case final captura?)
+        RepaintBoundary(key: _screen, child: widget.child),
+        if (_snapshot case final capture?)
           Positioned.fill(
             // No intercepta toques: la app ya responde con el tema nuevo.
             child: IgnorePointer(
               child: FadeTransition(
-                opacity: _opacidad,
-                child: RawImage(image: captura, fit: BoxFit.fill),
+                opacity: _opacity,
+                child: RawImage(image: capture, fit: BoxFit.fill),
               ),
             ),
           ),

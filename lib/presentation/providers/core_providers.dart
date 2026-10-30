@@ -28,7 +28,7 @@ final supabaseClientProvider = Provider<SupabaseClient>(
 );
 final supabaseMappingsProvider = Provider<SupabaseMappings>(
   (ref) => SupabaseMappings(
-    empleados: SupabaseTableMapping(
+    employees: SupabaseTableMapping(
       table: 'empleados',
       conflictFields: ['legajo'],
       columns: {
@@ -44,7 +44,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
         'activo': 'activo',
       },
     ),
-    cursos: SupabaseTableMapping(
+    courses: SupabaseTableMapping(
       table: 'cursos',
       conflictFields: ['id'],
       columns: {
@@ -55,7 +55,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
         'activo': 'activo',
       },
     ),
-    horas: SupabaseTableMapping(
+    hours: SupabaseTableMapping(
       table: 'horas_capacitacion',
       conflictFields: ['id'],
       columns: {
@@ -72,7 +72,7 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
         'descripcion': 'descripcion',
       },
     ),
-    finalizaciones: SupabaseTableMapping(
+    completions: SupabaseTableMapping(
       table: 'finalizaciones_cursos',
       conflictFields: ['legajo', 'cursoId'],
       columns: {
@@ -85,98 +85,93 @@ final supabaseMappingsProvider = Provider<SupabaseMappings>(
   ),
 );
 
-final empleadosRepositoryProvider = Provider<EmpleadosRepository>((ref) {
+final employeesRepositoryProvider = Provider<EmployeesRepository>((ref) {
   return SupabaseConfig.enabled
-      ? SupabaseEmpleadosRepository(
+      ? SupabaseEmployeesRepository(
           ref.watch(supabaseClientProvider),
-          ref.watch(supabaseMappingsProvider).empleados,
+          ref.watch(supabaseMappingsProvider).employees,
         )
-      : LocalEmpleadosRepository();
+      : LocalEmployeesRepository();
 });
 
-final cursosRepositoryProvider = Provider<CursosRepository>((ref) {
+final coursesRepositoryProvider = Provider<CoursesRepository>((ref) {
   // El repositorio guarda el catálogo leído: otra sesión lo vuelve a leer.
-  ref.watch(sesionDatosProvider);
+  ref.watch(sessionDataProvider);
   return SupabaseConfig.enabled
-      ? SupabaseCursosRepository(
+      ? SupabaseCoursesRepository(
           ref.watch(supabaseClientProvider),
-          ref.watch(supabaseMappingsProvider).cursos,
+          ref.watch(supabaseMappingsProvider).courses,
         )
-      : LocalCursosRepository();
+      : LocalCoursesRepository();
 });
 
-final cargaDeHorasCRMRepositoryProvider = Provider<CargaDeHorasCRMRepository>((
+final crmTimeEntriesRepositoryProvider = Provider<CrmTimeEntriesRepository>((
   ref,
 ) {
   return SupabaseConfig.enabled
-      ? SupabaseCargaDeHorasCRMRepository(
+      ? SupabaseCrmTimeEntriesRepository(
           ref.watch(supabaseClientProvider),
-          ref.watch(supabaseMappingsProvider).horas,
-          ref.watch(cursosRepositoryProvider),
+          ref.watch(supabaseMappingsProvider).hours,
+          ref.watch(coursesRepositoryProvider),
         )
-      : LocalCargaDeHorasCRMRepository();
+      : LocalCrmTimeEntriesRepository();
 });
 
-final certificacionesMoodleRepositoryProvider =
-    Provider<CertificacionesMoodleRepository>((ref) {
+final lmsCertificationsRepositoryProvider =
+    Provider<LmsCertificationsRepository>((ref) {
       return SupabaseConfig.enabled
-          ? SupabaseCertificacionesMoodleRepository(
+          ? SupabaseLmsCertificationsRepository(
               ref.watch(supabaseClientProvider),
-              ref.watch(supabaseMappingsProvider).finalizaciones,
-              ref.watch(cursosRepositoryProvider),
+              ref.watch(supabaseMappingsProvider).completions,
+              ref.watch(coursesRepositoryProvider),
             )
-          : LocalCertificacionesMoodleRepository();
+          : LocalLmsCertificationsRepository();
     });
 
-final planFormacionRepositoryProvider = Provider<PlanFormacionRepository>((
-  ref,
-) {
+final trainingPlanRepositoryProvider = Provider<TrainingPlanRepository>((ref) {
   return SupabaseConfig.enabled
-      ? SupabasePlanFormacionRepository(ref.watch(supabaseClientProvider))
-      : LocalPlanFormacionRepository();
+      ? SupabaseTrainingPlanRepository(ref.watch(supabaseClientProvider))
+      : LocalTrainingPlanRepository();
 });
 
 /// Versiones del plan de formación por seniority. Al guardar una se invalida
 /// y todo el cumplimiento se recalcula.
-final planesFormacionProvider = FutureProvider<PlanesFormacion>((ref) {
-  return ref.watch(planFormacionRepositoryProvider).getPlanes();
+final trainingPlanHistoryProvider = FutureProvider<TrainingPlanHistory>((ref) {
+  return ref.watch(trainingPlanRepositoryProvider).getPlans();
 });
 
-final cumplimientoServiceProvider = FutureProvider<CumplimientoService>((
+final complianceServiceProvider = FutureProvider<ComplianceService>((
   ref,
 ) async {
-  final planes = await ref.watch(planesFormacionProvider.future);
-  return CumplimientoService(planes: planes);
+  final plans = await ref.watch(trainingPlanHistoryProvider.future);
+  return ComplianceService(plans: plans);
 });
 
-final importacionesRepositoryProvider = Provider<ImportacionesRepository?>(
+final importRecordsRepositoryProvider = Provider<ImportRecordsRepository?>(
   (ref) => SupabaseConfig.enabled
-      ? SupabaseImportacionesRepository(ref.watch(supabaseClientProvider))
+      ? SupabaseImportRecordsRepository(ref.watch(supabaseClientProvider))
       : null,
 );
-final importacionServiceProvider = Provider<ImportacionService>(
+final importAuditServiceProvider = Provider<ImportAuditService>(
   (ref) =>
-      ImportacionService(auditoria: ref.watch(importacionesRepositoryProvider)),
+      ImportAuditService(audit: ref.watch(importRecordsRepositoryProvider)),
 );
 
-final usuariosAutorizadosRepositoryProvider =
-    Provider<UsuariosAutorizadosRepository?>(
-      (ref) => SupabaseConfig.enabled
-          ? SupabaseUsuariosAutorizadosRepository(
-              ref.watch(supabaseClientProvider),
-            )
-          : null,
-    );
+final authorizedUsersRepositoryProvider = Provider<AuthorizedUsersRepository?>(
+  (ref) => SupabaseConfig.enabled
+      ? SupabaseAuthorizedUsersRepository(ref.watch(supabaseClientProvider))
+      : null,
+);
 
 /// Áreas, equipos y líderes. `null` en modo local: ahí no hay estructura y
 /// las pantallas muestran el Sector y el Equipo tal como vienen en la nómina.
-final estructuraRepositoryProvider = Provider<EstructuraRepository?>(
+final orgStructureRepositoryProvider = Provider<OrgStructureRepository?>(
   (ref) => SupabaseConfig.enabled
-      ? SupabaseEstructuraRepository(ref.watch(supabaseClientProvider))
+      ? SupabaseOrgStructureRepository(ref.watch(supabaseClientProvider))
       : null,
 );
 
 /// Diálogo de impresión del navegador o del sistema. Igual en los dos modos.
-final impresionRepositoryProvider = Provider<ImpresionRepository>(
-  (ref) => const PrintingImpresionRepository(),
+final printRepositoryProvider = Provider<PrintRepository>(
+  (ref) => const PrintingPrintRepository(),
 );

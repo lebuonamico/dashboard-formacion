@@ -1,41 +1,41 @@
-class MensajeChat {
-  final String texto;
-  final bool esUsuario;
-  final String contexto;
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final String context;
 
-  const MensajeChat({
-    required this.texto,
-    required this.esUsuario,
-    required this.contexto,
+  const ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.context,
   });
 }
 
-class EstadoChat {
-  final bool abierto;
-  final bool enviando;
-  final List<MensajeChat> mensajes;
+class ChatState {
+  final bool open;
+  final bool sending;
+  final List<ChatMessage> messages;
   final String? error;
-  final bool puedeReintentar;
+  final bool canRetry;
 
-  const EstadoChat({
-    this.abierto = false,
-    this.enviando = false,
-    this.mensajes = const [],
+  const ChatState({
+    this.open = false,
+    this.sending = false,
+    this.messages = const [],
     this.error,
-    this.puedeReintentar = false,
+    this.canRetry = false,
   });
 
-  EstadoChat copyWith({
-    bool? abierto,
-    bool? enviando,
-    List<MensajeChat>? mensajes,
+  ChatState copyWith({
+    bool? open,
+    bool? sending,
+    List<ChatMessage>? messages,
     String? error,
-    bool? puedeReintentar,
-  }) => EstadoChat(
-    abierto: abierto ?? this.abierto,
-    enviando: enviando ?? this.enviando,
-    mensajes: mensajes ?? this.mensajes,
+    bool? canRetry,
+  }) => ChatState(
+    open: open ?? this.open,
+    sending: sending ?? this.sending,
+    messages: messages ?? this.messages,
     error: error,
-    puedeReintentar: puedeReintentar ?? this.puedeReintentar,
+    canRetry: canRetry ?? this.canRetry,
   );
 }

@@ -8,73 +8,73 @@ import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
 import 'package:app_finnegans/presentation/widgets/shared/etiqueta_color.dart';
 import 'package:app_finnegans/presentation/widgets/shared/result_pagination.dart';
 
-class AdminUsuariosTable extends StatefulWidget {
-  static const usuariosPorPagina = 8;
+class AdminUsersTable extends StatefulWidget {
+  static const usersPerPage = 8;
 
-  final List<UsuarioAutorizado> usuarios;
+  final List<AuthorizedUser> users;
 
   /// Para la columna Lidera. `null` mientras carga o sin base conectada.
-  final EstructuraOrganizacional? estructura;
+  final OrgStructure? structure;
 
   /// Para la columna Pertenece a. `null` mientras carga.
-  final List<Empleado>? nomina;
-  final String? emailSeleccionado;
-  final String? emailPropio;
-  final ValueChanged<String?> onSeleccionar;
+  final List<Employee>? payroll;
+  final String? selectedEmail;
+  final String? ownEmail;
+  final ValueChanged<String?> onSelect;
 
-  const AdminUsuariosTable({
+  const AdminUsersTable({
     super.key,
-    required this.usuarios,
-    this.estructura,
-    this.nomina,
-    required this.emailSeleccionado,
-    required this.emailPropio,
-    required this.onSeleccionar,
+    required this.users,
+    this.structure,
+    this.payroll,
+    required this.selectedEmail,
+    required this.ownEmail,
+    required this.onSelect,
   });
 
   @override
-  State<AdminUsuariosTable> createState() => _AdminUsuariosTableState();
+  State<AdminUsersTable> createState() => _AdminUsersTableState();
 }
 
-class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
-  int _paginaActual = 0;
+class _AdminUsersTableState extends State<AdminUsersTable> {
+  int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant AdminUsuariosTable oldWidget) {
+  void didUpdateWidget(covariant AdminUsersTable oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.usuarios != widget.usuarios) {
-      _paginaActual = 0;
+    if (oldWidget.users != widget.users) {
+      _currentPage = 0;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const porPagina = AdminUsuariosTable.usuariosPorPagina;
-    final total = widget.usuarios.length;
-    final totalPaginas = total == 0 ? 1 : (total + porPagina - 1) ~/ porPagina;
-    final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-    final inicio = paginaSegura * porPagina;
-    final finCalculado = inicio + porPagina;
-    final fin = finCalculado > total ? total : finCalculado;
-    final visibles = widget.usuarios.sublist(inicio, fin);
+    const perPage = AdminUsersTable.usersPerPage;
+    final total = widget.users.length;
+    final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
+    final safePage = _currentPage.clamp(0, totalPages - 1);
+    final start = safePage * perPage;
+    final calculatedEnd = start + perPage;
+    final end = calculatedEnd > total ? total : calculatedEnd;
+    final visible = widget.users.sublist(start, end);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (totalPaginas > 1) ...[
-          PaginacionResultados(
-            paginaActual: paginaSegura,
-            cantidadPaginas: totalPaginas,
-            desde: inicio + 1,
-            hasta: fin,
-            totalResultados: total,
-            etiquetaResultados: 'usuarios',
-            icono: Icons.manage_accounts_outlined,
-            onPrevious: paginaSegura > 0
-                ? () => setState(() => _paginaActual = paginaSegura - 1)
+        if (totalPages > 1) ...[
+          ResultsPagination(
+            currentPage: safePage,
+            pageCount: totalPages,
+            from: start + 1,
+            until: end,
+            totalResults: total,
+            resultsLabel: 'usuarios',
+            icon: Icons.manage_accounts_outlined,
+            onPrevious: safePage > 0
+                ? () => setState(() => _currentPage = safePage - 1)
                 : null,
-            onNext: paginaSegura < totalPaginas - 1
-                ? () => setState(() => _paginaActual = paginaSegura + 1)
+            onNext: safePage < totalPages - 1
+                ? () => setState(() => _currentPage = safePage + 1)
                 : null,
           ),
           const SizedBox(height: 12),
@@ -153,7 +153,7 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
                           ),
                         ),
                       ],
-                      rows: visibles.map(_buildRow).toList(),
+                      rows: visible.map(_buildRow).toList(),
                     ),
                   ),
                 );
@@ -165,117 +165,117 @@ class _AdminUsuariosTableState extends State<AdminUsuariosTable> {
     );
   }
 
-  DataRow _buildRow(UsuarioAutorizado usuario) {
+  DataRow _buildRow(AuthorizedUser user) {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final seleccionado = usuario.email == widget.emailSeleccionado;
-    final esPropio = usuario.esMismoUsuario(widget.emailPropio);
-    final rol = usuario.rolConocido;
-    final marca = ParColores(cs.onPrimaryContainer, cs.primaryContainer);
+    final colors = context.colors;
+    final selected = user.email == widget.selectedEmail;
+    final isOwn = user.isSameUser(widget.ownEmail);
+    final role = user.knownRole;
+    final brand = ColorPair(cs.onPrimaryContainer, cs.primaryContainer);
 
     return DataRow(
-      selected: seleccionado,
+      selected: selected,
       color: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
             ? cs.primary.withValues(alpha: 0.06)
             : null,
       ),
-      onSelectChanged: (valor) =>
-          widget.onSeleccionar(valor == true ? usuario.email : null),
+      onSelectChanged: (value) =>
+          widget.onSelect(value == true ? user.email : null),
       cells: [
         DataCell(
           Row(
             children: [
               Text(
-                usuario.email,
+                user.email,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
               ),
-              if (esPropio) ...[
+              if (isOwn) ...[
                 const SizedBox(width: 8),
-                EtiquetaColor(texto: 'Vos', colores: marca),
+                ColorLabel(text: 'Vos', colors: brand),
               ],
             ],
           ),
         ),
         DataCell(
-          rol == null
-              ? EtiquetaColor(
-                  texto: usuario.rol.isEmpty ? 'Sin rol' : usuario.rol,
-                  colores: colores.advertencia,
-                  icono: Icons.help_outline,
+          role == null
+              ? ColorLabel(
+                  text: user.role.isEmpty ? 'Sin rol' : user.role,
+                  colors: colors.warning,
+                  icon: Icons.help_outline,
                 )
-              : EtiquetaColor(texto: rol.label, colores: marca),
+              : ColorLabel(text: role.label, colors: brand),
         ),
-        DataCell(_alcance(usuario)),
-        DataCell(_pertenencia(usuario)),
+        DataCell(_scope(user)),
+        DataCell(_membership(user)),
         DataCell(
-          EtiquetaColor(
-            texto: usuario.estado.label,
-            colores: coloresEstadoUsuario(colores, usuario.estado),
+          ColorLabel(
+            text: user.status.label,
+            colors: userStatusColors(colors, user.status),
           ),
         ),
-        DataCell(_sello(usuario.ffAlta)),
-        DataCell(_sello(usuario.ffBloqueo)),
-        DataCell(_sello(usuario.ffEliminar)),
+        DataCell(_stamp(user.createdAt)),
+        DataCell(_stamp(user.blockedAt)),
+        DataCell(_stamp(user.deletedAt)),
       ],
     );
   }
 
   /// Qué ve el usuario: toda la empresa, o las áreas o los equipos que
   /// lidera según su rol.
-  Widget _alcance(UsuarioAutorizado usuario) {
-    final rol = usuario.rolConocido;
+  Widget _scope(AuthorizedUser user) {
+    final role = user.knownRole;
     // Los gestores ven todo aunque la estructura no haya cargado.
-    final texto = rol != null && rol.esGestor
+    final text = role != null && role.canManage
         ? 'Toda la empresa'
-        : widget.estructura?.lidera(rol: rol, email: usuario.email) ?? '—';
-    return _celdaTexto(texto, advertencia: texto.startsWith('Sin '));
+        : widget.structure?.leads(role: role, email: user.email) ?? '—';
+    return _textCell(text, warning: text.startsWith('Sin '));
   }
 
   /// Equipo y área de su fila en la nómina, buscada por email. Solo para los
   /// líderes: puede no coincidir con lo que lideran.
-  Widget _pertenencia(UsuarioAutorizado usuario) {
-    final rol = usuario.rolConocido;
-    final nomina = widget.nomina;
-    if (nomina == null || (rol != RolUsuario.lider && rol != RolUsuario.area)) {
-      return _celdaTexto('—');
+  Widget _membership(AuthorizedUser user) {
+    final role = user.knownRole;
+    final payroll = widget.payroll;
+    if (payroll == null ||
+        (role != UserRole.teamLead && role != UserRole.areaLead)) {
+      return _textCell('—');
     }
-    final empleado = Empleado.porMail(nomina, usuario.email);
-    return _celdaTexto(
-      EstructuraOrganizacional.pertenencia(empleado),
-      advertencia: empleado == null,
+    final employee = Employee.byEmail(payroll, user.email);
+    return _textCell(
+      OrgStructure.membership(employee),
+      warning: employee == null,
     );
   }
 
-  Widget _celdaTexto(String texto, {bool advertencia = false}) =>
-      ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 240),
-        child: Tooltip(
-          message: texto,
-          child: Text(
-            texto,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
-              color: advertencia
-                  ? context.colores.advertencia.texto
-                  : context.colores.textoIntermedio,
-            ),
-          ),
+  Widget _textCell(String text, {bool warning = false}) => ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 240),
+    child: Tooltip(
+      message: text,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 13,
+          color: warning
+              ? context.colors.warning.text
+              : context.colors.intermediateText,
         ),
-      );
+      ),
+    ),
+  );
 
-  Widget _sello(DateTime? fecha) => Text(
-    formatearSello(fecha),
+  Widget _stamp(DateTime? date) => Text(
+    formatStamp(date),
     style: TextStyle(
       fontSize: 13,
-      color: fecha == null
-          ? context.colores.textoTenue
-          : context.colores.textoIntermedio,
+      color: date == null
+          ? context.colors.faintText
+          : context.colors.intermediateText,
     ),
   );
 }

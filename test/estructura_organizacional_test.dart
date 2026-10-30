@@ -5,52 +5,52 @@ import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Empleado _empleado(
-  String legajo,
+Employee _employee(
+  String employeeId,
   String area,
-  String equipo, {
-  String? mail,
-  bool activo = true,
-}) => Empleado(
-  legajo: legajo,
-  nombre: 'Nombre$legajo',
-  apellido: 'Apellido',
+  String team, {
+  String? email,
+  bool active = true,
+}) => Employee(
+  employeeId: employeeId,
+  firstName: 'Nombre$employeeId',
+  lastName: 'Apellido',
   seniority: Seniority.junior1,
   area: area,
-  mail: mail ?? 'e$legajo@finnegans.com',
-  equipo: equipo,
-  activo: activo,
+  email: email ?? 'e$employeeId@finnegans.com',
+  team: team,
+  isActive: active,
 );
 
 /// PRODUCTOS TECNOLÓGICOS con PLATAFORMA CORE y BACKEND, y SERVICIOS con
 /// IMPLEMENTACIONES.
-EstructuraOrganizacional _estructura() => EstructuraOrganizacional(
+OrgStructure _structure() => OrgStructure(
   areas: [
     Area(
       id: '1',
-      nombre: 'PRODUCTOS TECNOLÓGICOS',
-      lideres: {'Area.Tec@finnegans.com'},
+      name: 'PRODUCTOS TECNOLÓGICOS',
+      leaders: {'Area.Tec@finnegans.com'},
     ),
     Area(
       id: '2',
-      nombre: 'SERVICIOS',
-      lideres: {'area.serv@finnegans.com', 'area.tec@finnegans.com'},
+      name: 'SERVICIOS',
+      leaders: {'area.serv@finnegans.com', 'area.tec@finnegans.com'},
     ),
   ],
-  equipos: [
-    Equipo(
+  teams: [
+    Team(
       id: '10',
       areaId: '1',
-      nombre: 'PLATAFORMA CORE',
-      lideres: {'lider.uno@finnegans.com', 'lider.dos@finnegans.com'},
+      name: 'PLATAFORMA CORE',
+      leaders: {'lider.uno@finnegans.com', 'lider.dos@finnegans.com'},
     ),
-    Equipo(
+    Team(
       id: '11',
       areaId: '1',
-      nombre: 'BACKEND',
-      lideres: {'lider.uno@finnegans.com'},
+      name: 'BACKEND',
+      leaders: {'lider.uno@finnegans.com'},
     ),
-    Equipo(id: '20', areaId: '2', nombre: 'IMPLEMENTACIONES'),
+    Team(id: '20', areaId: '2', name: 'IMPLEMENTACIONES'),
   ],
 );
 
@@ -58,127 +58,119 @@ void main() {
   group('Clave de nómina', () {
     test('Recorta y pasa a minúsculas, igual que la base', () {
       expect(
-        EstructuraOrganizacional.claveNomina('  PRODUCTOS TECNOLÓGICOS '),
+        OrgStructure.payrollKey('  PRODUCTOS TECNOLÓGICOS '),
         'productos tecnológicos',
       );
-      expect(Area(id: '1', nombre: ' Servicios ').claveNomina, 'servicios');
+      expect(Area(id: '1', name: ' Servicios ').payrollKey, 'servicios');
     });
 
     test('Los emails de líderes se guardan normalizados', () {
-      final area = Area(
-        id: '1',
-        nombre: 'X',
-        lideres: {'  Ana@Finnegans.COM '},
-      );
-      expect(area.lideres, {'ana@finnegans.com'});
+      final area = Area(id: '1', name: 'X', leaders: {'  Ana@Finnegans.COM '});
+      expect(area.leaders, {'ana@finnegans.com'});
     });
 
     test('Áreas y equipos se buscan por el texto de la nómina', () {
-      final estructura = _estructura();
-      expect(estructura.areaDeNomina('servicios ')!.id, '2');
+      final structure = _structure();
+      expect(structure.payrollArea('servicios ')!.id, '2');
       expect(
-        estructura
-            .equipoDeNomina('Productos Tecnológicos', 'plataforma core')!
-            .id,
+        structure.payrollTeam('Productos Tecnológicos', 'plataforma core')!.id,
         '10',
       );
-      expect(estructura.equipoDeNomina('SERVICIOS', 'PLATAFORMA CORE'), isNull);
-      expect(estructura.areaDeNomina('RRHH'), isNull);
+      expect(structure.payrollTeam('SERVICIOS', 'PLATAFORMA CORE'), isNull);
+      expect(structure.payrollArea('RRHH'), isNull);
     });
   });
 
   group('Faltantes de la nómina', () {
     test('Crea las áreas y los equipos nuevos una sola vez', () {
-      final faltantes = _estructura().faltantesDeNomina([
-        _empleado('1', 'RRHH', 'Selección'),
-        _empleado('2', 'rrhh ', 'SELECCIÓN'),
-        _empleado('3', 'RRHH', 'Liquidaciones'),
-        _empleado('4', 'SERVICIOS', 'Soporte'),
-        _empleado('5', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
-        _empleado('6', 'SERVICIOS', ''),
-        _empleado('7', '', 'Huérfano'),
+      final missing = _structure().missingFromPayroll([
+        _employee('1', 'RRHH', 'Selección'),
+        _employee('2', 'rrhh ', 'SELECCIÓN'),
+        _employee('3', 'RRHH', 'Liquidaciones'),
+        _employee('4', 'SERVICIOS', 'Soporte'),
+        _employee('5', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
+        _employee('6', 'SERVICIOS', ''),
+        _employee('7', '', 'Huérfano'),
       ]);
 
-      expect(faltantes.areas, ['RRHH']);
-      expect(faltantes.equipos, [
-        (area: 'RRHH', equipo: 'Selección'),
-        (area: 'RRHH', equipo: 'Liquidaciones'),
-        (area: 'SERVICIOS', equipo: 'Soporte'),
+      expect(missing.areas, ['RRHH']);
+      expect(missing.teams, [
+        (area: 'RRHH', team: 'Selección'),
+        (area: 'RRHH', team: 'Liquidaciones'),
+        (area: 'SERVICIOS', team: 'Soporte'),
       ]);
     });
 
     test('Una nómina conocida no crea nada', () {
-      final faltantes = _estructura().faltantesDeNomina([
-        _empleado('1', 'productos tecnológicos', 'backend'),
-        _empleado('2', 'SERVICIOS', 'IMPLEMENTACIONES'),
+      final missing = _structure().missingFromPayroll([
+        _employee('1', 'productos tecnológicos', 'backend'),
+        _employee('2', 'SERVICIOS', 'IMPLEMENTACIONES'),
       ]);
-      expect(faltantes.vacio, isTrue);
+      expect(missing.empty, isTrue);
     });
   });
 
   group('Líderes', () {
     test('Se buscan por el texto de la nómina', () {
-      final estructura = _estructura();
+      final structure = _structure();
       expect(
-        estructura.lideresDeEquipo('productos tecnológicos', 'PLATAFORMA CORE'),
+        structure.teamLeaders('productos tecnológicos', 'PLATAFORMA CORE'),
         {'lider.uno@finnegans.com', 'lider.dos@finnegans.com'},
       );
-      expect(estructura.lideresDeArea('PRODUCTOS TECNOLÓGICOS'), {
+      expect(structure.areaLeaders('PRODUCTOS TECNOLÓGICOS'), {
         'area.tec@finnegans.com',
       });
-      expect(estructura.lideresDeEquipo('RRHH', 'Selección'), isEmpty);
+      expect(structure.teamLeaders('RRHH', 'Selección'), isEmpty);
     });
 
     test('Una persona puede liderar varios equipos y varias áreas', () {
-      final estructura = _estructura();
+      final structure = _structure();
       expect(
-        estructura
-            .equiposLideradosPor('LIDER.UNO@finnegans.com')
-            .map((liderado) => liderado.equipo.nombre),
+        structure
+            .teamsLedBy('LIDER.UNO@finnegans.com')
+            .map((led) => led.team.name),
         ['BACKEND', 'PLATAFORMA CORE'],
       );
       expect(
-        estructura
-            .areasLideradasPor('area.tec@finnegans.com')
-            .map((area) => area.nombre),
+        structure.ledAreasBy('area.tec@finnegans.com').map((area) => area.name),
         ['PRODUCTOS TECNOLÓGICOS', 'SERVICIOS'],
       );
     });
 
     test('Lidera describe lo asignado según el rol', () {
-      final estructura = _estructura();
+      final structure = _structure();
       expect(
-        estructura.lidera(
-          rol: RolUsuario.lider,
+        structure.leads(
+          role: UserRole.teamLead,
           email: 'lider.uno@finnegans.com',
         ),
         'BACKEND, PLATAFORMA CORE',
       );
       expect(
-        estructura.lidera(rol: RolUsuario.lider, email: 'nadie@finnegans.com'),
+        structure.leads(role: UserRole.teamLead, email: 'nadie@finnegans.com'),
         'Sin equipos asignados',
       );
       expect(
-        estructura.lidera(
-          rol: RolUsuario.area,
+        structure.leads(
+          role: UserRole.areaLead,
           email: 'area.serv@finnegans.com',
         ),
         'SERVICIOS',
       );
       expect(
-        estructura.lidera(rol: RolUsuario.area, email: 'nadie@finnegans.com'),
+        structure.leads(role: UserRole.areaLead, email: 'nadie@finnegans.com'),
         'Sin áreas asignadas',
       );
       expect(
-        estructura.lidera(rol: RolUsuario.academia, email: 'x@finnegans.com'),
+        structure.leads(role: UserRole.academy, email: 'x@finnegans.com'),
         'Toda la empresa',
       );
-      expect(estructura.lidera(rol: null, email: 'x@finnegans.com'), isNull);
+      expect(structure.leads(role: null, email: 'x@finnegans.com'), isNull);
     });
 
     test('La etiqueta usa el nombre de la nómina si lo conoce', () {
       expect(
-        EstructuraOrganizacional.etiquetaLideres(
+        OrgStructure.leadersLabel(
           {'zoe@finnegans.com', 'Ana@finnegans.com', 'externo@gmail.com'},
           {'zoe@finnegans.com': 'Zoe Paz', 'ana@finnegans.com': 'Ana Ruiz'},
         ),
@@ -189,133 +181,130 @@ void main() {
 
   group('Pertenencia en la nómina', () {
     test('Empleado.porMail compara normalizado y prefiere la fila activa', () {
-      final baja = _empleado(
+      final removal = _employee(
         '1',
         'SERVICIOS',
         'SOPORTE',
-        mail: 'ana@x.com',
-        activo: false,
+        email: 'ana@x.com',
+        active: false,
       );
-      final activa = _empleado(
+      final active = _employee(
         '2',
         'SERVICIOS',
         'IMPLEMENTACIONES',
-        mail: ' ANA@x.com',
+        email: ' ANA@x.com',
       );
-      expect(Empleado.porMail([baja, activa], 'ana@X.com'), same(activa));
-      expect(Empleado.porMail([baja], 'ana@x.com'), same(baja));
-      expect(Empleado.porMail([activa], 'otra@x.com'), isNull);
-      expect(Empleado.porMail([activa], null), isNull);
-      expect(Empleado.porMail([activa], '  '), isNull);
+      expect(Employee.byEmail([removal, active], 'ana@X.com'), same(active));
+      expect(Employee.byEmail([removal], 'ana@x.com'), same(removal));
+      expect(Employee.byEmail([active], 'otra@x.com'), isNull);
+      expect(Employee.byEmail([active], null), isNull);
+      expect(Employee.byEmail([active], '  '), isNull);
     });
 
     test('Describe equipo y área, sin equipo, baja y ausencia', () {
       expect(
-        EstructuraOrganizacional.pertenencia(
-          _empleado('1', 'SERVICIOS', 'IMPLEMENTACIONES'),
+        OrgStructure.membership(
+          _employee('1', 'SERVICIOS', 'IMPLEMENTACIONES'),
         ),
         'IMPLEMENTACIONES · SERVICIOS',
       );
       expect(
-        EstructuraOrganizacional.pertenencia(_empleado('2', 'SERVICIOS', ' ')),
+        OrgStructure.membership(_employee('2', 'SERVICIOS', ' ')),
         'Sin equipo · SERVICIOS',
       );
       expect(
-        EstructuraOrganizacional.pertenencia(
-          _empleado('3', 'SERVICIOS', 'SOPORTE', activo: false),
+        OrgStructure.membership(
+          _employee('3', 'SERVICIOS', 'SOPORTE', active: false),
         ),
         'SOPORTE · SERVICIOS (baja en la nómina)',
       );
-      expect(
-        EstructuraOrganizacional.pertenencia(null),
-        EstructuraOrganizacional.noFiguraEnNomina,
-      );
+      expect(OrgStructure.membership(null), OrgStructure.notInPayroll);
     });
   });
 
   group('AlcanceUsuario', () {
-    final core = _empleado('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE');
-    final backend = _empleado('2', 'productos tecnológicos ', 'Backend');
-    final sinEquipo = _empleado('3', 'PRODUCTOS TECNOLÓGICOS', '');
-    final implementaciones = _empleado('4', 'SERVICIOS', 'IMPLEMENTACIONES');
-    final todos = [core, backend, sinEquipo, implementaciones];
+    final core = _employee('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE');
+    final backend = _employee('2', 'productos tecnológicos ', 'Backend');
+    final noTeam = _employee('3', 'PRODUCTOS TECNOLÓGICOS', '');
+    final implementations = _employee('4', 'SERVICIOS', 'IMPLEMENTACIONES');
+    final all = [core, backend, noTeam, implementations];
 
-    List<String> visibles(AlcanceUsuario alcance) => [
-      for (final empleado in todos)
-        if (alcance.incluyeEmpleado(empleado)) empleado.legajo,
+    List<String> visible(UserScope scope) => [
+      for (final employee in all)
+        if (scope.includesEmployee(employee)) employee.employeeId,
     ];
 
     test('Administrador y Academia ven todo, aun sin estructura', () {
-      for (final rol in [RolUsuario.admin, RolUsuario.academia]) {
-        final alcance = AlcanceUsuario.de(
-          rol: rol,
+      for (final role in [UserRole.admin, UserRole.academy]) {
+        final scope = UserScope.of(
+          role: role,
           email: 'x@finnegans.com',
-          estructura: null,
+          structure: null,
         );
-        expect(alcance.esTotal, isTrue);
-        expect(visibles(alcance), ['1', '2', '3', '4']);
+        expect(scope.isTotal, isTrue);
+        expect(visible(scope), ['1', '2', '3', '4']);
       }
     });
 
     test('Un líder ve solo los equipos que lidera', () {
-      final uno = AlcanceUsuario.de(
-        rol: RolUsuario.lider,
+      final one = UserScope.of(
+        role: UserRole.teamLead,
         email: 'Lider.Uno@finnegans.com',
-        estructura: _estructura(),
+        structure: _structure(),
       );
-      expect(visibles(uno), ['1', '2']);
+      expect(visible(one), ['1', '2']);
 
-      final dos = AlcanceUsuario.de(
-        rol: RolUsuario.lider,
+      final two = UserScope.of(
+        role: UserRole.teamLead,
         email: 'lider.dos@finnegans.com',
-        estructura: _estructura(),
+        structure: _structure(),
       );
-      expect(visibles(dos), ['1']);
+      expect(visible(two), ['1']);
     });
 
     test('Un usuario de área ve toda el área, sin equipo incluidos', () {
-      final servicios = AlcanceUsuario.de(
-        rol: RolUsuario.area,
+      final services = UserScope.of(
+        role: UserRole.areaLead,
         email: 'area.serv@finnegans.com',
-        estructura: _estructura(),
+        structure: _structure(),
       );
-      expect(visibles(servicios), ['4']);
+      expect(visible(services), ['4']);
 
-      final tec = AlcanceUsuario.de(
-        rol: RolUsuario.area,
+      final tech = UserScope.of(
+        role: UserRole.areaLead,
         email: 'area.tec@finnegans.com',
-        estructura: _estructura(),
+        structure: _structure(),
       );
-      expect(visibles(tec), ['1', '2', '3', '4']);
+      expect(visible(tech), ['1', '2', '3', '4']);
     });
 
     test('El rol decide qué asignación cuenta', () {
       // Lidera equipos, pero con rol Área solo cuentan las áreas.
-      final alcance = AlcanceUsuario.de(
-        rol: RolUsuario.area,
+      final scope = UserScope.of(
+        role: UserRole.areaLead,
         email: 'lider.uno@finnegans.com',
-        estructura: _estructura(),
+        structure: _structure(),
       );
-      expect(visibles(alcance), isEmpty);
+      expect(visible(scope), isEmpty);
     });
 
     test('Un rol desconocido o sin email no ve nada', () {
       expect(
-        visibles(
-          AlcanceUsuario.de(
-            rol: null,
+        visible(
+          UserScope.of(
+            role: null,
             email: 'lider.uno@finnegans.com',
-            estructura: _estructura(),
+            structure: _structure(),
           ),
         ),
         isEmpty,
       );
       expect(
-        visibles(
-          AlcanceUsuario.de(
-            rol: RolUsuario.lider,
+        visible(
+          UserScope.of(
+            role: UserRole.teamLead,
             email: null,
-            estructura: _estructura(),
+            structure: _structure(),
           ),
         ),
         isEmpty,

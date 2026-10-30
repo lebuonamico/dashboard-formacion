@@ -5,18 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pantalla mínima que maneja el estado como lo hacen las pantallas reales.
-class _Anfitrion extends StatefulWidget {
-  final double ancho;
+class _Host extends StatefulWidget {
+  final double width;
 
-  const _Anfitrion({this.ancho = 1200});
+  const _Host({this.width = 1200});
 
   @override
-  State<_Anfitrion> createState() => _AnfitrionState();
+  State<_Host> createState() => _HostState();
 }
 
-class _AnfitrionState extends State<_Anfitrion> {
-  String? estado;
-  int? anio;
+class _HostState extends State<_Host> {
+  String? status;
+  int? year;
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +26,12 @@ class _AnfitrionState extends State<_Anfitrion> {
         body: Align(
           alignment: Alignment.topLeft,
           child: SizedBox(
-            width: widget.ancho,
+            width: widget.width,
             child: FilterBar(
-              hasActiveFilters: estado != null || anio != null,
+              hasActiveFilters: status != null || year != null,
               filters: [
                 FilterDropdown<String?>(
-                  value: estado,
+                  value: status,
                   hint: 'Todos los estados',
                   icon: Icons.traffic_outlined,
                   items: const [
@@ -44,17 +44,17 @@ class _AnfitrionState extends State<_Anfitrion> {
                       child: Text('Estado A'),
                     ),
                   ],
-                  onChanged: (value) => setState(() => estado = value),
+                  onChanged: (value) => setState(() => status = value),
                 ),
                 FilterDropdown<int?>(
-                  value: anio,
+                  value: year,
                   hint: 'Todos los años',
                   icon: Icons.event_outlined,
                   // Deshabilitado hasta que haya un estado elegido.
-                  onChanged: estado == null
+                  onChanged: status == null
                       ? null
-                      : (value) => setState(() => anio = value),
-                  tooltip: estado == null ? 'Elegí un estado primero' : null,
+                      : (value) => setState(() => year = value),
+                  tooltip: status == null ? 'Elegí un estado primero' : null,
                   items: const [
                     DropdownMenuItem<int?>(
                       value: null,
@@ -65,8 +65,8 @@ class _AnfitrionState extends State<_Anfitrion> {
                 ),
               ],
               onClear: () => setState(() {
-                estado = null;
-                anio = null;
+                status = null;
+                year = null;
               }),
             ),
           ),
@@ -76,7 +76,7 @@ class _AnfitrionState extends State<_Anfitrion> {
   }
 }
 
-OutlinedButton _limpiar(WidgetTester tester) => tester.widget<OutlinedButton>(
+OutlinedButton _clear(WidgetTester tester) => tester.widget<OutlinedButton>(
   find.widgetWithText(OutlinedButton, 'Limpiar'),
 );
 
@@ -85,23 +85,23 @@ void main() {
     testWidgets('el desplegable cambia el filtro y "Limpiar" se habilita', (
       tester,
     ) async {
-      await tester.pumpWidget(const _Anfitrion());
-      expect(_limpiar(tester).onPressed, isNull);
+      await tester.pumpWidget(const _Host());
+      expect(_clear(tester).onPressed, isNull);
 
       await tester.tap(find.text('Todos los estados'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Estado A').last);
       await tester.pumpAndSettle();
 
-      final estado = tester.state<_AnfitrionState>(find.byType(_Anfitrion));
-      expect(estado.estado, 'a');
-      expect(_limpiar(tester).onPressed, isNotNull);
+      final status = tester.state<_HostState>(find.byType(_Host));
+      expect(status.status, 'a');
+      expect(_clear(tester).onPressed, isNotNull);
     });
 
     testWidgets('un desplegable con onChanged nulo queda deshabilitado', (
       tester,
     ) async {
-      await tester.pumpWidget(const _Anfitrion());
+      await tester.pumpWidget(const _Host());
 
       await tester.tap(find.text('Todos los años'), warnIfMissed: false);
       await tester.pumpAndSettle();
@@ -113,7 +113,7 @@ void main() {
     testWidgets('en pantallas angostas pasa a columna sin desbordes', (
       tester,
     ) async {
-      await tester.pumpWidget(const _Anfitrion(ancho: 500));
+      await tester.pumpWidget(const _Host(width: 500));
 
       expect(tester.takeException(), isNull);
       // Todos los controles siguen a la vista.

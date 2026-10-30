@@ -8,46 +8,46 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:app_finnegans/presentation/reportes/reporte_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-CumplimientoEmpleado _miembro(
-  int legajo,
-  String nombre,
-  String equipo,
+EmployeeCompliance _member(
+  int employeeId,
+  String name,
+  String team,
   Seniority seniority,
-  List<double> validas,
-  List<double> declaradas,
+  List<double> valid,
+  List<double> declared,
 ) {
-  final requeridas = {
-    TipoCurso.habilidadesDeNegocio: seniority.negocio,
-    TipoCurso.habilidadesBlandas: seniority.blandas,
-    TipoCurso.libresExploracion: seniority.libres,
-    TipoCurso.dictadoCapacitaciones: seniority.dictado,
+  final required = {
+    CourseCategory.businessSkills: seniority.business,
+    CourseCategory.softSkills: seniority.softSkills,
+    CourseCategory.exploration: seniority.exploration,
+    CourseCategory.teaching: seniority.teaching,
   };
-  final partes = nombre.split(' ');
-  return CumplimientoEmpleado(
-    empleado: Empleado(
-      legajo: '$legajo',
-      nombre: partes.first,
-      apellido: partes.last,
+  final parts = name.split(' ');
+  return EmployeeCompliance(
+    employee: Employee(
+      employeeId: '$employeeId',
+      firstName: parts.first,
+      lastName: parts.last,
       seniority: seniority,
       area: 'Desarrollo',
-      mail: '$legajo@example.com',
-      equipo: equipo,
+      email: '$employeeId@example.com',
+      team: team,
     ),
-    horasValidas: {
-      for (final (i, tipo) in TipoCurso.values.indexed) tipo: validas[i],
+    creditedHours: {
+      for (final (i, type) in CourseCategory.values.indexed) type: valid[i],
     },
-    horasDeclaradas: {
-      for (final (i, tipo) in TipoCurso.values.indexed) tipo: declaradas[i],
+    declaredHours: {
+      for (final (i, type) in CourseCategory.values.indexed) type: declared[i],
     },
-    horasRequeridas: requeridas,
+    requiredHours: required,
   );
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final miembros = [
-    _miembro(
+  final members = [
+    _member(
       101,
       'Ana Pérez',
       'Core',
@@ -55,7 +55,7 @@ void main() {
       [6, 4, 0, 0],
       [3, 4, 0, 0],
     ),
-    _miembro(
+    _member(
       102,
       'Bruno Gómez',
       'Core',
@@ -63,7 +63,7 @@ void main() {
       [2, 1, 0, 0],
       [2, 1, 0, 0],
     ),
-    _miembro(
+    _member(
       103,
       'Carla Núñez',
       'Mobile',
@@ -71,7 +71,7 @@ void main() {
       [0, 2, 2, 4],
       [0, 2, 2, 4],
     ),
-    _miembro(
+    _member(
       104,
       'Diego Ruiz',
       'Mobile',
@@ -81,66 +81,62 @@ void main() {
     ),
   ];
 
-  ReporteFormacion reporte({TipoReporte tipo = TipoReporte.area}) =>
-      ReporteFormacion(
-        tipo: tipo,
-        titulo: 'Desarrollo',
-        detalles: const ['Líder: María López', '2 equipos'],
-        periodo: 'Octubre 2026',
-        integrantes: 4,
-        enObjetivo: 2,
-        horas: 21,
-        objetivo: 34,
-        porcentaje: 61.8,
-        estado: 'Crítico',
-        nivel: NivelReporte.critico,
-        miembros: miembros,
-        desglose: const [
-          FilaDesgloseReporte(
-            nombre: 'Core',
-            integrantes: 2,
-            horas: 11,
-            objetivo: 16,
-            porcentaje: 68.8,
-            estado: 'Crítico',
-            nivel: NivelReporte.critico,
-          ),
-          FilaDesgloseReporte(
-            nombre: 'Mobile',
-            integrantes: 2,
-            horas: 10,
-            objetivo: 18,
-            porcentaje: 55.6,
-            estado: 'En riesgo',
-            nivel: NivelReporte.atencion,
-          ),
-        ],
-        evolucion: [
-          (mes: DateTime(2026, 7), horas: 3.2),
-          (mes: DateTime(2026, 8), horas: 4.1),
-          (mes: DateTime(2026, 9), horas: 2.7),
-          (mes: DateTime(2026, 10), horas: 5.3),
-        ],
-      );
+  TrainingReport report({ReportType type = ReportType.area}) => TrainingReport(
+    type: type,
+    title: 'Desarrollo',
+    details: const ['Líder: María López', '2 equipos'],
+    period: 'Octubre 2026',
+    memberCount: 4,
+    onTarget: 2,
+    hours: 21,
+    target: 34,
+    percentage: 61.8,
+    status: 'Crítico',
+    level: ReportLevel.critical,
+    members: members,
+    breakdown: const [
+      ReportBreakdownRow(
+        name: 'Core',
+        memberCount: 2,
+        hours: 11,
+        target: 16,
+        percentage: 68.8,
+        status: 'Crítico',
+        level: ReportLevel.critical,
+      ),
+      ReportBreakdownRow(
+        name: 'Mobile',
+        memberCount: 2,
+        hours: 10,
+        target: 18,
+        percentage: 55.6,
+        status: 'En riesgo',
+        level: ReportLevel.attention,
+      ),
+    ],
+    evolution: [
+      (month: DateTime(2026, 7), hours: 3.2),
+      (month: DateTime(2026, 8), hours: 4.1),
+      (month: DateTime(2026, 9), hours: 2.7),
+      (month: DateTime(2026, 10), hours: 5.3),
+    ],
+  );
 
   test('genera el PDF del reporte con tildes y varias secciones', () async {
-    final bytes = await generarReportePdf(reporte());
+    final bytes = await generateReportPdf(report());
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
 
     // Para revisar el diseño a mano: REPORTE_PDF_SALIDA=<carpeta>.
-    final salida = Platform.environment['REPORTE_PDF_SALIDA'];
-    if (salida != null) {
-      File('$salida/reporte_area.pdf').writeAsBytesSync(bytes);
-      File('$salida/reporte_general.pdf').writeAsBytesSync(
-        await generarReportePdf(reporte(tipo: TipoReporte.general)),
+    final output = Platform.environment['REPORTE_PDF_SALIDA'];
+    if (output != null) {
+      File('$output/reporte_area.pdf').writeAsBytesSync(bytes);
+      File('$output/reporte_general.pdf').writeAsBytesSync(
+        await generateReportPdf(report(type: ReportType.general)),
       );
     }
   });
 
   test('el nombre del archivo no lleva tildes ni espacios', () {
-    expect(
-      reporte().nombreArchivo,
-      'reporte_de_area_desarrollo_octubre_2026.pdf',
-    );
+    expect(report().fileName, 'reporte_de_area_desarrollo_octubre_2026.pdf');
   });
 }

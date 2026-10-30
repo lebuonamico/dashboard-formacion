@@ -22,7 +22,7 @@ class AppShell extends StatelessWidget {
                 Expanded(child: child),
               ],
             ),
-            const Positioned.fill(child: AsistenteChat()),
+            const Positioned.fill(child: AssistantChat()),
           ],
         ),
       ),

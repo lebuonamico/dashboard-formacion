@@ -30,13 +30,13 @@ class KpiGrid extends StatelessWidget {
     // Leandro: llama a LayoutBuilder para ajustar las columnas de KPIs al ancho disponible.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final ancho = constraints.maxWidth;
-        final columns = ancho >= 1300 && items.length >= 5
+        final width = constraints.maxWidth;
+        final columns = width >= 1300 && items.length >= 5
             ? 5
-            : ancho >= 1050
+            : width >= 1050
             // Con 5 ítems, 3 + 2 queda mejor que 4 + 1.
             ? (items.length == 5 ? 3 : 4)
-            : ancho >= 580
+            : width >= 580
             ? 2
             : 1;
         final cardWidth = (constraints.maxWidth - (columns - 1) * 14) / columns;
@@ -70,7 +70,7 @@ class _KpiCard extends StatelessWidget {
     final cs = context.colorScheme;
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: context.panel(sombra: true),
+      decoration: context.panel(shadow: true),
       child: Row(
         children: [
           Container(
@@ -110,7 +110,7 @@ class _KpiCard extends StatelessWidget {
                         child: Icon(
                           Icons.info_outline,
                           size: 15,
-                          color: context.colores.textoTenue,
+                          color: context.colors.faintText,
                         ),
                       ),
                     ],

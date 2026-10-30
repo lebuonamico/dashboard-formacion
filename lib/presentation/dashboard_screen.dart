@@ -24,16 +24,16 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hayDatosAsync = ref.watch(hasTeamPeriodDataProvider);
-    final cumplimientoAsync = ref.watch(cumplimientoDashboardProvider);
-    final areasAsync = ref.watch(semaforoPorAreaProvider);
-    final cargasAsync = ref.watch(cargasDashboardProvider);
-    final equiposAsync = ref.watch(teamOverviewsProvider);
-    final mesesEvaluados =
-        ref.watch(mesesEvaluadosDashboardProvider).value ?? 1;
-    final alcance = ref.watch(alcancePeriodoProvider);
-    final mes = ref.watch(filtroMesPeriodoProvider);
-    final anio = ref.watch(filtroAnioPeriodoProvider);
+    final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
+    final complianceAsync = ref.watch(dashboardComplianceProvider);
+    final areasAsync = ref.watch(complianceByAreaProvider);
+    final timeEntriesAsync = ref.watch(dashboardTimeEntriesProvider);
+    final teamsAsync = ref.watch(teamOverviewsProvider);
+    final evaluatedMonths =
+        ref.watch(dashboardEvaluatedMonthsProvider).value ?? 1;
+    final scope = ref.watch(periodScopeProvider);
+    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodYearFilterProvider);
 
     return Scaffold(
       body: Column(
@@ -41,68 +41,66 @@ class DashboardScreen extends ConsumerWidget {
           const AppTopBar(title: 'Plan Q3 - formación interna'),
           Expanded(
             child: SingleChildScrollView(
-              padding: paddingPantalla,
+              padding: screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  PeriodoFilterPanel(
-                    accion: BotonImprimirReporte(
-                      reporte: reporteDashboardProvider,
-                    ),
+                  PeriodFilterPanel(
+                    action: PrintReportButton(report: dashboardReportProvider),
                   ),
                   const SizedBox(height: 24),
-                  hayDatosAsync.when(
+                  hasDataAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
                     error: (error, _) => ErrorDataState(
                       title: 'No pudimos cargar el tablero',
                       error: error,
                     ),
-                    data: (hayDatos) => FadeIn(
+                    data: (hasData) => FadeIn(
                       child: (() {
-                        if (!hayDatos) {
-                          return EmptyDataState.periodoSinDatos(
-                            periodo: etiquetaPeriodo(alcance, mes, anio),
+                        if (!hasData) {
+                          return EmptyDataState.periodWithoutData(
+                            period: periodLabel(scope, month, year),
                           );
                         }
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             DashboardKpiGrid(
-                              cumplimientosAsync: cumplimientoAsync,
-                              cargasAsync: cargasAsync,
+                              complianceListAsync: complianceAsync,
+                              timeEntriesAsync: timeEntriesAsync,
                               areasAsync: areasAsync,
-                              equiposAsync: equiposAsync,
-                              alcance: alcance,
-                              mesSeleccionado: mes,
-                              anioSeleccionado: anio,
-                              mesesEvaluados: mesesEvaluados,
-                              proyeccionAsync: ref.watch(
-                                proyeccionAnualProvider((
+                              teamsAsync: teamsAsync,
+                              scope: scope,
+                              selectedMonth: month,
+                              selectedYear: year,
+                              evaluatedMonths: evaluatedMonths,
+                              projectionAsync: ref.watch(
+                                annualProjectionProvider((
                                   area: null,
-                                  equipo: null,
+                                  team: null,
                                 )),
                               ),
-                              variacionAsync: ref.watch(
-                                variacionCumplimientoProvider((
+                              variationAsync: ref.watch(
+                                complianceVariationProvider((
                                   area: null,
-                                  equipo: null,
+                                  team: null,
                                 )),
                               ),
                             ),
                             const SizedBox(height: 28),
                             DashboardSummaryCharts(
-                              cumplimientosAsync: cumplimientoAsync,
+                              complianceListAsync: complianceAsync,
                             ),
                             const SizedBox(height: 28),
-                            if (cumplimientoAsync.value case final items?
+                            if (complianceAsync.value case final items?
                                 when items.isNotEmpty) ...[
-                              ComparacionMoodleCrmCards(cumplimientos: items),
+                              MoodleCrmComparisonCards(complianceList: items),
                               const SizedBox(height: 28),
                             ],
                             DashboardMonthlyHours(
-                              evolucionAsync: ref.watch(
-                                evolucionMensualDashboardProvider,
+                              evolutionAsync: ref.watch(
+                                dashboardMonthlyEvolutionProvider,
                               ),
                             ),
                             const SizedBox(height: 28),

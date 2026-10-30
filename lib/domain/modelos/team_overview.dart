@@ -92,7 +92,7 @@ class TeamsPeriodSummary {
 
 class TeamDetail {
   final TeamOverview overview;
-  final List<CumplimientoEmpleado> members;
+  final List<EmployeeCompliance> members;
 
   const TeamDetail({required this.overview, required this.members});
 }

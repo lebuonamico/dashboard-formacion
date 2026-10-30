@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// Bordes, relleno y colores salen del `inputDecorationTheme` de `AppTheme`.
-InputDecoration filtroInputDecoration(String hint, IconData icon) =>
+InputDecoration filterInputDecoration(String hint, IconData icon) =>
     InputDecoration(hintText: hint, prefixIcon: Icon(icon, size: 19));
 
 /// Selector compartido. La búsqueda es local y nunca modifica la selección.
@@ -238,11 +238,11 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
   Widget build(BuildContext context) {
     final selected = _selected;
     final incompatible = widget.incompatibleValues.intersection(selected);
-    final query = CumplimientoService.normalizarNombreCurso(_search.text);
+    final query = ComplianceService.normalizeCourseName(_search.text);
     final options = widget.items.where((item) => item.value != null).toList();
     final matches = options
         .where(
-          (item) => CumplimientoService.normalizarNombreCurso(
+          (item) => ComplianceService.normalizeCourseName(
             _label(item),
           ).contains(query),
         )
@@ -330,7 +330,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
               },
         child: InputDecorator(
           isEmpty: false,
-          decoration: filtroInputDecoration(widget.hint, widget.icon).copyWith(
+          decoration: filterInputDecoration(widget.hint, widget.icon).copyWith(
             labelText: widget.hint,
             enabled: _enabled,
             suffixIcon: incompatible.isEmpty

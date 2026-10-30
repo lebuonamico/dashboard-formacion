@@ -12,95 +12,91 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 /// Integrantes del área, paginados y con selector para filtrar por avance.
-class AreaMiembrosTable extends StatefulWidget {
-  final List<CumplimientoEmpleado> miembros;
+class AreaMembersTable extends StatefulWidget {
+  final List<EmployeeCompliance> members;
 
   /// `cumplido`, `riesgo`, `critico`; vacío = todos.
-  final Set<String> filtro;
-  final ValueChanged<Set<String>> onFiltro;
+  final Set<String> filter;
+  final ValueChanged<Set<String>> onFilter;
 
-  const AreaMiembrosTable({
+  const AreaMembersTable({
     super.key,
-    required this.miembros,
-    required this.filtro,
-    required this.onFiltro,
+    required this.members,
+    required this.filter,
+    required this.onFilter,
   });
 
   @override
-  State<AreaMiembrosTable> createState() => _AreaMiembrosTableState();
+  State<AreaMembersTable> createState() => _AreaMembersTableState();
 }
 
-class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
-  static const _integrantesPorPagina = 8;
-  int _paginaActual = 0;
-  var _orden = const EstadoOrdenMiembros();
+class _AreaMembersTableState extends State<AreaMembersTable> {
+  static const _membersPerPage = 8;
+  int _currentPage = 0;
+  var _order = const MemberSortState();
 
   /// Columnas en el orden en que se muestran; null = no ordenable.
-  static const _columnas = <(String, OrdenMiembros?)>[
-    ('Legajo', OrdenMiembros.legajo),
-    ('Colaborador', OrdenMiembros.colaborador),
-    ('Equipo', OrdenMiembros.equipo),
-    ('Seniority', OrdenMiembros.seniority),
-    ('Horas realizadas / objetivo', OrdenMiembros.horas),
-    ('Cumplimiento', OrdenMiembros.cumplimiento),
+  static const _columns = <(String, MemberSort?)>[
+    ('Legajo', MemberSort.employeeId),
+    ('Colaborador', MemberSort.employee),
+    ('Equipo', MemberSort.team),
+    ('Seniority', MemberSort.seniority),
+    ('Horas realizadas / objetivo', MemberSort.hours),
+    ('Cumplimiento', MemberSort.compliance),
     ('Por categoría', null),
   ];
 
   @override
-  void didUpdateWidget(covariant AreaMiembrosTable oldWidget) {
+  void didUpdateWidget(covariant AreaMembersTable oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.miembros != widget.miembros ||
-        oldWidget.filtro != widget.filtro) {
-      _paginaActual = 0;
+    if (oldWidget.members != widget.members ||
+        oldWidget.filter != widget.filter) {
+      _currentPage = 0;
     }
   }
 
   /// Mismos cortes que el semáforo, sobre el porcentaje de cada integrante.
-  String _estadoMiembro(CumplimientoEmpleado miembro) =>
-      miembro.porcentajeTotal >= 100.0
+  String _memberStatus(EmployeeCompliance member) =>
+      member.totalPercentage >= 100.0
       ? 'cumplido'
-      : miembro.porcentajeTotal >= 70.0
+      : member.totalPercentage >= 70.0
       ? 'riesgo'
       : 'critico';
 
-  List<CumplimientoEmpleado> get _miembrosFiltrados => widget.miembros
+  List<EmployeeCompliance> get _filteredMembers => widget.members
       .where(
-        (miembro) =>
-            widget.filtro.isEmpty ||
-            widget.filtro.contains(_estadoMiembro(miembro)),
+        (member) =>
+            widget.filter.isEmpty ||
+            widget.filter.contains(_memberStatus(member)),
       )
       .toList();
 
   @override
   Widget build(BuildContext context) {
-    final estadoOptions = cascadeFilterOptions(
+    final statusOptions = cascadeFilterOptions(
       [
-        for (final miembro in widget.miembros)
-          {'Estado': _estadoMiembro(miembro)},
+        for (final member in widget.members) {'Estado': _memberStatus(member)},
       ],
-      {'Estado': widget.filtro},
+      {'Estado': widget.filter},
     )['Estado'];
-    const etiquetasEstado = {
+    const statusLabels = {
       'cumplido': 'Cumplidos',
       'riesgo': 'En riesgo',
       'critico': 'Críticos',
     };
-    final visiblesFiltrados = _orden.aplicar(_miembrosFiltrados);
-    final indiceOrden = _columnas.indexWhere(
-      (columna) => columna.$2 != null && columna.$2 == _orden.columna,
+    final filteredVisible = _order.apply(_filteredMembers);
+    final orderIndex = _columns.indexWhere(
+      (column) => column.$2 != null && column.$2 == _order.column,
     );
-    final totalIntegrantes = visiblesFiltrados.length;
-    final totalPaginas = totalIntegrantes == 0
+    final totalMembers = filteredVisible.length;
+    final totalPages = totalMembers == 0
         ? 1
-        : (totalIntegrantes + _integrantesPorPagina - 1) ~/
-              _integrantesPorPagina;
-    final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-    final inicio = paginaSegura * _integrantesPorPagina;
-    final finCalculado = inicio + _integrantesPorPagina;
-    final fin = finCalculado > totalIntegrantes
-        ? totalIntegrantes
-        : finCalculado;
-    final miembrosVisibles = visiblesFiltrados.sublist(inicio, fin);
+        : (totalMembers + _membersPerPage - 1) ~/ _membersPerPage;
+    final safePage = _currentPage.clamp(0, totalPages - 1);
+    final start = safePage * _membersPerPage;
+    final calculatedEnd = start + _membersPerPage;
+    final end = calculatedEnd > totalMembers ? totalMembers : calculatedEnd;
+    final visibleMembers = filteredVisible.sublist(start, end);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +108,7 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
           spacing: 16,
           children: [
             Text(
-              'Integrantes ($totalIntegrantes)',
+              'Integrantes ($totalMembers)',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -122,45 +118,45 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
             SizedBox(
               width: 250,
               child: FilterDropdown<String>.multiple(
-                selectedValues: widget.filtro,
+                selectedValues: widget.filter,
                 incompatibleValues:
-                    estadoOptions?.incompatibleValues ?? const {},
+                    statusOptions?.incompatibleValues ?? const {},
                 hint: 'Estado',
                 icon: Icons.traffic_outlined,
                 items: [
-                  for (final value in estadoOptions?.values ?? <String>[])
+                  for (final value in statusOptions?.values ?? <String>[])
                     DropdownMenuItem(
                       value: value,
-                      child: Text(etiquetasEstado[value] ?? value),
+                      child: Text(statusLabels[value] ?? value),
                     ),
                 ],
-                onSelectionChanged: widget.onFiltro,
+                onSelectionChanged: widget.onFilter,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        if (miembrosVisibles.isEmpty)
+        if (visibleMembers.isEmpty)
           const EmptyDataState(
             compact: true,
             icon: Icons.filter_alt_off_outlined,
             title: 'Ningún integrante coincide con el filtro.',
           )
         else ...[
-          if (totalPaginas > 1) ...[
-            PaginacionResultados(
-              paginaActual: paginaSegura,
-              cantidadPaginas: totalPaginas,
-              desde: inicio + 1,
-              hasta: fin,
-              totalResultados: totalIntegrantes,
-              etiquetaResultados: 'integrantes',
-              icono: Icons.people_outline,
-              onPrevious: paginaSegura > 0
-                  ? () => setState(() => _paginaActual = paginaSegura - 1)
+          if (totalPages > 1) ...[
+            ResultsPagination(
+              currentPage: safePage,
+              pageCount: totalPages,
+              from: start + 1,
+              until: end,
+              totalResults: totalMembers,
+              resultsLabel: 'integrantes',
+              icon: Icons.people_outline,
+              onPrevious: safePage > 0
+                  ? () => setState(() => _currentPage = safePage - 1)
                   : null,
-              onNext: paginaSegura < totalPaginas - 1
-                  ? () => setState(() => _paginaActual = paginaSegura + 1)
+              onNext: safePage < totalPages - 1
+                  ? () => setState(() => _currentPage = safePage + 1)
                   : null,
             ),
             const SizedBox(height: 12),
@@ -183,21 +179,21 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
                       headingRowColor: WidgetStatePropertyAll(
                         context.colorScheme.surfaceContainerLow,
                       ),
-                      sortColumnIndex: indiceOrden < 0 ? null : indiceOrden,
-                      sortAscending: _orden.ascendente,
+                      sortColumnIndex: orderIndex < 0 ? null : orderIndex,
+                      sortAscending: _order.ascending,
                       columns: [
-                        for (final (titulo, orden) in _columnas)
+                        for (final (title, order) in _columns)
                           DataColumn(
-                            label: Text(titulo),
-                            onSort: orden == null
+                            label: Text(title),
+                            onSort: order == null
                                 ? null
                                 : (_, _) => setState(() {
-                                    _orden = _orden.alternar(orden);
-                                    _paginaActual = 0;
+                                    _order = _order.toggle(order);
+                                    _currentPage = 0;
                                   }),
                           ),
                       ],
-                      rows: miembrosVisibles.map(_buildRow).toList(),
+                      rows: visibleMembers.map(_buildRow).toList(),
                     ),
                   ),
                 );
@@ -209,53 +205,52 @@ class _AreaMiembrosTableState extends State<AreaMiembrosTable> {
     );
   }
 
-  DataRow _buildRow(CumplimientoEmpleado miembro) {
-    final empleado = miembro.empleado;
-    final cumple = miembro.cumpleObjetivo;
-    final equipo = empleado.equipo.trim();
+  DataRow _buildRow(EmployeeCompliance member) {
+    final employee = member.employee;
+    final meets = member.meetsTarget;
+    final team = employee.team.trim();
 
     return DataRow(
-      onSelectChanged: (_) =>
-          context.push('/empleados/${Uri.encodeComponent(empleado.legajo)}'),
+      onSelectChanged: (_) => context.push(
+        '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+      ),
       cells: [
-        DataCell(Text(empleado.legajo)),
+        DataCell(Text(employee.employeeId)),
         DataCell(
           Text(
-            empleado.nombreCompleto,
+            employee.fullName,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
         DataCell(
           Text(
-            equipo.isEmpty ? 'Sin equipo asignado' : equipo,
+            team.isEmpty ? 'Sin equipo asignado' : team,
             style: TextStyle(
-              color: equipo.isEmpty
-                  ? context.colorScheme.onSurfaceVariant
-                  : null,
+              color: team.isEmpty ? context.colorScheme.onSurfaceVariant : null,
             ),
           ),
         ),
-        DataCell(SeniorityChip(seniority: empleado.seniority)),
+        DataCell(SeniorityChip(seniority: employee.seniority)),
         DataCell(
           Text(
-            '${miembro.totalHorasValidas.toStringAsFixed(1)} / ${miembro.totalHorasRequeridas.toStringAsFixed(1)} h',
+            '${member.totalCreditedHours.toStringAsFixed(1)} / ${member.totalRequiredHours.toStringAsFixed(1)} h',
           ),
         ),
         DataCell(
           Text(
-            formatearPorcentaje(miembro.porcentajeTotal),
+            formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: cumple
-                  ? context.colores.exito.texto
-                  : context.colores.advertencia.texto,
+              color: meets
+                  ? context.colors.success.text
+                  : context.colors.warning.text,
             ),
           ),
         ),
         DataCell(
-          ProgresoHorasPorCategoria(
-            cumplimiento: miembro,
-            mostrarSoloHorasAplicables: true,
+          CategoryHoursProgress(
+            compliance: member,
+            showOnlyApplicableHours: true,
           ),
         ),
       ],

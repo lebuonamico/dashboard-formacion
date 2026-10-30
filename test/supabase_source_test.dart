@@ -69,10 +69,10 @@ ProviderContainer _remoteContainer(SupabaseClient client) => ProviderContainer(
     supabaseClientProvider.overrideWithValue(client),
     // These tests cover repository errors, not scope: an administrator sees
     // everything, so hours and completions do not depend on the payroll.
-    sesionDatosProvider.overrideWithValue((
-      habilitada: true,
+    sessionDataProvider.overrideWithValue((
+      enabled: true,
       email: 'admin@finnegans.com',
-      rol: 'admin',
+      role: 'admin',
     )),
   ],
   // Disable Riverpod's retries so each request has one deterministic result.
@@ -81,24 +81,24 @@ ProviderContainer _remoteContainer(SupabaseClient client) => ProviderContainer(
 
 void _expectRemoteRepositories(ProviderContainer container) {
   expect(
-    container.read(empleadosRepositoryProvider),
-    isA<SupabaseEmpleadosRepository>(),
+    container.read(employeesRepositoryProvider),
+    isA<SupabaseEmployeesRepository>(),
   );
   expect(
-    container.read(cursosRepositoryProvider),
-    isA<SupabaseCursosRepository>(),
+    container.read(coursesRepositoryProvider),
+    isA<SupabaseCoursesRepository>(),
   );
   expect(
-    container.read(cargaDeHorasCRMRepositoryProvider),
-    isA<SupabaseCargaDeHorasCRMRepository>(),
+    container.read(crmTimeEntriesRepositoryProvider),
+    isA<SupabaseCrmTimeEntriesRepository>(),
   );
   expect(
-    container.read(certificacionesMoodleRepositoryProvider),
-    isA<SupabaseCertificacionesMoodleRepository>(),
+    container.read(lmsCertificationsRepositoryProvider),
+    isA<SupabaseLmsCertificationsRepository>(),
   );
   expect(
-    container.read(usuariosAutorizadosRepositoryProvider),
-    isA<SupabaseUsuariosAutorizadosRepository>(),
+    container.read(authorizedUsersRepositoryProvider),
+    isA<SupabaseAuthorizedUsersRepository>(),
   );
 }
 
@@ -119,38 +119,38 @@ void main() {
       addTearDown(container.dispose);
 
       expect(
-        container.read(empleadosRepositoryProvider),
-        isA<LocalEmpleadosRepository>(),
+        container.read(employeesRepositoryProvider),
+        isA<LocalEmployeesRepository>(),
       );
       expect(
-        container.read(cursosRepositoryProvider),
-        isA<LocalCursosRepository>(),
+        container.read(coursesRepositoryProvider),
+        isA<LocalCoursesRepository>(),
       );
       expect(
-        container.read(cargaDeHorasCRMRepositoryProvider),
-        isA<LocalCargaDeHorasCRMRepository>(),
+        container.read(crmTimeEntriesRepositoryProvider),
+        isA<LocalCrmTimeEntriesRepository>(),
       );
       expect(
-        container.read(certificacionesMoodleRepositoryProvider),
-        isA<LocalCertificacionesMoodleRepository>(),
+        container.read(lmsCertificationsRepositoryProvider),
+        isA<LocalLmsCertificationsRepository>(),
       );
-      expect(container.read(usuariosAutorizadosRepositoryProvider), isNull);
+      expect(container.read(authorizedUsersRepositoryProvider), isNull);
       expect(
-        (await container.read(empleadosProvider.future)).single.legajo,
+        (await container.read(employeesProvider.future)).single.employeeId,
         'LOCAL-ONLY',
       );
       expect(
-        (await container.read(cursosProvider.future)).single.id,
+        (await container.read(coursesProvider.future)).single.id,
         'LOCAL-COURSE',
       );
       expect(
-        (await container.read(cargasDeHorasCRMProvider.future)).single.id,
+        (await container.read(crmTimeEntriesProvider.future)).single.id,
         'LOCAL-HOURS',
       );
       expect(
         (await container.read(
-          certificacionesMoodleProvider.future,
-        )).single.legajo,
+          lmsCertificationsProvider.future,
+        )).single.employeeId,
         'LOCAL-ONLY',
       );
     },
@@ -188,42 +188,37 @@ void main() {
           );
 
           await expectLater(
-            container.read(empleadosRepositoryProvider).getEmpleados(),
+            container.read(employeesRepositoryProvider).getEmployees(),
             failure,
           );
           await expectLater(
-            container.read(cursosRepositoryProvider).getCursos(),
+            container.read(coursesRepositoryProvider).getCourses(),
             failure,
           );
           await expectLater(
-            container
-                .read(cargaDeHorasCRMRepositoryProvider)
-                .getCargasDeHoras(),
+            container.read(crmTimeEntriesRepositoryProvider).getTimeEntries(),
             failure,
           );
           await expectLater(
             container
-                .read(certificacionesMoodleRepositoryProvider)
-                .getCertificaciones(),
+                .read(lmsCertificationsRepositoryProvider)
+                .getCertifications(),
             failure,
           );
-          await expectLater(container.read(empleadosProvider.future), failure);
-          await expectLater(container.read(cursosProvider.future), failure);
+          await expectLater(container.read(employeesProvider.future), failure);
+          await expectLater(container.read(coursesProvider.future), failure);
           await expectLater(
-            container.read(cargasDeHorasCRMProvider.future),
+            container.read(crmTimeEntriesProvider.future),
             failure,
           );
           await expectLater(
-            container.read(certificacionesMoodleProvider.future),
+            container.read(lmsCertificationsProvider.future),
             failure,
           );
-          expect(container.read(empleadosProvider).hasError, isTrue);
-          expect(container.read(cursosProvider).hasError, isTrue);
-          expect(container.read(cargasDeHorasCRMProvider).hasError, isTrue);
-          expect(
-            container.read(certificacionesMoodleProvider).hasError,
-            isTrue,
-          );
+          expect(container.read(employeesProvider).hasError, isTrue);
+          expect(container.read(coursesProvider).hasError, isTrue);
+          expect(container.read(crmTimeEntriesProvider).hasError, isTrue);
+          expect(container.read(lmsCertificationsProvider).hasError, isTrue);
           expect(requests.map((request) => request.url.path).toSet(), {
             '/rest/v1/empleados',
             '/rest/v1/cursos',
@@ -257,13 +252,10 @@ void main() {
         addTearDown(container.dispose);
         _expectRemoteRepositories(container);
 
-        expect(await container.read(empleadosProvider.future), isEmpty);
-        expect(await container.read(cursosProvider.future), isEmpty);
-        expect(await container.read(cargasDeHorasCRMProvider.future), isEmpty);
-        expect(
-          await container.read(certificacionesMoodleProvider.future),
-          isEmpty,
-        );
+        expect(await container.read(employeesProvider.future), isEmpty);
+        expect(await container.read(coursesProvider.future), isEmpty);
+        expect(await container.read(crmTimeEntriesProvider.future), isEmpty);
+        expect(await container.read(lmsCertificationsProvider.future), isEmpty);
         expect(requests.length, 4);
       },
     );
@@ -290,10 +282,10 @@ void main() {
         addTearDown(container.dispose);
 
         await container
-            .read(empleadosRepositoryProvider)
-            .getEmpleados(
-              legajo: '10',
-              equipo: 'Equipo remoto',
+            .read(employeesRepositoryProvider)
+            .getEmployees(
+              employeeId: '10',
+              team: 'Equipo remoto',
               sector: 'Sector remoto',
             );
         expect(requests.last.url.queryParameters['legajo'], 'eq.10');
@@ -303,16 +295,16 @@ void main() {
         );
         expect(requests.last.url.queryParameters['sector'], 'eq.Sector remoto');
 
-        await container.read(cursosRepositoryProvider).getCursos(id: '107');
+        await container.read(coursesRepositoryProvider).getCourses(id: '107');
         expect(requests.last.url.queryParameters['id_curso'], 'eq.107');
 
         await container
-            .read(cargaDeHorasCRMRepositoryProvider)
-            .getCargasDeHoras(
-              empleadoLegajo: '10',
-              cursoId: '107',
-              desde: DateTime(2025, 1),
-              hasta: DateTime(2025, 2),
+            .read(crmTimeEntriesRepositoryProvider)
+            .getTimeEntries(
+              employeeId: '10',
+              courseId: '107',
+              from: DateTime(2025, 1),
+              until: DateTime(2025, 2),
             );
         expect(requests.last.url.queryParameters['legajo'], 'eq.10');
         expect(requests.last.url.queryParameters['curso_id'], 'eq.107');
@@ -325,8 +317,8 @@ void main() {
         );
 
         await container
-            .read(certificacionesMoodleRepositoryProvider)
-            .getCertificaciones(legajo: '10', cursoId: '107');
+            .read(lmsCertificationsRepositoryProvider)
+            .getCertifications(employeeId: '10', courseId: '107');
         expect(requests.last.url.queryParameters['legajo'], 'eq.10');
         expect(requests.last.url.queryParameters['curso_id'], 'eq.107');
         expect(requests.map((request) => request.url.path), [
@@ -356,15 +348,15 @@ void main() {
       final container = _remoteContainer(client);
       addTearDown(container.dispose);
 
-      expect(container.read(cursosConInstructorProvider).isLoading, isTrue);
+      expect(container.read(courseStatsProvider).isLoading, isTrue);
       await expectLater(
-        container.read(empleadosProvider.future),
+        container.read(employeesProvider.future),
         throwsA(isA<PostgrestException>()),
       );
-      expect(await container.read(cursosProvider.future), isEmpty);
+      expect(await container.read(coursesProvider.future), isEmpty);
       await container.pump();
 
-      final state = container.read(cursosConInstructorProvider);
+      final state = container.read(courseStatsProvider);
       expect(state.hasError, isTrue);
       expect(
         state.error,
@@ -397,27 +389,24 @@ void main() {
         final container = _remoteContainer(client);
         addTearDown(container.dispose);
 
-        expect(
-          container.read(cargasDeHorasCompletasProvider).isLoading,
-          isTrue,
-        );
+        expect(container.read(joinedTimeEntriesProvider).isLoading, isTrue);
         if (table == 'empleados') {
           await expectLater(
-            container.read(empleadosProvider.future),
+            container.read(employeesProvider.future),
             throwsA(isA<PostgrestException>()),
           );
-          expect(await container.read(cursosProvider.future), isEmpty);
+          expect(await container.read(coursesProvider.future), isEmpty);
         } else {
           await expectLater(
-            container.read(cursosProvider.future),
+            container.read(coursesProvider.future),
             throwsA(isA<PostgrestException>()),
           );
-          expect(await container.read(empleadosProvider.future), isEmpty);
+          expect(await container.read(employeesProvider.future), isEmpty);
         }
-        expect(await container.read(cargasDeHorasCRMProvider.future), isEmpty);
+        expect(await container.read(crmTimeEntriesProvider.future), isEmpty);
         await container.pump();
 
-        final state = container.read(cargasDeHorasCompletasProvider);
+        final state = container.read(joinedTimeEntriesProvider);
         expect(state.hasError, isTrue);
         expect(
           state.error,

@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/filter_bar.dart';
 
 class AdminFilters extends StatelessWidget {
-  final bool hayFiltrosActivos;
-  final VoidCallback onLimpiar;
+  final bool hasActiveFilters;
+  final VoidCallback onClear;
 
   const AdminFilters({
     super.key,
-    required this.hayFiltrosActivos,
-    required this.onLimpiar,
+    required this.hasActiveFilters,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) => FilterBar(
     scope: 'admin',
-    hasActiveFilters: hayFiltrosActivos,
-    onClear: onLimpiar,
+    hasActiveFilters: hasActiveFilters,
+    onClear: onClear,
   );
 }

@@ -25,7 +25,7 @@ Future<int> runProject(
   bool? isWindows,
   void Function(String)? reportError,
 }) async {
-  final report = reportError ?? stderr.writeln;
+  final void Function(String) report = reportError ?? stderr.writeln;
   if (arguments.length != 1 ||
       !const {'local', 'supabase'}.contains(arguments.single)) {
     report(_usage);

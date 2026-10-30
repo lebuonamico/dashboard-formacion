@@ -4,44 +4,44 @@ import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 import 'package:app_finnegans/presentation/widgets/admin/admin_styles.dart';
 
-Future<({String email, RolUsuario rol})?> mostrarDialogoAltaUsuario(
+Future<({String email, UserRole role})?> showUserCreationDialog(
   BuildContext context,
 ) {
-  return showDialog<({String email, RolUsuario rol})>(
+  return showDialog<({String email, UserRole role})>(
     context: context,
-    builder: (_) => const _DialogoAltaUsuario(),
+    builder: (_) => const _UserCreationDialog(),
   );
 }
 
-Future<RolUsuario?> mostrarDialogoCambiarRol(
+Future<UserRole?> showRoleChangeDialog(
   BuildContext context, {
   required String email,
-  required RolUsuario? rolActual,
+  required UserRole? currentRole,
 }) {
-  return showDialog<RolUsuario>(
+  return showDialog<UserRole>(
     context: context,
-    builder: (_) => _DialogoCambiarRol(email: email, rolActual: rolActual),
+    builder: (_) => _RoleChangeDialog(email: email, currentRole: currentRole),
   );
 }
 
-Future<bool> confirmarAccion(
+Future<bool> confirmAction(
   BuildContext context, {
-  required String titulo,
-  required String mensaje,
-  required String etiquetaConfirmar,
+  required String title,
+  required String message,
+  required String confirmLabel,
   required Color color,
 }) async {
-  final confirmado = await showDialog<bool>(
+  final confirmed = await showDialog<bool>(
     context: context,
-    builder: (ctx) => _MarcoDialogo(
-      titulo: titulo,
-      ancho: 460,
+    builder: (ctx) => _DialogFrame(
+      title: title,
+      width: 460,
       children: [
         Text(
-          mensaje,
+          message,
           style: TextStyle(
             fontSize: 14,
-            color: context.colores.textoIntermedio,
+            color: context.colors.intermediateText,
             height: 1.4,
           ),
         ),
@@ -58,88 +58,87 @@ Future<bool> confirmarAccion(
               key: const Key('admin_confirmar'),
               onPressed: () => Navigator.of(ctx).pop(true),
               style: FilledButton.styleFrom(backgroundColor: color),
-              child: Text(etiquetaConfirmar),
+              child: Text(confirmLabel),
             ),
           ],
         ),
       ],
     ),
   );
-  return confirmado ?? false;
+  return confirmed ?? false;
 }
 
 /// Elige los líderes de un área o un equipo entre los usuarios activos con
-/// [rol]. Devuelve el conjunto completo de emails, o `null` si se cancela.
-Future<Set<String>?> mostrarDialogoLideres(
+/// [role]. Devuelve el conjunto completo de emails, o `null` si se cancela.
+Future<Set<String>?> showLeadersDialog(
   BuildContext context, {
-  required String titulo,
-  required String subtitulo,
-  required RolUsuario rol,
-  required List<UsuarioAutorizado> usuarios,
-  required Set<String> seleccionados,
-  required Map<String, String> nombrePorEmail,
+  required String title,
+  required String subtitle,
+  required UserRole role,
+  required List<AuthorizedUser> users,
+  required Set<String> selected,
+  required Map<String, String> nameByEmail,
 }) {
   return showDialog<Set<String>>(
     context: context,
-    builder: (_) => _DialogoLideres(
-      titulo: titulo,
-      subtitulo: subtitulo,
-      rol: rol,
-      usuarios: usuarios,
-      seleccionados: seleccionados,
-      nombrePorEmail: nombrePorEmail,
+    builder: (_) => _LeadersDialog(
+      title: title,
+      subtitle: subtitle,
+      role: role,
+      users: users,
+      selected: selected,
+      nameByEmail: nameByEmail,
     ),
   );
 }
 
-class _DialogoLideres extends StatefulWidget {
-  final String titulo;
-  final String subtitulo;
-  final RolUsuario rol;
-  final List<UsuarioAutorizado> usuarios;
-  final Set<String> seleccionados;
-  final Map<String, String> nombrePorEmail;
+class _LeadersDialog extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final UserRole role;
+  final List<AuthorizedUser> users;
+  final Set<String> selected;
+  final Map<String, String> nameByEmail;
 
-  const _DialogoLideres({
-    required this.titulo,
-    required this.subtitulo,
-    required this.rol,
-    required this.usuarios,
-    required this.seleccionados,
-    required this.nombrePorEmail,
+  const _LeadersDialog({
+    required this.title,
+    required this.subtitle,
+    required this.role,
+    required this.users,
+    required this.selected,
+    required this.nameByEmail,
   });
 
   @override
-  State<_DialogoLideres> createState() => _DialogoLideresState();
+  State<_LeadersDialog> createState() => _LeadersDialogState();
 }
 
-class _DialogoLideresState extends State<_DialogoLideres> {
-  late final Set<String> _marcados = {...widget.seleccionados};
+class _LeadersDialogState extends State<_LeadersDialog> {
+  late final Set<String> _checked = {...widget.selected};
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final candidatos = {
-      for (final usuario in widget.usuarios)
-        if (usuario.estado == EstadoUsuario.activo &&
-            usuario.rolConocido == widget.rol)
-          usuario.email,
+    final candidates = {
+      for (final user in widget.users)
+        if (user.status == UserStatus.active && user.knownRole == widget.role)
+          user.email,
     };
     // Los asignados que perdieron el rol o el acceso se listan igual, para
     // poder quitarlos.
-    final sinAcceso = widget.seleccionados.difference(candidatos);
-    final emails = [...candidatos, ...sinAcceso]..sort();
-    final sinCambios =
-        _marcados.length == widget.seleccionados.length &&
-        _marcados.containsAll(widget.seleccionados);
+    final noAccess = widget.selected.difference(candidates);
+    final emails = [...candidates, ...noAccess]..sort();
+    final noChanges =
+        _checked.length == widget.selected.length &&
+        _checked.containsAll(widget.selected);
 
-    return _MarcoDialogo(
-      titulo: widget.titulo,
-      subtitulo: widget.subtitulo,
+    return _DialogFrame(
+      title: widget.title,
+      subtitle: widget.subtitle,
       children: [
         if (emails.isEmpty)
           Text(
-            'No hay usuarios activos con el rol ${widget.rol.label}. Dalos de '
+            'No hay usuarios activos con el rol ${widget.role.label}. Dalos de '
             'alta o cambiales el rol desde la pestaña Usuarios.',
             style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           )
@@ -152,22 +151,22 @@ class _DialogoLideresState extends State<_DialogoLideres> {
                   for (final email in emails)
                     CheckboxListTile(
                       key: Key('admin_lider_$email'),
-                      value: _marcados.contains(email),
+                      value: _checked.contains(email),
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
                       activeColor: cs.primary,
-                      onChanged: (valor) => setState(() {
-                        if (valor == true) {
-                          _marcados.add(email);
+                      onChanged: (value) => setState(() {
+                        if (value == true) {
+                          _checked.add(email);
                         } else {
-                          _marcados.remove(email);
+                          _checked.remove(email);
                         }
                       }),
                       title: Text(
                         email,
                         style: TextStyle(fontSize: 14, color: cs.onSurface),
                       ),
-                      subtitle: _subtitulo(email, sinAcceso.contains(email)),
+                      subtitle: _subtitle(email, noAccess.contains(email)),
                     ),
                 ],
               ),
@@ -184,9 +183,9 @@ class _DialogoLideresState extends State<_DialogoLideres> {
             const SizedBox(width: 8),
             FilledButton(
               key: const Key('admin_lideres_confirmar'),
-              onPressed: sinCambios
+              onPressed: noChanges
                   ? null
-                  : () => Navigator.of(context).pop({..._marcados}),
+                  : () => Navigator.of(context).pop({..._checked}),
               child: const Text('Guardar líderes'),
             ),
           ],
@@ -195,65 +194,65 @@ class _DialogoLideresState extends State<_DialogoLideres> {
     );
   }
 
-  Widget? _subtitulo(String email, bool sinAcceso) {
-    final nombre = widget.nombrePorEmail[email];
-    final partes = [
-      ?nombre,
-      if (sinAcceso) 'Ya no tiene el rol ${widget.rol.label} o está sin acceso',
+  Widget? _subtitle(String email, bool noAccess) {
+    final name = widget.nameByEmail[email];
+    final parts = [
+      ?name,
+      if (noAccess) 'Ya no tiene el rol ${widget.role.label} o está sin acceso',
     ];
-    if (partes.isEmpty) return null;
+    if (parts.isEmpty) return null;
     return Text(
-      partes.join(' · '),
+      parts.join(' · '),
       style: TextStyle(
         fontSize: 12,
-        color: sinAcceso
-            ? context.colores.advertencia.texto
+        color: noAccess
+            ? context.colors.warning.text
             : context.colorScheme.onSurfaceVariant,
       ),
     );
   }
 }
 
-class _DialogoAltaUsuario extends StatefulWidget {
-  const _DialogoAltaUsuario();
+class _UserCreationDialog extends StatefulWidget {
+  const _UserCreationDialog();
 
   @override
-  State<_DialogoAltaUsuario> createState() => _DialogoAltaUsuarioState();
+  State<_UserCreationDialog> createState() => _UserCreationDialogState();
 }
 
-class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
-  final _claveFormulario = GlobalKey<FormState>();
-  final _controladorEmail = TextEditingController();
-  RolUsuario _rol = RolUsuario.lider;
+class _UserCreationDialogState extends State<_UserCreationDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _controllerEmail = TextEditingController();
+  UserRole _role = UserRole.teamLead;
 
   @override
   void dispose() {
-    _controladorEmail.dispose();
+    _controllerEmail.dispose();
     super.dispose();
   }
 
-  void _confirmar() {
-    if (_claveFormulario.currentState?.validate() != true) return;
+  void _confirm() {
+    if (_formKey.currentState?.validate() != true) return;
     Navigator.of(
       context,
-    ).pop((email: _controladorEmail.text.trim().toLowerCase(), rol: _rol));
+    ).pop((email: _controllerEmail.text.trim().toLowerCase(), role: _role));
   }
 
   @override
   Widget build(BuildContext context) {
-    return _MarcoDialogo(
-      titulo: 'Nuevo usuario',
-      subtitulo:
+    return _DialogFrame(
+      title: 'Nuevo usuario',
+      subtitle:
           'El usuario queda habilitado para iniciar sesión con su cuenta de Google.',
       children: [
         Form(
-          key: _claveFormulario,
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 key: const Key('admin_alta_email'),
-                controller: _controladorEmail,
+                controller: _controllerEmail,
                 autofocus: true,
                 keyboardType: TextInputType.emailAddress,
                 decoration: adminInputDecoration(
@@ -261,32 +260,32 @@ class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
                   Icons.alternate_email,
                   label: 'Email corporativo',
                 ),
-                onFieldSubmitted: (_) => _confirmar(),
-                validator: _validarEmail,
+                onFieldSubmitted: (_) => _confirm(),
+                validator: _validateEmail,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<RolUsuario>(
+              DropdownButtonFormField<UserRole>(
                 key: const Key('admin_alta_rol'),
-                initialValue: _rol,
+                initialValue: _role,
                 isExpanded: true,
                 decoration: adminInputDecoration(
                   'Rol',
                   Icons.badge_outlined,
                   label: 'Rol',
                 ),
-                items: RolUsuario.values
+                items: UserRole.values
                     .map(
-                      (rol) => DropdownMenuItem(
-                        value: rol,
+                      (role) => DropdownMenuItem(
+                        value: role,
                         child: Text(
-                          '${rol.label} — ${rol.descripcion}',
+                          '${role.label} — ${role.description}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )
                     .toList(),
-                onChanged: (valor) =>
-                    setState(() => _rol = valor ?? RolUsuario.lider),
+                onChanged: (value) =>
+                    setState(() => _role = value ?? UserRole.teamLead),
               ),
             ],
           ),
@@ -302,7 +301,7 @@ class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
             const SizedBox(width: 8),
             FilledButton(
               key: const Key('admin_alta_confirmar'),
-              onPressed: _confirmar,
+              onPressed: _confirm,
               child: const Text('Crear usuario'),
             ),
           ],
@@ -311,8 +310,8 @@ class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
     );
   }
 
-  static String? _validarEmail(String? valor) {
-    final email = valor?.trim() ?? '';
+  static String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Ingresá un email.';
     if (!RegExp(r'^[^@\s]+@[^@\s.]+\.[^@\s]+$').hasMatch(email)) {
       return 'El email no tiene un formato válido.';
@@ -321,29 +320,29 @@ class _DialogoAltaUsuarioState extends State<_DialogoAltaUsuario> {
   }
 }
 
-class _DialogoCambiarRol extends StatefulWidget {
+class _RoleChangeDialog extends StatefulWidget {
   final String email;
-  final RolUsuario? rolActual;
+  final UserRole? currentRole;
 
-  const _DialogoCambiarRol({required this.email, required this.rolActual});
+  const _RoleChangeDialog({required this.email, required this.currentRole});
 
   @override
-  State<_DialogoCambiarRol> createState() => _DialogoCambiarRolState();
+  State<_RoleChangeDialog> createState() => _RoleChangeDialogState();
 }
 
-class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
-  late RolUsuario _rol = widget.rolActual ?? RolUsuario.lider;
+class _RoleChangeDialogState extends State<_RoleChangeDialog> {
+  late UserRole _role = widget.currentRole ?? UserRole.teamLead;
 
   @override
   Widget build(BuildContext context) {
-    final sinCambio = _rol == widget.rolActual;
+    final unchanged = _role == widget.currentRole;
     final cs = context.colorScheme;
 
-    return _MarcoDialogo(
-      titulo: 'Cambiar rol',
-      subtitulo: widget.email,
+    return _DialogFrame(
+      title: 'Cambiar rol',
+      subtitle: widget.email,
       children: [
-        if (widget.rolActual == null)
+        if (widget.currentRole == null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
@@ -351,24 +350,24 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
               'lista para reemplazarlo.',
               style: TextStyle(
                 fontSize: 13,
-                color: context.colores.advertencia.texto,
+                color: context.colors.warning.text,
               ),
             ),
           ),
-        RadioGroup<RolUsuario>(
-          groupValue: _rol,
-          onChanged: (valor) => setState(() => _rol = valor ?? _rol),
+        RadioGroup<UserRole>(
+          groupValue: _role,
+          onChanged: (value) => setState(() => _role = value ?? _role),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: RolUsuario.values
+            children: UserRole.values
                 .map(
-                  (rol) => RadioListTile<RolUsuario>(
-                    key: Key('admin_rol_${rol.name}'),
-                    value: rol,
+                  (role) => RadioListTile<UserRole>(
+                    key: Key('admin_rol_${role.name}'),
+                    value: role,
                     contentPadding: EdgeInsets.zero,
                     activeColor: cs.primary,
                     title: Text(
-                      rol.label,
+                      role.label,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -376,7 +375,7 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
                       ),
                     ),
                     subtitle: Text(
-                      rol.descripcion,
+                      role.description,
                       style: TextStyle(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
@@ -398,9 +397,9 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
             const SizedBox(width: 8),
             FilledButton(
               key: const Key('admin_rol_confirmar'),
-              onPressed: sinCambio
+              onPressed: unchanged
                   ? null
-                  : () => Navigator.of(context).pop(_rol),
+                  : () => Navigator.of(context).pop(_role),
               child: const Text('Guardar rol'),
             ),
           ],
@@ -410,17 +409,17 @@ class _DialogoCambiarRolState extends State<_DialogoCambiarRol> {
   }
 }
 
-class _MarcoDialogo extends StatelessWidget {
-  final String titulo;
-  final String? subtitulo;
-  final double ancho;
+class _DialogFrame extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final double width;
   final List<Widget> children;
 
-  const _MarcoDialogo({
-    required this.titulo,
+  const _DialogFrame({
+    required this.title,
     required this.children,
-    this.subtitulo,
-    this.ancho = 520,
+    this.subtitle,
+    this.width = 520,
   });
 
   @override
@@ -428,7 +427,7 @@ class _MarcoDialogo extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: ancho),
+        constraints: BoxConstraints(maxWidth: width),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -443,17 +442,17 @@ class _MarcoDialogo extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          titulo,
+                          title,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: context.colorScheme.onSurface,
                           ),
                         ),
-                        if (subtitulo != null) ...[
+                        if (subtitle != null) ...[
                           const SizedBox(height: 2),
                           Text(
-                            subtitulo!,
+                            subtitle!,
                             style: TextStyle(
                               fontSize: 13,
                               color: context.colorScheme.onSurfaceVariant,

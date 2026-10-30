@@ -1,2 +1,3 @@
-bool coincidePeriodo(DateTime fecha, {int? anio, int? mes}) =>
-    (anio == null || fecha.year == anio) && (mes == null || fecha.month == mes);
+bool matchesPeriod(DateTime date, {int? year, int? month}) =>
+    (year == null || date.year == year) &&
+    (month == null || date.month == month);

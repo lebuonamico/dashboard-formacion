@@ -8,24 +8,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class DashboardSummaryCharts extends StatelessWidget {
-  final AsyncValue<List<CumplimientoEmpleado>> cumplimientosAsync;
+  final AsyncValue<List<EmployeeCompliance>> complianceListAsync;
 
-  const DashboardSummaryCharts({super.key, required this.cumplimientosAsync});
+  const DashboardSummaryCharts({super.key, required this.complianceListAsync});
 
   @override
   Widget build(BuildContext context) {
-    return cumplimientosAsync.when(
+    return complianceListAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
       ),
-      data: (cumplimientos) {
-        if (cumplimientos.isEmpty) return const SizedBox.shrink();
+      data: (complianceList) {
+        if (complianceList.isEmpty) return const SizedBox.shrink();
 
-        final compliance = _ComplianceSummary.from(cumplimientos);
-        final categories = _CategorySummary.from(cumplimientos);
+        final compliance = _ComplianceSummary.from(complianceList);
+        final categories = _CategorySummary.from(complianceList);
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -66,15 +66,15 @@ class _ComplianceSummary {
     required this.doesNotMeet,
   });
 
-  factory _ComplianceSummary.from(List<CumplimientoEmpleado> items) {
+  factory _ComplianceSummary.from(List<EmployeeCompliance> items) {
     var meetsTarget = 0;
     var attention = 0;
     var doesNotMeet = 0;
 
     for (final item in items) {
-      if (item.porcentajeTotal >= 100) {
+      if (item.totalPercentage >= 100) {
         meetsTarget++;
-      } else if (item.porcentajeTotal >= 70) {
+      } else if (item.totalPercentage >= 70) {
         attention++;
       } else {
         doesNotMeet++;
@@ -93,7 +93,7 @@ class _ComplianceSummary {
 }
 
 class _CategorySummary {
-  final Map<TipoCurso, double> hours;
+  final Map<CourseCategory, double> hours;
   final double averageHours;
 
   /// Objetivo del período por persona y total, para darle referencia al
@@ -108,24 +108,24 @@ class _CategorySummary {
     required this.totalTarget,
   });
 
-  factory _CategorySummary.from(List<CumplimientoEmpleado> items) {
-    final hours = <TipoCurso, double>{};
-    for (final tipo in TipoCurso.values) {
+  factory _CategorySummary.from(List<EmployeeCompliance> items) {
+    final hours = <CourseCategory, double>{};
+    for (final type in CourseCategory.values) {
       // Sólo lo que suma al objetivo: el total coincide con totalCompleted.
-      hours[tipo] = items.fold<double>(
+      hours[type] = items.fold<double>(
         0,
-        (total, item) => total + item.horasAplicablesAlObjetivo(tipo),
+        (total, item) => total + item.applicableHours(type),
       );
     }
 
     final totalCompleted = items.fold<double>(
       0,
-      (total, item) => total + item.totalHorasValidas,
+      (total, item) => total + item.totalCreditedHours,
     );
 
     final totalTarget = items.fold<double>(
       0,
-      (total, item) => total + item.totalHorasRequeridas,
+      (total, item) => total + item.totalRequiredHours,
     );
 
     return _CategorySummary(
@@ -147,28 +147,30 @@ class _ComplianceChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ParColores(texto: verde, fondo: fondoVerde) = context.colores.exito;
-    final ParColores(texto: ambar, fondo: fondoAmbar) =
-        context.colores.advertencia;
-    final ParColores(texto: rojo, fondo: fondoRojo) = context.colores.peligro;
+    final ColorPair(text: green, background: greenBackground) =
+        context.colors.success;
+    final ColorPair(text: amber, background: amberBackground) =
+        context.colors.warning;
+    final ColorPair(text: red, background: redBackground) =
+        context.colors.danger;
     final legend = [
       _ChartLegendItem(
         label: 'Cumple (>=100%)',
         count: summary.meetsTarget,
-        color: verde,
-        backgroundColor: fondoVerde,
+        color: green,
+        backgroundColor: greenBackground,
       ),
       _ChartLegendItem(
         label: 'Atención (70-84%)',
         count: summary.attention,
-        color: ambar,
-        backgroundColor: fondoAmbar,
+        color: amber,
+        backgroundColor: amberBackground,
       ),
       _ChartLegendItem(
         label: 'No cumple (<70%)',
         count: summary.doesNotMeet,
-        color: rojo,
-        backgroundColor: fondoRojo,
+        color: red,
+        backgroundColor: redBackground,
       ),
     ];
 
@@ -185,15 +187,15 @@ class _ComplianceChartCard extends StatelessWidget {
             segments: [
               DonutChartSegment(
                 value: summary.meetsTarget.toDouble(),
-                color: verde,
+                color: green,
               ),
               DonutChartSegment(
                 value: summary.attention.toDouble(),
-                color: ambar,
+                color: amber,
               ),
               DonutChartSegment(
                 value: summary.doesNotMeet.toDouble(),
-                color: rojo,
+                color: red,
               ),
             ],
             centerText:
@@ -219,17 +221,17 @@ class _CategoryChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Mismo color por categoría que los chips de tipo de curso.
     final colors = [
-      for (final tipo in TipoCurso.values)
-        context.colores.categoria(tipo).texto,
+      for (final type in CourseCategory.values)
+        context.colors.category(type).text,
     ];
     final legend = <_ChartLegendItem>[];
 
-    for (var index = 0; index < TipoCurso.values.length; index++) {
-      final tipo = TipoCurso.values[index];
+    for (var index = 0; index < CourseCategory.values.length; index++) {
+      final type = CourseCategory.values[index];
       legend.add(
         _ChartLegendItem(
-          label: tipo.labelCorto,
-          value: summary.hours[tipo] ?? 0,
+          label: type.shortLabel,
+          value: summary.hours[type] ?? 0,
           color: colors[index],
           backgroundColor: context.colorScheme.surfaceContainerLow,
         ),
@@ -246,18 +248,18 @@ class _CategoryChartCard extends StatelessWidget {
       action: 'Ver cursos',
       onAction: () => context.push('/cursos'),
       child: summary.totalHours == 0
-          ? const _SinDatosCategorias()
+          ? const _NoCategoryData()
           : Row(
               children: [
                 DonutChart(
                   segments: [
                     for (
                       var index = 0;
-                      index < TipoCurso.values.length;
+                      index < CourseCategory.values.length;
                       index++
                     )
                       DonutChartSegment(
-                        value: summary.hours[TipoCurso.values[index]] ?? 0,
+                        value: summary.hours[CourseCategory.values[index]] ?? 0,
                         color: colors[index],
                       ),
                   ],
@@ -282,8 +284,8 @@ class _CategoryChartCard extends StatelessWidget {
   }
 }
 
-class _SinDatosCategorias extends StatelessWidget {
-  const _SinDatosCategorias();
+class _NoCategoryData extends StatelessWidget {
+  const _NoCategoryData();
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +345,7 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: context.panel(sombra: true),
+      decoration: context.panel(shadow: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -490,7 +492,7 @@ class _LegendList extends StatelessWidget {
                     item.label,
                     style: TextStyle(
                       fontSize: 10,
-                      color: context.colores.textoIntermedio,
+                      color: context.colors.intermediateText,
                     ),
                   ),
                 ),
@@ -501,7 +503,7 @@ class _LegendList extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: context.colores.textoIntermedio,
+                    color: context.colors.intermediateText,
                   ),
                 ),
               ],

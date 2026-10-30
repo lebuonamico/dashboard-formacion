@@ -7,16 +7,16 @@ import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 import 'package:go_router/go_router.dart';
 
 /// Grilla de los equipos generales de un área, con título y conteo.
-class AreaEquiposGrid extends StatelessWidget {
-  final List<TeamOverview> equipos;
-  final bool esAnual;
-  final String origen;
+class AreaTeamsGrid extends StatelessWidget {
+  final List<TeamOverview> teams;
+  final bool isAnnual;
+  final String origin;
 
-  const AreaEquiposGrid({
+  const AreaTeamsGrid({
     super.key,
-    required this.equipos,
-    required this.origen,
-    this.esAnual = false,
+    required this.teams,
+    required this.origin,
+    this.isAnnual = false,
   });
 
   @override
@@ -35,11 +35,11 @@ class AreaEquiposGrid extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _CountBadge(count: equipos.length),
+            _CountBadge(count: teams.length),
           ],
         ),
         const SizedBox(height: 13),
-        if (equipos.isEmpty)
+        if (teams.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -59,11 +59,11 @@ class AreaEquiposGrid extends StatelessWidget {
               mainAxisSpacing: 16,
               mainAxisExtent: 252,
             ),
-            itemCount: equipos.length,
-            itemBuilder: (context, index) => AreaEquipoCard(
-              equipo: equipos[index],
-              esAnual: esAnual,
-              origen: origen,
+            itemCount: teams.length,
+            itemBuilder: (context, index) => AreaTeamCard(
+              team: teams[index],
+              isAnnual: isAnnual,
+              origin: origin,
             ),
           ),
       ],
@@ -98,24 +98,24 @@ class _CountBadge extends StatelessWidget {
 
 /// Tarjeta de un equipo dentro del detalle de área, con el estilo de la
 /// pantalla de Equipos.
-class AreaEquipoCard extends StatelessWidget {
-  final TeamOverview equipo;
-  final bool esAnual;
+class AreaTeamCard extends StatelessWidget {
+  final TeamOverview team;
+  final bool isAnnual;
 
   /// Sección del menú desde la que se llegó, para que el detalle la resalte.
-  final String origen;
+  final String origin;
 
-  const AreaEquipoCard({
+  const AreaTeamCard({
     super.key,
-    required this.equipo,
-    required this.origen,
-    this.esAnual = false,
+    required this.team,
+    required this.origin,
+    this.isAnnual = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = (equipo.completionPercentage / 100).clamp(0.0, 1.0);
-    final colorEstado = equipo.status.colores(context).texto;
+    final progress = (team.completionPercentage / 100).clamp(0.0, 1.0);
+    final statusColor = team.status.colors(context).text;
 
     return Material(
       color: context.colorScheme.surface,
@@ -123,16 +123,16 @@ class AreaEquipoCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () => context.push(
-          '/areas/${Uri.encodeComponent(equipo.area)}/equipos/${Uri.encodeComponent(equipo.name)}?origen=$origen',
+          '/areas/${Uri.encodeComponent(team.area)}/equipos/${Uri.encodeComponent(team.name)}?origen=$origin',
         ),
         child: Container(
-          decoration: context.panel(sombra: true),
+          decoration: context.panel(shadow: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: colorEstado,
+                  color: statusColor,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -144,17 +144,17 @@ class AreaEquipoCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _CardHeader(equipo: equipo),
+                      _CardHeader(team: team),
                       const SizedBox(height: 13),
-                      _LeaderRow(lider: equipo.leader),
+                      _LeaderRow(leader: team.leader),
                       const Spacer(),
                       _ProgressSection(
-                        equipo: equipo,
+                        team: team,
                         progress: progress,
-                        esAnual: esAnual,
+                        isAnnual: isAnnual,
                       ),
                       const SizedBox(height: 9),
-                      _CardFooter(equipo: equipo),
+                      _CardFooter(team: team),
                     ],
                   ),
                 ),
@@ -168,13 +168,13 @@ class AreaEquipoCard extends StatelessWidget {
 }
 
 class _CardHeader extends StatelessWidget {
-  final TeamOverview equipo;
+  final TeamOverview team;
 
-  const _CardHeader({required this.equipo});
+  const _CardHeader({required this.team});
 
   @override
   Widget build(BuildContext context) {
-    final integrantes = equipo.memberCount;
+    final members = team.memberCount;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +184,7 @@ class _CardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                equipo.name,
+                team.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -197,7 +197,7 @@ class _CardHeader extends StatelessWidget {
               const SizedBox(height: 5),
               // El área ya es el título de la pantalla: acá va la nómina.
               Text(
-                '$integrantes ${integrantes == 1 ? 'integrante' : 'integrantes'}',
+                '$members ${members == 1 ? 'integrante' : 'integrantes'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -210,16 +210,16 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        _StatusBadge(status: equipo.status),
+        _StatusBadge(status: team.status),
       ],
     );
   }
 }
 
 class _LeaderRow extends StatelessWidget {
-  final String lider;
+  final String leader;
 
-  const _LeaderRow({required this.lider});
+  const _LeaderRow({required this.leader});
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +233,7 @@ class _LeaderRow extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'Líder: $lider',
+            'Líder: $leader',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -248,19 +248,19 @@ class _LeaderRow extends StatelessWidget {
 }
 
 class _ProgressSection extends StatelessWidget {
-  final TeamOverview equipo;
+  final TeamOverview team;
   final double progress;
-  final bool esAnual;
+  final bool isAnnual;
 
   const _ProgressSection({
-    required this.equipo,
+    required this.team,
     required this.progress,
-    required this.esAnual,
+    required this.isAnnual,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colorEstado = equipo.status.colores(context).texto;
+    final statusColor = team.status.colors(context).text;
 
     return Column(
       children: [
@@ -272,7 +272,7 @@ class _ProgressSection extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      '${equipo.membersOnTarget} de ${equipo.memberCount} en objetivo',
+                      '${team.membersOnTarget} de ${team.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -283,7 +283,7 @@ class _ProgressSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Tooltip(
-                    message: esAnual
+                    message: isAnnual
                         ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
                         : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
                     child: Icon(
@@ -299,11 +299,11 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatearPorcentaje(equipo.completionPercentage),
+              formatPercentage(team.completionPercentage),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: colorEstado,
+                color: statusColor,
               ),
             ),
           ],
@@ -314,8 +314,8 @@ class _ProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: context.colores.graficoPista,
-            color: colorEstado,
+            backgroundColor: context.colors.chartTrack,
+            color: statusColor,
           ),
         ),
       ],
@@ -324,9 +324,9 @@ class _ProgressSection extends StatelessWidget {
 }
 
 class _CardFooter extends StatelessWidget {
-  final TeamOverview equipo;
+  final TeamOverview team;
 
-  const _CardFooter({required this.equipo});
+  const _CardFooter({required this.team});
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +337,7 @@ class _CardFooter extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '${equipo.completedHours.toStringAsFixed(1)} de ${equipo.targetHours.toStringAsFixed(1)} hs',
+                  '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
@@ -348,13 +348,13 @@ class _CardFooter extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                _formatDesvio(equipo.hoursDeviation),
+                _formatDeviation(team.hoursDeviation),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: equipo.hoursDeviation >= 0
-                      ? context.colores.exito.texto
-                      : context.colores.peligro.texto,
+                  color: team.hoursDeviation >= 0
+                      ? context.colors.success.text
+                      : context.colors.danger.text,
                 ),
               ),
             ],
@@ -379,12 +379,12 @@ class _CardFooter extends StatelessWidget {
     );
   }
 
-  String _formatDesvio(double desvioHoras) {
-    if (desvioHoras >= 0) {
-      return '+${desvioHoras.toStringAsFixed(1)} hs';
+  String _formatDeviation(double hoursDeviation) {
+    if (hoursDeviation >= 0) {
+      return '+${hoursDeviation.toStringAsFixed(1)} hs';
     }
 
-    return '-${desvioHoras.abs().toStringAsFixed(1)} hs';
+    return '-${hoursDeviation.abs().toStringAsFixed(1)} hs';
   }
 }
 
@@ -395,12 +395,14 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ParColores(:texto, :fondo) = status.colores(context);
+    final ColorPair(text: text, background: background) = status.colors(
+      context,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: fondo,
+        color: background,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -409,13 +411,13 @@ class _StatusBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(color: texto, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: text, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(
             status.label,
             style: TextStyle(
-              color: texto,
+              color: text,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),

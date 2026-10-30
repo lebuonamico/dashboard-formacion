@@ -9,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseConfig.initialize();
-  final apariencia = await TemaController.leerGuardado();
+  final appearance = await ThemeModeController.readSaved();
   runApp(
     ProviderScope(
-      overrides: [temaProvider.overrideWith(() => TemaController(apariencia))],
+      overrides: [
+        themeModeProvider.overrideWith(() => ThemeModeController(appearance)),
+      ],
       child: const MyApp(),
     ),
   );
@@ -28,11 +30,11 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ref.watch(temaProvider),
+      themeMode: ref.watch(themeModeProvider),
       // El cambio de tema lo anima TransicionTema con un fundido; interpolar
       // el ThemeData reconstruiría toda la app en cada frame.
       themeAnimationDuration: Duration.zero,
-      builder: (context, child) => TransicionTema(child: child!),
+      builder: (context, child) => ThemeTransition(child: child!),
       routerConfig: ref.watch(appRouterProvider),
     );
   }

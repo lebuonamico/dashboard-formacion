@@ -33,22 +33,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Auditoria implements ImportacionesRepository {
-  final registros = <RegistroImportacion>[];
-  Future<void> Function(RegistroImportacion)? alRegistrar;
+class _Audit implements ImportRecordsRepository {
+  final records = <ImportRecord>[];
+  Future<void> Function(ImportRecord)? onRegister;
 
   @override
-  Future<void> registrar(RegistroImportacion registro) async {
-    registros.add(registro);
-    await alRegistrar?.call(registro);
+  Future<void> register(ImportRecord record) async {
+    records.add(record);
+    await onRegister?.call(record);
   }
 }
 
-class _SelectorArchivo extends FilePicker {
-  final Future<FilePickerResult?> Function() seleccionar;
-  int llamadas = 0;
+class _FileSelector extends FilePicker {
+  final Future<FilePickerResult?> Function() select;
+  int calls = 0;
 
-  _SelectorArchivo(this.seleccionar);
+  _FileSelector(this.select);
 
   @override
   Future<FilePickerResult?> pickFiles({
@@ -65,56 +65,56 @@ class _SelectorArchivo extends FilePicker {
     bool lockParentWindow = false,
     bool readSequential = false,
   }) {
-    llamadas++;
-    return seleccionar();
+    calls++;
+    return select();
   }
 }
 
-class _Cursos extends CursosRepository
-    implements CountedUpsertRepository<Curso> {
-  final guardados = <Curso>[];
-  int consultas = 0;
+class _Courses extends CoursesRepository
+    implements CountedUpsertRepository<Course> {
+  final saved = <Course>[];
+  int queries = 0;
   int upserts = 0;
-  Completer<ResultadoUpsert>? persistencia;
-  Completer<List<Curso>>? consultaPendiente;
-  Object? errorPersistencia;
+  Completer<UpsertResult>? persistence;
+  Completer<List<Course>>? pendingQuery;
+  Object? persistenceError;
 
   @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async {
-    consultas++;
-    if (upserts > 0 && consultaPendiente != null) {
-      return consultaPendiente!.future;
+  Future<List<Course>> getCourses({String? id, String? name}) async {
+    queries++;
+    if (upserts > 0 && pendingQuery != null) {
+      return pendingQuery!.future;
     }
-    return List.of(guardados);
+    return List.of(saved);
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(List<Curso> items) async {
+  Future<UpsertResult> upsertWithResult(List<Course> items) async {
     upserts++;
-    if (errorPersistencia case final error?) throw error;
-    final resultado =
-        await (persistencia?.future ??
+    if (persistenceError case final error?) throw error;
+    final result =
+        await (persistence?.future ??
             Future.value(
-              ResultadoUpsert(
-                registrosProcesados: items.length,
-                insertados: items.length,
-                actualizados: 0,
+              UpsertResult(
+                processedRecords: items.length,
+                inserted: items.length,
+                updated: 0,
               ),
             ));
     for (final item in items) {
-      guardados.removeWhere((curso) => curso.id == item.id);
-      guardados.add(item);
+      saved.removeWhere((course) => course.id == item.id);
+      saved.add(item);
     }
-    return resultado;
+    return result;
   }
 
   @override
-  Future<void> upsert(List<Curso> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<Course> items) async {
+    await upsertWithResult(items);
   }
 
   @override
-  Future<void> replaceCursos(List<Curso> cursos) async {
+  Future<void> replaceCourses(List<Course> courses) async {
     fail('El importador debe usar UPSERT.');
   }
 
@@ -124,48 +124,48 @@ class _Cursos extends CursosRepository
   }
 }
 
-class _Empleados extends EmpleadosRepository
-    implements CountedUpsertRepository<Empleado> {
-  int consultas = 0;
-  int guardados = 0;
-  final lotes = <List<Empleado>>[];
-  final empleadosPorLegajo = <String, Empleado>{};
+class _Employees extends EmployeesRepository
+    implements CountedUpsertRepository<Employee> {
+  int queries = 0;
+  int saved = 0;
+  final batches = <List<Employee>>[];
+  final employeesByEmployeeId = <String, Employee>{};
 
   @override
-  Future<List<Empleado>> getEmpleados({
-    String? legajo,
-    String? equipo,
+  Future<List<Employee>> getEmployees({
+    String? employeeId,
+    String? team,
     String? sector,
   }) async {
-    consultas++;
-    return empleadosPorLegajo.values.toList();
+    queries++;
+    return employeesByEmployeeId.values.toList();
   }
 
   @override
-  Future<void> replaceEmpleados(List<Empleado> empleados) async {
+  Future<void> replaceEmployees(List<Employee> employees) async {
     fail('El importador debe usar UPSERT.');
   }
 
   @override
-  Future<ResultadoUpsert> upsertConResultado(List<Empleado> items) async {
-    guardados++;
-    lotes.add(List.of(items));
-    final actualizados = items
-        .where((item) => empleadosPorLegajo.containsKey(item.legajo))
+  Future<UpsertResult> upsertWithResult(List<Employee> items) async {
+    saved++;
+    batches.add(List.of(items));
+    final updated = items
+        .where((item) => employeesByEmployeeId.containsKey(item.employeeId))
         .length;
     for (final item in items) {
-      empleadosPorLegajo[item.legajo] = item;
+      employeesByEmployeeId[item.employeeId] = item;
     }
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: items.length - actualizados,
-      actualizados: actualizados,
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: items.length - updated,
+      updated: updated,
     );
   }
 
   @override
-  Future<void> upsert(List<Empleado> items) async {
-    await upsertConResultado(items);
+  Future<void> upsert(List<Employee> items) async {
+    await upsertWithResult(items);
   }
 
   @override
@@ -174,23 +174,23 @@ class _Empleados extends EmpleadosRepository
   }
 }
 
-class _Horas extends CargaDeHorasCRMRepository {
-  int consultas = 0;
-  List<CargaDeHorasCRM> Function()? leer;
+class _Hours extends CrmTimeEntriesRepository {
+  int queries = 0;
+  List<CrmTimeEntry> Function()? read;
 
   @override
-  Future<List<CargaDeHorasCRM>> getCargasDeHoras({
-    String? empleadoLegajo,
-    String? cursoId,
-    DateTime? desde,
-    DateTime? hasta,
+  Future<List<CrmTimeEntry>> getTimeEntries({
+    String? employeeId,
+    String? courseId,
+    DateTime? from,
+    DateTime? until,
   }) async {
-    consultas++;
-    return leer?.call() ?? [];
+    queries++;
+    return read?.call() ?? [];
   }
 
   @override
-  Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) async {
+  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {
     fail('Un archivo inválido no debe persistir horas.');
   }
 
@@ -200,76 +200,76 @@ class _Horas extends CargaDeHorasCRMRepository {
   }
 }
 
-class _Certificaciones extends CertificacionesMoodleRepository {
-  int consultas = 0;
-  List<CertificacionMoodle> Function()? leer;
+class _Certifications extends LmsCertificationsRepository {
+  int queries = 0;
+  List<LmsCertification> Function()? read;
 
   @override
-  Future<List<CertificacionMoodle>> getCertificaciones({
-    String? legajo,
-    String? cursoId,
+  Future<List<LmsCertification>> getCertifications({
+    String? employeeId,
+    String? courseId,
   }) async {
-    consultas++;
-    return leer?.call() ?? [];
+    queries++;
+    return read?.call() ?? [];
   }
 
   @override
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
+  Future<void> replaceCertifications(
+    List<LmsCertification> certifications,
   ) async {
     fail('La importación de cursos no debe persistir finalizaciones.');
   }
 }
 
-FilePickerResult _csv(String nombre, String contenido) {
-  final bytes = Uint8List.fromList(utf8.encode(contenido));
+FilePickerResult _csv(String name, String content) {
+  final bytes = Uint8List.fromList(utf8.encode(content));
   return FilePickerResult([
-    PlatformFile(name: nombre, size: bytes.length, bytes: bytes),
+    PlatformFile(name: name, size: bytes.length, bytes: bytes),
   ]);
 }
 
-const _catalogo =
+const _catalog =
     'idCurso,NombreCurso,Clasificacion,CargaHoraria\r\n'
     '107,Curso de prueba,Habilidades de negocio,4\r\n';
 
-bool _diagnosticoListTilePreexistente(FlutterErrorDetails details) {
+bool _preexistingListTileDiagnostic(FlutterErrorDetails details) {
   final error = details.exception;
   if (error is! FlutterError ||
       error.diagnostics.first.toDescription() !=
           'ListTile background color or ink splashes may be invisible.') {
     return false;
   }
-  final propiedades = details.informationCollector?.call();
-  if (propiedades == null) return false;
-  final tiles = propiedades.whereType<DiagnosticsProperty<ListTile>>();
+  final properties = details.informationCollector?.call();
+  if (properties == null) return false;
+  final tiles = properties.whereType<DiagnosticsProperty<ListTile>>();
   if (tiles.length != 1) return false;
-  final titulo = tiles.single.value?.title;
-  return titulo is Text &&
+  final title = tiles.single.value?.title;
+  return title is Text &&
       const {
         'Importar nómina desde Excel / CSV',
         'Usar API de Moodle',
         'Importar cursos desde Excel / CSV',
         'Importar carga de horas desde Excel / CSV',
         'Importar certificaciones LMS desde Excel',
-      }.contains(titulo.data);
+      }.contains(title.data);
 }
 
 /// Estructura fija que registra lo que la importación pide crear.
-class _Estructura implements EstructuraRepository {
-  final EstructuraOrganizacional estructura;
-  final _Empleados empleados;
-  final faltantes = <FaltantesNomina>[];
-  int? guardadosAlRegistrar;
+class _Structure implements OrgStructureRepository {
+  final OrgStructure structure;
+  final _Employees employees;
+  final missing = <PayrollGaps>[];
+  int? savedOnRegister;
 
-  _Estructura(this.estructura, this.empleados);
-
-  @override
-  Future<EstructuraOrganizacional> getEstructura() async => estructura;
+  _Structure(this.structure, this.employees);
 
   @override
-  Future<void> registrarFaltantes(FaltantesNomina faltantes) async {
-    guardadosAlRegistrar = empleados.guardados;
-    this.faltantes.add(faltantes);
+  Future<OrgStructure> getStructure() async => structure;
+
+  @override
+  Future<void> registerMissing(PayrollGaps gaps) async {
+    savedOnRegister = employees.saved;
+    missing.add(gaps);
   }
 
   @override
@@ -277,26 +277,26 @@ class _Estructura implements EstructuraRepository {
       fail('La importación no debe llamar a ${invocation.memberName}.');
 }
 
-Future<ProviderContainer> _mostrarConfiguracion(
+Future<ProviderContainer> _showSettings(
   WidgetTester tester, {
-  required _Cursos cursos,
-  required _Auditoria auditoria,
-  _Empleados? empleados,
-  _Horas? horas,
-  _Certificaciones? certificaciones,
-  _Estructura? estructura,
+  required _Courses courses,
+  required _Audit auditLog,
+  _Employees? employees,
+  _Hours? hours,
+  _Certifications? certifications,
+  _Structure? structure,
 }) async {
   // Flutter now diagnoses existing decorated cards without a Material surface.
   // Recognize only that known diagnostic; unexpected errors still fail tests.
   // It is no longer required to appear: the Moodle SwitchListTile that always
   // triggered it was removed with the Moodle sync (04cf827).
-  final reportarError = FlutterError.onError;
+  final reportError = FlutterError.onError;
   FlutterError.onError = (details) {
-    if (!_diagnosticoListTilePreexistente(details)) {
-      reportarError?.call(details);
+    if (!_preexistingListTileDiagnostic(details)) {
+      reportError?.call(details);
     }
   };
-  addTearDown(() => FlutterError.onError = reportarError);
+  addTearDown(() => FlutterError.onError = reportError);
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
   tester.view.devicePixelRatio = 1;
@@ -305,22 +305,22 @@ Future<ProviderContainer> _mostrarConfiguracion(
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith((ref) => AuthController(null)),
-      cursosRepositoryProvider.overrideWithValue(cursos),
-      empleadosRepositoryProvider.overrideWithValue(empleados ?? _Empleados()),
-      cargaDeHorasCRMRepositoryProvider.overrideWithValue(horas ?? _Horas()),
-      certificacionesMoodleRepositoryProvider.overrideWithValue(
-        certificaciones ?? _Certificaciones(),
+      coursesRepositoryProvider.overrideWithValue(courses),
+      employeesRepositoryProvider.overrideWithValue(employees ?? _Employees()),
+      crmTimeEntriesRepositoryProvider.overrideWithValue(hours ?? _Hours()),
+      lmsCertificationsRepositoryProvider.overrideWithValue(
+        certifications ?? _Certifications(),
       ),
       // Sin estructura explícita no se toca el cliente de Supabase, aunque
       // los tests corran con USE_SUPABASE=true.
-      estructuraRepositoryProvider.overrideWithValue(estructura),
-      if (estructura != null)
-        sesionDatosProvider.overrideWithValue((
-          habilitada: true,
+      orgStructureRepositoryProvider.overrideWithValue(structure),
+      if (structure != null)
+        sessionDataProvider.overrideWithValue((
+          enabled: true,
           email: 'admin@finnegans.com',
-          rol: 'admin',
+          role: 'admin',
         )),
-      importacionesRepositoryProvider.overrideWithValue(auditoria),
+      importRecordsRepositoryProvider.overrideWithValue(auditLog),
     ],
   );
   addTearDown(container.dispose);
@@ -329,7 +329,7 @@ Future<ProviderContainer> _mostrarConfiguracion(
     routes: [
       GoRoute(
         path: '/configuracion',
-        builder: (context, state) => const ConfiguracionScreen(),
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/otra',
@@ -361,15 +361,15 @@ Future<ProviderContainer> _mostrarConfiguracion(
   return container;
 }
 
-OutlinedButton _boton(WidgetTester tester, String tipo) =>
-    tester.widget<OutlinedButton>(find.byKey(Key('importar_$tipo')));
+OutlinedButton _button(WidgetTester tester, String type) =>
+    tester.widget<OutlinedButton>(find.byKey(Key('importar_$type')));
 
-void _verificarLoading(WidgetTester tester, String tipo, bool activo) {
+void _verifyLoading(WidgetTester tester, String type, bool active) {
   expect(
-    find.byKey(Key('loading_$tipo')),
-    activo ? findsOneWidget : findsNothing,
+    find.byKey(Key('loading_$type')),
+    active ? findsOneWidget : findsNothing,
   );
-  expect(_boton(tester, tipo).onPressed, activo ? isNull : isNotNull);
+  expect(_button(tester, type).onPressed, active ? isNull : isNotNull);
 }
 
 void main() {
@@ -379,180 +379,180 @@ void main() {
     test(
       'Espera persistencia, auditoría y refresh; conserva conteos reales',
       () async {
-        final guardar = Completer<ResultadoUpsert>();
-        final auditar = Completer<void>();
-        final refrescar = Completer<void>();
-        final pasos = <String>[];
-        final auditoria = _Auditoria()
-          ..alRegistrar = (registro) {
-            pasos.add('auditoria');
-            return auditar.future;
+        final save = Completer<UpsertResult>();
+        final audit = Completer<void>();
+        final refresh = Completer<void>();
+        final steps = <String>[];
+        final auditLog = _Audit()
+          ..onRegister = (record) {
+            steps.add('auditoria');
+            return audit.future;
           };
-        var termino = false;
-        final tarea = ImportacionService(auditoria: auditoria)
-            .ejecutar(
-              tipoArchivo: 'nomina',
-              nombreArchivo: 'nomina.csv',
-              procesar: () {
-                pasos.add('persistencia');
-                return guardar.future;
+        var term = false;
+        final task = ImportAuditService(audit: auditLog)
+            .run(
+              fileType: 'nomina',
+              fileName: 'nomina.csv',
+              process: () {
+                steps.add('persistencia');
+                return save.future;
               },
-              refrescar: () {
-                pasos.add('refresh');
-                return refrescar.future;
+              refresh: () {
+                steps.add('refresh');
+                return refresh.future;
               },
             )
-            .then((resultado) {
-              termino = true;
-              return resultado;
+            .then((result) {
+              term = true;
+              return result;
             });
 
-        expect(pasos, ['persistencia']);
-        expect(auditoria.registros, isEmpty);
-        const resultado = ResultadoUpsert(
-          registrosProcesados: 80,
-          insertados: 12,
-          actualizados: 68,
+        expect(steps, ['persistencia']);
+        expect(auditLog.records, isEmpty);
+        const outcome = UpsertResult(
+          processedRecords: 80,
+          inserted: 12,
+          updated: 68,
         );
-        guardar.complete(resultado);
+        save.complete(outcome);
         await Future<void>.delayed(Duration.zero);
-        expect(pasos, ['persistencia', 'auditoria']);
-        expect(termino, isFalse);
-        final registro = auditoria.registros.single;
-        expect(registro.tipoArchivo, 'nomina');
-        expect(registro.nombreArchivo, 'nomina.csv');
-        expect(registro.estado, EstadoImportacion.completada);
-        expect(registro.registrosProcesados, 80);
-        expect(registro.insertados, 12);
-        expect(registro.actualizados, 68);
-        expect(registro.errores, isEmpty);
-        expect(registro.fechaHora.isUtc, isTrue);
+        expect(steps, ['persistencia', 'auditoria']);
+        expect(term, isFalse);
+        final record = auditLog.records.single;
+        expect(record.fileType, 'nomina');
+        expect(record.fileName, 'nomina.csv');
+        expect(record.status, ImportStatus.completed);
+        expect(record.processedRecords, 80);
+        expect(record.inserted, 12);
+        expect(record.updated, 68);
+        expect(record.errors, isEmpty);
+        expect(record.dateTime.isUtc, isTrue);
 
-        auditar.complete();
+        audit.complete();
         await Future<void>.delayed(Duration.zero);
-        expect(pasos, ['persistencia', 'auditoria', 'refresh']);
-        expect(termino, isFalse);
-        refrescar.complete();
-        expect(await tarea, same(resultado));
-        expect(termino, isTrue);
+        expect(steps, ['persistencia', 'auditoria', 'refresh']);
+        expect(term, isFalse);
+        refresh.complete();
+        expect(await task, same(outcome));
+        expect(term, isTrue);
       },
     );
 
     test('Un error de parsing se audita como fallida y no refresca', () async {
-      final auditoria = _Auditoria();
-      var refrescos = 0;
+      final auditLog = _Audit();
+      var refreshes = 0;
       const error = FormatException('Fecha inválida: 31/02/2026');
 
       await expectLater(
-        ImportacionService(auditoria: auditoria).ejecutar(
-          tipoArchivo: 'nomina',
-          nombreArchivo: 'invalida.csv',
-          procesar: () async => throw error,
-          refrescar: () async => refrescos++,
+        ImportAuditService(audit: auditLog).run(
+          fileType: 'nomina',
+          fileName: 'invalida.csv',
+          process: () async => throw error,
+          refresh: () async => refreshes++,
         ),
         throwsA(same(error)),
       );
 
-      expect(refrescos, 0);
-      final registro = auditoria.registros.single;
-      expect(registro.estado, EstadoImportacion.fallida);
-      expect(registro.nombreArchivo, 'invalida.csv');
-      expect(registro.errores.single, contains('31/02/2026'));
-      expect(registro.registrosProcesados, 0);
+      expect(refreshes, 0);
+      final record = auditLog.records.single;
+      expect(record.status, ImportStatus.failed);
+      expect(record.fileName, 'invalida.csv');
+      expect(record.errors.single, contains('31/02/2026'));
+      expect(record.processedRecords, 0);
     });
 
     test(
       'Un error de UPSERT conserva el error original y no refresca',
       () async {
-        final auditoria = _Auditoria();
-        var refrescos = 0;
+        final auditLog = _Audit();
+        var refreshes = 0;
         final error = StateError('UPSERT rechazado por Supabase');
 
         await expectLater(
-          ImportacionService(auditoria: auditoria).ejecutar(
-            tipoArchivo: 'horas_crm',
-            nombreArchivo: 'horas.xlsx',
-            procesar: () async => throw error,
-            refrescar: () async => refrescos++,
+          ImportAuditService(audit: auditLog).run(
+            fileType: 'horas_crm',
+            fileName: 'horas.xlsx',
+            process: () async => throw error,
+            refresh: () async => refreshes++,
           ),
           throwsA(same(error)),
         );
 
-        expect(refrescos, 0);
-        expect(auditoria.registros.single.estado, EstadoImportacion.fallida);
-        expect(auditoria.registros.single.errores.single, contains('UPSERT'));
+        expect(refreshes, 0);
+        expect(auditLog.records.single.status, ImportStatus.failed);
+        expect(auditLog.records.single.errors.single, contains('UPSERT'));
       },
     );
 
     test(
       'Si falla auditoría de éxito no refresca y registra la falla',
       () async {
-        final auditoria = _Auditoria()
-          ..alRegistrar = (registro) async {
-            if (registro.estado == EstadoImportacion.completada) {
+        final auditLog = _Audit()
+          ..onRegister = (record) async {
+            if (record.status == ImportStatus.completed) {
               throw StateError('Auditoría no disponible');
             }
           };
-        var refrescos = 0;
+        var refreshes = 0;
 
         await expectLater(
-          ImportacionService(auditoria: auditoria).ejecutar(
-            tipoArchivo: 'cursos_lms',
-            nombreArchivo: 'cursos.csv',
-            procesar: () async => const ResultadoUpsert(
-              registrosProcesados: 25,
-              insertados: 0,
-              actualizados: 25,
+          ImportAuditService(audit: auditLog).run(
+            fileType: 'cursos_lms',
+            fileName: 'cursos.csv',
+            process: () async => const UpsertResult(
+              processedRecords: 25,
+              inserted: 0,
+              updated: 25,
             ),
-            refrescar: () async => refrescos++,
+            refresh: () async => refreshes++,
           ),
           throwsA(isA<FormatException>()),
         );
 
-        expect(refrescos, 0);
-        expect(auditoria.registros.last.estado, EstadoImportacion.fallida);
-        expect(auditoria.registros.last.errores.single, contains('Auditoría'));
+        expect(refreshes, 0);
+        expect(auditLog.records.last.status, ImportStatus.failed);
+        expect(auditLog.records.last.errors.single, contains('Auditoría'));
       },
     );
 
     test(
       'Una falla de auditoría no oculta el error de datos original',
       () async {
-        final auditoria = _Auditoria()
-          ..alRegistrar = (registro) async => throw StateError('Sin conexión');
+        final auditLog = _Audit()
+          ..onRegister = (record) async => throw StateError('Sin conexión');
         const error = FormatException('Curso no encontrado');
 
         await expectLater(
-          ImportacionService(auditoria: auditoria).ejecutar(
-            tipoArchivo: 'finalizaciones',
-            nombreArchivo: 'lms.xlsx',
-            procesar: () async => throw error,
+          ImportAuditService(audit: auditLog).run(
+            fileType: 'finalizaciones',
+            fileName: 'lms.xlsx',
+            process: () async => throw error,
           ),
           throwsA(same(error)),
         );
 
-        expect(auditoria.registros.single.estado, EstadoImportacion.fallida);
-        expect(auditoria.registros.single.errores.single, contains('Curso'));
+        expect(auditLog.records.single.status, ImportStatus.failed);
+        expect(auditLog.records.single.errors.single, contains('Curso'));
       },
     );
 
     test(
       'Un error de refresh conserva una sola auditoría completada',
       () async {
-        final auditoria = _Auditoria();
-        var refrescos = 0;
+        final auditLog = _Audit();
+        var refreshes = 0;
 
         await expectLater(
-          ImportacionService(auditoria: auditoria).ejecutar(
-            tipoArchivo: 'cursos_lms',
-            nombreArchivo: 'cursos.csv',
-            procesar: () async => const ResultadoUpsert(
-              registrosProcesados: 25,
-              insertados: 0,
-              actualizados: 25,
+          ImportAuditService(audit: auditLog).run(
+            fileType: 'cursos_lms',
+            fileName: 'cursos.csv',
+            process: () async => const UpsertResult(
+              processedRecords: 25,
+              inserted: 0,
+              updated: 25,
             ),
-            refrescar: () async {
-              refrescos++;
+            refresh: () async {
+              refreshes++;
               throw StateError('GET de cursos no disponible');
             },
           ),
@@ -565,34 +565,31 @@ void main() {
           ),
         );
 
-        expect(refrescos, 1);
-        final registro = auditoria.registros.single;
-        expect(registro.estado, EstadoImportacion.completada);
-        expect(registro.registrosProcesados, 25);
-        expect(registro.insertados, 0);
-        expect(registro.actualizados, 25);
-        expect(registro.errores, isEmpty);
+        expect(refreshes, 1);
+        final record = auditLog.records.single;
+        expect(record.status, ImportStatus.completed);
+        expect(record.processedRecords, 25);
+        expect(record.inserted, 0);
+        expect(record.updated, 25);
+        expect(record.errors, isEmpty);
       },
     );
 
     test(
       'El modo sin auditoría mantiene la persistencia y el refresh',
       () async {
-        var refrescos = 0;
-        final resultado = await const ImportacionService().ejecutar(
-          tipoArchivo: 'cursos_lms',
-          nombreArchivo: 'local.csv',
-          procesar: () async => const ResultadoUpsert(
-            registrosProcesados: 1,
-            insertados: 1,
-            actualizados: 0,
-          ),
-          refrescar: () async => refrescos++,
+        var refreshes = 0;
+        final result = await const ImportAuditService().run(
+          fileType: 'cursos_lms',
+          fileName: 'local.csv',
+          process: () async =>
+              const UpsertResult(processedRecords: 1, inserted: 1, updated: 0),
+          refresh: () async => refreshes++,
         );
 
-        expect(resultado.insertados, 1);
-        expect(resultado.actualizados, 0);
-        expect(refrescos, 1);
+        expect(result.inserted, 1);
+        expect(result.updated, 0);
+        expect(refreshes, 1);
       },
     );
   });
@@ -601,29 +598,29 @@ void main() {
     testWidgets('Loading inmediato, bloqueo por sección y cancelación segura', (
       tester,
     ) async {
-      final seleccion = Completer<FilePickerResult?>();
-      final selector = _SelectorArchivo(() => seleccion.future);
+      final selection = Completer<FilePickerResult?>();
+      final selector = _FileSelector(() => selection.future);
       FilePicker.platform = selector;
-      final auditoria = _Auditoria();
-      final cursos = _Cursos();
-      await _mostrarConfiguracion(tester, cursos: cursos, auditoria: auditoria);
+      final auditLog = _Audit();
+      final courses = _Courses();
+      await _showSettings(tester, courses: courses, auditLog: auditLog);
 
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(_boton(tester, 'nomina').onPressed, isNotNull);
-      expect(_boton(tester, 'horas').onPressed, isNotNull);
-      expect(_boton(tester, 'finalizaciones').onPressed, isNotNull);
+      _verifyLoading(tester, 'cursos', true);
+      expect(_button(tester, 'nomina').onPressed, isNotNull);
+      expect(_button(tester, 'horas').onPressed, isNotNull);
+      expect(_button(tester, 'finalizaciones').onPressed, isNotNull);
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pump();
-      expect(selector.llamadas, 1);
-      expect(cursos.upserts, 0);
+      expect(selector.calls, 1);
+      expect(courses.upserts, 0);
 
-      seleccion.complete(null);
+      selection.complete(null);
       await tester.pumpAndSettle();
-      _verificarLoading(tester, 'cursos', false);
-      expect(auditoria.registros, isEmpty);
-      expect(cursos.upserts, 0);
+      _verifyLoading(tester, 'cursos', false);
+      expect(auditLog.records, isEmpty);
+      expect(courses.upserts, 0);
       expect(find.byType(SnackBar), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -631,99 +628,95 @@ void main() {
     testWidgets('Loading dura hasta persistencia, auditoría y refresh reales', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
-        () async => _csv('cursos.csv', _catalogo),
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
       );
-      final persistencia = Completer<ResultadoUpsert>();
-      final auditar = Completer<void>();
-      final refresh = Completer<List<Curso>>();
-      final cursos = _Cursos()..persistencia = persistencia;
-      final auditoria = _Auditoria()..alRegistrar = (_) => auditar.future;
-      final container = await _mostrarConfiguracion(
+      final persistence = Completer<UpsertResult>();
+      final audit = Completer<void>();
+      final refresh = Completer<List<Course>>();
+      final courses = _Courses()..persistence = persistence;
+      final auditLog = _Audit()..onRegister = (_) => audit.future;
+      final container = await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
+        courses: courses,
+        auditLog: auditLog,
       );
-      final escucha = container.listen(cursosProvider, (_, _) {});
-      addTearDown(escucha.close);
-      await container.read(cursosProvider.future);
-      cursos.consultaPendiente = refresh;
+      final listens = container.listen(coursesProvider, (_, _) {});
+      addTearDown(listens.close);
+      await container.read(coursesProvider.future);
+      courses.pendingQuery = refresh;
 
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(cursos.upserts, 1);
-      expect(auditoria.registros, isEmpty);
-      expect(cursos.consultas, 2);
+      _verifyLoading(tester, 'cursos', true);
+      expect(courses.upserts, 1);
+      expect(auditLog.records, isEmpty);
+      expect(courses.queries, 2);
       expect(find.byType(SnackBar), findsNothing);
 
-      persistencia.complete(
-        const ResultadoUpsert(
-          registrosProcesados: 1,
-          insertados: 0,
-          actualizados: 1,
-        ),
+      persistence.complete(
+        const UpsertResult(processedRecords: 1, inserted: 0, updated: 1),
       );
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(auditoria.registros.single.estado, EstadoImportacion.completada);
-      expect(auditoria.registros.single.insertados, 0);
-      expect(auditoria.registros.single.actualizados, 1);
-      expect(cursos.consultas, 2);
+      _verifyLoading(tester, 'cursos', true);
+      expect(auditLog.records.single.status, ImportStatus.completed);
+      expect(auditLog.records.single.inserted, 0);
+      expect(auditLog.records.single.updated, 1);
+      expect(courses.queries, 2);
       expect(find.byType(SnackBar), findsNothing);
 
-      auditar.complete();
+      audit.complete();
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(cursos.consultas, 3);
+      _verifyLoading(tester, 'cursos', true);
+      expect(courses.queries, 3);
       expect(find.byType(SnackBar), findsNothing);
 
-      refresh.complete(List.of(cursos.guardados));
+      refresh.complete(List.of(courses.saved));
       await tester.pumpAndSettle();
-      _verificarLoading(tester, 'cursos', false);
+      _verifyLoading(tester, 'cursos', false);
       expect(
         find.text('Se cargaron 1 cursos desde cursos.csv.'),
         findsOneWidget,
       );
-      expect(cursos.guardados.single.id, '107');
+      expect(courses.saved.single.id, '107');
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('Error de Supabase libera loading, audita y no refresca', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
-        () async => _csv('cursos.csv', _catalogo),
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
       );
-      final persistencia = Completer<ResultadoUpsert>();
-      final cursos = _Cursos()..persistencia = persistencia;
-      final auditar = Completer<void>();
-      final auditoria = _Auditoria()..alRegistrar = (_) => auditar.future;
-      final container = await _mostrarConfiguracion(
+      final persistence = Completer<UpsertResult>();
+      final courses = _Courses()..persistence = persistence;
+      final audit = Completer<void>();
+      final auditLog = _Audit()..onRegister = (_) => audit.future;
+      final container = await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
+        courses: courses,
+        auditLog: auditLog,
       );
-      final escucha = container.listen(cursosProvider, (_, _) {});
-      addTearDown(escucha.close);
-      await container.read(cursosProvider.future);
+      final listens = container.listen(coursesProvider, (_, _) {});
+      addTearDown(listens.close);
+      await container.read(coursesProvider.future);
 
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      persistencia.completeError(StateError('Supabase rechazó el UPSERT'));
+      _verifyLoading(tester, 'cursos', true);
+      persistence.completeError(StateError('Supabase rechazó el UPSERT'));
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(auditoria.registros.single.estado, EstadoImportacion.fallida);
+      _verifyLoading(tester, 'cursos', true);
+      expect(auditLog.records.single.status, ImportStatus.failed);
       expect(find.byType(SnackBar), findsNothing);
-      auditar.complete();
+      audit.complete();
       await tester.pumpAndSettle();
 
-      _verificarLoading(tester, 'cursos', false);
-      expect(cursos.consultas, 2);
-      expect(cursos.guardados, isEmpty);
-      expect(auditoria.registros.single.estado, EstadoImportacion.fallida);
-      expect(auditoria.registros.single.errores.single, contains('Supabase'));
+      _verifyLoading(tester, 'cursos', false);
+      expect(courses.queries, 2);
+      expect(courses.saved, isEmpty);
+      expect(auditLog.records.single.status, ImportStatus.failed);
+      expect(auditLog.records.single.errors.single, contains('Supabase'));
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('Se cargaron'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -732,23 +725,23 @@ void main() {
     testWidgets('Error de parsing se audita antes de cualquier UPSERT', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
+      FilePicker.platform = _FileSelector(
         () async => _csv('sin_cursos.csv', 'Columna incorrecta\r\nDato\r\n'),
       );
-      final cursos = _Cursos();
-      final auditoria = _Auditoria();
-      await _mostrarConfiguracion(tester, cursos: cursos, auditoria: auditoria);
+      final courses = _Courses();
+      final auditLog = _Audit();
+      await _showSettings(tester, courses: courses, auditLog: auditLog);
 
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pumpAndSettle();
 
-      _verificarLoading(tester, 'cursos', false);
-      expect(cursos.upserts, 0);
-      expect(cursos.consultas, 0);
-      final registro = auditoria.registros.single;
-      expect(registro.estado, EstadoImportacion.fallida);
-      expect(registro.nombreArchivo, 'sin_cursos.csv');
-      expect(registro.errores.single, contains('No se encontraron cursos'));
+      _verifyLoading(tester, 'cursos', false);
+      expect(courses.upserts, 0);
+      expect(courses.queries, 0);
+      final record = auditLog.records.single;
+      expect(record.status, ImportStatus.failed);
+      expect(record.fileName, 'sin_cursos.csv');
+      expect(record.errors.single, contains('No se encontraron cursos'));
       expect(find.textContaining('No se encontraron cursos'), findsOneWidget);
       expect(find.textContaining('Se cargaron'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -757,156 +750,144 @@ void main() {
     testWidgets('Renombrar un curso refresca los nombres de horas y LMS', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
-        () async => _csv('cursos.csv', _catalogo),
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
       );
-      final cursos = _Cursos()
-        ..guardados.add(
-          Curso.fromJson({'id': '107', 'nombre': 'Curso anterior'}),
-        );
-      final horas = _Horas()
-        ..leer = () => [
-          CargaDeHorasCRM(
+      final courses = _Courses()
+        ..saved.add(Course.fromJson({'id': '107', 'nombre': 'Curso anterior'}));
+      final hours = _Hours()
+        ..read = () => [
+          CrmTimeEntry(
             id: 'txn-1',
-            cursoId: '107',
-            cursoNombre: cursos.guardados.single.nombre,
-            empleadoLegajo: '10',
-            fecha: DateTime.utc(2026, 10, 1),
-            horasTotales: 4,
-            tipo: TipoCargaDeHoras.tomada,
+            courseId: '107',
+            courseName: courses.saved.single.name,
+            employeeId: '10',
+            date: DateTime.utc(2026, 10, 1),
+            hours: 4,
+            kind: TimeEntryKind.taken,
           ),
         ];
-      final certificaciones = _Certificaciones()
-        ..leer = () => [
-          CertificacionMoodle(
-            legajo: '10',
-            cursoId: '107',
-            cursoNombre: cursos.guardados.single.nombre,
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime.utc(2026, 10, 1),
+      final certifications = _Certifications()
+        ..read = () => [
+          LmsCertification(
+            employeeId: '10',
+            courseId: '107',
+            courseName: courses.saved.single.name,
+            isCompleted: true,
+            completedAt: DateTime.utc(2026, 10, 1),
           ),
         ];
-      final auditoria = _Auditoria();
-      final container = await _mostrarConfiguracion(
+      final auditLog = _Audit();
+      final container = await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
-        horas: horas,
-        certificaciones: certificaciones,
+        courses: courses,
+        auditLog: auditLog,
+        hours: hours,
+        certifications: certifications,
       );
-      final escuchaHoras = container.listen(
-        cargasDeHorasCRMProvider,
+      final timeEntriesSubscription = container.listen(
+        crmTimeEntriesProvider,
         (_, _) {},
       );
-      final escuchaLms = container.listen(
-        certificacionesMoodleProvider,
+      final lmsSubscription = container.listen(
+        lmsCertificationsProvider,
         (_, _) {},
       );
-      addTearDown(escuchaHoras.close);
-      addTearDown(escuchaLms.close);
+      addTearDown(timeEntriesSubscription.close);
+      addTearDown(lmsSubscription.close);
       expect(
-        (await container.read(
-          cargasDeHorasCRMProvider.future,
-        )).single.cursoNombre,
+        (await container.read(crmTimeEntriesProvider.future)).single.courseName,
         'Curso anterior',
       );
       expect(
         (await container.read(
-          certificacionesMoodleProvider.future,
-        )).single.cursoNombre,
+          lmsCertificationsProvider.future,
+        )).single.courseName,
         'Curso anterior',
       );
-      expect(horas.consultas, 1);
-      expect(certificaciones.consultas, 1);
+      expect(hours.queries, 1);
+      expect(certifications.queries, 1);
 
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pumpAndSettle();
 
-      _verificarLoading(tester, 'cursos', false);
-      expect(horas.consultas, greaterThan(1));
-      expect(certificaciones.consultas, 2);
+      _verifyLoading(tester, 'cursos', false);
+      expect(hours.queries, greaterThan(1));
+      expect(certifications.queries, 2);
       expect(
-        (await container.read(
-          cargasDeHorasCRMProvider.future,
-        )).single.cursoNombre,
+        (await container.read(crmTimeEntriesProvider.future)).single.courseName,
         'Curso de prueba',
       );
       expect(
         (await container.read(
-          certificacionesMoodleProvider.future,
-        )).single.cursoNombre,
+          lmsCertificationsProvider.future,
+        )).single.courseName,
         'Curso de prueba',
       );
-      expect(auditoria.registros.single.estado, EstadoImportacion.completada);
+      expect(auditLog.records.single.status, ImportStatus.completed);
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('Abandonar la pantalla no interrumpe auditoría ni refresh', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
-        () async => _csv('cursos.csv', _catalogo),
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
       );
-      final persistencia = Completer<ResultadoUpsert>();
-      final cursos = _Cursos()..persistencia = persistencia;
-      final horas = _Horas();
-      final certificaciones = _Certificaciones();
-      final auditoria = _Auditoria();
-      final container = await _mostrarConfiguracion(
+      final persistence = Completer<UpsertResult>();
+      final courses = _Courses()..persistence = persistence;
+      final hours = _Hours();
+      final certifications = _Certifications();
+      final auditLog = _Audit();
+      final container = await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
-        horas: horas,
-        certificaciones: certificaciones,
+        courses: courses,
+        auditLog: auditLog,
+        hours: hours,
+        certifications: certifications,
       );
-      final escuchaCursos = container.listen(cursosProvider, (_, _) {});
-      final escuchaHoras = container.listen(
-        cargasDeHorasCRMProvider,
+      final coursesSubscription = container.listen(coursesProvider, (_, _) {});
+      final timeEntriesSubscription = container.listen(
+        crmTimeEntriesProvider,
         (_, _) {},
       );
-      final escuchaLms = container.listen(
-        certificacionesMoodleProvider,
+      final lmsSubscription = container.listen(
+        lmsCertificationsProvider,
         (_, _) {},
       );
-      addTearDown(escuchaCursos.close);
-      addTearDown(escuchaHoras.close);
-      addTearDown(escuchaLms.close);
+      addTearDown(coursesSubscription.close);
+      addTearDown(timeEntriesSubscription.close);
+      addTearDown(lmsSubscription.close);
       await Future.wait([
-        container.read(cursosProvider.future),
-        container.read(cargasDeHorasCRMProvider.future),
-        container.read(certificacionesMoodleProvider.future),
+        container.read(coursesProvider.future),
+        container.read(crmTimeEntriesProvider.future),
+        container.read(lmsCertificationsProvider.future),
       ]);
-      final router = GoRouter.of(
-        tester.element(find.byType(ConfiguracionScreen)),
-      );
+      final router = GoRouter.of(tester.element(find.byType(SettingsScreen)));
       await tester.tap(find.byKey(const Key('importar_cursos')));
       await tester.pump();
-      _verificarLoading(tester, 'cursos', true);
-      expect(cursos.upserts, 1);
+      _verifyLoading(tester, 'cursos', true);
+      expect(courses.upserts, 1);
 
       router.go('/otra');
       await tester.pumpAndSettle();
-      expect(find.byType(ConfiguracionScreen), findsNothing);
+      expect(find.byType(SettingsScreen), findsNothing);
       expect(find.text('Otra pantalla'), findsOneWidget);
-      expect(auditoria.registros, isEmpty);
-      expect(cursos.consultas, 2);
+      expect(auditLog.records, isEmpty);
+      expect(courses.queries, 2);
 
-      persistencia.complete(
-        const ResultadoUpsert(
-          registrosProcesados: 1,
-          insertados: 1,
-          actualizados: 0,
-        ),
+      persistence.complete(
+        const UpsertResult(processedRecords: 1, inserted: 1, updated: 0),
       );
       await tester.pumpAndSettle();
 
-      expect(auditoria.registros.single.estado, EstadoImportacion.completada);
-      expect(auditoria.registros.single.insertados, 1);
-      expect(cursos.consultas, 3);
-      expect(horas.consultas, greaterThan(1));
-      expect(certificaciones.consultas, 2);
+      expect(auditLog.records.single.status, ImportStatus.completed);
+      expect(auditLog.records.single.inserted, 1);
+      expect(courses.queries, 3);
+      expect(hours.queries, greaterThan(1));
+      expect(certifications.queries, 2);
       expect(
-        (await container.read(cursosProvider.future)).single.nombre,
+        (await container.read(coursesProvider.future)).single.name,
         'Curso de prueba',
       );
       expect(find.byType(SnackBar), findsNothing);
@@ -916,33 +897,33 @@ void main() {
     testWidgets(
       'Refresh fallido libera loading sin duplicar auditoría ni éxito',
       (tester) async {
-        FilePicker.platform = _SelectorArchivo(
-          () async => _csv('cursos.csv', _catalogo),
+        FilePicker.platform = _FileSelector(
+          () async => _csv('cursos.csv', _catalog),
         );
-        final cursos = _Cursos();
-        final auditoria = _Auditoria();
-        final container = await _mostrarConfiguracion(
+        final courses = _Courses();
+        final auditLog = _Audit();
+        final container = await _showSettings(
           tester,
-          cursos: cursos,
-          auditoria: auditoria,
+          courses: courses,
+          auditLog: auditLog,
         );
-        final escucha = container.listen(cursosProvider, (_, _) {});
-        addTearDown(escucha.close);
-        await container.read(cursosProvider.future);
-        final refresh = Completer<List<Curso>>();
-        cursos.consultaPendiente = refresh;
+        final listens = container.listen(coursesProvider, (_, _) {});
+        addTearDown(listens.close);
+        await container.read(coursesProvider.future);
+        final refresh = Completer<List<Course>>();
+        courses.pendingQuery = refresh;
 
         await tester.tap(find.byKey(const Key('importar_cursos')));
         await tester.pump();
-        _verificarLoading(tester, 'cursos', true);
-        expect(cursos.guardados.single.id, '107');
-        expect(auditoria.registros.single.estado, EstadoImportacion.completada);
+        _verifyLoading(tester, 'cursos', true);
+        expect(courses.saved.single.id, '107');
+        expect(auditLog.records.single.status, ImportStatus.completed);
         refresh.completeError(StateError('GET de cursos no disponible'));
         await tester.pumpAndSettle();
 
-        _verificarLoading(tester, 'cursos', false);
-        expect(auditoria.registros.single.estado, EstadoImportacion.completada);
-        expect(auditoria.registros.single.insertados, 1);
+        _verifyLoading(tester, 'cursos', false);
+        expect(auditLog.records.single.status, ImportStatus.completed);
+        expect(auditLog.records.single.inserted, 1);
         expect(find.textContaining('Los datos se guardaron'), findsOneWidget);
         expect(find.textContaining('Se cargaron'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -952,7 +933,7 @@ void main() {
     testWidgets('Nómina repetida cuenta filas y escribe una vez por legajo', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
+      FilePicker.platform = _FileSelector(
         () async => _csv(
           'nomina_repetida.csv',
           'legajo,nombre,apellido,seniority,sector,correo,fechaIngreso\r\n'
@@ -960,28 +941,28 @@ void main() {
               '10,Ana,Pérez,Senior,Producto,ana@example.com,01/10/2026\r\n',
         ),
       );
-      final empleados = _Empleados();
-      final cursos = _Cursos();
-      final auditoria = _Auditoria();
-      await _mostrarConfiguracion(
+      final employees = _Employees();
+      final courses = _Courses();
+      final auditLog = _Audit();
+      await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
-        empleados: empleados,
+        courses: courses,
+        auditLog: auditLog,
+        employees: employees,
       );
 
       await tester.tap(find.byKey(const Key('importar_nomina')));
       await tester.pumpAndSettle();
 
-      _verificarLoading(tester, 'nomina', false);
-      expect(empleados.guardados, 1);
-      expect(empleados.lotes.single.single.legajo, '10');
-      expect(empleados.empleadosPorLegajo.keys, ['10']);
-      final registro = auditoria.registros.single;
-      expect(registro.estado, EstadoImportacion.completada);
-      expect(registro.registrosProcesados, 2);
-      expect(registro.insertados, 1);
-      expect(registro.actualizados, 0);
+      _verifyLoading(tester, 'nomina', false);
+      expect(employees.saved, 1);
+      expect(employees.batches.single.single.employeeId, '10');
+      expect(employees.employeesByEmployeeId.keys, ['10']);
+      final record = auditLog.records.single;
+      expect(record.status, ImportStatus.completed);
+      expect(record.processedRecords, 2);
+      expect(record.inserted, 1);
+      expect(record.updated, 0);
       expect(
         find.text('Se importaron 2 registros desde nomina_repetida.csv.'),
         findsOneWidget,
@@ -992,7 +973,7 @@ void main() {
     testWidgets(
       'Nómina crea antes las áreas y equipos nuevos, sin repetir los que ya están',
       (tester) async {
-        FilePicker.platform = _SelectorArchivo(
+        FilePicker.platform = _FileSelector(
           () async => _csv(
             'nomina_estructura.csv',
             'legajo,nombre,apellido,seniority,sector,equipo,correo,fechaIngreso\r\n'
@@ -1001,36 +982,36 @@ void main() {
                 '12,Caro,Paz,Junior 2,RRHH,Selección,caro@example.com,01/10/2026\r\n',
           ),
         );
-        final empleados = _Empleados();
-        final estructura = _Estructura(
-          EstructuraOrganizacional(
-            areas: [Area(id: '1', nombre: 'PRODUCTO')],
-            equipos: [Equipo(id: '10', areaId: '1', nombre: 'LEGACY')],
+        final employees = _Employees();
+        final structure = _Structure(
+          OrgStructure(
+            areas: [Area(id: '1', name: 'PRODUCTO')],
+            teams: [Team(id: '10', areaId: '1', name: 'LEGACY')],
           ),
-          empleados,
+          employees,
         );
-        await _mostrarConfiguracion(
+        await _showSettings(
           tester,
-          cursos: _Cursos(),
-          auditoria: _Auditoria(),
-          empleados: empleados,
-          estructura: estructura,
+          courses: _Courses(),
+          auditLog: _Audit(),
+          employees: employees,
+          structure: structure,
         );
 
         await tester.tap(find.byKey(const Key('importar_nomina')));
         await tester.pumpAndSettle();
 
-        final faltantes = estructura.faltantes.single;
+        final missing = structure.missing.single;
         // "Producto" ya existe como PRODUCTO y "Legacy" como LEGACY.
-        expect(faltantes.areas, ['RRHH']);
-        expect(faltantes.equipos, [
-          (area: 'PRODUCTO', equipo: 'Web'),
-          (area: 'RRHH', equipo: 'Selección'),
+        expect(missing.areas, ['RRHH']);
+        expect(missing.teams, [
+          (area: 'PRODUCTO', team: 'Web'),
+          (area: 'RRHH', team: 'Selección'),
         ]);
         // La estructura se registra antes de escribir la nómina.
-        expect(estructura.guardadosAlRegistrar, 0);
-        expect(empleados.guardados, 1);
-        expect(empleados.empleadosPorLegajo['10']!.area, 'Producto');
+        expect(structure.savedOnRegister, 0);
+        expect(employees.saved, 1);
+        expect(employees.employeesByEmployeeId['10']!.area, 'Producto');
         expect(tester.takeException(), isNull);
       },
     );
@@ -1038,36 +1019,36 @@ void main() {
     testWidgets('Fecha inválida de nómina se rechaza, audita y no refresca', (
       tester,
     ) async {
-      FilePicker.platform = _SelectorArchivo(
+      FilePicker.platform = _FileSelector(
         () async => _csv(
           'nomina_invalida.csv',
           'legajo,nombre,apellido,seniority,sector,correo,fechaIngreso\r\n'
               '10,Ana,Pérez,Senior,Producto,ana@example.com,31/02/2026\r\n',
         ),
       );
-      final empleados = _Empleados();
-      final cursos = _Cursos();
-      final auditoria = _Auditoria();
-      final container = await _mostrarConfiguracion(
+      final employees = _Employees();
+      final courses = _Courses();
+      final auditLog = _Audit();
+      final container = await _showSettings(
         tester,
-        cursos: cursos,
-        auditoria: auditoria,
-        empleados: empleados,
+        courses: courses,
+        auditLog: auditLog,
+        employees: employees,
       );
-      final escucha = container.listen(empleadosProvider, (_, _) {});
-      addTearDown(escucha.close);
-      await container.read(empleadosProvider.future);
+      final listens = container.listen(employeesProvider, (_, _) {});
+      addTearDown(listens.close);
+      await container.read(employeesProvider.future);
 
       await tester.tap(find.byKey(const Key('importar_nomina')));
       await tester.pumpAndSettle();
 
-      _verificarLoading(tester, 'nomina', false);
-      expect(empleados.guardados, 0);
-      expect(empleados.consultas, 1);
-      expect(cursos.upserts, 0);
-      final registro = auditoria.registros.single;
-      expect(registro.estado, EstadoImportacion.fallida);
-      expect(registro.errores.single, contains('31/02/2026'));
+      _verifyLoading(tester, 'nomina', false);
+      expect(employees.saved, 0);
+      expect(employees.queries, 1);
+      expect(courses.upserts, 0);
+      final record = auditLog.records.single;
+      expect(record.status, ImportStatus.failed);
+      expect(record.errors.single, contains('31/02/2026'));
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('Se importaron'), findsNothing);
       expect(tester.takeException(), isNull);

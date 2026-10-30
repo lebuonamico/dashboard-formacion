@@ -1,90 +1,95 @@
-enum ModuloAsistente {
+enum AssistantModule {
   dashboard('Dashboard'),
   areas('Áreas'),
-  equipos('Equipos'),
-  detalleEquipo('Detalle de equipo'),
-  personas('Personas'),
-  cursos('Cursos'),
-  configuracion('Configuración'),
-  otros('Ayuda general');
+  teams('Equipos'),
+  teamDetail('Detalle de equipo'),
+  people('Personas'),
+  courses('Cursos'),
+  settings('Configuración'),
+  others('Ayuda general');
 
-  final String etiqueta;
-  const ModuloAsistente(this.etiqueta);
+  final String label;
+  const AssistantModule(this.label);
 }
 
 /// Los parámetros de navegación se usan para buscar entidades localmente.
 /// Nunca se serializan la URL, los legajos ni parámetros arbitrarios.
-class DestinoAsistente {
-  final ModuloAsistente modulo;
+class AssistantDestination {
+  final AssistantModule module;
   final String? area;
-  final String? equipo;
-  final String? legajo;
-  const DestinoAsistente(this.modulo, {this.area, this.equipo, this.legajo});
+  final String? team;
+  final String? employeeId;
+  const AssistantDestination(
+    this.module, {
+    this.area,
+    this.team,
+    this.employeeId,
+  });
 
-  factory DestinoAsistente.desdeUri(Uri uri) {
+  factory AssistantDestination.fromUri(Uri uri) {
     final p = uri.pathSegments;
     if (p.firstOrNull == 'areas') {
-      return DestinoAsistente(
+      return AssistantDestination(
         p.length >= 4 && p[2] == 'equipos'
-            ? ModuloAsistente.detalleEquipo
-            : ModuloAsistente.areas,
+            ? AssistantModule.teamDetail
+            : AssistantModule.areas,
         area: p.length > 1 ? p[1] : null,
-        equipo: p.length >= 4 ? p[3] : null,
+        team: p.length >= 4 ? p[3] : null,
       );
     }
-    return DestinoAsistente(switch (p.firstOrNull) {
-      'dashboard' => ModuloAsistente.dashboard,
-      'equipos' => ModuloAsistente.equipos,
-      'empleados' => ModuloAsistente.personas,
-      'cursos' => ModuloAsistente.cursos,
-      'configuracion' => ModuloAsistente.configuracion,
-      _ => ModuloAsistente.otros,
-    }, legajo: p.firstOrNull == 'empleados' && p.length > 1 ? p[1] : null);
+    return AssistantDestination(switch (p.firstOrNull) {
+      'dashboard' => AssistantModule.dashboard,
+      'equipos' => AssistantModule.teams,
+      'empleados' => AssistantModule.people,
+      'cursos' => AssistantModule.courses,
+      'configuracion' => AssistantModule.settings,
+      _ => AssistantModule.others,
+    }, employeeId: p.firstOrNull == 'empleados' && p.length > 1 ? p[1] : null);
   }
 }
 
-class PeriodoAsistente {
-  final int anio;
-  final int mes;
-  final bool anual;
-  const PeriodoAsistente({
-    required this.anio,
-    required this.mes,
-    this.anual = false,
+class AssistantPeriod {
+  final int year;
+  final int month;
+  final bool annual;
+  const AssistantPeriod({
+    required this.year,
+    required this.month,
+    this.annual = false,
   });
   Map<String, Object> toJson() => {
-    'anio': anio,
-    if (!anual) 'mes': mes,
-    'alcance': anual ? 'anual' : 'mensual',
+    'anio': year,
+    if (!annual) 'mes': month,
+    'alcance': annual ? 'anual' : 'mensual',
   };
-  String get etiqueta => anual ? 'Año $anio' : '$mes/$anio';
+  String get label => annual ? 'Año $year' : '$month/$year';
 }
 
-enum TemaAsistente {
+enum AssistantTopic {
   general,
   areas,
-  equipos,
-  persona,
-  cursos,
-  importacion,
+  teams,
+  person,
+  courses,
+  import,
   conceptual,
 }
 
-class ConsultaAsistente {
-  final DestinoAsistente destino;
-  final TemaAsistente tema;
-  final String pregunta;
-  final List<PeriodoAsistente> periodos;
-  final List<String> notas;
-  final bool evolucion;
-  final bool acumulado;
-  const ConsultaAsistente({
-    required this.destino,
-    required this.tema,
-    required this.pregunta,
-    required this.periodos,
-    this.notas = const [],
-    this.evolucion = false,
-    this.acumulado = false,
+class AssistantQuery {
+  final AssistantDestination destination;
+  final AssistantTopic theme;
+  final String question;
+  final List<AssistantPeriod> periods;
+  final List<String> notes;
+  final bool evolution;
+  final bool accumulated;
+  const AssistantQuery({
+    required this.destination,
+    required this.theme,
+    required this.question,
+    required this.periods,
+    this.notes = const [],
+    this.evolution = false,
+    this.accumulated = false,
   });
 }

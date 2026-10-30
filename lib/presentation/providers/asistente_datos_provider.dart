@@ -13,48 +13,48 @@ import 'package:app_finnegans/presentation/providers/estructura_providers.dart';
 import 'package:app_finnegans/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final iaContextoRealProvider = Provider<bool>(
+final aiRealContextProvider = Provider<bool>(
   (ref) => const bool.fromEnvironment('IA_CONTEXTO_REAL', defaultValue: true),
 );
-final asistenteContextoServiceProvider = Provider<AsistenteContextoService>(
-  (ref) => AsistenteContextoService(),
+final assistantContextServiceProvider = Provider<AssistantContextService>(
+  (ref) => AssistantContextService(),
 );
 
 /// Solo se ejecuta al enviar. El snapshot reutiliza providers y servicios de las
 /// pantallas, con sus mismos datos; no cambia filtros ni necesita otra sesión.
-final prepararContextoIaProvider =
-    Provider<Future<ContextoAsistente> Function(DestinoAsistente, String)>(
+final prepareAiContextProvider =
+    Provider<Future<AssistantContext> Function(AssistantDestination, String)>(
       (ref) =>
-          (destino, pregunta) => _preparar(
+          (destination, question) => _prepare(
             ref,
-            destino,
-            pregunta,
+            destination,
+            question,
           ).timeout(const Duration(seconds: 30)),
     );
 
-Future<ContextoAsistente> _preparar(
+Future<AssistantContext> _prepare(
   Ref ref,
-  DestinoAsistente destino,
-  String pregunta,
+  AssistantDestination destination,
+  String question,
 ) async {
-  final service = ref.read(asistenteContextoServiceProvider);
-  final dinamico = ref.read(iaContextoRealProvider);
-  final visible = PeriodoAsistente(
-    anio: ref.read(filtroAnioPeriodoProvider),
-    mes: ref.read(filtroMesPeriodoProvider),
-    anual: ref.read(alcancePeriodoProvider) == AlcancePeriodo.anual,
+  final service = ref.read(assistantContextServiceProvider);
+  final dynamic = ref.read(aiRealContextProvider);
+  final visible = AssistantPeriod(
+    year: ref.read(periodYearFilterProvider),
+    month: ref.read(periodMonthFilterProvider),
+    annual: ref.read(periodScopeProvider) == PeriodScope.annual,
   );
-  final consulta = service.planificar(pregunta, destino, visible);
-  final datos = <String, Object?>{'notas_alcance': <String>[]};
-  final notas = datos['notas_alcance'] as List<String>;
-  if (!dinamico || consulta.tema == TemaAsistente.conceptual) {
-    datos['disponibilidad'] = dinamico
+  final query = service.plan(question, destination, visible);
+  final data = <String, Object?>{'notas_alcance': <String>[]};
+  final notes = data['notas_alcance'] as List<String>;
+  if (!dynamic || query.theme == AssistantTopic.conceptual) {
+    data['disponibilidad'] = dynamic
         ? 'Consulta conceptual; no se solicitaron indicadores.'
         : 'Contexto dinámico deshabilitado. No se enviaron indicadores ni ejemplos estáticos.';
-    return service.preparar(consulta, datos, dinamico: dinamico);
+    return service.prepare(query, data, dynamic: dynamic);
   }
-  if (consulta.tema == TemaAsistente.importacion) {
-    datos['importaciones'] = {
+  if (query.theme == AssistantTopic.import) {
+    data['importaciones'] = {
       'orden': ['Nómina', 'Cursos', 'Horas CRM', 'Finalizaciones LMS'],
       'nomina_cursos':
           'Snapshot por archivo: activa presentes e inactiva ausentes sin borrado físico; no aceptar una foto vacía.',
@@ -67,73 +67,73 @@ Future<ContextoAsistente> _preparar(
       'limite':
           'Sin contenido de archivos ni historial de importaciones. No puede ejecutar cargas.',
     };
-    return service.preparar(consulta, datos, dinamico: true);
+    return service.prepare(query, data, dynamic: true);
   }
-  if (consulta.periodos.isEmpty) {
-    return service.preparar(consulta, datos, dinamico: true);
+  if (query.periods.isEmpty) {
+    return service.prepare(query, data, dynamic: true);
   }
-  if (consulta.acumulado) {
-    if (consulta.tema == TemaAsistente.general) {
-      await _agregarAcumulado(ref, consulta, datos, service);
+  if (query.accumulated) {
+    if (query.theme == AssistantTopic.general) {
+      await _addAccumulated(ref, query, data, service);
     } else {
-      notas.add(
+      notes.add(
         'El acumulado por rango está disponible para el cumplimiento global de la organización desde el Dashboard. No se envió un total global como si correspondiera al área, equipo o perfil seleccionado.',
       );
     }
-    return service.preparar(consulta, datos, dinamico: true);
+    return service.prepare(query, data, dynamic: true);
   }
-  if (consulta.tema == TemaAsistente.cursos && destino.legajo == null) {
-    final cursos = await ref.read(cursosProvider.future);
-    datos['catalogo'] = service.catalogo(cursos, pregunta);
-    notas.add(
+  if (query.theme == AssistantTopic.courses && destination.employeeId == null) {
+    final courses = await ref.read(coursesProvider.future);
+    data['catalogo'] = service.catalog(courses, question);
+    notes.add(
       'No hay perfil seleccionado. Recomendaciones generales, no personalizadas. El catálogo no está historizado por período.',
     );
-    return service.preparar(consulta, datos, dinamico: true);
+    return service.prepare(query, data, dynamic: true);
   }
 
-  final resultados = <Map<String, Object?>>[];
-  if (consulta.evolucion) {
-    notas.add(
+  final results = <Map<String, Object?>>[];
+  if (query.evolution) {
+    notes.add(
       'La serie enviada es global de la organización; no es una evolución individual ni del equipo o área seleccionados.',
     );
   }
-  for (final periodo in consulta.periodos) {
-    final usaGrupos =
-        consulta.evolucion ||
-        consulta.tema == TemaAsistente.general ||
-        consulta.tema == TemaAsistente.areas ||
-        consulta.tema == TemaAsistente.equipos;
-    final scope = await _snapshot(ref, periodo, requiereHistorial: usaGrupos);
-    final resultado = <String, Object?>{'periodo': periodo.toJson()};
-    resultados.add(resultado);
+  for (final period in query.periods) {
+    final usesGroups =
+        query.evolution ||
+        query.theme == AssistantTopic.general ||
+        query.theme == AssistantTopic.areas ||
+        query.theme == AssistantTopic.teams;
+    final scope = await _snapshot(ref, period, requiresHistory: usesGroups);
+    final result = <String, Object?>{'periodo': period.toJson()};
+    results.add(result);
     try {
-      final hayDatos = await scope.read(hasTeamPeriodDataProvider.future);
-      resultado['tiene_datos'] = hayDatos;
-      if (!hayDatos) {
-        resultado['alcance'] =
+      final hasData = await scope.read(hasTeamPeriodDataProvider.future);
+      result['tiene_datos'] = hasData;
+      if (!hasData) {
+        result['alcance'] =
             'No hay movimientos CRM ni LMS en este período. No evaluar incumplimiento ni inventar ceros.';
-        if (consulta.tema == TemaAsistente.cursos) {
-          resultado['catalogo'] = service.catalogo(
-            await scope.read(cursosProvider.future),
-            pregunta,
+        if (query.theme == AssistantTopic.courses) {
+          result['catalogo'] = service.catalog(
+            await scope.read(coursesProvider.future),
+            question,
           );
-          notas.add(
+          notes.add(
             'Sin datos del período para personalizar; se envía catálogo actual sin historial.',
           );
         }
         continue;
       }
-      final resumen = usaGrupos
+      final summary = usesGroups
           ? await scope.read(teamsPeriodSummaryProvider.future)
           : null;
-      if (resumen != null && resumen.employeeCount == 0) {
-        resultado['disponibilidad'] =
+      if (summary != null && summary.employeeCount == 0) {
+        result['disponibilidad'] =
             'Hay movimientos pero no colaboradores evaluables; no hay un KPI de cumplimiento para mostrar.';
         continue;
       }
-      if (resumen != null) resultado['global'] = _global(resumen);
-      if (consulta.evolucion) {
-        (resultado['global'] as Map).removeWhere(
+      if (summary != null) result['global'] = _global(summary);
+      if (query.evolution) {
+        (result['global'] as Map).removeWhere(
           (k, _) => !{
             'completo',
             'colaboradores',
@@ -144,308 +144,302 @@ Future<ContextoAsistente> _preparar(
         );
         continue;
       }
-      switch (consulta.tema) {
-        case TemaAsistente.general:
-          final cumplimientos = await scope.read(
-            cumplimientoDashboardProvider.future,
+      switch (query.theme) {
+        case AssistantTopic.general:
+          final complianceList = await scope.read(
+            dashboardComplianceProvider.future,
           );
-          final cargas = await scope.read(cargasDashboardProvider.future);
-          final meses = await scope.read(
-            mesesEvaluadosDashboardProvider.future,
+          final timeEntries = await scope.read(
+            dashboardTimeEntriesProvider.future,
           );
-          final kpis = const DashboardKpisService().calcular(
-            cumplimientos: cumplimientos,
-            cargas: cargas,
-            mesesEvaluados: meses,
+          final months = await scope.read(
+            dashboardEvaluatedMonthsProvider.future,
           );
-          resultado['dashboard'] = {
+          final kpis = const DashboardKpisService().calculate(
+            complianceList: complianceList,
+            timeEntries: timeEntries,
+            evaluatedMonths: months,
+          );
+          result['dashboard'] = {
             'completo': true,
-            'colaboradores': kpis.colaboradores,
-            'capacitandose': kpis.capacitandose,
-            'horas_declaradas_crm': kpis.horasDeclaradas,
-            'meses_evaluados': kpis.mesesEvaluados,
-            'ritmo_mensual_hs_por_persona': kpis.ritmoMensual,
-            'proyeccion_anual_hs_por_persona': kpis.proyeccionAnual,
+            'colaboradores': kpis.employees,
+            'capacitandose': kpis.training,
+            'horas_declaradas_crm': kpis.declaredHours,
+            'meses_evaluados': kpis.evaluatedMonths,
+            'ritmo_mensual_hs_por_persona': kpis.monthlyPace,
+            'proyeccion_anual_hs_por_persona': kpis.annualProjection,
           };
           if (RegExp(
             r'categor|negocio|blanda|libre|dictad',
-          ).hasMatch(service.normalizar(pregunta))) {
-            resultado['horas_validas_por_categoria'] = {
-              'negocio': resumen!.businessHours,
-              'blandas': resumen.softSkillsHours,
-              'libres': resumen.explorationHours,
-              'dictado': resumen.teachingHours,
+          ).hasMatch(service.normalize(question))) {
+            result['horas_validas_por_categoria'] = {
+              'negocio': summary!.businessHours,
+              'blandas': summary.softSkillsHours,
+              'libres': summary.explorationHours,
+              'dictado': summary.teachingHours,
             };
           }
-        case TemaAsistente.areas:
-          final areas = await scope.read(resumenAreasPeriodoProvider.future);
-          var lista = areas.areas.toList();
-          final q = service.normalizar(pregunta);
-          final explicitas = lista
-              .where((a) => _menciona(q, a.nombre, service))
+        case AssistantTopic.areas:
+          final areas = await scope.read(areasPeriodSummaryProvider.future);
+          var items = areas.areas.toList();
+          final q = service.normalize(question);
+          final explicit = items
+              .where((a) => _mentions(q, a.name, service))
               .toList();
-          if (explicitas.isNotEmpty) {
-            lista = explicitas;
-          } else if (destino.area != null &&
+          if (explicit.isNotEmpty) {
+            items = explicit;
+          } else if (destination.area != null &&
               !RegExp(r'compar|menor|mayor|todas|ranking').hasMatch(q)) {
-            lista = lista
+            items = items
                 .where(
                   (a) =>
-                      service.normalizar(a.nombre) ==
-                      service.normalizar(destino.area!),
+                      service.normalize(a.name) ==
+                      service.normalize(destination.area!),
                 )
                 .toList();
           }
           if (q.contains('critic')) {
-            lista = lista.where((a) => a.semaforo.label == 'Crítico').toList();
+            items = items.where((a) => a.level.label == 'Crítico').toList();
           }
-          lista.sort(
+          items.sort(
             (a, b) => q.contains('mayor') || q.contains('mejor')
-                ? b.porcentajeCumplimiento.compareTo(a.porcentajeCumplimiento)
-                : a.porcentajeCumplimiento.compareTo(b.porcentajeCumplimiento),
+                ? b.compliancePercentage.compareTo(a.compliancePercentage)
+                : a.compliancePercentage.compareTo(b.compliancePercentage),
           );
-          resultado['areas'] = service.seleccion(
-            lista
+          result['areas'] = service.selection(
+            items
                 .map(
                   (a) => <String, Object?>{
-                    'area': a.nombre,
-                    'colaboradores': a.cantidadIntegrantes,
-                    'personas_en_objetivo': a.integrantesEnObjetivo,
-                    'horas_validas': a.horasRealizadas,
-                    'horas_objetivo': a.horasObjetivo,
-                    'cumplimiento_pct': a.porcentajeCumplimiento,
-                    'estado': a.semaforo.label,
+                    'area': a.name,
+                    'colaboradores': a.memberCount,
+                    'personas_en_objetivo': a.membersOnTarget,
+                    'horas_validas': a.completedHours,
+                    'horas_objetivo': a.targetHours,
+                    'cumplimiento_pct': a.compliancePercentage,
+                    'estado': a.level.label,
                   },
                 )
                 .toList(),
-            total: lista.length,
-            criterio:
+            total: items.length,
+            criterion:
                 'Áreas calculadas; orden por cumplimiento, filtro según pregunta/selección.',
-            max: service.soloTotales(pregunta) ? 0 : 12,
+            max: service.totalsOnly(question) ? 0 : 12,
           );
-          if (destino.area != null) {
-            notas.add(
+          if (destination.area != null) {
+            notes.add(
               'El global corresponde a toda la organización; la lista identifica el área seleccionada cuando aplica.',
             );
           }
-        case TemaAsistente.equipos:
-          var lista = resumen!.teams.toList();
-          final q = service.normalizar(pregunta);
-          final explicitos = lista
-              .where((e) => _menciona(q, e.name, service))
+        case AssistantTopic.teams:
+          var items = summary!.teams.toList();
+          final q = service.normalize(question);
+          final explicit = items
+              .where((e) => _mentions(q, e.name, service))
               .toList();
-          final areasExplicitas = lista
+          final explicitAreas = items
               .map((e) => e.area)
-              .where((a) => _menciona(q, a, service))
+              .where((a) => _mentions(q, a, service))
               .toSet();
-          final comparacion = RegExp(
+          final comparison = RegExp(
             r'compar|otros|resto|todos|que equipos|cuales|ranking|menor|mayor',
           ).hasMatch(q);
-          if (destino.equipo != null) {
-            final seleccionado = lista
+          if (destination.team != null) {
+            final selected = items
                 .where(
                   (e) =>
-                      service.normalizar(e.name) ==
-                          service.normalizar(destino.equipo!) &&
-                      service.normalizar(e.area) ==
-                          service.normalizar(destino.area ?? ''),
+                      service.normalize(e.name) ==
+                          service.normalize(destination.team!) &&
+                      service.normalize(e.area) ==
+                          service.normalize(destination.area ?? ''),
                 )
                 .firstOrNull;
-            if (seleccionado != null) {
-              resultado['equipo_seleccionado'] = _equipo(seleccionado);
+            if (selected != null) {
+              result['equipo_seleccionado'] = _team(selected);
             } else {
-              notas.add(
+              notes.add(
                 'El equipo seleccionado no tiene integrantes evaluables en este período; no implica que no exista en la base.',
               );
             }
           }
-          if (explicitos.isNotEmpty) {
-            lista = explicitos;
-          } else if (areasExplicitas.isNotEmpty) {
-            lista = lista
-                .where((e) => areasExplicitas.contains(e.area))
-                .toList();
-          } else if (destino.area != null && !comparacion) {
-            lista = lista
+          if (explicit.isNotEmpty) {
+            items = explicit;
+          } else if (explicitAreas.isNotEmpty) {
+            items = items.where((e) => explicitAreas.contains(e.area)).toList();
+          } else if (destination.area != null && !comparison) {
+            items = items
                 .where(
                   (e) =>
-                      service.normalizar(e.area) ==
-                      service.normalizar(destino.area!),
+                      service.normalize(e.area) ==
+                      service.normalize(destination.area!),
                 )
                 .toList();
-            if (destino.equipo != null) {
-              lista = lista
+            if (destination.team != null) {
+              items = items
                   .where(
                     (e) =>
-                        service.normalizar(e.name) ==
-                        service.normalizar(destino.equipo!),
+                        service.normalize(e.name) ==
+                        service.normalize(destination.team!),
                   )
                   .toList();
             }
           }
           if (q.contains('critic')) {
-            lista = lista
+            items = items
                 .where((e) => e.status == TeamStatus.critical)
                 .toList();
           } else if (q.contains('riesgo')) {
-            lista = lista
-                .where((e) => e.status == TeamStatus.atRisk)
-                .toList();
+            items = items.where((e) => e.status == TeamStatus.atRisk).toList();
           } else if (q.contains('en objetivo')) {
-            lista = lista
+            items = items
                 .where((e) => e.status == TeamStatus.onTarget)
                 .toList();
           }
           if (RegExp(r'menor|mayor|mejor|peor|compar').hasMatch(q)) {
-            lista.sort(
+            items.sort(
               (a, b) => q.contains('mayor') || q.contains('mejor')
                   ? b.completionPercentage.compareTo(a.completionPercentage)
-                  : a.completionPercentage.compareTo(
-                      b.completionPercentage,
-                    ),
+                  : a.completionPercentage.compareTo(b.completionPercentage),
             );
           }
-          resultado['equipos'] = service.seleccion(
-            lista.map(_equipo).toList(),
-            total: lista.length,
-            criterio:
+          result['equipos'] = service.selection(
+            items.map(_team).toList(),
+            total: items.length,
+            criterion:
                 'Estado calculado por EquiposService; filtro de pregunta, prioridad o cumplimiento.',
-            max: service.soloTotales(pregunta) ? 0 : 12,
+            max: service.totalsOnly(question) ? 0 : 12,
           );
-        case TemaAsistente.persona || TemaAsistente.cursos:
-          final empleados = await scope.read(empleadosProvider.future);
-          final q = service.normalizar(pregunta);
-          final coincidencias = empleados
-              .where((e) => _menciona(q, e.nombreCompleto, service))
+        case AssistantTopic.person || AssistantTopic.courses:
+          final employees = await scope.read(employeesProvider.future);
+          final q = service.normalize(question);
+          final matches = employees
+              .where((e) => _mentions(q, e.fullName, service))
               .toList();
-          final legajo = coincidencias.length == 1
-              ? coincidencias.single.legajo
-              : destino.legajo;
-          if (legajo == null) {
-            notas.add(
+          final employeeId = matches.length == 1
+              ? matches.single.employeeId
+              : destination.employeeId;
+          if (employeeId == null) {
+            notes.add(
               'No hay una persona identificada de forma inequívoca. Seleccioná su perfil o indicá el nombre completo. No usar la cuenta autenticada como perfil.',
             );
           } else {
-            final detalle = await scope.read(
-              detalleEmpleadoProvider(legajo).future,
+            final detail = await scope.read(
+              employeeDetailProvider(employeeId).future,
             );
-            if (detalle == null) {
-              notas.add(
+            if (detail == null) {
+              notes.add(
                 'No se encontró el perfil seleccionado en la nómina disponible.',
               );
             } else {
-              resultado['perfil_seleccionado'] = service.persona(
-                detalle.cumplimiento,
-              );
-              notas.add(
+              result['perfil_seleccionado'] = service.person(detail.compliance);
+              notes.add(
                 'El perfil conserva el alcance de su pantalla: usa atributos actuales de nómina y no reconstruye la elegibilidad histórica de Equipos.',
               );
-              if (periodo.anual) {
-                notas.add(
+              if (period.annual) {
+                notes.add(
                   'El perfil individual usa el objetivo mensual actual ×12 y sus propios filtros, igual que su pantalla; no equivale al acumulado histórico anual de Equipos.',
                 );
               }
-              if (consulta.tema == TemaAsistente.cursos) {
-                resultado['catalogo'] = service.catalogo(
-                  await scope.read(cursosProvider.future),
-                  pregunta,
-                  perfil: detalle.cumplimiento,
-                  finalizados: detalle.cursosFinalizados,
+              if (query.theme == AssistantTopic.courses) {
+                result['catalogo'] = service.catalog(
+                  await scope.read(coursesProvider.future),
+                  question,
+                  profile: detail.compliance,
+                  completed: detail.completedCourses,
                 );
-                notas.add(
+                notes.add(
                   'Catálogo actual, sin historización por período. No se enviaron correo, legajo ni instructor.',
                 );
               }
             }
           }
-        case TemaAsistente.conceptual || TemaAsistente.importacion:
+        case AssistantTopic.conceptual || AssistantTopic.import:
           break;
       }
     } catch (_) {
-      resultado['disponibilidad'] =
+      result['disponibilidad'] =
           'Preparación incompleta: los bloques presentes conservan su alcance. Solo los campos ausentes no están disponibles en esta consulta; no implican ausencia de registros.';
     } finally {
       scope.dispose();
     }
   }
-  datos['resultados'] = resultados;
-  datos['notas_alcance'] = notas.toSet().toList();
-  return service.preparar(consulta, datos, dinamico: true);
+  data['resultados'] = results;
+  data['notas_alcance'] = notes.toSet().toList();
+  return service.prepare(query, data, dynamic: true);
 }
 
-Future<void> _agregarAcumulado(
+Future<void> _addAccumulated(
   Ref ref,
-  ConsultaAsistente consulta,
-  Map<String, Object?> datos,
-  AsistenteContextoService service,
+  AssistantQuery query,
+  Map<String, Object?> data,
+  AssistantContextService service,
 ) async {
-  String clave(PeriodoAsistente p) =>
-      '${p.anio}-${p.mes.toString().padLeft(2, '0')}';
-  final meses = <Map<String, Object?>>[];
-  final detalle = <Map<String, Object?>>[];
-  final evaluados = <TeamsPeriodSummary>[];
-  var incompleto = false;
-  for (final periodo in consulta.periodos) {
-    final mes = <String, Object?>{
-      'periodo': clave(periodo),
+  String key(AssistantPeriod p) =>
+      '${p.year}-${p.month.toString().padLeft(2, '0')}';
+  final months = <Map<String, Object?>>[];
+  final detail = <Map<String, Object?>>[];
+  final evaluated = <TeamsPeriodSummary>[];
+  var incomplete = false;
+  for (final period in query.periods) {
+    final month = <String, Object?>{
+      'periodo': key(period),
       'estado': 'no_consultado',
     };
-    meses.add(mes);
+    months.add(month);
     ProviderContainer? scope;
     try {
-      scope = await _snapshot(ref, periodo, requiereHistorial: true);
+      scope = await _snapshot(ref, period, requiresHistory: true);
       if (!await scope.read(hasTeamPeriodDataProvider.future)) {
-        mes['estado'] = 'sin_datos';
+        month['estado'] = 'sin_datos';
         continue;
       }
-      final resumen = await scope.read(teamsPeriodSummaryProvider.future);
-      if (resumen.employeeCount == 0) {
-        mes['estado'] = 'sin_colaboradores_evaluables';
+      final summary = await scope.read(teamsPeriodSummaryProvider.future);
+      if (summary.employeeCount == 0) {
+        month['estado'] = 'sin_colaboradores_evaluables';
         continue;
       }
-      evaluados.add(resumen);
-      mes['estado'] = 'evaluado';
-      detalle.add({
-        'periodo': clave(periodo),
-        'horas_validas': resumen.completedHours,
-        'horas_objetivo': resumen.targetHours,
-        'cumplimiento_pct': resumen.overallCompletion,
+      evaluated.add(summary);
+      month['estado'] = 'evaluado';
+      detail.add({
+        'periodo': key(period),
+        'horas_validas': summary.completedHours,
+        'horas_objetivo': summary.targetHours,
+        'cumplimiento_pct': summary.overallCompletion,
       });
     } catch (_) {
       // Un fallo de lectura o de cálculo no equivale a un mes sin registros.
-      incompleto = true;
+      incomplete = true;
     } finally {
       scope?.dispose();
     }
   }
-  final total = !incompleto && evaluados.isNotEmpty
-      ? const DashboardKpisService().acumularCumplimiento(evaluados)
+  final total = !incomplete && evaluated.isNotEmpty
+      ? const DashboardKpisService().accumulateCompliance(evaluated)
       : null;
-  datos['acumulado_solicitado'] = {
+  data['acumulado_solicitado'] = {
     'alcance': 'global_organizacion',
-    'desde': clave(consulta.periodos.first),
-    'hasta': clave(consulta.periodos.last),
-    'completo': !incompleto,
-    'estado': incompleto
+    'desde': key(query.periods.first),
+    'hasta': key(query.periods.last),
+    'completo': !incomplete,
+    'estado': incomplete
         ? 'incompleto'
         : total == null
         ? 'sin_meses_evaluables'
         : 'disponible',
-    'meses_solicitados': meses.length,
-    'meses_evaluados': evaluados.length,
-    'meses': meses,
+    'meses_solicitados': months.length,
+    'meses_evaluados': evaluated.length,
+    'meses': months,
     if (total != null) ...{
-      'horas_validas': total.horasValidas,
-      'horas_objetivo': total.horasObjetivo,
-      'cumplimiento_pct': total.cumplimiento,
+      'horas_validas': total.creditedHours,
+      'horas_objetivo': total.targetHours,
+      'cumplimiento_pct': total.compliance,
     },
   };
-  datos['desglose_mensual'] = service.seleccion(
-    detalle,
-    total: detalle.length,
-    criterio: 'Indicadores mensuales evaluados; el acumulado no se recorta.',
+  data['desglose_mensual'] = service.selection(
+    detail,
+    total: detail.length,
+    criterion: 'Indicadores mensuales evaluados; el acumulado no se recorta.',
   );
-  (datos['notas_alcance'] as List<String>).add(
+  (data['notas_alcance'] as List<String>).add(
     'El rango incluye ambos extremos. Se acumulan solo meses con datos CRM o LMS y colaboradores evaluables, con elegibilidad histórica y topes mensuales. sin_datos y sin_colaboradores_evaluables se excluyen sin asignarles 0%. no_consultado indica un fallo al obtener o calcular indicadores: impide publicar el total del rango.',
   );
 }
@@ -461,7 +455,7 @@ Map<String, Object?> _global(TeamsPeriodSummary r) => {
   'en_riesgo': r.atRisk,
   'criticos': r.critical,
 };
-Map<String, Object?> _equipo(TeamOverview e) => {
+Map<String, Object?> _team(TeamOverview e) => {
   'equipo': e.name,
   'area': e.area,
   'integrantes': e.memberCount,
@@ -471,75 +465,73 @@ Map<String, Object?> _equipo(TeamOverview e) => {
   'cumplimiento_pct': e.completionPercentage,
   'estado': e.status.label,
 };
-bool _menciona(String q, String nombre, AsistenteContextoService s) {
-  final n = s.normalizar(nombre);
+bool _mentions(String q, String name, AssistantContextService s) {
+  final n = s.normalize(name);
   return n.length >= 3 && ' $q '.contains(' $n ');
 }
 
 Future<ProviderContainer> _snapshot(
   Ref ref,
-  PeriodoAsistente periodo, {
-  required bool requiereHistorial,
+  AssistantPeriod period, {
+  required bool requiresHistory,
 }) async {
-  final empleadosF = ref.read(empleadosProvider.future);
-  final historialF = requiereHistorial
-      ? ref.read(empleadoHistorialProvider.future)
+  final employeesFuture = ref.read(employeesProvider.future);
+  final historyFuture = requiresHistory
+      ? ref.read(employeeHistoryProvider.future)
       : Future.value(null);
-  final cursosF = ref.read(cursosProvider.future);
-  final cargasF = ref.read(cargasDeHorasCRMProvider.future);
-  final certificacionesF = ref.read(certificacionesMoodleProvider.future);
-  final estructuraF = ref.read(estructuraProvider.future);
-  final alcanceF = ref.read(alcanceUsuarioProvider.future);
-  final equiposService = ref.read(teamsServiceProvider);
-  final cumplimientoServiceF = ref.read(cumplimientoServiceProvider.future);
-  final sesion = ref.read(sesionDatosProvider);
+  final coursesFuture = ref.read(coursesProvider.future);
+  final timeEntriesFuture = ref.read(crmTimeEntriesProvider.future);
+  final certificationsFuture = ref.read(lmsCertificationsProvider.future);
+  final structureFuture = ref.read(orgStructureProvider.future);
+  final scopeFuture = ref.read(userScopeProvider.future);
+  final teamsService = ref.read(teamsServiceProvider);
+  final complianceServiceFuture = ref.read(complianceServiceProvider.future);
+  final session = ref.read(sessionDataProvider);
   final (
-    empleados,
-    historial,
-    cursos,
-    cargas,
-    certificaciones,
-    estructura,
-    alcanceUsuario,
-    cumplimientoService,
+    employees,
+    history,
+    courses,
+    timeEntries,
+    certifications,
+    structure,
+    userScope,
+    complianceService,
   ) = await (
-    empleadosF,
-    historialF,
-    cursosF,
-    cargasF,
-    certificacionesF,
-    estructuraF,
-    alcanceF,
-    cumplimientoServiceF,
+    employeesFuture,
+    historyFuture,
+    coursesFuture,
+    timeEntriesFuture,
+    certificationsFuture,
+    structureFuture,
+    scopeFuture,
+    complianceServiceFuture,
   ).wait;
   return ProviderContainer(
     retry: (_, _) => null,
     overrides: [
       // El contenedor no tiene padre: sin esto armaría otra sesión sin rol y
       // el alcance lo dejaría sin colaboradores.
-      sesionDatosProvider.overrideWithValue(sesion),
-      estructuraProvider.overrideWith((_) async => estructura),
-      alcanceUsuarioProvider.overrideWith((_) async => alcanceUsuario),
-      empleadosProvider.overrideWith((_) async => empleados),
-      empleadoHistorialProvider.overrideWith((_) async => historial),
-      cursosProvider.overrideWith((_) async => cursos),
-      cargasDeHorasCRMProvider.overrideWith((_) async => cargas),
-      certificacionesMoodleProvider.overrideWith((_) async => certificaciones),
-      teamsServiceProvider.overrideWithValue(equiposService),
-      cumplimientoServiceProvider.overrideWith(
-        (_) async => cumplimientoService,
+      sessionDataProvider.overrideWithValue(session),
+      orgStructureProvider.overrideWith((_) async => structure),
+      userScopeProvider.overrideWith((_) async => userScope),
+      employeesProvider.overrideWith((_) async => employees),
+      employeeHistoryProvider.overrideWith((_) async => history),
+      coursesProvider.overrideWith((_) async => courses),
+      crmTimeEntriesProvider.overrideWith((_) async => timeEntries),
+      lmsCertificationsProvider.overrideWith((_) async => certifications),
+      teamsServiceProvider.overrideWithValue(teamsService),
+      complianceServiceProvider.overrideWith((_) async => complianceService),
+      periodScopeProvider.overrideWith(
+        (_) => period.annual ? PeriodScope.annual : PeriodScope.monthly,
       ),
-      alcancePeriodoProvider.overrideWith(
-        (_) => periodo.anual ? AlcancePeriodo.anual : AlcancePeriodo.mensual,
-      ),
-      filtroMesPeriodoProvider.overrideWith((_) => periodo.mes),
-      filtroAnioPeriodoProvider.overrideWith((_) => periodo.anio),
-      cargasDashboardProvider.overrideWith(
-        (_) async => equiposService.periods.filterTimeEntriesByPeriod(
-          timeEntries: cargas,
-          year: periodo.anio,
-          month: periodo.mes,
-          isAnnual: periodo.anual,
+      periodMonthFilterProvider.overrideWith((_) => period.month),
+      periodYearFilterProvider.overrideWith((_) => period.year),
+      dashboardTimeEntriesProvider.overrideWith(
+        (_) async => teamsService.periods.filterTimeEntriesByPeriod(
+          timeEntries: timeEntries,
+          year: period.year,
+          month: period.month,
+          isAnnual: period.annual,
         ),
       ),
     ],

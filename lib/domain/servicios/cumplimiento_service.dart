@@ -6,124 +6,123 @@ import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/plan_formacion.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
-class CumplimientoService {
+class ComplianceService {
   /// Versiones del plan de formación. Sin versiones rige el plan por defecto.
-  final PlanesFormacion planes;
+  final TrainingPlanHistory plans;
 
-  const CumplimientoService({
-    this.planes = const PlanesFormacion.sinVersiones(),
-  });
+  const ComplianceService({this.plans = const TrainingPlanHistory.empty()});
 
-  /// [anio] y [mes] eligen la versión del plan que fija el objetivo. Sin
+  /// [year] y [month] eligen la versión del plan que fija el objetivo. Sin
   /// período se usa la vigente hoy.
-  List<CumplimientoEmpleado> calcularCumplimientoGlobal({
-    required List<Empleado> empleados,
-    required List<Curso> cursos,
-    required List<CargaDeHorasCRM> cargasDeHoras,
-    required List<CertificacionMoodle> certificacionesMoodle,
-    int? anio,
-    int? mes,
+  List<EmployeeCompliance> calculateComplianceGlobal({
+    required List<Employee> employees,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> lmsCertifications,
+    int? year,
+    int? month,
   }) {
-    assert((anio == null) == (mes == null), 'anio y mes van juntos');
-    final plan = anio != null && mes != null
-        ? planes.vigenteEn(anio, mes)
-        : planes.actual;
-    final cursosMap = {
-      for (final curso in cursos) normalizarNombreCurso(curso.nombre): curso,
+    assert((year == null) == (month == null), 'anio y mes van juntos');
+    final plan = year != null && month != null
+        ? plans.currentIn(year, month)
+        : plans.current;
+    final coursesMap = {
+      for (final course in courses) normalizeCourseName(course.name): course,
     };
-    final cargasPorLegajo = <String, List<CargaDeHorasCRM>>{};
-    for (final carga in cargasDeHoras) {
-      cargasPorLegajo.putIfAbsent(carga.empleadoLegajo, () => []).add(carga);
+    final timeEntriesByEmployeeId = <String, List<CrmTimeEntry>>{};
+    for (final timeEntry in timeEntries) {
+      timeEntriesByEmployeeId
+          .putIfAbsent(timeEntry.employeeId, () => [])
+          .add(timeEntry);
     }
-    final certificacionesPorLegajo = <String, List<CertificacionMoodle>>{};
-    for (final certificacion in certificacionesMoodle) {
-      certificacionesPorLegajo
-          .putIfAbsent(certificacion.legajo, () => [])
-          .add(certificacion);
+    final certificationsByEmployeeId = <String, List<LmsCertification>>{};
+    for (final certification in lmsCertifications) {
+      certificationsByEmployeeId
+          .putIfAbsent(certification.employeeId, () => [])
+          .add(certification);
     }
 
-    return empleados.map((empleado) {
+    return employees.map((employee) {
       // Leandro: llama a _horasPorCategoriaEnCero para inicializar las horas del colaborador sin inventar actividad.
-      final horasValidas = _horasPorCategoriaEnCero();
-      final horasDeclaradas = _horasPorCategoriaEnCero();
+      final creditedHours = _zeroHoursByCategory();
+      final declaredHours = _zeroHoursByCategory();
 
-      final cargasEmpleado =
-          cargasPorLegajo[empleado.legajo] ?? const <CargaDeHorasCRM>[];
-      for (final carga in cargasEmpleado) {
+      final employeeTimeEntries =
+          timeEntriesByEmployeeId[employee.employeeId] ??
+          const <CrmTimeEntry>[];
+      for (final timeEntry in employeeTimeEntries) {
         // Libres y Dictado no pasan por el LMS: la Clasificación CRM las acredita.
-        final categoriaSoloCrm = carga.categoriaSoloCrm;
-        if (categoriaSoloCrm != null) {
-          horasDeclaradas[categoriaSoloCrm] =
-              (horasDeclaradas[categoriaSoloCrm] ?? 0) + carga.horasTotales;
-          horasValidas[categoriaSoloCrm] =
-              (horasValidas[categoriaSoloCrm] ?? 0) + carga.horasTotales;
+        final categoryOnlyCrm = timeEntry.categoryOnlyCrm;
+        if (categoryOnlyCrm != null) {
+          declaredHours[categoryOnlyCrm] =
+              (declaredHours[categoryOnlyCrm] ?? 0) + timeEntry.hours;
+          creditedHours[categoryOnlyCrm] =
+              (creditedHours[categoryOnlyCrm] ?? 0) + timeEntry.hours;
           continue;
         }
 
         // Leandro: llama a normalizarNombreCurso para buscar el curso CRM en el catálogo con un nombre uniforme.
-        final cursoNormalizado = normalizarNombreCurso(carga.cursoNombre);
-        final curso = cursosMap[cursoNormalizado];
-        if (curso != null) {
-          horasDeclaradas[curso.clasificacion] =
-              (horasDeclaradas[curso.clasificacion] ?? 0) + carga.horasTotales;
+        final normalizedCourse = normalizeCourseName(timeEntry.courseName);
+        final course = coursesMap[normalizedCourse];
+        if (course != null) {
+          declaredHours[course.category] =
+              (declaredHours[course.category] ?? 0) + timeEntry.hours;
         }
       }
 
       // Negocio y Blandas: cada curso finalizado en el LMS acredita su carga horaria.
-      final cursosValidados = <String>{};
-      final certificacionesEmpleado =
-          certificacionesPorLegajo[empleado.legajo] ??
-          const <CertificacionMoodle>[];
-      for (final certificacion in certificacionesEmpleado) {
+      final validatedCourses = <String>{};
+      final employeeCertifications =
+          certificationsByEmployeeId[employee.employeeId] ??
+          const <LmsCertification>[];
+      for (final certification in employeeCertifications) {
         // Leandro: llama a normalizarNombreCurso para buscar el curso finalizado en el catálogo.
-        final cursoNormalizado = normalizarNombreCurso(
-          certificacion.cursoNombre,
-        );
-        if (!certificacion.finalizoCurso ||
-            !cursosValidados.add(cursoNormalizado)) {
+        final normalizedCourse = normalizeCourseName(certification.courseName);
+        if (!certification.isCompleted ||
+            !validatedCourses.add(normalizedCourse)) {
           continue;
         }
 
-        final curso = cursosMap[cursoNormalizado];
+        final course = coursesMap[normalizedCourse];
         // Libres y Dictado se acreditan solo por CRM.
-        if (curso == null ||
-            curso.clasificacion == TipoCurso.libresExploracion ||
-            curso.clasificacion == TipoCurso.dictadoCapacitaciones) {
+        if (course == null ||
+            course.category == CourseCategory.exploration ||
+            course.category == CourseCategory.teaching) {
           continue;
         }
 
-        final horasAcreditadas = curso.cargaHorariaHs < 0
+        final hoursToCredit = course.workloadHours < 0
             ? 0.0
-            : curso.cargaHorariaHs;
-        horasValidas[curso.clasificacion] =
-            (horasValidas[curso.clasificacion] ?? 0) + horasAcreditadas;
+            : course.workloadHours;
+        creditedHours[course.category] =
+            (creditedHours[course.category] ?? 0) + hoursToCredit;
       }
 
       // Requerimientos mensuales según el seniority del empleado.
-      final horasRequeridas = Map.of(plan.horasRequeridas(empleado.seniority));
+      final requiredHours = Map.of(plan.requiredHours(employee.seniority));
 
       // Leandro: llama a CumplimientoEmpleado para entregar las horas validadas, declaradas y requeridas de cada persona.
-      return CumplimientoEmpleado(
-        empleado: empleado,
-        horasValidas: horasValidas,
-        horasDeclaradas: horasDeclaradas,
-        horasRequeridas: horasRequeridas,
+      return EmployeeCompliance(
+        employee: employee,
+        creditedHours: creditedHours,
+        declaredHours: declaredHours,
+        requiredHours: requiredHours,
       );
     }).toList();
   }
 
-  static Map<TipoCurso, double> _horasPorCategoriaEnCero() => {
-    for (final tipo in TipoCurso.values) tipo: 0.0,
+  static Map<CourseCategory, double> _zeroHoursByCategory() => {
+    for (final type in CourseCategory.values) type: 0.0,
   };
 
   /// Se llama por cada carga y certificación, con pocos nombres distintos:
   /// cada uno se normaliza una sola vez.
-  static String normalizarNombreCurso(String nombre) =>
-      _nombresNormalizados[nombre] ??= _normalizarNombre(nombre);
+  static String normalizeCourseName(String name) =>
+      _normalizedNames[name] ??= _normalizeName(name);
 
-  static final _nombresNormalizados = <String, String>{};
+  static final _normalizedNames = <String, String>{};
 
-  static String _normalizarNombre(String nombre) => nombre
+  static String _normalizeName(String name) => name
       .trim()
       .toLowerCase()
       .replaceAll('á', 'a')

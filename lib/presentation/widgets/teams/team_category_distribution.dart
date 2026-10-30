@@ -73,32 +73,32 @@ class TeamCategoryDistribution extends StatelessWidget {
                   valueSuffix: ' h',
                   slices: [
                     TeamDonutSlice(
-                      label: TipoCurso.habilidadesDeNegocio.labelCorto,
+                      label: CourseCategory.businessSkills.shortLabel,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: businessHours,
-                      color: context.colores.negocio.texto,
+                      color: context.colors.business.text,
                     ),
                     TeamDonutSlice(
-                      label: TipoCurso.habilidadesBlandas.labelCorto,
+                      label: CourseCategory.softSkills.shortLabel,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: softSkillsHours,
-                      color: context.colores.blandas.texto,
+                      color: context.colors.softSkills.text,
                     ),
                     TeamDonutSlice(
-                      label: TipoCurso.libresExploracion.labelCorto,
+                      label: CourseCategory.exploration.shortLabel,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los integrantes.',
                       value: explorationHours,
-                      color: context.colores.exploracion.texto,
+                      color: context.colors.exploration.text,
                     ),
                     TeamDonutSlice(
-                      label: TipoCurso.dictadoCapacitaciones.labelCorto,
+                      label: CourseCategory.teaching.shortLabel,
                       help:
                           'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
                       value: teachingHours,
-                      color: context.colores.dictado.texto,
+                      color: context.colors.teaching.text,
                     ),
                   ],
                 ),

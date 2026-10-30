@@ -1,9 +1,9 @@
 import 'package:app_finnegans/domain/modelos/usuario_autorizado.dart';
 
-abstract interface class UsuariosAutorizadosRepository {
-  Future<List<UsuarioAutorizado>> getUsuarios();
+abstract interface class AuthorizedUsersRepository {
+  Future<List<AuthorizedUser>> getUsers();
 
-  Future<void> crear(UsuarioAutorizado usuario);
+  Future<void> create(AuthorizedUser user);
 
-  Future<void> guardar(UsuarioAutorizado usuario);
+  Future<void> save(AuthorizedUser user);
 }

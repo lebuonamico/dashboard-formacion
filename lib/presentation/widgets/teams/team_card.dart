@@ -26,13 +26,13 @@ class TeamCard extends StatelessWidget {
           '/areas/${Uri.encodeComponent(team.area)}/equipos/${Uri.encodeComponent(team.name)}?origen=equipos',
         ),
         child: Container(
-          decoration: context.panel(sombra: true),
+          decoration: context.panel(shadow: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: team.status.colores(context).texto,
+                  color: team.status.colors(context).text,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -195,11 +195,11 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatearPorcentaje(team.completionPercentage),
+              formatPercentage(team.completionPercentage),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: team.status.colores(context).texto,
+                color: team.status.colors(context).text,
               ),
             ),
           ],
@@ -210,8 +210,8 @@ class _ProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: context.colores.graficoPista,
-            color: team.status.colores(context).texto,
+            backgroundColor: context.colors.chartTrack,
+            color: team.status.colors(context).text,
           ),
         ),
       ],
@@ -249,8 +249,8 @@ class _CardFooter extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: team.hoursDeviation >= 0
-                      ? context.colores.exito.texto
-                      : context.colores.peligro.texto,
+                      ? context.colors.success.text
+                      : context.colors.danger.text,
                 ),
               ),
             ],
@@ -294,7 +294,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: status.colores(context).fondo,
+        color: status.colors(context).background,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -304,7 +304,7 @@ class _StatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: status.colores(context).texto,
+              color: status.colors(context).text,
               shape: BoxShape.circle,
             ),
           ),
@@ -312,7 +312,7 @@ class _StatusBadge extends StatelessWidget {
           Text(
             status.label,
             style: TextStyle(
-              color: status.colores(context).texto,
+              color: status.colors(context).text,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),

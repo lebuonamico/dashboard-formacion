@@ -2,59 +2,56 @@ import 'package:app_finnegans/domain/repositorios/upsert_repository.dart';
 import 'package:app_finnegans/domain/modelos/curso.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 
-abstract class CursosRepository {
-  Future<List<Curso>> getCursos({String? id, String? nombre});
-  Future<void> replaceCursos(List<Curso> cursos);
+abstract class CoursesRepository {
+  Future<List<Course>> getCourses({String? id, String? name});
+  Future<void> replaceCourses(List<Course> courses);
   Future<void> resetToMock();
 }
 
-extension CursosUpsert on CursosRepository {
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
-    List<Curso> items,
-  ) async {
+extension CoursesUpsert on CoursesRepository {
+  Future<UpsertResult> syncSnapshotWithResult(List<Course> items) async {
     if (items.isEmpty || items.any((item) => item.id.trim().isEmpty)) {
       throw const FormatException(
         'La foto de Cursos está vacía o tiene claves inválidas.',
       );
     }
-    if (this is FotoVigenteRepository<Curso>) {
-      return (this as FotoVigenteRepository<Curso>)
-          .sincronizarFotoVigenteConResultado(items);
+    if (this is SnapshotRepository<Course>) {
+      return (this as SnapshotRepository<Course>).syncSnapshotWithResult(items);
     }
-    final presentes = items.map((item) => item.id).toSet();
-    final cambios = [
-      for (final item in items) item.copyWith(activo: true),
-      for (final item in await getCursos())
-        if (item.activo && !presentes.contains(item.id))
-          item.copyWith(activo: false),
+    final present = items.map((item) => item.id).toSet();
+    final changes = [
+      for (final item in items) item.copyWith(active: true),
+      for (final item in await getCourses())
+        if (item.isActive && !present.contains(item.id))
+          item.copyWith(active: false),
     ];
-    final resultado = await upsertCursosConResultado(cambios);
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: resultado.insertados,
-      actualizados: resultado.actualizados,
+    final result = await upsertCoursesWithResult(changes);
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: result.inserted,
+      updated: result.updated,
     );
   }
 
-  Future<ResultadoUpsert> upsertCursosConResultado(List<Curso> items) async {
-    if (items.isEmpty) return ResultadoUpsert.empty;
-    if (this is CountedUpsertRepository<Curso>) {
-      return (this as CountedUpsertRepository<Curso>).upsertConResultado(items);
+  Future<UpsertResult> upsertCoursesWithResult(List<Course> items) async {
+    if (items.isEmpty) return UpsertResult.empty;
+    if (this is CountedUpsertRepository<Course>) {
+      return (this as CountedUpsertRepository<Course>).upsertWithResult(items);
     }
-    await upsertCursos(items);
-    return ResultadoUpsert(registrosProcesados: items.length);
+    await upsertCourses(items);
+    return UpsertResult(processedRecords: items.length);
   }
 
-  Future<void> upsertCursos(List<Curso> items) async {
+  Future<void> upsertCourses(List<Course> items) async {
     if (items.isEmpty) return;
-    if (this is UpsertRepository<Curso>) {
-      await (this as UpsertRepository<Curso>).upsert(items);
+    if (this is UpsertRepository<Course>) {
+      await (this as UpsertRepository<Course>).upsert(items);
       return;
     }
-    final merged = <String, Curso>{};
-    for (final item in [...await getCursos(), ...items]) {
+    final merged = <String, Course>{};
+    for (final item in [...await getCourses(), ...items]) {
       merged[item.id] = item;
     }
-    await replaceCursos(merged.values.toList());
+    await replaceCourses(merged.values.toList());
   }
 }

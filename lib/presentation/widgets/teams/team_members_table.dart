@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class TeamMembersTable extends StatefulWidget {
-  final List<CumplimientoEmpleado> members;
+  final List<EmployeeCompliance> members;
 
   const TeamMembersTable({super.key, required this.members});
 
@@ -20,22 +20,22 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
   static const _membersPerPage = 8;
   static const _minimumTableWidth = 980.0;
   int _currentPage = 0;
-  var _sortState = const EstadoOrdenMiembros();
-  late List<CumplimientoEmpleado> _sortedMembers;
+  var _sortState = const MemberSortState();
+  late List<EmployeeCompliance> _sortedMembers;
 
-  static const _columns = <(String, OrdenMiembros?)>[
-    ('Legajo', OrdenMiembros.legajo),
-    ('Colaborador', OrdenMiembros.colaborador),
-    ('Seniority', OrdenMiembros.seniority),
-    ('Horas realizadas / objetivo', OrdenMiembros.horas),
-    ('Cumplimiento', OrdenMiembros.cumplimiento),
+  static const _columns = <(String, MemberSort?)>[
+    ('Legajo', MemberSort.employeeId),
+    ('Colaborador', MemberSort.employee),
+    ('Seniority', MemberSort.seniority),
+    ('Horas realizadas / objetivo', MemberSort.hours),
+    ('Cumplimiento', MemberSort.compliance),
     ('Por categoría', null),
   ];
 
   @override
   void initState() {
     super.initState();
-    _sortedMembers = _sortState.aplicar(widget.members);
+    _sortedMembers = _sortState.apply(widget.members);
   }
 
   @override
@@ -43,7 +43,7 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.members != widget.members) {
       _currentPage = 0;
-      _sortedMembers = _sortState.aplicar(widget.members);
+      _sortedMembers = _sortState.apply(widget.members);
     }
   }
 
@@ -59,7 +59,7 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
     final endIndex = calculatedEnd > memberCount ? memberCount : calculatedEnd;
     final visibleMembers = _sortedMembers.sublist(startIndex, endIndex);
     final sortColumnIndex = _columns.indexWhere(
-      (column) => column.$2 != null && column.$2 == _sortState.columna,
+      (column) => column.$2 != null && column.$2 == _sortState.column,
     );
 
     return Column(
@@ -75,14 +75,14 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
         ),
         const SizedBox(height: 12),
         if (pageCount > 1) ...[
-          PaginacionResultados(
-            paginaActual: safePage,
-            cantidadPaginas: pageCount,
-            desde: startIndex + 1,
-            hasta: endIndex,
-            totalResultados: memberCount,
-            etiquetaResultados: 'integrantes',
-            icono: Icons.people_outline,
+          ResultsPagination(
+            currentPage: safePage,
+            pageCount: pageCount,
+            from: startIndex + 1,
+            until: endIndex,
+            totalResults: memberCount,
+            resultsLabel: 'integrantes',
+            icon: Icons.people_outline,
             onPrevious: safePage > 0
                 ? () => setState(() => _currentPage = safePage - 1)
                 : null,
@@ -113,7 +113,7 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
                     sortColumnIndex: sortColumnIndex < 0
                         ? null
                         : sortColumnIndex,
-                    sortAscending: _sortState.ascendente,
+                    sortAscending: _sortState.ascending,
                     columns: [
                       for (final (title, sortColumn) in _columns)
                         DataColumn(
@@ -121,8 +121,8 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
                           onSort: sortColumn == null
                               ? null
                               : (_, _) => setState(() {
-                                  _sortState = _sortState.alternar(sortColumn);
-                                  _sortedMembers = _sortState.aplicar(
+                                  _sortState = _sortState.toggle(sortColumn);
+                                  _sortedMembers = _sortState.apply(
                                     widget.members,
                                   );
                                   _currentPage = 0;
@@ -140,42 +140,43 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
     );
   }
 
-  DataRow _buildRow(CumplimientoEmpleado member) {
-    final employee = member.empleado;
-    final isOnTarget = member.cumpleObjetivo;
+  DataRow _buildRow(EmployeeCompliance member) {
+    final employee = member.employee;
+    final isOnTarget = member.meetsTarget;
 
     return DataRow(
-      onSelectChanged: (_) =>
-          context.push('/empleados/${Uri.encodeComponent(employee.legajo)}'),
+      onSelectChanged: (_) => context.push(
+        '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+      ),
       cells: [
-        DataCell(Text(employee.legajo)),
+        DataCell(Text(employee.employeeId)),
         DataCell(
           Text(
-            employee.nombreCompleto,
+            employee.fullName,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
         DataCell(Text(employee.seniority.label)),
         DataCell(
           Text(
-            '${member.totalHorasValidas.toStringAsFixed(1)} / ${member.totalHorasRequeridas.toStringAsFixed(1)} h',
+            '${member.totalCreditedHours.toStringAsFixed(1)} / ${member.totalRequiredHours.toStringAsFixed(1)} h',
           ),
         ),
         DataCell(
           Text(
-            formatearPorcentaje(member.porcentajeTotal),
+            formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: isOnTarget
-                  ? context.colores.exito.texto
-                  : context.colores.advertencia.texto,
+                  ? context.colors.success.text
+                  : context.colors.warning.text,
             ),
           ),
         ),
         DataCell(
-          ProgresoHorasPorCategoria(
-            cumplimiento: member,
-            mostrarSoloHorasAplicables: true,
+          CategoryHoursProgress(
+            compliance: member,
+            showOnlyApplicableHours: true,
           ),
         ),
       ],

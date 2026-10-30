@@ -13,132 +13,123 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 /// Tamaño del símbolo del botón flotante del asistente.
-const double _tamanoSimbolo = 52;
+const double _symbolSize = 52;
 
 /// Posición del botón y del panel dentro del área visible.
-class DisposicionAsistente {
-  /// Símbolo de [_tamanoSimbolo] más el borde de 2 px de cada lado.
-  static const diametroBoton = 56.0;
+class AssistantLayout {
+  /// Símbolo de [_symbolSize] más el borde de 2 px de cada lado.
+  static const buttonDiameter = 56.0;
 
   /// El badge de Netlify del deploy mide ~170 px de ancho y está a ~16 px de
   /// la esquina inferior derecha. El botón va a su izquierda, centrado en su
   /// misma línea, dentro de la franja libre que dejan todas las pantallas al
-  /// pie ([reservaInferiorFlotantes]).
-  static const _derechaJuntoAlBadge = 200.0;
-  static const _baseJuntoAlBadge = 8.0;
+  /// pie ([bottomFloatingReserve]).
+  static const _rightNextToBadge = 200.0;
+  static const _baseNextToBadge = 8.0;
 
-  final double margen;
-  final double derechaBoton;
-  final double baseBoton;
+  final double margin;
+  final double buttonRight;
+  final double buttonBase;
   final double basePanel;
 
-  const DisposicionAsistente._(
-    this.margen,
-    this.derechaBoton,
-    this.baseBoton,
+  const AssistantLayout._(
+    this.margin,
+    this.buttonRight,
+    this.buttonBase,
     this.basePanel,
   );
 
-  factory DisposicionAsistente.para(Size disponible) {
-    final margen = disponible.width < 600 ? 12.0 : 20.0;
-    final despeje = math.min(
-      (disponible.height * .1).clamp(56.0, 96.0),
-      disponible.height * .2,
+  factory AssistantLayout.forSize(Size available) {
+    final margin = available.width < 600 ? 12.0 : 20.0;
+    final clearance = math.min(
+      (available.height * .1).clamp(56.0, 96.0),
+      available.height * .2,
     );
     // En ventanas muy angostas no puede quedar fuera de la pantalla.
-    final derechaBoton = math.max(
-      margen,
-      math.min(_derechaJuntoAlBadge, disponible.width - diametroBoton - margen),
+    final buttonRight = math.max(
+      margin,
+      math.min(_rightNextToBadge, available.width - buttonDiameter - margin),
     );
-    return DisposicionAsistente._(
-      margen,
-      derechaBoton,
-      _baseJuntoAlBadge,
-      despeje,
-    );
+    return AssistantLayout._(margin, buttonRight, _baseNextToBadge, clearance);
   }
 }
 
 /// Copiloto del AppShell autenticado; su estado vive al cambiar de módulo.
-class AsistenteChat extends ConsumerStatefulWidget {
-  const AsistenteChat({super.key});
+class AssistantChat extends ConsumerStatefulWidget {
+  const AssistantChat({super.key});
 
   @override
-  ConsumerState<AsistenteChat> createState() => _AsistenteChatState();
+  ConsumerState<AssistantChat> createState() => _AssistantChatState();
 }
 
-class _AsistenteChatState extends ConsumerState<AsistenteChat> {
-  final _texto = TextEditingController();
+class _AssistantChatState extends ConsumerState<AssistantChat> {
+  final _text = TextEditingController();
   final _scroll = ScrollController();
   final _focus = FocusNode();
-  double _offsetGuardado = 0;
-  MensajeChat? _ultimoAlMinimizar;
-  String? _errorAlMinimizar;
+  double _savedOffset = 0;
+  ChatMessage? _lastOnMinimize;
+  String? _errorOnMinimize;
 
   @override
   void initState() {
     super.initState();
-    _scroll.addListener(() => _offsetGuardado = _scroll.offset);
+    _scroll.addListener(() => _savedOffset = _scroll.offset);
   }
 
   @override
   void dispose() {
-    _texto.dispose();
+    _text.dispose();
     _scroll.dispose();
     _focus.dispose();
     super.dispose();
   }
 
-  Future<void> _enviar(DestinoAsistente destino) async {
-    if (ref.read(asistenteChatProvider).enviando) return;
-    final valor = _texto.value;
-    if (valor.text.trim().isEmpty ||
-        (valor.composing.isValid && !valor.composing.isCollapsed)) {
+  Future<void> _send(AssistantDestination destination) async {
+    if (ref.read(assistantChatProvider).sending) return;
+    final value = _text.value;
+    if (value.text.trim().isEmpty ||
+        (value.composing.isValid && !value.composing.isCollapsed)) {
       return;
     }
-    final envio = ref
-        .read(asistenteChatProvider.notifier)
-        .enviar(valor.text, destino);
-    if (ref.read(asistenteChatProvider).enviando) _texto.clear();
+    final submission = ref
+        .read(assistantChatProvider.notifier)
+        .send(value.text, destination);
+    if (ref.read(assistantChatProvider).sending) _text.clear();
     // No tocar el borrador ni la conexión de entrada al recibir una respuesta.
-    await envio;
+    await submission;
   }
 
-  KeyEventResult _teclaEditor(KeyEvent event, DestinoAsistente destino) {
+  KeyEventResult _editorKey(KeyEvent event, AssistantDestination destination) {
     if (event.logicalKey != LogicalKeyboardKey.enter &&
         event.logicalKey != LogicalKeyboardKey.numpadEnter) {
       return KeyEventResult.ignored;
     }
-    final teclado = HardwareKeyboard.instance;
-    if (teclado.isShiftPressed ||
-        teclado.isControlPressed ||
-        teclado.isAltPressed ||
-        teclado.isMetaPressed ||
-        (_texto.value.composing.isValid &&
-            !_texto.value.composing.isCollapsed)) {
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isShiftPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isAltPressed ||
+        keyboard.isMetaPressed ||
+        (_text.value.composing.isValid && !_text.value.composing.isCollapsed)) {
       return KeyEventResult.ignored;
     }
-    if (event is KeyDownEvent) _enviar(destino);
+    if (event is KeyDownEvent) _send(destination);
     // Consumir solo Enter: también durante la espera, sin borrar el borrador.
     return KeyEventResult.handled;
   }
 
-  void _minimizar() {
-    final estado = ref.read(asistenteChatProvider);
-    _ultimoAlMinimizar = estado.mensajes.lastOrNull;
-    _errorAlMinimizar = estado.error;
-    ref.read(asistenteChatProvider.notifier).cerrar();
+  void _minimize() {
+    final status = ref.read(assistantChatProvider);
+    _lastOnMinimize = status.messages.lastOrNull;
+    _errorOnMinimize = status.error;
+    ref.read(assistantChatProvider.notifier).close();
   }
 
-  Future<void> _limpiarConversacion() async {
-    final confirmado = await showDialog<bool>(
+  Future<void> _clearConversation() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        icon: Icon(
-          Icons.delete_outline_rounded,
-          color: context.colores.ia.texto,
-        ),
+        icon: Icon(Icons.delete_outline_rounded, color: context.colors.ai.text),
         title: const Text('¿Limpiar esta conversación?'),
         content: const Text(
           'Se eliminarán los mensajes y el borrador del asistente. Los datos del Dashboard se conservan.',
@@ -150,7 +141,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: context.colores.ia.texto,
+              backgroundColor: context.colors.ai.text,
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Limpiar conversación'),
@@ -158,97 +149,93 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         ],
       ),
     );
-    if (!mounted || confirmado != true) return;
-    ref.read(asistenteChatProvider.notifier).limpiar();
-    _texto.clear();
-    _ultimoAlMinimizar = null;
-    _errorAlMinimizar = null;
+    if (!mounted || confirmed != true) return;
+    ref.read(assistantChatProvider.notifier).clear();
+    _text.clear();
+    _lastOnMinimize = null;
+    _errorOnMinimize = null;
   }
 
-  Future<void> _copiarConversacion() async {
-    final mensajes = ref.read(asistenteChatProvider).mensajes;
-    if (mensajes.isEmpty) return;
-    final conversacion = mensajes
-        .map((m) => '${m.esUsuario ? 'Usuario' : 'Asistente'}:\n${m.texto}')
+  Future<void> _copyConversation() async {
+    final messages = ref.read(assistantChatProvider).messages;
+    if (messages.isEmpty) return;
+    final conversation = messages
+        .map((m) => '${m.isUser ? 'Usuario' : 'Asistente'}:\n${m.text}')
         .join('\n\n');
-    String aviso;
+    String notice;
     try {
-      await Clipboard.setData(ClipboardData(text: conversacion));
-      aviso = 'Conversación copiada';
+      await Clipboard.setData(ClipboardData(text: conversation));
+      notice = 'Conversación copiada';
     } catch (_) {
-      aviso = 'No se pudo copiar. Revisá los permisos del portapapeles.';
+      notice = 'No se pudo copiar. Revisá los permisos del portapapeles.';
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(aviso), duration: const Duration(seconds: 2)),
+      SnackBar(content: Text(notice), duration: const Duration(seconds: 2)),
     );
   }
 
-  void _actualizarScroll(EstadoChat? anterior, EstadoChat siguiente) {
-    if (!siguiente.abierto) return;
-    final ultimo = siguiente.mensajes.lastOrNull;
-    final cambioMensaje = !identical(anterior?.mensajes.lastOrNull, ultimo);
-    final abriendo = anterior?.abierto != true;
-    final respuestaPendiente =
-        abriendo && !identical(_ultimoAlMinimizar, ultimo);
-    final siguiendo = !_scroll.hasClients || _scroll.position.extentAfter < 72;
-    final mostrarMensaje =
-        ultimo != null &&
-        (respuestaPendiente ||
-            (cambioMensaje && (ultimo.esUsuario || siguiendo)));
-    final mostrarError =
-        siguiente.error != null &&
-        ((abriendo && _errorAlMinimizar != siguiente.error) ||
-            (anterior?.error != siguiente.error && siguiendo));
-    if (!abriendo && !cambioMensaje && !mostrarError) return;
-    final duracion = _movimiento(context, 180);
+  void _updateScroll(ChatState? previous, ChatState next) {
+    if (!next.open) return;
+    final last = next.messages.lastOrNull;
+    final messageChange = !identical(previous?.messages.lastOrNull, last);
+    final opening = previous?.open != true;
+    final pendingResponse = opening && !identical(_lastOnMinimize, last);
+    final following = !_scroll.hasClients || _scroll.position.extentAfter < 72;
+    final showMessage =
+        last != null &&
+        (pendingResponse || (messageChange && (last.isUser || following)));
+    final showError =
+        next.error != null &&
+        ((opening && _errorOnMinimize != next.error) ||
+            (previous?.error != next.error && following));
+    if (!opening && !messageChange && !showError) return;
+    final duration = _movement(context, 180);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
-      if (mostrarMensaje) {
+      if (showMessage) {
         if (!identical(
-          ref.read(asistenteChatProvider).mensajes.lastOrNull,
-          ultimo,
+          ref.read(assistantChatProvider).messages.lastOrNull,
+          last,
         )) {
           return;
         }
-        if (ultimo.esUsuario) {
-          if (duracion == Duration.zero) {
+        if (last.isUser) {
+          if (duration == Duration.zero) {
             _scroll.jumpTo(_scroll.position.maxScrollExtent);
           } else {
             _scroll.animateTo(
               _scroll.position.maxScrollExtent,
-              duration: duracion,
+              duration: duration,
               curve: Curves.easeOut,
             );
           }
           return;
         }
-        final render = GlobalObjectKey(
-          ultimo,
-        ).currentContext?.findRenderObject();
+        final render = GlobalObjectKey(last).currentContext?.findRenderObject();
         if (render != null) {
           _scroll.position.ensureVisible(
             render,
             alignment: 0,
-            duration: duracion,
+            duration: duration,
             curve: Curves.easeOut,
           );
         }
-      } else if (mostrarError) {
-        if (duracion == Duration.zero) {
+      } else if (showError) {
+        if (duration == Duration.zero) {
           _scroll.jumpTo(_scroll.position.maxScrollExtent);
         } else {
           _scroll.animateTo(
             _scroll.position.maxScrollExtent,
-            duration: duracion,
+            duration: duration,
             curve: Curves.easeOut,
           );
         }
-      } else if (abriendo || ultimo == null) {
+      } else if (opening || last == null) {
         _scroll.jumpTo(
-          ultimo == null
+          last == null
               ? 0
-              : _offsetGuardado.clamp(0, _scroll.position.maxScrollExtent),
+              : _savedOffset.clamp(0, _scroll.position.maxScrollExtent),
         );
       }
     });
@@ -256,72 +243,75 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
 
   @override
   Widget build(BuildContext context) {
-    final estado = ref.watch(asistenteChatProvider);
-    final real = ref.watch(iaContextoRealProvider);
+    final status = ref.watch(assistantChatProvider);
+    final real = ref.watch(aiRealContextProvider);
     final uri = GoRouterState.of(context).uri;
-    final destino = DestinoAsistente.desdeUri(uri);
-    ref.listen(asistenteChatProvider, _actualizarScroll);
+    final destination = AssistantDestination.fromUri(uri);
+    ref.listen(assistantChatProvider, _updateScroll);
     ref.listen(authControllerProvider.select((auth) => auth.email), (
       prev,
       next,
     ) {
       if (prev != next) {
-        _texto.clear();
+        _text.clear();
         _focus.unfocus();
-        _offsetGuardado = 0;
-        _ultimoAlMinimizar = null;
-        _errorAlMinimizar = null;
+        _savedOffset = 0;
+        _lastOnMinimize = null;
+        _errorOnMinimize = null;
       }
     });
-    final duracion = _movimiento(context, 220);
+    final duration = _movement(context, 220);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final disposicion = DisposicionAsistente.para(constraints.biggest);
-        final margen = disposicion.margen;
-        final ancho = math.max(
+        final layout = AssistantLayout.forSize(constraints.biggest);
+        final margin = layout.margin;
+        final width = math.max(
           0.0,
-          math.min(480.0, constraints.maxWidth - margen * 2),
+          math.min(480.0, constraints.maxWidth - margin * 2),
         );
-        final alto = math.max(
+        final height = math.max(
           0.0,
-          math.min(
-            740.0,
-            constraints.maxHeight - disposicion.basePanel - margen,
-          ),
+          math.min(740.0, constraints.maxHeight - layout.basePanel - margin),
         );
         return Stack(
           clipBehavior: Clip.none,
           children: [
             // Un solo panel montado evita reanexar controladores al minimizar.
             Positioned(
-              right: margen,
-              bottom: disposicion.basePanel,
-              width: ancho,
-              height: alto,
+              right: margin,
+              bottom: layout.basePanel,
+              width: width,
+              height: height,
               child: IgnorePointer(
-                ignoring: !estado.abierto,
+                ignoring: !status.open,
                 child: ExcludeFocus(
-                  excluding: !estado.abierto,
+                  excluding: !status.open,
                   child: ExcludeSemantics(
-                    excluding: !estado.abierto,
+                    excluding: !status.open,
                     child: AnimatedSlide(
-                      offset: estado.abierto
+                      offset: status.open
                           ? Offset.zero
                           : const Offset(.015, .035),
-                      duration: duracion,
+                      duration: duration,
                       curve: Curves.easeOutCubic,
                       child: AnimatedScale(
-                        scale: estado.abierto ? 1 : .96,
+                        scale: status.open ? 1 : .96,
                         alignment: Alignment.bottomRight,
-                        duration: duracion,
+                        duration: duration,
                         curve: Curves.easeOutCubic,
                         child: AnimatedOpacity(
-                          opacity: estado.abierto ? 1 : 0,
-                          duration: duracion,
+                          opacity: status.open ? 1 : 0,
+                          duration: duration,
                           child: TickerMode(
-                            enabled: estado.abierto,
-                            child: _panel(estado, destino, real, ancho, alto),
+                            enabled: status.open,
+                            child: _panel(
+                              status,
+                              destination,
+                              real,
+                              width,
+                              height,
+                            ),
                           ),
                         ),
                       ),
@@ -331,24 +321,24 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               ),
             ),
             Positioned(
-              right: disposicion.derechaBoton,
-              bottom: disposicion.baseBoton,
+              right: layout.buttonRight,
+              bottom: layout.buttonBase,
               child: IgnorePointer(
-                ignoring: estado.abierto,
+                ignoring: status.open,
                 child: ExcludeFocus(
-                  excluding: estado.abierto,
+                  excluding: status.open,
                   child: ExcludeSemantics(
-                    excluding: estado.abierto,
+                    excluding: status.open,
                     child: AnimatedScale(
-                      scale: estado.abierto ? .8 : 1,
-                      duration: duracion,
+                      scale: status.open ? .8 : 1,
+                      duration: duration,
                       child: AnimatedOpacity(
-                        opacity: estado.abierto ? 0 : 1,
-                        duration: duracion,
-                        child: _BotonCopiloto(
+                        opacity: status.open ? 0 : 1,
+                        duration: duration,
+                        child: _CopilotButton(
                           onPressed: ref
-                              .read(asistenteChatProvider.notifier)
-                              .abrir,
+                              .read(assistantChatProvider.notifier)
+                              .open,
                         ),
                       ),
                     ),
@@ -363,17 +353,17 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
   }
 
   Widget _panel(
-    EstadoChat estado,
-    DestinoAsistente destino,
+    ChatState status,
+    AssistantDestination destination,
     bool real,
-    double ancho,
-    double alto,
+    double width,
+    double height,
   ) {
-    final compacto = alto < 430;
-    final escala = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final cabecera = _encabezado(estado, ancho, compacto);
-    final conversacion = _conversacion(estado, real);
-    final editor = _editor(estado, destino, compacto);
+    final compact = height < 430;
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final header = _header(status, width, compact);
+    final conversation = _conversation(status, real);
+    final editor = _editor(status, destination, compact);
     final cs = context.colorScheme;
     return Container(
       key: const Key('asistente_panel'),
@@ -387,7 +377,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
             offset: const Offset(0, 18),
           ),
           BoxShadow(
-            color: context.colores.ia.texto.withValues(alpha: .08),
+            color: context.colors.ai.text.withValues(alpha: .08),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -397,16 +387,16 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(25),
         clipBehavior: Clip.antiAlias,
-        child: alto < 270 * escala
+        child: height < 270 * scale
             // Con teclado y muy poca altura, todo el panel sigue siendo accesible.
             ? SingleChildScrollView(
                 primary: false,
                 child: Column(
                   children: [
-                    cabecera,
+                    header,
                     SizedBox(
-                      height: math.max(130, alto * .55),
-                      child: conversacion,
+                      height: math.max(130, height * .55),
+                      child: conversation,
                     ),
                     editor,
                   ],
@@ -414,8 +404,8 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               )
             : Column(
                 children: [
-                  cabecera,
-                  Expanded(child: conversacion),
+                  header,
+                  Expanded(child: conversation),
                   editor,
                 ],
               ),
@@ -423,40 +413,40 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     );
   }
 
-  Widget _encabezado(EstadoChat estado, double ancho, bool compacto) {
-    final dosFilas =
-        !compacto &&
-        (ancho < 430 || MediaQuery.textScalerOf(context).scale(16) > 20);
-    final acciones = Row(
+  Widget _header(ChatState status, double width, bool compact) {
+    final twoRows =
+        !compact &&
+        (width < 430 || MediaQuery.textScalerOf(context).scale(16) > 20);
+    final actions = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _accionHeader(
+        _actionHeader(
           Icons.copy_outlined,
           'Copiar conversación',
-          estado.mensajes.isEmpty ? null : _copiarConversacion,
+          status.messages.isEmpty ? null : _copyConversation,
         ),
-        _accionHeader(
+        _actionHeader(
           Icons.delete_outline_rounded,
           'Limpiar conversación',
-          _limpiarConversacion,
+          _clearConversation,
         ),
-        _accionHeader(Icons.remove_rounded, 'Minimizar asistente', _minimizar),
+        _actionHeader(Icons.remove_rounded, 'Minimizar asistente', _minimize),
       ],
     );
-    final colores = context.colores;
+    final colors = context.colors;
     return Container(
       key: const Key('asistente_encabezado'),
       padding: EdgeInsets.fromLTRB(
         18,
-        compacto ? 10 : 18,
+        compact ? 10 : 18,
         12,
-        compacto ? 10 : 14,
+        compact ? 10 : 14,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: colores.iaGradienteEncabezado,
+          colors: colors.aiHeaderGradient,
         ),
       ),
       child: Column(
@@ -464,8 +454,8 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         children: [
           Row(
             children: [
-              if (!compacto) ...[
-                const AsistenteSimbolo(size: 42),
+              if (!compact) ...[
+                const AssistantSymbol(size: 42),
                 const SizedBox(width: 12),
               ],
               Expanded(
@@ -474,22 +464,22 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   children: [
                     Text(
                       'Asistente IA de Formación',
-                      maxLines: compacto ? 1 : 2,
+                      maxLines: compact ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: colores.sobreGradiente,
+                        color: colors.overGradient,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.25,
                         height: 1.3,
                       ),
                     ),
-                    if (!compacto) ...[
+                    if (!compact) ...[
                       const SizedBox(height: 4),
                       Text(
                         'Tu copiloto de capacitación',
                         style: TextStyle(
-                          color: colores.sobreGradiente.withValues(alpha: .8),
+                          color: colors.overGradient.withValues(alpha: .8),
                           fontSize: 11.5,
                           height: 1.4,
                         ),
@@ -498,36 +488,36 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   ],
                 ),
               ),
-              if (!dosFilas) ...[const SizedBox(width: 4), acciones],
+              if (!twoRows) ...[const SizedBox(width: 4), actions],
             ],
           ),
-          if (dosFilas) ...[
+          if (twoRows) ...[
             const SizedBox(height: 8),
-            Align(alignment: Alignment.centerRight, child: acciones),
+            Align(alignment: Alignment.centerRight, child: actions),
           ],
         ],
       ),
     );
   }
 
-  Widget _accionHeader(IconData icono, String tooltip, VoidCallback? accion) {
-    final sobreGradiente = context.colores.sobreGradiente;
+  Widget _actionHeader(IconData icon, String tooltip, VoidCallback? action) {
+    final overGradient = context.colors.overGradient;
     return IconButton(
       tooltip: tooltip,
-      onPressed: accion,
+      onPressed: action,
       style: IconButton.styleFrom(
-        foregroundColor: sobreGradiente,
-        disabledForegroundColor: sobreGradiente.withValues(alpha: .45),
-        hoverColor: sobreGradiente.withValues(alpha: .13),
-        focusColor: sobreGradiente.withValues(alpha: .2),
+        foregroundColor: overGradient,
+        disabledForegroundColor: overGradient.withValues(alpha: .45),
+        hoverColor: overGradient.withValues(alpha: .13),
+        focusColor: overGradient.withValues(alpha: .2),
         minimumSize: const Size(44, 44),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: Icon(icono, size: 20),
+      icon: Icon(icon, size: 20),
     );
   }
 
-  Widget _conversacion(EstadoChat estado, bool real) => ClipRect(
+  Widget _conversation(ChatState status, bool real) => ClipRect(
     key: const Key('asistente_viewport'),
     child: Scrollbar(
       controller: _scroll,
@@ -543,7 +533,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               key: const Key('asistente_aviso'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: context.colores.ia.fondo,
+                color: context.colors.ai.background,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -570,47 +560,43 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 ],
               ),
             ),
-            if (estado.mensajes.isEmpty &&
-                !estado.enviando &&
-                estado.error == null)
-              _bienvenida(estado.enviando)
+            if (status.messages.isEmpty &&
+                !status.sending &&
+                status.error == null)
+              _welcome(status.sending)
             else ...[
               const SizedBox(height: 20),
-              for (final mensaje in estado.mensajes)
+              for (final message in status.messages)
                 Padding(
-                  key: GlobalObjectKey(mensaje),
+                  key: GlobalObjectKey(message),
                   padding: const EdgeInsets.only(bottom: 18),
-                  child: AsistenteMensaje(mensaje: mensaje),
+                  child: AssistantMessage(message: message),
                 ),
             ],
-            if (estado.enviando) const _AnalizandoConsulta(),
-            if (estado.error != null) _error(estado),
+            if (status.sending) const _AnalyzingQuery(),
+            if (status.error != null) _error(status),
           ],
         ),
       ),
     ),
   );
 
-  Widget _error(EstadoChat estado) {
-    final advertencia = context.colores.advertencia;
+  Widget _error(ChatState status) {
+    final warning = context.colors.warning;
     return Semantics(
       liveRegion: true,
       child: Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: advertencia.fondo,
-          border: Border.all(color: advertencia.texto.withValues(alpha: .3)),
+          color: warning.background,
+          border: Border.all(color: warning.text.withValues(alpha: .3)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline_rounded,
-              color: advertencia.texto,
-              size: 20,
-            ),
+            Icon(Icons.info_outline_rounded, color: warning.text, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -619,29 +605,29 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   Text(
                     'Tu consulta sigue disponible',
                     style: TextStyle(
-                      color: advertencia.texto,
+                      color: warning.text,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    estado.error!,
+                    status.error!,
                     style: TextStyle(
-                      color: context.colores.textoIntermedio,
+                      color: context.colors.intermediateText,
                       fontSize: 12.5,
                       height: 1.5,
                     ),
                   ),
-                  if (estado.puedeReintentar) ...[
+                  if (status.canRetry) ...[
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
                       key: const Key('asistente_reintentar'),
-                      onPressed: estado.enviando
+                      onPressed: status.sending
                           ? null
                           : () => ref
-                                .read(asistenteChatProvider.notifier)
-                                .reintentar(),
+                                .read(assistantChatProvider.notifier)
+                                .retry(),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: const Text('Reintentar'),
                     ),
@@ -665,21 +651,21 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
   }
 
   Widget _editor(
-    EstadoChat estado,
-    DestinoAsistente destino,
-    bool compacto,
+    ChatState status,
+    AssistantDestination destination,
+    bool compact,
   ) => ListenableBuilder(
-    listenable: Listenable.merge([_texto, _focus]),
+    listenable: Listenable.merge([_text, _focus]),
     builder: (context, _) {
-      final valor = _texto.value;
-      final puedeEnviar =
-          !estado.enviando &&
-          valor.text.trim().isNotEmpty &&
-          (!valor.composing.isValid || valor.composing.isCollapsed);
+      final value = _text.value;
+      final canSend =
+          !status.sending &&
+          value.text.trim().isNotEmpty &&
+          (!value.composing.isValid || value.composing.isCollapsed);
       final cs = context.colorScheme;
-      final colores = context.colores;
-      final acento = colores.ia.texto;
-      final estiloNota = TextStyle(
+      final colors = context.colors;
+      final accent = colors.ai.text;
+      final noteStyle = TextStyle(
         color: cs.onSurfaceVariant,
         fontSize: 10.5,
         height: 1.4,
@@ -688,9 +674,9 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
         key: const Key('asistente_editor'),
         padding: EdgeInsets.fromLTRB(
           14,
-          compacto ? 8 : 12,
+          compact ? 8 : 12,
           14,
-          compacto ? 8 : 12,
+          compact ? 8 : 12,
         ),
         decoration: BoxDecoration(
           color: cs.surface,
@@ -700,18 +686,18 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-              duration: _movimiento(context, 140),
+              duration: _movement(context, 140),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: _focus.hasFocus ? acento : cs.outline,
+                  color: _focus.hasFocus ? accent : cs.outline,
                   width: 1.5,
                 ),
                 boxShadow: [
                   if (_focus.hasFocus)
                     BoxShadow(
-                      color: acento.withValues(alpha: .07),
+                      color: accent.withValues(alpha: .07),
                       blurRadius: 10,
                     ),
                 ],
@@ -722,18 +708,18 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   Expanded(
                     child: Focus(
                       canRequestFocus: false,
-                      onKeyEvent: (_, event) => _teclaEditor(event, destino),
+                      onKeyEvent: (_, event) => _editorKey(event, destination),
                       child: TextField(
                         key: const Key('asistente_input'),
-                        controller: _texto,
+                        controller: _text,
                         focusNode: _focus,
-                        maxLength: AsistenteContextoService.maxPregunta,
+                        maxLength: AssistantContextService.maxQuestion,
                         minLines: 1,
-                        maxLines: compacto ? 2 : 4,
+                        maxLines: compact ? 2 : 4,
                         textAlignVertical: TextAlignVertical.center,
                         keyboardType: TextInputType.multiline,
                         textInputAction: TextInputAction.newline,
-                        cursorColor: acento,
+                        cursorColor: accent,
                         style: TextStyle(
                           color: cs.onSurface,
                           fontSize: 14,
@@ -762,22 +748,22 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                   Padding(
                     padding: const EdgeInsets.all(6),
                     child: AnimatedContainer(
-                      duration: _movimiento(context, 140),
+                      duration: _movement(context, 140),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(13),
-                        gradient: puedeEnviar
-                            ? LinearGradient(colors: colores.iaGradienteEnviar)
+                        gradient: canSend
+                            ? LinearGradient(colors: colors.aiSendGradient)
                             : null,
-                        color: puedeEnviar ? null : cs.surfaceContainer,
+                        color: canSend ? null : cs.surfaceContainer,
                       ),
                       child: IconButton(
-                        tooltip: estado.enviando
+                        tooltip: status.sending
                             ? 'Esperá la respuesta para enviar otra consulta'
                             : 'Enviar pregunta',
-                        onPressed: puedeEnviar ? () => _enviar(destino) : null,
+                        onPressed: canSend ? () => _send(destination) : null,
                         style: IconButton.styleFrom(
-                          foregroundColor: colores.sobreGradiente,
-                          disabledForegroundColor: colores.textoTenue,
+                          foregroundColor: colors.overGradient,
+                          disabledForegroundColor: colors.faintText,
                           minimumSize: const Size(44, 44),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(13),
@@ -790,7 +776,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 ],
               ),
             ),
-            if (!compacto) ...[
+            if (!compact) ...[
               const SizedBox(height: 8),
               Wrap(
                 alignment: WrapAlignment.center,
@@ -798,16 +784,16 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 runSpacing: 4,
                 children: [
                   Text(
-                    estado.enviando
+                    status.sending
                         ? 'Podés preparar tu próxima pregunta'
                         : 'Enter para enviar · Shift + Enter para otra línea',
                     textAlign: TextAlign.center,
-                    style: estiloNota,
+                    style: noteStyle,
                   ),
-                  if (valor.text.length > 1000)
+                  if (value.text.length > 1000)
                     Text(
-                      '${valor.text.length}/${AsistenteContextoService.maxPregunta}',
-                      style: estiloNota,
+                      '${value.text.length}/${AssistantContextService.maxQuestion}',
+                      style: noteStyle,
                     ),
                 ],
               ),
@@ -815,7 +801,7 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
               Text(
                 'Consultas independientes. No compartas credenciales.',
                 textAlign: TextAlign.center,
-                style: estiloNota,
+                style: noteStyle,
               ),
             ],
           ],
@@ -824,14 +810,14 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
     },
   );
 
-  Widget _bienvenida(bool enviando) {
+  Widget _welcome(bool sending) {
     final cs = context.colorScheme;
-    final colores = context.colores;
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(top: 30, bottom: 12),
       child: Column(
         children: [
-          const AsistenteSimbolo(size: 68, halo: true),
+          const AssistantSymbol(size: 68, halo: true),
           const SizedBox(height: 22),
           Text(
             '¡Hola! ¿En qué puedo ayudarte?',
@@ -857,13 +843,13 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
-              final columnas =
+              final columns =
                   constraints.maxWidth >= 360 &&
                   MediaQuery.textScalerOf(context).scale(14) < 19;
-              final ancho = columnas
+              final width = columns
                   ? (constraints.maxWidth - 10) / 2
                   : constraints.maxWidth;
-              const sugerencias = [
+              const suggestions = [
                 (Icons.insights_rounded, '¿Cómo viene el cumplimiento?'),
                 (Icons.groups_outlined, '¿Qué equipos necesitan atención?'),
                 (Icons.auto_stories_outlined, '¿Qué cursos hay disponibles?'),
@@ -876,26 +862,26 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  for (final (icono, pregunta) in sugerencias)
+                  for (final (icon, question) in suggestions)
                     SizedBox(
-                      width: ancho,
+                      width: width,
                       child: OutlinedButton(
-                        onPressed: enviando
+                        onPressed: sending
                             ? null
                             : () {
-                                _texto.value = TextEditingValue(
-                                  text: pregunta,
+                                _text.value = TextEditingValue(
+                                  text: question,
                                   selection: TextSelection.collapsed(
-                                    offset: pregunta.length,
+                                    offset: question.length,
                                   ),
                                 );
                                 _focus.requestFocus();
                               },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: colores.textoIntermedio,
+                          foregroundColor: colors.intermediateText,
                           backgroundColor: cs.surface,
                           padding: const EdgeInsets.all(14),
-                          minimumSize: Size(0, columnas ? 100 : 66),
+                          minimumSize: Size(0, columns ? 100 : 66),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -905,10 +891,10 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(icono, size: 21, color: colores.ia.texto),
+                            Icon(icon, size: 21, color: colors.ai.text),
                             const SizedBox(height: 9),
                             Text(
-                              pregunta,
+                              question,
                               style: const TextStyle(
                                 fontSize: 12.5,
                                 height: 1.45,
@@ -929,57 +915,57 @@ class _AsistenteChatState extends ConsumerState<AsistenteChat> {
   }
 }
 
-Duration _movimiento(BuildContext context, int milisegundos) =>
+Duration _movement(BuildContext context, int milliseconds) =>
     MediaQuery.disableAnimationsOf(context) ||
         MediaQuery.accessibleNavigationOf(context)
     ? Duration.zero
-    : Duration(milliseconds: milisegundos);
+    : Duration(milliseconds: milliseconds);
 
-class _BotonCopiloto extends StatefulWidget {
+class _CopilotButton extends StatefulWidget {
   final VoidCallback onPressed;
-  const _BotonCopiloto({required this.onPressed});
+  const _CopilotButton({required this.onPressed});
 
   @override
-  State<_BotonCopiloto> createState() => _BotonCopilotoState();
+  State<_CopilotButton> createState() => _CopilotButtonState();
 }
 
-class _BotonCopilotoState extends State<_BotonCopiloto> {
+class _CopilotButtonState extends State<_CopilotButton> {
   bool _hover = false;
-  bool _foco = false;
+  bool _focus = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final gradiente = context.colores.iaGradienteSimbolo;
+    final gradient = context.colors.aiSymbolGradient;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: _movimiento(context, 350),
+      duration: _movement(context, 350),
       curve: Curves.easeOutCubic,
-      builder: (context, valor, child) => Opacity(
-        opacity: valor,
-        child: Transform.scale(scale: .85 + .15 * valor, child: child),
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.scale(scale: .85 + .15 * value, child: child),
       ),
       child: AnimatedScale(
-        scale: _hover || _foco ? 1.05 : 1,
-        duration: _movimiento(context, 160),
+        scale: _hover || _focus ? 1.05 : 1,
+        duration: _movement(context, 160),
         child: AnimatedContainer(
-          duration: _movimiento(context, 160),
+          duration: _movement(context, 160),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: _foco ? cs.onSurface : cs.surface,
+              color: _focus ? cs.onSurface : cs.surface,
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: gradiente[1].withValues(
-                  alpha: _hover || _foco ? .31 : .19,
+                color: gradient[1].withValues(
+                  alpha: _hover || _focus ? .31 : .19,
                 ),
                 blurRadius: 26,
                 spreadRadius: 2,
               ),
               BoxShadow(
-                color: gradiente[0].withValues(alpha: .19),
+                color: gradient[0].withValues(alpha: .19),
                 blurRadius: 16,
                 offset: const Offset(0, 7),
               ),
@@ -988,11 +974,11 @@ class _BotonCopilotoState extends State<_BotonCopiloto> {
           child: Tooltip(
             message: 'Preguntale a la IA',
             child: SizedBox(
-              width: _tamanoSimbolo,
-              height: _tamanoSimbolo,
+              width: _symbolSize,
+              height: _symbolSize,
               child: Stack(
                 children: [
-                  const AsistenteSimbolo(size: _tamanoSimbolo),
+                  const AssistantSymbol(size: _symbolSize),
                   Positioned.fill(
                     child: Material(
                       type: MaterialType.transparency,
@@ -1000,8 +986,9 @@ class _BotonCopilotoState extends State<_BotonCopiloto> {
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: widget.onPressed,
-                        onHover: (valor) => setState(() => _hover = valor),
-                        onFocusChange: (valor) => setState(() => _foco = valor),
+                        onHover: (value) => setState(() => _hover = value),
+                        onFocusChange: (value) =>
+                            setState(() => _focus = value),
                         customBorder: const CircleBorder(),
                         mouseCursor: SystemMouseCursors.click,
                         child: const SizedBox.expand(),
@@ -1018,16 +1005,16 @@ class _BotonCopilotoState extends State<_BotonCopiloto> {
   }
 }
 
-class _AnalizandoConsulta extends StatefulWidget {
-  const _AnalizandoConsulta();
+class _AnalyzingQuery extends StatefulWidget {
+  const _AnalyzingQuery();
 
   @override
-  State<_AnalizandoConsulta> createState() => _AnalizandoConsultaState();
+  State<_AnalyzingQuery> createState() => _AnalyzingQueryState();
 }
 
-class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
+class _AnalyzingQueryState extends State<_AnalyzingQuery>
     with SingleTickerProviderStateMixin {
-  late final _animacion = AnimationController(
+  late final _animation = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   );
@@ -1035,17 +1022,17 @@ class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_movimiento(context, 1) == Duration.zero) {
-      _animacion.stop();
-      _animacion.value = .5;
+    if (_movement(context, 1) == Duration.zero) {
+      _animation.stop();
+      _animation.value = .5;
     } else {
-      _animacion.repeat();
+      _animation.repeat();
     }
   }
 
   @override
   void dispose() {
-    _animacion.dispose();
+    _animation.dispose();
     super.dispose();
   }
 
@@ -1058,7 +1045,7 @@ class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
         child: Row(
           children: [
-            const AsistenteSimbolo(size: 28),
+            const AssistantSymbol(size: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -1071,24 +1058,24 @@ class _AnalizandoConsultaState extends State<_AnalizandoConsulta>
               ),
             ),
             AnimatedBuilder(
-              animation: _animacion,
+              animation: _animation,
               builder: (context, _) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (i) {
-                  final onda =
-                      (math.sin(_animacion.value * math.pi * 2 - i * .9) + 1) /
+                  final wave =
+                      (math.sin(_animation.value * math.pi * 2 - i * .9) + 1) /
                       2;
                   return Padding(
                     padding: const EdgeInsets.only(left: 4),
                     child: Opacity(
-                      opacity: .3 + .7 * onda,
+                      opacity: .3 + .7 * wave,
                       child: Transform.translate(
-                        offset: Offset(0, -2 * onda),
+                        offset: Offset(0, -2 * wave),
                         child: Container(
                           width: 5,
                           height: 5,
                           decoration: BoxDecoration(
-                            color: context.colores.ia.texto,
+                            color: context.colors.ai.text,
                             shape: BoxShape.circle,
                           ),
                         ),

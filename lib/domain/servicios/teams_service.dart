@@ -16,14 +16,14 @@ class TeamsService {
   const TeamsService({this.periods = const TeamPeriodService()});
 
   List<TeamOverview> buildTeamOverviews(
-    List<CumplimientoEmpleado> compliance, {
+    List<EmployeeCompliance> compliance, {
     TeamLeaderResolver? resolveLeader,
   }) {
-    final membersByTeam = <String, List<CumplimientoEmpleado>>{};
+    final membersByTeam = <String, List<EmployeeCompliance>>{};
 
     for (final item in compliance) {
-      final employee = item.empleado;
-      final teamName = normalizeTeamName(employee.equipo);
+      final employee = item.employee;
+      final teamName = normalizeTeamName(employee.team);
       final key = '${employee.area}::$teamName';
 
       membersByTeam.putIfAbsent(key, () => []).add(item);
@@ -39,7 +39,7 @@ class TeamsService {
   }
 
   TeamDetail? getTeamDetail({
-    required List<CumplimientoEmpleado> compliance,
+    required List<EmployeeCompliance> compliance,
     required String area,
     required String team,
     TeamLeaderResolver? resolveLeader,
@@ -47,24 +47,22 @@ class TeamsService {
     final requestedArea = normalizeTeamComparison(area);
     final requestedTeam = normalizeTeamComparison(normalizeTeamName(team));
     final members = compliance.where((item) {
-      final employee = item.empleado;
+      final employee = item.employee;
       return normalizeTeamComparison(employee.area) == requestedArea &&
-          normalizeTeamComparison(normalizeTeamName(employee.equipo)) ==
+          normalizeTeamComparison(normalizeTeamName(employee.team)) ==
               requestedTeam;
     }).toList();
 
     if (members.isEmpty) return null;
 
     final overview = _buildTeamOverview(members, resolveLeader);
-    members.sort(
-      (a, b) => a.empleado.nombreCompleto.compareTo(b.empleado.nombreCompleto),
-    );
+    members.sort((a, b) => a.employee.fullName.compareTo(b.employee.fullName));
 
     return TeamDetail(overview: overview, members: members);
   }
 
   TeamsPeriodSummary buildPeriodSummary(
-    List<CumplimientoEmpleado> compliance, {
+    List<EmployeeCompliance> compliance, {
     int? uniqueEmployeeCount,
     TeamLeaderResolver? resolveLeader,
   }) {
@@ -117,27 +115,27 @@ class TeamsService {
   }
 
   TeamOverview _buildTeamOverview(
-    List<CumplimientoEmpleado> members,
+    List<EmployeeCompliance> members,
     TeamLeaderResolver? resolveLeader,
   ) {
-    final firstEmployee = members.first.empleado;
-    final teamName = normalizeTeamName(firstEmployee.equipo);
+    final firstEmployee = members.first.employee;
+    final teamName = normalizeTeamName(firstEmployee.team);
     // Assigned leaders take precedence over the manager from the employee roster.
     final assignedLeaders = resolveLeader?.call(firstEmployee.area, teamName);
     final completedHours = members.fold<double>(
       0,
-      (total, member) => total + member.totalHorasValidas,
+      (total, member) => total + member.totalCreditedHours,
     );
     final targetHours = members.fold<double>(
       0,
-      (total, member) => total + member.totalHorasRequeridas,
+      (total, member) => total + member.totalRequiredHours,
     );
     final completionPercentage = targetHours == 0
         ? 100.0
         : (completedHours / targetHours) * 100;
     final memberCount = members.length;
     final membersOnTarget = members
-        .where((member) => member.cumpleObjetivo)
+        .where((member) => member.meetsTarget)
         .length;
 
     return TeamOverview(
@@ -146,21 +144,18 @@ class TeamsService {
       area: firstEmployee.area,
       leader: assignedLeaders != null && assignedLeaders.isNotEmpty
           ? assignedLeaders
-          : firstEmployee.gerente.trim().isEmpty
+          : firstEmployee.manager.trim().isEmpty
           ? 'Sin líder asignado'
-          : firstEmployee.gerente,
+          : firstEmployee.manager,
       memberCount: memberCount,
       membersOnTarget: membersOnTarget,
       completedHours: completedHours,
       targetHours: targetHours,
       hoursDeviation: completedHours - targetHours,
-      businessHours: _sumCategoryHours(members, TipoCurso.habilidadesDeNegocio),
-      softSkillsHours: _sumCategoryHours(members, TipoCurso.habilidadesBlandas),
-      explorationHours: _sumCategoryHours(members, TipoCurso.libresExploracion),
-      teachingHours: _sumCategoryHours(
-        members,
-        TipoCurso.dictadoCapacitaciones,
-      ),
+      businessHours: _sumCategoryHours(members, CourseCategory.businessSkills),
+      softSkillsHours: _sumCategoryHours(members, CourseCategory.softSkills),
+      explorationHours: _sumCategoryHours(members, CourseCategory.exploration),
+      teachingHours: _sumCategoryHours(members, CourseCategory.teaching),
       averageHoursPerMember: memberCount == 0
           ? 0
           : completedHours / memberCount,
@@ -218,12 +213,12 @@ class TeamsService {
   }
 
   double _sumCategoryHours(
-    List<CumplimientoEmpleado> members,
-    TipoCurso category,
+    List<EmployeeCompliance> members,
+    CourseCategory category,
   ) {
     return members.fold<double>(
       0,
-      (total, member) => total + member.horasAplicablesAlObjetivo(category),
+      (total, member) => total + member.applicableHours(category),
     );
   }
 

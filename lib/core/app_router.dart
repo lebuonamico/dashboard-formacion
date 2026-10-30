@@ -18,16 +18,16 @@ import 'package:app_finnegans/presentation/admin_screen.dart';
 import 'package:app_finnegans/presentation/widgets/app_shell.dart';
 
 /// Duración del fundido al cambiar de pantalla.
-const _duracionFundido = Duration(milliseconds: 200);
+const _fadeDuration = Duration(milliseconds: 200);
 
 /// Página que entra con un fundido. Como la nueva se pinta sobre la anterior
 /// (ambas con fondo opaco), se ve como un fundido cruzado.
-CustomTransitionPage<void> _conFundido(GoRouterState state, Widget child) {
+CustomTransitionPage<void> _withFade(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: _duracionFundido,
-    reverseTransitionDuration: _duracionFundido,
+    transitionDuration: _fadeDuration,
+    reverseTransitionDuration: _fadeDuration,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
@@ -45,11 +45,11 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      pageBuilder: (context, state) => _conFundido(state, const LoginScreen()),
+      pageBuilder: (context, state) => _withFade(state, const LoginScreen()),
     ),
     GoRoute(
       path: '/login',
-      pageBuilder: (context, state) => _conFundido(state, const LoginScreen()),
+      pageBuilder: (context, state) => _withFade(state, const LoginScreen()),
     ),
     // Todas las pantallas autenticadas comparten el menú lateral: queda fijo y
     // sólo cambia el contenido.
@@ -59,73 +59,73 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
         GoRoute(
           path: '/dashboard',
           pageBuilder: (context, state) =>
-              _conFundido(state, const DashboardScreen()),
+              _withFade(state, const DashboardScreen()),
         ),
         GoRoute(
           path: '/empleados',
           pageBuilder: (context, state) =>
-              _conFundido(state, const EmpleadosScreen()),
+              _withFade(state, const EmployeesScreen()),
         ),
         GoRoute(
           path: '/cursos',
           pageBuilder: (context, state) =>
-              _conFundido(state, const CursosScreen()),
+              _withFade(state, const CoursesScreen()),
         ),
         GoRoute(
           path: '/configuracion',
           pageBuilder: (context, state) =>
-              _conFundido(state, const ConfiguracionScreen()),
+              _withFade(state, const SettingsScreen()),
         ),
         GoRoute(
           path: '/cursadas',
           pageBuilder: (context, state) =>
-              _conFundido(state, const CursadasScreen()),
+              _withFade(state, const TimeEntriesScreen()),
         ),
         GoRoute(
           path: '/certificaciones',
           pageBuilder: (context, state) =>
-              _conFundido(state, const CertificacionScreen()),
+              _withFade(state, const CertificationsScreen()),
         ),
         GoRoute(
           path: '/empleados/:legajo',
           pageBuilder: (context, state) {
-            final legajo = state.pathParameters['legajo']!;
-            return _conFundido(state, EmpleadoDetalleScreen(legajo: legajo));
+            final employeeId = state.pathParameters['legajo']!;
+            return _withFade(
+              state,
+              EmployeeDetailScreen(employeeId: employeeId),
+            );
           },
         ),
 
         GoRoute(
           path: '/areas',
           pageBuilder: (context, state) =>
-              _conFundido(state, const AreasScreen()),
+              _withFade(state, const AreasScreen()),
         ),
         GoRoute(
           path: '/areas/:area',
           pageBuilder: (context, state) {
             final area = state.pathParameters['area']!;
-            return _conFundido(state, AreaDetalleScreen(nombreArea: area));
+            return _withFade(state, AreaDetailScreen(areaName: area));
           },
         ),
         GoRoute(
           path: '/areas/:area/equipos/:equipo',
           pageBuilder: (context, state) {
             final area = state.pathParameters['area']!;
-            final equipo = state.pathParameters['equipo']!;
-            return _conFundido(
-              state,
-              TeamDetailScreen(area: area, team: equipo),
-            );
+            final team = state.pathParameters['equipo']!;
+            return _withFade(state, TeamDetailScreen(area: area, team: team));
           },
         ),
         GoRoute(
           path: '/equipos',
           pageBuilder: (context, state) =>
-              _conFundido(state, const TeamsScreen()),
+              _withFade(state, const TeamsScreen()),
         ),
         GoRoute(
           path: '/admin',
           pageBuilder: (context, state) =>
-              _conFundido(state, const AdminScreen()),
+              _withFade(state, const AdminScreen()),
         ),
       ],
     ),

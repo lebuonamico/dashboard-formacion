@@ -8,16 +8,16 @@ import 'package:app_finnegans/presentation/providers/side_menu_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-const double _anchoSideMenu = 260;
+const double _widthSideMenu = 260;
 
 /// Mismo alto que `AppTopBar` y los top bars de cada pantalla, para que la
 /// línea bajo el logo continúe exactamente la del top bar.
-const double _altoHeader = 64;
+const double _heightHeader = 64;
 
-const Duration _duracionAnimacion = Duration(milliseconds: 220);
+const Duration _animationDuration = Duration(milliseconds: 220);
 
 /// Transición de color del ítem activo del menú.
-const Duration _duracionColor = Duration(milliseconds: 200);
+const Duration _durationColor = Duration(milliseconds: 200);
 
 class SideMenu extends ConsumerStatefulWidget {
   const SideMenu({super.key});
@@ -29,14 +29,14 @@ class SideMenu extends ConsumerStatefulWidget {
 class _SideMenuState extends ConsumerState<SideMenu>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final CurvedAnimation _animacion;
+  late final CurvedAnimation _animation;
 
   // La pestaña sobresale del borde de la sidebar: si fuera hija del Row de la
   // pantalla quedaría pintada debajo del contenido y fuera del hit-test. Por
   // eso va en el overlay. Se ubica con overlayChildLayoutBuilder y no con un
   // CompositedTransformFollower: el Tooltip de la pestaña también usa ese
   // builder, y Flutter lo rompe si encuentra un follower entre él y el Overlay.
-  final _pestana = OverlayPortalController();
+  final _tab = OverlayPortalController();
 
   @override
   void initState() {
@@ -44,58 +44,58 @@ class _SideMenuState extends ConsumerState<SideMenu>
     // Arranca en el estado actual: al navegar a otra pantalla no re-anima.
     _controller = AnimationController(
       vsync: this,
-      duration: _duracionAnimacion,
-      value: ref.read(sideMenuDesplegadoProvider) ? 1 : 0,
+      duration: _animationDuration,
+      value: ref.read(sideMenuExpandedProvider) ? 1 : 0,
     );
-    _animacion = CurvedAnimation(
+    _animation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOutCubic,
     );
-    _pestana.show();
+    _tab.show();
   }
 
   @override
   void dispose() {
-    _animacion.dispose();
+    _animation.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<bool>(sideMenuDesplegadoProvider, (_, desplegado) {
-      desplegado ? _controller.forward() : _controller.reverse();
+    ref.listen<bool>(sideMenuExpandedProvider, (_, expanded) {
+      expanded ? _controller.forward() : _controller.reverse();
     });
-    final desplegado = ref.watch(sideMenuDesplegadoProvider);
+    final isExpanded = ref.watch(sideMenuExpandedProvider);
 
     return OverlayPortal.overlayChildLayoutBuilder(
-      controller: _pestana,
-      overlayChildBuilder: (_, info) => _buildPestana(desplegado, info),
+      controller: _tab,
+      overlayChildBuilder: (_, info) => _buildTab(isExpanded, info),
       child: AnimatedBuilder(
-        animation: _animacion,
+        animation: _animation,
         // El contenido se arma siempre con el ancho completo y se recorta: la
         // sidebar se desliza como un cajón en lugar de comprimir los textos.
-        builder: (context, contenido) => SizedBox(
-          width: _anchoSideMenu * _animacion.value,
+        builder: (context, content) => SizedBox(
+          width: _widthSideMenu * _animation.value,
           child: Visibility(
             // Oculta del todo, los ítems no reciben foco ni quedan en la
             // semántica.
-            visible: _animacion.value > 0,
+            visible: _animation.value > 0,
             // Conserva el alto completo: con el SizedBox.shrink por defecto el
             // Row de la pantalla la centraría verticalmente y la pestaña
             // saltaría a la mitad de la altura al plegarse.
             replacement: const SizedBox(height: double.infinity),
             child: ClipRect(
               child: OverflowBox(
-                minWidth: _anchoSideMenu,
-                maxWidth: _anchoSideMenu,
+                minWidth: _widthSideMenu,
+                maxWidth: _widthSideMenu,
                 alignment: Alignment.centerRight,
-                child: contenido,
+                child: content,
               ),
             ),
           ),
         ),
-        child: _buildContenido(context),
+        child: _buildContent(context),
       ),
     );
   }
@@ -103,8 +103,8 @@ class _SideMenuState extends ConsumerState<SideMenu>
   /// Se vuelve a ejecutar en cada layout: `info` trae el tamaño y la posición
   /// de la sidebar en coordenadas del overlay, así la pestaña sigue el ancho
   /// animado y las transiciones de página.
-  Widget _buildPestana(bool desplegado, OverlayChildLayoutInfo info) {
-    final borde = MatrixUtils.transformPoint(
+  Widget _buildTab(bool expanded, OverlayChildLayoutInfo info) {
+    final border = MatrixUtils.transformPoint(
       info.childPaintTransform,
       Offset(info.childSize.width, 0),
     );
@@ -113,18 +113,18 @@ class _SideMenuState extends ConsumerState<SideMenu>
     // está oculta). Se superpone 1px para tapar la línea del borde y que la
     // pestaña se vea como una continuación del menú.
     return Positioned(
-      left: math.max(0, borde.dx - 1),
-      top: borde.dy + _altoHeader + 16,
-      child: _PestanaToggle(
-        progreso: _animacion.value,
-        desplegado: desplegado,
+      left: math.max(0, border.dx - 1),
+      top: border.dy + _heightHeader + 16,
+      child: _TabToggle(
+        progress: _animation.value,
+        expanded: expanded,
         onTap: () =>
-            ref.read(sideMenuDesplegadoProvider.notifier).state = !desplegado,
+            ref.read(sideMenuExpandedProvider.notifier).state = !expanded,
       ),
     );
   }
 
-  Widget _buildContenido(BuildContext context) {
+  Widget _buildContent(BuildContext context) {
     final uri = GoRouterState.of(context).uri;
     final currentPath = uri.path;
     final requestedOrigin = uri.queryParameters['origen'];
@@ -140,26 +140,26 @@ class _SideMenuState extends ConsumerState<SideMenu>
 
     final auth = ref.watch(authControllerProvider);
     // En modo local no hay roles: se ve todo, para poder probarlo.
-    final gestiona = auth.esGestor || !auth.enabled;
-    final verAreas = !auth.enabled || auth.rolConocido != RolUsuario.lider;
+    final manages = auth.canManage || !auth.enabled;
+    final showAreas = !auth.enabled || auth.knownRole != UserRole.teamLead;
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final borde = BorderSide(color: colores.sidebarBorde);
+    final colors = context.colors;
+    final border = BorderSide(color: colors.sidebarBorder);
 
     return Container(
-      width: _anchoSideMenu,
+      width: _widthSideMenu,
       decoration: BoxDecoration(
-        color: colores.sidebarFondo,
-        border: Border(right: borde),
+        color: colors.sidebarBackground,
+        border: Border(right: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header con Logo
           Container(
-            height: _altoHeader,
+            height: _heightHeader,
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            decoration: BoxDecoration(border: Border(bottom: borde)),
+            decoration: BoxDecoration(border: Border(bottom: border)),
             child: Row(
               children: [
                 ClipRRect(
@@ -217,7 +217,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
                     ); // Navega a la pantalla de dashboard
                   },
                 ),
-                if (verAreas)
+                if (showAreas)
                   _MenuItem(
                     icon: Icons.account_tree_outlined,
                     label: 'Áreas',
@@ -269,7 +269,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
                   isSelected: isSelected('certificaciones', '/certificaciones'),
                   onTap: () => context.push('/certificaciones'),
                 ),
-                if (gestiona)
+                if (manages)
                   _MenuItem(
                     icon: Icons.settings_outlined,
                     label: 'Configuración',
@@ -280,7 +280,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
                       ); // Navega a la pantalla de configuración
                     },
                   ),
-                if (gestiona)
+                if (manages)
                   _MenuItem(
                     icon: Icons.admin_panel_settings_outlined,
                     label: 'Panel de administrador',
@@ -293,7 +293,7 @@ class _SideMenuState extends ConsumerState<SideMenu>
             ),
           ),
           // Logout
-          Divider(height: 1, color: colores.sidebarBorde),
+          Divider(height: 1, color: colors.sidebarBorder),
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: _MenuItem(
@@ -331,37 +331,37 @@ class _SideMenuState extends ConsumerState<SideMenu>
 /// Pestaña vertical que sale del borde derecho de la sidebar, del mismo color
 /// y sin línea divisoria, como la manija de un cajón. La flecha gira junto con
 /// la animación: apunta a la izquierda desplegada y a la derecha oculta.
-class _PestanaToggle extends StatefulWidget {
-  static const double ancho = 22;
-  static const double alto = 52;
+class _TabToggle extends StatefulWidget {
+  static const double width = 22;
+  static const double height = 52;
 
   /// 1 = desplegada, 0 = oculta.
-  final double progreso;
-  final bool desplegado;
+  final double progress;
+  final bool expanded;
   final VoidCallback onTap;
 
-  const _PestanaToggle({
-    required this.progreso,
-    required this.desplegado,
+  const _TabToggle({
+    required this.progress,
+    required this.expanded,
     required this.onTap,
   });
 
   @override
-  State<_PestanaToggle> createState() => _PestanaToggleState();
+  State<_TabToggle> createState() => _TabToggleState();
 }
 
-class _PestanaToggleState extends State<_PestanaToggle> {
+class _TabToggleState extends State<_TabToggle> {
   bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    final mensaje = widget.desplegado ? 'Ocultar menú' : 'Mostrar menú';
-    final colores = context.colores;
-    final fondo = _hover ? colores.sidebarHover : colores.sidebarFondo;
-    final marca = context.colorScheme.primary;
+    final message = widget.expanded ? 'Ocultar menú' : 'Mostrar menú';
+    final colors = context.colors;
+    final background = _hover ? colors.sidebarHover : colors.sidebarBackground;
+    final brand = context.colorScheme.primary;
 
     return Tooltip(
-      message: mensaje,
+      message: message,
       waitDuration: const Duration(milliseconds: 400),
       child: Semantics(
         button: true,
@@ -373,22 +373,22 @@ class _PestanaToggleState extends State<_PestanaToggle> {
             key: const Key('side_menu_toggle'),
             onTap: widget.onTap,
             child: SizedBox(
-              width: _PestanaToggle.ancho,
-              height: _PestanaToggle.alto,
+              width: _TabToggle.width,
+              height: _TabToggle.height,
               child: Stack(
                 children: [
                   Positioned.fill(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       decoration: BoxDecoration(
-                        color: fondo,
+                        color: background,
                         borderRadius: const BorderRadius.horizontal(
                           right: Radius.circular(10),
                         ),
-                        border: Border.all(color: colores.sidebarBorde),
+                        border: Border.all(color: colors.sidebarBorder),
                         boxShadow: [
                           BoxShadow(
-                            color: marca.withValues(alpha: 0.07),
+                            color: brand.withValues(alpha: 0.07),
                             blurRadius: 6,
                             offset: const Offset(2, 1),
                           ),
@@ -396,11 +396,11 @@ class _PestanaToggleState extends State<_PestanaToggle> {
                       ),
                       child: Center(
                         child: Transform.rotate(
-                          angle: (1 - widget.progreso) * math.pi,
+                          angle: (1 - widget.progress) * math.pi,
                           child: Icon(
                             Icons.chevron_left_rounded,
                             size: 20,
-                            color: marca,
+                            color: brand,
                           ),
                         ),
                       ),
@@ -416,7 +416,7 @@ class _PestanaToggleState extends State<_PestanaToggle> {
                     width: 2,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      color: fondo,
+                      color: background,
                     ),
                   ),
                 ],
@@ -452,35 +452,34 @@ class _MenuItem extends StatefulWidget {
 }
 
 class _MenuItemState extends State<_MenuItem> {
-  static final _radio = BorderRadius.circular(8);
+  static final _radius = BorderRadius.circular(8);
 
   bool _hover = false;
-  bool _presionado = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colores = context.colores;
-    final marca = cs.primary;
-    final seleccionado = widget.isSelected;
-    final colorTexto =
-        widget.color ?? (seleccionado ? marca : colores.textoIntermedio);
-    final colorIcono =
-        widget.color ?? (seleccionado ? marca : cs.onSurfaceVariant);
+    final colors = context.colors;
+    final brand = cs.primary;
+    final selected = widget.isSelected;
+    final textColor =
+        widget.color ?? (selected ? brand : colors.intermediateText);
+    final iconColor = widget.color ?? (selected ? brand : cs.onSurfaceVariant);
 
     // Sin ripple: el feedback es continuo. El fondo del ítem se desvanece entre
     // reposo, hover, presionado y seleccionado, y el texto y el ícono cambian de
     // color con la misma curva. Así nada aparece ni se borra de golpe.
     // Sobre el fondo del menú, el ítem activo es una "tarjeta" y el hover la
     // misma tarjeta translúcida.
-    final activo = colores.sidebarActivo;
-    final colorFondo = _presionado
-        ? activo.withValues(alpha: seleccionado ? 0.85 : 0.6)
-        : seleccionado
-        ? activo
+    final active = colors.sidebarActive;
+    final backgroundColor = _pressed
+        ? active.withValues(alpha: selected ? 0.85 : 0.6)
+        : selected
+        ? active
         : _hover
-        ? activo.withValues(alpha: 0.55)
-        : activo.withValues(alpha: 0);
+        ? active.withValues(alpha: 0.55)
+        : active.withValues(alpha: 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -488,19 +487,19 @@ class _MenuItemState extends State<_MenuItem> {
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         child: Listener(
-          onPointerDown: (_) => setState(() => _presionado = true),
-          onPointerUp: (_) => setState(() => _presionado = false),
-          onPointerCancel: (_) => setState(() => _presionado = false),
+          onPointerDown: (_) => setState(() => _pressed = true),
+          onPointerUp: (_) => setState(() => _pressed = false),
+          onPointerCancel: (_) => setState(() => _pressed = false),
           child: AnimatedContainer(
-            duration: _duracionColor,
+            duration: _durationColor,
             curve: Curves.easeOut,
             decoration: BoxDecoration(
-              color: colorFondo,
-              borderRadius: _radio,
-              boxShadow: seleccionado
+              color: backgroundColor,
+              borderRadius: _radius,
+              boxShadow: selected
                   ? [
                       BoxShadow(
-                        color: marca.withValues(alpha: 0.08),
+                        color: brand.withValues(alpha: 0.08),
                         blurRadius: 4,
                         offset: const Offset(0, 1),
                       ),
@@ -509,38 +508,38 @@ class _MenuItemState extends State<_MenuItem> {
             ),
             child: Material(
               type: MaterialType.transparency,
-              borderRadius: _radio,
+              borderRadius: _radius,
               child: TweenAnimationBuilder<Color?>(
-                tween: ColorTween(end: colorIcono),
-                duration: _duracionColor,
+                tween: ColorTween(end: iconColor),
+                duration: _durationColor,
                 curve: Curves.easeOut,
-                builder: (context, iconoAnimado, _) =>
+                builder: (context, animatedIcon, _) =>
                     TweenAnimationBuilder<Color?>(
-                      tween: ColorTween(end: colorTexto),
-                      duration: _duracionColor,
+                      tween: ColorTween(end: textColor),
+                      duration: _durationColor,
                       curve: Curves.easeOut,
-                      builder: (context, textoAnimado, _) => ListTile(
-                        shape: RoundedRectangleBorder(borderRadius: _radio),
+                      builder: (context, animatedText, _) => ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: _radius),
                         onTap: widget.onTap,
                         dense: true,
                         // Sin ripple ni resaltados propios del ListTile.
                         splashColor: Colors.transparent,
                         hoverColor: Colors.transparent,
-                        focusColor: marca.withValues(alpha: 0.08),
+                        focusColor: brand.withValues(alpha: 0.08),
                         enableFeedback: false,
                         leading: Icon(
                           widget.icon,
                           size: 20,
-                          color: iconoAnimado,
+                          color: animatedIcon,
                         ),
                         title: Text(
                           widget.label,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: seleccionado
+                            fontWeight: selected
                                 ? FontWeight.w600
                                 : FontWeight.w500,
-                            color: textoAnimado,
+                            color: animatedText,
                           ),
                         ),
                       ),

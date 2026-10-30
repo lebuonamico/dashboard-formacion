@@ -7,35 +7,35 @@ import 'package:flutter/material.dart';
 /// Indicadores de todas las áreas, con las mismas cards que el inicio.
 class AreasKpiSection extends StatelessWidget {
   final int totalAreas;
-  final int totalColaboradores;
-  final double horasRealizadas;
-  final double horasObjetivo;
-  final double desvioHoras;
-  final double cumplimientoGlobal;
-  final bool esAnual;
-  final int anio;
-  final int mes;
+  final int totalEmployees;
+  final double completedHours;
+  final double targetHours;
+  final double hoursDeviation;
+  final double complianceGlobal;
+  final bool isAnnual;
+  final int year;
+  final int month;
 
   /// Variación del cumplimiento contra el mes anterior.
-  final VariacionCumplimiento? variacion;
+  final ComplianceVariation? variation;
 
   /// Proyección a fin de año de todas las áreas; sin ella no se muestra la
   /// card.
-  final ProyeccionAnual? proyeccion;
+  final AnnualProjection? projection;
 
   const AreasKpiSection({
     super.key,
     required this.totalAreas,
-    required this.totalColaboradores,
-    required this.horasRealizadas,
-    required this.horasObjetivo,
-    required this.desvioHoras,
-    required this.cumplimientoGlobal,
-    required this.anio,
-    required this.mes,
-    this.esAnual = false,
-    this.variacion,
-    this.proyeccion,
+    required this.totalEmployees,
+    required this.completedHours,
+    required this.targetHours,
+    required this.hoursDeviation,
+    required this.complianceGlobal,
+    required this.year,
+    required this.month,
+    this.isAnnual = false,
+    this.variation,
+    this.projection,
   });
 
   @override
@@ -51,39 +51,39 @@ class AreasKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.apartment_outlined,
           color: context.colorScheme.primary,
-          ayuda:
+          help:
               'Áreas con al menos un colaborador elegible en el período '
               'elegido.',
         ),
         DashboardKpiCard(
           title: 'COLABORADORES',
-          value: '$totalColaboradores',
+          value: '$totalEmployees',
           suffix: 'en todas las áreas',
           progress: 1,
           progressLabel: 'Nómina elegible',
           footer: '',
           icon: Icons.people_outline,
-          color: context.colores.acentoCian,
-          ayuda: ayudaNominaElegible,
+          color: context.colors.cyanAccent,
+          help: eligiblePayrollHelp,
         ),
-        horasValidasKpiCard(
+        creditedHoursKpiCard(
           context,
-          esAnual: esAnual,
-          anio: anio,
-          mes: mes,
-          horas: horasRealizadas,
-          objetivo: horasObjetivo,
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          hours: completedHours,
+          target: targetHours,
         ),
-        cumplimientoKpiCard(
+        complianceKpiCard(
           context,
-          esAnual: esAnual,
-          anio: anio,
-          mes: mes,
-          porcentaje: cumplimientoGlobal,
-          variacion: variacion,
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          percentage: complianceGlobal,
+          variation: variation,
         ),
-        if (proyeccion case final proyeccion?)
-          proyeccionKpiCard(context, proyeccion),
+        if (projection case final projection?)
+          projectionKpiCard(context, projection),
       ],
     );
   }
@@ -91,30 +91,29 @@ class AreasKpiSection extends StatelessWidget {
 
 /// Horas válidas para el objetivo contra la meta del período, como en el
 /// inicio.
-Widget horasValidasKpiCard(
+Widget creditedHoursKpiCard(
   BuildContext context, {
-  required bool esAnual,
-  required int anio,
-  required int mes,
-  required double horas,
-  required double objetivo,
+  required bool isAnnual,
+  required int year,
+  required int month,
+  required double hours,
+  required double target,
 }) {
-  final periodo = esAnual
-      ? 'AÑO $anio'
-      : '${nombreMes(mes).toUpperCase()} $anio';
-  final falta = objetivo - horas;
+  final period = isAnnual
+      ? 'AÑO $year'
+      : '${monthName(month).toUpperCase()} $year';
+  final missing = target - hours;
   return DashboardKpiCard(
-    title: 'HORAS VÁLIDAS · $periodo',
-    value: '${horas.toStringAsFixed(1)} h',
+    title: 'HORAS VÁLIDAS · $period',
+    value: '${hours.toStringAsFixed(1)} h',
     suffix: 'para el objetivo',
-    progress: objetivo == 0 ? 0 : (horas / objetivo).clamp(0.0, 1.0),
-    progressLabel: 'Meta: ${objetivo.toStringAsFixed(0)} h',
-    footer: falta > 0
-        ? '${falta.toStringAsFixed(1)} h para la meta'
+    progress: target == 0 ? 0 : (hours / target).clamp(0.0, 1.0),
+    progressLabel: 'Meta: ${target.toStringAsFixed(0)} h',
+    footer: missing > 0
+        ? '${missing.toStringAsFixed(1)} h para la meta'
         : 'Meta alcanzada',
     icon: Icons.schedule_outlined,
     color: context.colorScheme.primary,
-    ayuda: esAnual ? ayudaHorasValidasAnual : ayudaHorasValidasMes,
+    help: isAnnual ? annualCreditedHoursHelp : monthCreditedHoursHelp,
   );
 }
-

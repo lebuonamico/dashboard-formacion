@@ -24,19 +24,19 @@ final _mapping = SupabaseTableMapping(
   },
 );
 
-Curso _curso(String id, String nombre, {double horas = 4}) => Curso(
+Course _course(String id, String name, {double hours = 4}) => Course(
   id: id,
-  nombre: nombre,
-  clasificacion: TipoCurso.habilidadesDeNegocio,
-  areaCurso: '',
-  instructorLegajo: '',
-  cargaHorariaHs: horas,
+  name: name,
+  category: CourseCategory.businessSkills,
+  courseArea: '',
+  instructorEmployeeId: '',
+  workloadHours: hours,
 );
 
 void main() {
   test('Sincronizar el catálogo actualiza por nombre los cursos existentes '
       'e inserta los nuevos', () async {
-    final existentes = [
+    final existing = [
       {
         'col_id': '107',
         'col_nombre': 'ISO 9001',
@@ -52,52 +52,52 @@ void main() {
         'col_activo': true,
       },
     ];
-    final escritos = <Map<String, dynamic>>[];
+    final written = <Map<String, dynamic>>[];
     final client = SupabaseClient(
       'https://test.supabase.co',
       'public-test-key',
       httpClient: MockClient((request) async {
         if (request.method == 'POST') {
-          escritos.addAll(
+          written.addAll(
             (jsonDecode(request.body) as List).map(
               (row) => Map<String, dynamic>.from(row as Map),
             ),
           );
           return http.Response('', 201, request: request);
         }
-        final soloClaves = request.url.queryParameters['select'] == 'col_id';
+        final keysOnly = request.url.queryParameters['select'] == 'col_id';
         return http.Response(
           jsonEncode([
-            for (final row in existentes)
-              soloClaves ? {'col_id': row['col_id']} : row,
+            for (final row in existing)
+              keysOnly ? {'col_id': row['col_id']} : row,
           ]),
           200,
           request: request,
           headers: {
             'content-type': 'application/json',
-            'content-range': '0-${existentes.length - 1}/${existentes.length}',
+            'content-range': '0-${existing.length - 1}/${existing.length}',
           },
         );
       }),
     );
     addTearDown(client.dispose);
 
-    final resultado = await SupabaseCursosRepository(client, _mapping)
-        .sincronizarFotoVigenteConResultado([
-          _curso('30014', ' iso 9001 ', horas: 8),
-          _curso('30001', 'Administración de accesos'),
+    final result = await SupabaseCoursesRepository(client, _mapping)
+        .syncSnapshotWithResult([
+          _course('30014', ' iso 9001 ', hours: 8),
+          _course('30001', 'Administración de accesos'),
         ]);
 
-    final porId = {for (final row in escritos) row['col_id']: row};
-    expect(porId.keys, unorderedEquals(['107', '30001', '200']));
+    final byId = {for (final row in written) row['col_id']: row};
+    expect(byId.keys, unorderedEquals(['107', '30001', '200']));
     // El existente conserva su ID y toma los datos del archivo.
-    expect(porId['107']!['col_cargaHorariaHs'], 8);
-    expect(porId['107']!['col_clasificacion'], 'habilidadesDeNegocio');
-    expect(porId['107']!['col_activo'], isTrue);
-    expect(porId['30001']!['col_activo'], isTrue);
+    expect(byId['107']!['col_cargaHorariaHs'], 8);
+    expect(byId['107']!['col_clasificacion'], 'habilidadesDeNegocio');
+    expect(byId['107']!['col_activo'], isTrue);
+    expect(byId['30001']!['col_activo'], isTrue);
     // El que ya no viene en el archivo se desactiva.
-    expect(porId['200']!['col_activo'], isFalse);
-    expect(resultado.registrosProcesados, 2);
-    expect(resultado.insertados, 1);
+    expect(byId['200']!['col_activo'], isFalse);
+    expect(result.processedRecords, 2);
+    expect(result.inserted, 1);
   });
 }

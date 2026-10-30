@@ -20,15 +20,15 @@ class AppBackButton extends StatefulWidget {
 }
 
 class _AppBackButtonState extends State<AppBackButton> {
-  static const _duracion = Duration(milliseconds: 160);
+  static const _duration = Duration(milliseconds: 160);
 
   bool _hover = false;
-  bool _presionado = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colorFondo = _presionado
+    final backgroundColor = _pressed
         ? cs.onSurface.withValues(alpha: 0.1)
         : _hover
         ? cs.onSurface.withValues(alpha: 0.06)
@@ -37,11 +37,11 @@ class _AppBackButtonState extends State<AppBackButton> {
     return Tooltip(
       message: widget.tooltip,
       child: AnimatedScale(
-        scale: _presionado ? 0.92 : 1,
+        scale: _pressed ? 0.92 : 1,
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
         child: AnimatedContainer(
-          duration: _duracion,
+          duration: _duration,
           curve: Curves.easeOut,
           width: 40,
           height: 40,
@@ -49,7 +49,7 @@ class _AppBackButtonState extends State<AppBackButton> {
           // distingue del toggle circular azul del menú.
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            color: colorFondo,
+            color: backgroundColor,
             border: Border.all(color: cs.outline),
           ),
           child: Material(
@@ -66,12 +66,12 @@ class _AppBackButtonState extends State<AppBackButton> {
               hoverColor: Colors.transparent,
               onTap: widget.onPressed,
               onHover: (hover) => setState(() => _hover = hover),
-              onHighlightChanged: (presionado) =>
-                  setState(() => _presionado = presionado),
+              onHighlightChanged: (pressed) =>
+                  setState(() => _pressed = pressed),
               child: Center(
                 child: AnimatedSlide(
                   offset: Offset(_hover ? -0.1 : 0, 0),
-                  duration: _duracion,
+                  duration: _duration,
                   curve: Curves.easeOut,
                   child: Icon(Icons.arrow_back, size: 20, color: cs.onSurface),
                 ),

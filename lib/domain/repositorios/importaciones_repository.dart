@@ -1,5 +1,5 @@
 import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
 
-abstract interface class ImportacionesRepository {
-  Future<void> registrar(RegistroImportacion registro);
+abstract interface class ImportRecordsRepository {
+  Future<void> register(ImportRecord record);
 }

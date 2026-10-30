@@ -5,11 +5,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 /// Título de una sección, con una bajada opcional que explica cómo leerla.
-class TituloSeccionPdf extends pw.StatelessWidget {
-  final String titulo;
-  final String? bajada;
+class PdfSectionTitle extends pw.StatelessWidget {
+  final String title;
+  final String? lowered;
 
-  TituloSeccionPdf(this.titulo, {this.bajada});
+  PdfSectionTitle(this.title, {this.lowered});
 
   @override
   pw.Widget build(pw.Context context) => pw.Padding(
@@ -17,14 +17,14 @@ class TituloSeccionPdf extends pw.StatelessWidget {
     child: pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(titulo, style: pw.TextStyle(fontWeight: negrita, fontSize: 12)),
-        if (bajada case final bajada?) ...[
+        pw.Text(title, style: pw.TextStyle(fontWeight: bold, fontSize: 12)),
+        if (lowered case final lowered?) ...[
           pw.SizedBox(height: 2),
           pw.Text(
-            bajada,
+            lowered,
             style: const pw.TextStyle(
               fontSize: 8,
-              color: ColoresReportePdf.tintaSuave,
+              color: PdfReportColors.softInk,
             ),
           ),
         ],
@@ -33,57 +33,57 @@ class TituloSeccionPdf extends pw.StatelessWidget {
   );
 }
 
-class ChipEstadoPdf extends pw.StatelessWidget {
-  final String texto;
-  final NivelReporte nivel;
-  final bool grande;
+class PdfStatusChip extends pw.StatelessWidget {
+  final String text;
+  final ReportLevel level;
+  final bool large;
 
-  ChipEstadoPdf(this.texto, this.nivel, {this.grande = false});
+  PdfStatusChip(this.text, this.level, {this.large = false});
 
   @override
   pw.Widget build(pw.Context context) => pw.Container(
     padding: pw.EdgeInsets.symmetric(
-      horizontal: grande ? 10 : 6,
-      vertical: grande ? 4 : 2,
+      horizontal: large ? 10 : 6,
+      vertical: large ? 4 : 2,
     ),
     decoration: pw.BoxDecoration(
-      color: nivel.fondo,
+      color: level.background,
       borderRadius: pw.BorderRadius.circular(10),
     ),
     child: pw.Text(
-      texto,
+      text,
       style: pw.TextStyle(
-        fontWeight: negrita,
-        fontSize: grande ? 9 : 7.5,
-        color: nivel.color,
+        fontWeight: bold,
+        fontSize: large ? 9 : 7.5,
+        color: level.color,
       ),
     ),
   );
 }
 
-class BarraProgresoPdf extends pw.StatelessWidget {
-  final double progreso;
+class PdfProgressBar extends pw.StatelessWidget {
+  final double progress;
   final PdfColor color;
-  final double alto;
+  final double height;
 
-  BarraProgresoPdf(this.progreso, this.color, {this.alto = 5});
+  PdfProgressBar(this.progress, this.color, {this.height = 5});
 
   @override
   pw.Widget build(pw.Context context) => pw.LayoutBuilder(
     builder: (context, constraints) {
-      final ancho = constraints!.maxWidth;
-      pw.Widget tramo(double ancho, PdfColor color) => pw.Container(
-        width: ancho,
-        height: alto,
+      final width = constraints!.maxWidth;
+      pw.Widget segment(double columnWidth, PdfColor color) => pw.Container(
+        width: columnWidth,
+        height: height,
         decoration: pw.BoxDecoration(
           color: color,
-          borderRadius: pw.BorderRadius.circular(alto / 2),
+          borderRadius: pw.BorderRadius.circular(height / 2),
         ),
       );
       return pw.Stack(
         children: [
-          tramo(ancho, ColoresReportePdf.pista),
-          tramo(ancho * progreso.clamp(0.0, 1.0), color),
+          segment(width, PdfReportColors.track),
+          segment(width * progress.clamp(0.0, 1.0), color),
         ],
       );
     },
@@ -91,10 +91,10 @@ class BarraProgresoPdf extends pw.StatelessWidget {
 }
 
 /// Círculo de color de las leyendas.
-class PuntoColorPdf extends pw.StatelessWidget {
+class PdfColorDot extends pw.StatelessWidget {
   final PdfColor color;
 
-  PuntoColorPdf(this.color);
+  PdfColorDot(this.color);
 
   @override
   pw.Widget build(pw.Context context) => pw.Container(
@@ -109,63 +109,60 @@ class PuntoColorPdf extends pw.StatelessWidget {
 /// Es una función y no un `pw.StatelessWidget` porque `MultiPage` decide si
 /// puede partir un widget antes de maquetarlo, y un StatelessWidget recién
 /// sabe qué contiene al maquetarse: la `pw.Table` tiene que llegar directa.
-pw.Table tablaPdf({
-  required List<double> anchos,
-  required Set<int> derecha,
-  required List<String> encabezados,
-  required List<List<pw.Widget>> filas,
+pw.Table pdfTable({
+  required List<double> widths,
+  required Set<int> right,
+  required List<String> headers,
+  required List<List<pw.Widget>> rows,
 }) {
-  pw.Widget alinear(int columna, pw.Widget hijo) => pw.Container(
+  pw.Widget align(int column, pw.Widget child) => pw.Container(
     padding: const pw.EdgeInsets.symmetric(vertical: 4.5, horizontal: 5),
-    alignment: derecha.contains(columna)
+    alignment: right.contains(column)
         ? pw.Alignment.centerRight
         : pw.Alignment.centerLeft,
-    child: hijo,
+    child: child,
   );
 
   return pw.Table(
     columnWidths: {
-      for (final (i, ancho) in anchos.indexed) i: pw.FlexColumnWidth(ancho),
+      for (final (i, width) in widths.indexed) i: pw.FlexColumnWidth(width),
     },
     defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
     tableWidth: pw.TableWidth.max,
     border: const pw.TableBorder(
-      horizontalInside: pw.BorderSide(
-        color: ColoresReportePdf.linea,
-        width: 0.6,
-      ),
-      bottom: pw.BorderSide(color: ColoresReportePdf.linea, width: 0.6),
+      horizontalInside: pw.BorderSide(color: PdfReportColors.line, width: 0.6),
+      bottom: pw.BorderSide(color: PdfReportColors.line, width: 0.6),
     ),
     children: [
       pw.TableRow(
         repeat: true,
         decoration: const pw.BoxDecoration(
           border: pw.Border(
-            bottom: pw.BorderSide(color: ColoresReportePdf.tinta, width: 0.8),
+            bottom: pw.BorderSide(color: PdfReportColors.ink, width: 0.8),
           ),
         ),
         children: [
-          for (final (i, texto) in encabezados.indexed)
-            alinear(
+          for (final (i, text) in headers.indexed)
+            align(
               i,
               pw.Text(
-                texto,
+                text,
                 style: pw.TextStyle(
-                  fontWeight: negrita,
+                  fontWeight: bold,
                   fontSize: 6.5,
                   letterSpacing: 0.3,
-                  color: ColoresReportePdf.tintaSuave,
+                  color: PdfReportColors.softInk,
                 ),
               ),
             ),
         ],
       ),
-      for (final (n, fila) in filas.indexed)
+      for (final (n, row) in rows.indexed)
         pw.TableRow(
           decoration: n.isOdd
-              ? const pw.BoxDecoration(color: ColoresReportePdf.fondoSuave)
+              ? const pw.BoxDecoration(color: PdfReportColors.softBackground)
               : null,
-          children: [for (final (i, celda) in fila.indexed) alinear(i, celda)],
+          children: [for (final (i, cell) in row.indexed) align(i, cell)],
         ),
     ],
   );

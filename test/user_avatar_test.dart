@@ -20,9 +20,9 @@ class _App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
     theme: AppTheme.light(),
     darkTheme: AppTheme.dark(),
-    themeMode: ref.watch(temaProvider),
+    themeMode: ref.watch(themeModeProvider),
     themeAnimationDuration: Duration.zero,
-    builder: (context, child) => TransicionTema(child: child!),
+    builder: (context, child) => ThemeTransition(child: child!),
     home: const Scaffold(body: Align(child: UserAvatar())),
   );
 }
@@ -35,7 +35,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         authControllerProvider.overrideWith((ref) => AuthController(null)),
-        temaProvider.overrideWith(() => TemaController(ThemeMode.light)),
+        themeModeProvider.overrideWith(
+          () => ThemeModeController(ThemeMode.light),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -43,76 +45,78 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(container: container, child: const _App()),
     );
-    BuildContext contexto() => tester.element(find.byType(UserAvatar));
-    expect(Theme.of(contexto()).brightness, Brightness.light);
+    BuildContext context() => tester.element(find.byType(UserAvatar));
+    expect(Theme.of(context()).brightness, Brightness.light);
 
     await tester.tap(find.byType(UserAvatar));
     await tester.pumpAndSettle();
     // El switch refleja el tema actual (claro).
-    final interruptor = find.byKey(const Key('apariencia_switch'));
+    final toggleSwitch = find.byKey(const Key('apariencia_switch'));
     expect(find.text('Tema oscuro'), findsOneWidget);
-    expect(tester.widget<Switch>(interruptor).value, isFalse);
+    expect(tester.widget<Switch>(toggleSwitch).value, isFalse);
 
-    await tester.tap(interruptor);
+    await tester.tap(toggleSwitch);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
     // A mitad del fundido: el tema nuevo ya está aplicado y la captura del
     // anterior se desvanece encima.
-    expect(container.read(temaProvider), ThemeMode.dark);
-    expect(Theme.of(contexto()).brightness, Brightness.dark);
+    expect(container.read(themeModeProvider), ThemeMode.dark);
+    expect(Theme.of(context()).brightness, Brightness.dark);
     expect(find.byType(RawImage), findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(find.byType(RawImage), findsNothing);
-    expect(await TemaController.leerGuardado(), ThemeMode.dark);
+    expect(await ThemeModeController.readSaved(), ThemeMode.dark);
 
     // El menú sigue abierto y el switch quedó encendido; apagarlo vuelve al
     // tema claro.
-    expect(tester.widget<Switch>(interruptor).value, isTrue);
-    await tester.tap(interruptor);
+    expect(tester.widget<Switch>(toggleSwitch).value, isTrue);
+    await tester.tap(toggleSwitch);
     await tester.pumpAndSettle();
-    expect(container.read(temaProvider), ThemeMode.light);
-    expect(await TemaController.leerGuardado(), ThemeMode.light);
+    expect(container.read(themeModeProvider), ThemeMode.light);
+    expect(await ThemeModeController.readSaved(), ThemeMode.light);
     expect(tester.takeException(), isNull);
   });
 
   group('Lidera y Pertenece a', () {
-    final estructura = EstructuraOrganizacional(
-      areas: [Area(id: '1', nombre: 'PRODUCTOS TECNOLÓGICOS')],
-      equipos: [
-        Equipo(
+    final structure = OrgStructure(
+      areas: [Area(id: '1', name: 'PRODUCTOS TECNOLÓGICOS')],
+      teams: [
+        Team(
           id: '10',
           areaId: '1',
-          nombre: 'PLATAFORMA CORE',
-          lideres: {'lider@finnegans.com'},
+          name: 'PLATAFORMA CORE',
+          leaders: {'lider@finnegans.com'},
         ),
       ],
     );
-    final propio = Empleado(
-      legajo: '5',
-      nombre: 'Lía',
-      apellido: 'Líder',
+    final own = Employee(
+      employeeId: '5',
+      firstName: 'Lía',
+      lastName: 'Líder',
       seniority: Seniority.senior1,
       area: 'SERVICIOS',
-      mail: 'lider@finnegans.com',
-      equipo: 'IMPLEMENTACIONES',
+      email: 'lider@finnegans.com',
+      team: 'IMPLEMENTACIONES',
     );
 
-    Future<void> abrirMenu(
+    Future<void> openMenu(
       WidgetTester tester, {
-      required String rol,
-      Empleado? empleado,
+      required String role,
+      Employee? employee,
     }) async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(
-            (ref) => _AuthConRol('lider@finnegans.com', rol),
+            (ref) => _AuthWithRole('lider@finnegans.com', role),
           ),
-          temaProvider.overrideWith(() => TemaController(ThemeMode.light)),
-          estructuraProvider.overrideWith((ref) async => estructura),
-          empleadoDeSesionProvider.overrideWith((ref) async => empleado),
+          themeModeProvider.overrideWith(
+            () => ThemeModeController(ThemeMode.light),
+          ),
+          orgStructureProvider.overrideWith((ref) async => structure),
+          sessionEmployeeProvider.overrideWith((ref) async => employee),
         ],
       );
       addTearDown(container.dispose);
@@ -124,28 +128,25 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    String texto(WidgetTester tester, String clave) =>
-        tester.widget<Text>(find.byKey(Key(clave))).data!;
+    String text(WidgetTester tester, String key) =>
+        tester.widget<Text>(find.byKey(Key(key))).data!;
 
     testWidgets('Un líder ve lo que lidera y a qué pertenece', (tester) async {
-      await abrirMenu(tester, rol: 'lider', empleado: propio);
+      await openMenu(tester, role: 'teamLead', employee: own);
 
-      expect(texto(tester, 'cuenta_lidera'), 'PLATAFORMA CORE');
-      expect(texto(tester, 'cuenta_pertenece'), 'IMPLEMENTACIONES · SERVICIOS');
+      expect(text(tester, 'cuenta_lidera'), 'PLATAFORMA CORE');
+      expect(text(tester, 'cuenta_pertenece'), 'IMPLEMENTACIONES · SERVICIOS');
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('Un líder que no figura en la nómina lo dice', (tester) async {
-      await abrirMenu(tester, rol: 'lider');
+      await openMenu(tester, role: 'teamLead');
 
-      expect(
-        texto(tester, 'cuenta_pertenece'),
-        EstructuraOrganizacional.noFiguraEnNomina,
-      );
+      expect(text(tester, 'cuenta_pertenece'), OrgStructure.notInPayroll);
     });
 
     testWidgets('Un administrador no ve esos datos', (tester) async {
-      await abrirMenu(tester, rol: 'admin', empleado: propio);
+      await openMenu(tester, role: 'admin', employee: own);
 
       expect(find.byKey(const Key('cuenta_lidera')), findsNothing);
       expect(find.byKey(const Key('cuenta_pertenece')), findsNothing);
@@ -154,11 +155,11 @@ void main() {
 }
 
 /// Sesión con Supabase habilitado, un email y un rol fijos, sin cliente real.
-class _AuthConRol extends AuthController {
+class _AuthWithRole extends AuthController {
   final String _email;
 
-  _AuthConRol(this._email, String rol) : super(null) {
-    this.rol = rol;
+  _AuthWithRole(this._email, String role) : super(null) {
+    this.role = role;
   }
 
   @override

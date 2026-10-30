@@ -1,23 +1,24 @@
+import 'package:app_finnegans/data/supabase/supabase_codes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
 import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart';
 
-class SupabaseImportacionesRepository implements ImportacionesRepository {
+class SupabaseImportRecordsRepository implements ImportRecordsRepository {
   final SupabaseClient _client;
 
-  SupabaseImportacionesRepository(this._client);
+  SupabaseImportRecordsRepository(this._client);
 
   @override
-  Future<void> registrar(RegistroImportacion registro) async {
+  Future<void> register(ImportRecord record) async {
     await _client.schema('public').from('importaciones').insert({
-      'tipo_archivo': registro.tipoArchivo,
-      'nombre_archivo': registro.nombreArchivo,
-      'fecha_hora': registro.fechaHora.toIso8601String(),
-      'estado': registro.estado.name,
-      'registros_procesados': registro.registrosProcesados,
-      'insertados': registro.insertados,
-      'actualizados': registro.actualizados,
-      'errores': registro.errores,
+      'tipo_archivo': record.fileType,
+      'nombre_archivo': record.fileName,
+      'fecha_hora': record.dateTime.toIso8601String(),
+      'estado': importStatusToDb(record.status),
+      'registros_procesados': record.processedRecords,
+      'insertados': record.inserted,
+      'actualizados': record.updated,
+      'errores': record.errors,
     });
   }
 }

@@ -1,38 +1,38 @@
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 
-class CertificacionMoodle {
-  final String? cursoId;
-  final String legajo;
-  final String cursoNombre;
-  final bool finalizoCurso;
-  final DateTime? fechaFinalizacion;
+class LmsCertification {
+  final String? courseId;
+  final String employeeId;
+  final String courseName;
+  final bool isCompleted;
+  final DateTime? completedAt;
 
-  const CertificacionMoodle({
-    this.cursoId,
-    required this.legajo,
-    required this.cursoNombre,
-    required this.finalizoCurso,
-    this.fechaFinalizacion,
+  const LmsCertification({
+    this.courseId,
+    required this.employeeId,
+    required this.courseName,
+    required this.isCompleted,
+    this.completedAt,
   });
 
   Map<String, dynamic> toJson() => {
-    'cursoId': cursoId,
-    'legajo': legajo,
-    'cursoNombre': cursoNombre,
-    'finalizoCurso': finalizoCurso,
-    'fechaFinalizacion': fechaFinalizacion?.toIso8601String(),
+    'cursoId': courseId,
+    'legajo': employeeId,
+    'cursoNombre': courseName,
+    'finalizoCurso': isCompleted,
+    'fechaFinalizacion': completedAt?.toIso8601String(),
   };
 
-  factory CertificacionMoodle.fromJson(Map<String, dynamic> json) {
-    final finalizo = json['finalizoCurso'];
-    return CertificacionMoodle(
-      cursoId: json['cursoId']?.toString(),
-      legajo: json['legajo']?.toString() ?? '',
-      cursoNombre: json['cursoNombre']?.toString() ?? '',
-      finalizoCurso: finalizo == true || finalizo?.toString() == 'true',
-      fechaFinalizacion: json['fechaFinalizacion'] == null
+  factory LmsCertification.fromJson(Map<String, dynamic> json) {
+    final completed = json['finalizoCurso'];
+    return LmsCertification(
+      courseId: json['cursoId']?.toString(),
+      employeeId: json['legajo']?.toString() ?? '',
+      courseName: json['cursoNombre']?.toString() ?? '',
+      isCompleted: completed == true || completed?.toString() == 'true',
+      completedAt: json['fechaFinalizacion'] == null
           ? null
-          : fechaObligatoria(json['fechaFinalizacion'].toString()),
+          : requiredDate(json['fechaFinalizacion'].toString()),
     );
   }
 }

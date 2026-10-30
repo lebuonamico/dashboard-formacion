@@ -22,24 +22,23 @@ import 'package:app_finnegans/domain/modelos/empleado.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/servicios/cumplimiento_service.dart';
 
-class EmpleadoDetalleScreen extends ConsumerWidget {
-  final String legajo;
+class EmployeeDetailScreen extends ConsumerWidget {
+  final String employeeId;
 
-  const EmpleadoDetalleScreen({super.key, required this.legajo});
+  const EmployeeDetailScreen({super.key, required this.employeeId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detalleAsync = ref.watch(detalleEmpleadoProvider(legajo));
-    final alcance = ref.watch(alcancePeriodoProvider);
-    final mes = ref.watch(filtroMesPeriodoProvider);
-    final anio = ref.watch(filtroAnioPeriodoProvider);
-    final periodoTexto = alcance == AlcancePeriodo.anual
-        ? 'Año $anio'
-        : '${nombreMes(mes)} $anio';
-    final hayDatosPeriodo =
-        ref.watch(hasTeamPeriodDataProvider).value ?? true;
+    final detailAsync = ref.watch(employeeDetailProvider(employeeId));
+    final scope = ref.watch(periodScopeProvider);
+    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodYearFilterProvider);
+    final periodText = scope == PeriodScope.annual
+        ? 'Año $year'
+        : '${monthName(month)} $year';
+    final hasPeriodData = ref.watch(hasTeamPeriodDataProvider).value ?? true;
 
-    final estiloSeccion = TextStyle(
+    final sectionStyle = TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w700,
       color: context.colorScheme.onSurface,
@@ -55,7 +54,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
 
           // Contenido
           Expanded(
-            child: detalleAsync.when(
+            child: detailAsync.when(
               // Al cambiar el período mantiene los datos previos en pantalla.
               skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -63,79 +62,81 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 title: 'No pudimos cargar el colaborador',
                 error: err,
               ),
-              data: (detalle) => FadeIn(
+              data: (detail) => FadeIn(
                 child: (() {
-                  if (detalle == null) {
+                  if (detail == null) {
                     return const Center(child: Text('Empleado no encontrado.'));
                   }
 
-                  final emp = detalle.empleado;
-                  final cump = detalle.cumplimiento;
+                  final emp = detail.employee;
+                  final currentCompliance = detail.compliance;
 
                   return ListView(
-                    padding: paddingPantalla,
+                    padding: screenPadding,
                     children: [
                       // Cabecera con datos del empleado
-                      _buildHeaderEmpleado(
+                      _buildEmployeeHeader(
                         context,
                         emp,
-                        cump,
-                        mostrarCumplimiento: hayDatosPeriodo,
+                        currentCompliance,
+                        showCompliance: hasPeriodData,
                       ),
                       const SizedBox(height: 16),
 
                       // Filtro de período global
-                      const PeriodoFilterPanel(),
+                      const PeriodFilterPanel(),
                       const SizedBox(height: 24),
 
-                      if (!hayDatosPeriodo) ...[
-                        EmptyDataState.periodoSinDatos(
-                          periodo: etiquetaPeriodo(alcance, mes, anio),
+                      if (!hasPeriodData) ...[
+                        EmptyDataState.periodWithoutData(
+                          period: periodLabel(scope, month, year),
                         ),
                         const SizedBox(height: 24),
                       ] else ...[
                         // Desglose de cumplimiento por categoría
                         Text(
-                          'Desglose del plan de formación ($periodoTexto)',
-                          style: estiloSeccion,
+                          'Desglose del plan de formación ($periodText)',
+                          style: sectionStyle,
                         ),
                         const SizedBox(height: 12),
-                        _buildGridCategorias(context, cump),
+                        _buildCategoriesGrid(context, currentCompliance),
                         const SizedBox(height: 24),
 
-                        if (ref.watch(proyeccionEmpleadoProvider(legajo)).value
-                            case final proyeccion?) ...[
-                          Text('Proyección a fin de año', style: estiloSeccion),
+                        if (ref
+                                .watch(employeeProjectionProvider(employeeId))
+                                .value
+                            case final projection?) ...[
+                          Text('Proyección a fin de año', style: sectionStyle),
                           const SizedBox(height: 12),
-                          ProyeccionEmpleadoCard(
-                            proyeccion: proyeccion,
-                            anio: anio,
+                          EmployeeProjectionCard(
+                            projection: projection,
+                            year: year,
                           ),
                           const SizedBox(height: 24),
                         ],
 
                         // Cursos del período: Moodle y CRM
                         Text(
-                          'Cursos del período ($periodoTexto)',
-                          style: estiloSeccion,
+                          'Cursos del período ($periodText)',
+                          style: sectionStyle,
                         ),
                         const SizedBox(height: 12),
-                        _buildColumnasCursos(context, detalle),
+                        _buildCoursesColumns(context, detail),
                         const SizedBox(height: 24),
                       ],
 
                       // Cursos Dictados (si aplica al seniority)
-                      if ((cump.horasRequeridas[TipoCurso
-                                      .dictadoCapacitaciones] ??
+                      if ((currentCompliance.requiredHours[CourseCategory
+                                      .teaching] ??
                                   0) >
                               0 ||
-                          detalle.cursosDictados.isNotEmpty) ...[
+                          detail.taughtCourses.isNotEmpty) ...[
                         Text(
                           'Cursos dictados como instructor',
-                          style: estiloSeccion,
+                          style: sectionStyle,
                         ),
                         const SizedBox(height: 12),
-                        _buildTablaDictados(context, detalle.cursosDictados),
+                        _buildTaughtTable(context, detail.taughtCourses),
                       ],
                     ],
                   );
@@ -148,16 +149,16 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderEmpleado(
+  Widget _buildEmployeeHeader(
     BuildContext context,
-    Empleado emp,
-    CumplimientoEmpleado cump, {
-    required bool mostrarCumplimiento,
+    Employee emp,
+    EmployeeCompliance currentCompliance, {
+    required bool showCompliance,
   }) {
     final cs = context.colorScheme;
-    final estadoCumplimiento = cump.cumpleObjetivo
-        ? context.colores.exito
-        : context.colores.advertencia;
+    final complianceStatus = currentCompliance.meetsTarget
+        ? context.colors.success
+        : context.colors.warning;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: context.panel(),
@@ -168,9 +169,9 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             radius: 36,
             backgroundColor: cs.primary,
             child: Text(
-              emp.nombre.trim().isEmpty
+              emp.firstName.trim().isEmpty
                   ? '?'
-                  : emp.nombre.trim().substring(0, 1).toUpperCase(),
+                  : emp.firstName.trim().substring(0, 1).toUpperCase(),
               style: TextStyle(
                 fontSize: 28,
                 color: cs.onPrimary,
@@ -186,7 +187,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      '${emp.nombre} ${emp.apellido}',
+                      '${emp.firstName} ${emp.lastName}',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -199,12 +200,12 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Área de ${emp.area} · Legajo: ${emp.legajo}',
+                  'Área de ${emp.area} · Legajo: ${emp.employeeId}',
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  emp.mail,
+                  emp.email,
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -212,13 +213,10 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _DatoEmpleado(
-                      label: 'Equipo',
-                      value: _mostrarDato(emp.equipo),
-                    ),
-                    _DatoEmpleado(
+                    _EmployeeData(label: 'Equipo', value: _showData(emp.team)),
+                    _EmployeeData(
                       label: 'Gerente',
-                      value: _mostrarDato(emp.gerente),
+                      value: _showData(emp.manager),
                     ),
                   ],
                 ),
@@ -226,35 +224,37 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             ),
           ),
           // Estado de Cumplimiento Global
-          if (mostrarCumplimiento)
+          if (showCompliance)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: estadoCumplimiento.fondo,
+                color: complianceStatus.background,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 children: [
                   Text(
-                    '${cump.totalHorasValidas.toStringAsFixed(0)} / ${cump.totalHorasRequeridas.toStringAsFixed(0)} hs LMS',
+                    '${currentCompliance.totalCreditedHours.toStringAsFixed(0)} / ${currentCompliance.totalRequiredHours.toStringAsFixed(0)} hs LMS',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: estadoCumplimiento.texto,
+                      color: complianceStatus.text,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    cump.cumpleObjetivo ? 'Objetivo cumplido' : 'En progreso',
+                    currentCompliance.meetsTarget
+                        ? 'Objetivo cumplido'
+                        : 'En progreso',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: estadoCumplimiento.texto,
+                      color: complianceStatus.text,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'CRM declaró ${cump.totalHorasDeclaradas.toStringAsFixed(0)} hs',
+                    'CRM declaró ${currentCompliance.totalDeclaredHours.toStringAsFixed(0)} hs',
                     style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                   ),
                 ],
@@ -265,20 +265,23 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
+  String _showData(String value) => value.trim().isEmpty ? '-' : value;
 
-  Widget _buildGridCategorias(BuildContext context, CumplimientoEmpleado cump) {
+  Widget _buildCategoriesGrid(
+    BuildContext context,
+    EmployeeCompliance currentCompliance,
+  ) {
     return Row(
-      children: TipoCurso.values.map((tipo) {
-        final completadas = cump.horasValidas[tipo] ?? 0.0;
-        final declaradas = cump.horasDeclaradas[tipo] ?? 0.0;
-        final requeridas = cump.horasRequeridas[tipo] ?? 0.0;
-        final requerida = requeridas > 0;
-        final cumple = requerida && completadas >= requeridas;
+      children: CourseCategory.values.map((type) {
+        final completed = currentCompliance.creditedHours[type] ?? 0.0;
+        final declared = currentCompliance.declaredHours[type] ?? 0.0;
+        final required = currentCompliance.requiredHours[type] ?? 0.0;
+        final isRequired = required > 0;
+        final meets = isRequired && completed >= required;
         // Libres y Dictado no existen en el LMS: se cumplen con horas CRM.
-        final fuente =
-            tipo == TipoCurso.libresExploracion ||
-                tipo == TipoCurso.dictadoCapacitaciones
+        final source =
+            type == CourseCategory.exploration ||
+                type == CourseCategory.teaching
             ? 'CRM'
             : 'LMS';
 
@@ -291,7 +294,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  tipo.label,
+                  type.label,
                   style: TextStyle(
                     fontSize: 12,
                     color: context.colorScheme.onSurfaceVariant,
@@ -302,22 +305,22 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  requerida
-                      ? '${completadas.toStringAsFixed(0)} / ${requeridas.toStringAsFixed(0)} hs $fuente'
+                  isRequired
+                      ? '${completed.toStringAsFixed(0)} / ${required.toStringAsFixed(0)} hs $source'
                       : 'No requerida',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: !requerida
+                    color: !isRequired
                         ? context.colorScheme.onSurfaceVariant
-                        : cumple
-                        ? context.colores.exito.texto
-                        : context.colores.peligro.texto,
+                        : meets
+                        ? context.colors.success.text
+                        : context.colors.danger.text,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'CRM declaró ${declaradas.toStringAsFixed(0)} hs',
+                  'CRM declaró ${declared.toStringAsFixed(0)} hs',
                   style: TextStyle(
                     fontSize: 11,
                     color: context.colorScheme.onSurfaceVariant,
@@ -327,16 +330,16 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
-                    value: requeridas == 0
+                    value: required == 0
                         ? 0.0
-                        : (completadas / requeridas).clamp(0.0, 1.0),
+                        : (completed / required).clamp(0.0, 1.0),
                     minHeight: 4,
                     backgroundColor: context.colorScheme.surfaceContainer,
-                    color: !requerida
+                    color: !isRequired
                         ? context.colorScheme.outlineVariant
-                        : cumple
-                        ? context.colores.exito.texto
-                        : context.colores.advertencia.texto,
+                        : meets
+                        ? context.colors.success.text
+                        : context.colors.warning.text,
                   ),
                 ),
               ],
@@ -348,50 +351,50 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
   }
 
   /// Muestra Moodle y CRM lado a lado; en pantallas angostas los apila.
-  Widget _buildColumnasCursos(
+  Widget _buildCoursesColumns(
     BuildContext context,
-    DetalleEmpleadoViewModel detalle,
+    EmployeeDetailViewModel detail,
   ) {
-    final horasCrm = detalle.cargasCrm.fold<double>(
+    final crmHours = detail.timeEntriesCrm.fold<double>(
       0,
-      (total, item) => total + item.carga.horasTotales,
+      (total, item) => total + item.timeEntry.hours,
     );
     // Horas del catálogo de los cursos Moodle finalizados en el período.
-    final horasMoodle = detalle.certificacionesMoodle
-        .where((item) => item.finalizoCurso)
+    final moodleHours = detail.lmsCertifications
+        .where((item) => item.isCompleted)
         .fold<double>(
           0,
           (total, item) =>
               total +
-              (detalle.cursoPorNombre(item.cursoNombre)?.cargaHorariaHs ?? 0),
+              (detail.courseByName(item.courseName)?.workloadHours ?? 0),
         );
-    final columnaMoodle = Column(
+    final columnMoodle = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildEncabezadoColumna(
+        _buildColumnHeader(
           context,
-          icono: Icons.school_outlined,
-          titulo: 'Moodle (LMS)',
-          detalle: '${_formatearHoras(horasMoodle)} hs',
+          icon: Icons.school_outlined,
+          title: 'Moodle (LMS)',
+          detail: '${_formatHours(moodleHours)} hs',
         ),
         const SizedBox(height: 8),
-        _buildColumnaMoodle(context, detalle),
+        _buildColumnMoodle(context, detail),
       ],
     );
-    final columnaCrm = Column(
+    final columnCrm = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildEncabezadoColumna(
+        _buildColumnHeader(
           context,
-          icono: Icons.schedule_outlined,
-          titulo: 'CRM (horas declaradas)',
-          detalle: '${_formatearHoras(horasCrm)} hs',
+          icon: Icons.schedule_outlined,
+          title: 'CRM (horas declaradas)',
+          detail: '${_formatHours(crmHours)} hs',
         ),
         const SizedBox(height: 8),
-        _buildTablaCursadas(
+        _buildTimeEntriesTable(
           context,
-          detalle.cargasCrm,
-          detalle.cursosFinalizados,
+          detail.timeEntriesCrm,
+          detail.completedCourses,
         ),
       ],
     );
@@ -401,35 +404,35 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
         if (constraints.maxWidth < 900) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [columnaMoodle, const SizedBox(height: 24), columnaCrm],
+            children: [columnMoodle, const SizedBox(height: 24), columnCrm],
           );
         }
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: columnaMoodle),
+            Expanded(child: columnMoodle),
             const SizedBox(width: 16),
-            Expanded(child: columnaCrm),
+            Expanded(child: columnCrm),
           ],
         );
       },
     );
   }
 
-  Widget _buildEncabezadoColumna(
+  Widget _buildColumnHeader(
     BuildContext context, {
-    required IconData icono,
-    required String titulo,
-    required String detalle,
+    required IconData icon,
+    required String title,
+    required String detail,
   }) {
     final cs = context.colorScheme;
     return Row(
       children: [
-        Icon(icono, size: 18, color: cs.primary),
+        Icon(icon, size: 18, color: cs.primary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            titulo,
+            title,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -438,94 +441,95 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
           ),
         ),
         Text(
-          detalle,
+          detail,
           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
         ),
       ],
     );
   }
 
-  Widget _buildEstadoVacio(BuildContext context, String mensaje) {
+  Widget _buildEmptyState(BuildContext context, String message) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: context.panel(),
       child: Center(
         child: Text(
-          mensaje,
+          message,
           style: TextStyle(color: context.colorScheme.onSurfaceVariant),
         ),
       ),
     );
   }
 
-  Widget _buildColumnaMoodle(
+  Widget _buildColumnMoodle(
     BuildContext context,
-    DetalleEmpleadoViewModel detalle,
+    EmployeeDetailViewModel detail,
   ) {
-    if (detalle.certificacionesMoodle.isEmpty) {
-      return _buildEstadoVacio(context, 'Sin certificaciones en el período.');
+    if (detail.lmsCertifications.isEmpty) {
+      return _buildEmptyState(context, 'Sin certificaciones en el período.');
     }
 
     return Column(
-      children: detalle.certificacionesMoodle.map((certificacion) {
-        final curso = detalle.cursoPorNombre(certificacion.cursoNombre);
-        return _CertificacionMoodleCard(
-          certificacion: certificacion,
-          nombreCurso: curso?.nombre ?? certificacion.cursoNombre,
-          infoCurso: curso == null
+      children: detail.lmsCertifications.map((certification) {
+        final course = detail.courseByName(certification.courseName);
+        return _LmsCertificationCard(
+          certification: certification,
+          courseName: course?.name ?? certification.courseName,
+          courseInfo: course == null
               ? 'Curso no encontrado en el catálogo'
-              : '${curso.clasificacion.label} · ${_formatearHoras(curso.cargaHorariaHs)} hs',
-          fechaTexto: _formatearFecha(certificacion.fechaFinalizacion!),
+              : '${course.category.label} · ${_formatHours(course.workloadHours)} hs',
+          dateText: _formatDate(certification.completedAt!),
         );
       }).toList(),
     );
   }
 
-  Widget _buildTablaCursadas(
+  Widget _buildTimeEntriesTable(
     BuildContext context,
-    List<CargaDeHorasCRMViewModel> cursadas,
-    Set<String> cursosFinalizados,
+    List<CrmTimeEntryViewModel> timeEntries,
+    Set<String> completedCourses,
   ) {
-    if (cursadas.isEmpty) {
-      return _buildEstadoVacio(context, 'Sin cargas CRM en el período.');
+    if (timeEntries.isEmpty) {
+      return _buildEmptyState(context, 'Sin cargas CRM en el período.');
     }
     final cs = context.colorScheme;
-    final colores = context.colores;
+    final colors = context.colors;
 
-    final grupos = <String, List<CargaDeHorasCRMViewModel>>{};
-    for (final cursada in cursadas) {
-      final cursoId = cursada.curso?.id.trim() ?? '';
-      final nombreCurso = cursada.curso?.nombre ?? cursada.carga.cursoNombre;
-      final clave = cursoId.isNotEmpty
-          ? 'id:$cursoId'
-          : 'nombre:${nombreCurso.trim().toLowerCase()}';
-      grupos.putIfAbsent(clave, () => []).add(cursada);
+    final groups = <String, List<CrmTimeEntryViewModel>>{};
+    for (final timeEntry in timeEntries) {
+      final courseId = timeEntry.course?.id.trim() ?? '';
+      final courseName =
+          timeEntry.course?.name ?? timeEntry.timeEntry.courseName;
+      final key = courseId.isNotEmpty
+          ? 'id:$courseId'
+          : 'nombre:${courseName.trim().toLowerCase()}';
+      groups.putIfAbsent(key, () => []).add(timeEntry);
     }
 
-    final cursosAgrupados = grupos.entries.toList()
-      ..sort((a, b) => _nombreCurso(a.value).compareTo(_nombreCurso(b.value)));
+    final groupedCourses = groups.entries.toList()
+      ..sort((a, b) => _courseName(a.value).compareTo(_courseName(b.value)));
 
     return Column(
-      children: cursosAgrupados.map((grupo) {
-        final registros = grupo.value
-          ..sort((a, b) => b.carga.fecha.compareTo(a.carga.fecha));
-        final primeraCursada = registros.first;
-        final nombreCurso = _nombreCurso(registros);
-        final cursoFinalizado = cursosFinalizados.contains(
-          CumplimientoService.normalizarNombreCurso(nombreCurso),
+      children: groupedCourses.map((group) {
+        final records = group.value
+          ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
+        final firstTimeEntry = records.first;
+        final courseName = _courseName(records);
+        final completedCourse = completedCourses.contains(
+          ComplianceService.normalizeCourseName(courseName),
         );
-        final horasDeclaradas = registros.fold<double>(
+        final declaredHours = records.fold<double>(
           0,
-          (total, item) => total + item.carga.horasTotales,
+          (total, item) => total + item.timeEntry.hours,
         );
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
-          decoration: context.panel(radio: 6),
+          decoration: context.panel(radius: 6),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: ExpansionTile(
-              key: PageStorageKey<String>('curso-${grupo.key}'),
+              key: PageStorageKey<String>('curso-${group.key}'),
               tilePadding: const EdgeInsets.symmetric(horizontal: 16),
               childrenPadding: EdgeInsets.zero,
               leading: Icon(
@@ -537,7 +541,7 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      nombreCurso,
+                      courseName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -547,22 +551,22 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (cursoFinalizado) ...[
+                  if (completedCourse) ...[
                     const SizedBox(width: 8),
-                    EtiquetaColor(texto: 'Finalizado', colores: colores.exito),
+                    ColorLabel(text: 'Finalizado', colors: colors.success),
                   ],
                 ],
               ),
               subtitle: Text(
-                '${primeraCursada.curso?.clasificacion.label ?? 'Tipo sin especificar'} · '
-                '${registros.length} ${registros.length == 1 ? 'registro' : 'registros'} · '
-                '${_formatearHoras(horasDeclaradas)} hs declaradas',
+                '${firstTimeEntry.course?.category.label ?? 'Tipo sin especificar'} · '
+                '${records.length} ${records.length == 1 ? 'registro' : 'registros'} · '
+                '${_formatHours(declaredHours)} hs declaradas',
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
               ),
               children: [
                 const Divider(height: 1),
-                ...registros.map((registro) {
-                  final fechaTexto = _formatearFecha(registro.carga.fecha);
+                ...records.map((record) {
+                  final dateText = _formatDate(record.timeEntry.date);
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -579,22 +583,19 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            fechaTexto,
+                            dateText,
                             style: TextStyle(
                               fontSize: 13,
-                              color: colores.textoIntermedio,
+                              color: colors.intermediateText,
                             ),
                           ),
                         ),
-                        if (registro.carga.esDictada) ...[
-                          EtiquetaColor(
-                            texto: 'Dictada',
-                            colores: colores.dictado,
-                          ),
+                        if (record.timeEntry.isTaught) ...[
+                          ColorLabel(text: 'Dictada', colors: colors.teaching),
                           const SizedBox(width: 8),
                         ],
                         Text(
-                          '${_formatearHoras(registro.carga.horasTotales)} hs',
+                          '${_formatHours(record.timeEntry.hours)} hs',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -613,25 +614,25 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  String _nombreCurso(List<CargaDeHorasCRMViewModel> cursadas) {
-    final primera = cursadas.first;
-    return primera.curso?.nombre ?? primera.carga.cursoNombre;
+  String _courseName(List<CrmTimeEntryViewModel> timeEntries) {
+    final first = timeEntries.first;
+    return first.course?.name ?? first.timeEntry.courseName;
   }
 
-  String _formatearHoras(double horas) => horas == horas.roundToDouble()
-      ? horas.toStringAsFixed(0)
-      : horas.toStringAsFixed(1);
+  String _formatHours(double hours) => hours == hours.roundToDouble()
+      ? hours.toStringAsFixed(0)
+      : hours.toStringAsFixed(1);
 
-  String _formatearFecha(DateTime fecha) =>
-      '${fecha.day.toString().padLeft(2, '0')}/'
-      '${fecha.month.toString().padLeft(2, '0')}/'
-      '${fecha.year}';
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/'
+      '${date.year}';
 
-  Widget _buildTablaDictados(
+  Widget _buildTaughtTable(
     BuildContext context,
-    List<CursoDictadoViewModel> dictados,
+    List<TaughtCourseViewModel> taught,
   ) {
-    if (dictados.isEmpty) {
+    if (taught.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: context.panel(),
@@ -673,28 +674,28 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
             ),
           ),
         ],
-        rows: dictados.map((c) {
+        rows: taught.map((c) {
           return DataRow(
             cells: [
               DataCell(
                 Text(
-                  c.codigo,
+                  c.code,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
               DataCell(
                 Text(
-                  c.nombre,
+                  c.name,
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
               DataCell(Text(c.area)),
               DataCell(
                 Text(
-                  '${_formatearHoras(c.horas)} hs',
+                  '${_formatHours(c.hours)} hs',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: context.colores.dictado.texto,
+                    color: context.colors.teaching.text,
                   ),
                 ),
               ),
@@ -706,11 +707,11 @@ class EmpleadoDetalleScreen extends ConsumerWidget {
   }
 }
 
-class _DatoEmpleado extends StatelessWidget {
+class _EmployeeData extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DatoEmpleado({required this.label, required this.value});
+  const _EmployeeData({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -718,7 +719,7 @@ class _DatoEmpleado extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 150),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: context
-          .panel(radio: 6)
+          .panel(radius: 6)
           .copyWith(color: context.colorScheme.surfaceContainerLow),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,28 +742,28 @@ class _DatoEmpleado extends StatelessWidget {
   }
 }
 
-class _CertificacionMoodleCard extends StatelessWidget {
-  final CertificacionMoodle certificacion;
-  final String nombreCurso;
-  final String infoCurso;
-  final String fechaTexto;
+class _LmsCertificationCard extends StatelessWidget {
+  final LmsCertification certification;
+  final String courseName;
+  final String courseInfo;
+  final String dateText;
 
-  const _CertificacionMoodleCard({
-    required this.certificacion,
-    required this.nombreCurso,
-    required this.infoCurso,
-    required this.fechaTexto,
+  const _LmsCertificationCard({
+    required this.certification,
+    required this.courseName,
+    required this.courseInfo,
+    required this.dateText,
   });
 
   @override
   Widget build(BuildContext context) {
-    final finalizado = certificacion.finalizoCurso;
+    final completed = certification.isCompleted;
     final cs = context.colorScheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: context.panel(radio: 6),
+      decoration: context.panel(radius: 6),
       child: Row(
         children: [
           Icon(
@@ -779,7 +780,7 @@ class _CertificacionMoodleCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        nombreCurso,
+                        courseName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -790,17 +791,17 @@ class _CertificacionMoodleCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    EtiquetaColor(
-                      texto: finalizado ? 'Finalizado' : 'En curso',
-                      colores: finalizado
-                          ? context.colores.exito
-                          : context.colores.advertencia,
+                    ColorLabel(
+                      text: completed ? 'Finalizado' : 'En curso',
+                      colors: completed
+                          ? context.colors.success
+                          : context.colors.warning,
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$infoCurso · ${finalizado ? 'Finalizó' : 'Fecha'} $fechaTexto',
+                  '$courseInfo · ${completed ? 'Finalizó' : 'Fecha'} $dateText',
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ],

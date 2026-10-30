@@ -4,30 +4,48 @@ import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 /// El objetivo que se evalúa sale de `PlanesFormacion`, que se edita en
 /// Configuración y puede cambiar mes a mes.
 enum Seniority {
-  trainee('Trainee', negocio: 4, blandas: 4, libres: 0, dictado: 0),
-  junior1('Junior 1', negocio: 4, blandas: 4, libres: 0, dictado: 0),
-  junior2('Junior 2', negocio: 4, blandas: 4, libres: 0, dictado: 0),
-  junior3('Junior 3', negocio: 3, blandas: 4, libres: 1, dictado: 0),
-  semisenior1('Semisenior 1', negocio: 3, blandas: 4, libres: 1, dictado: 0),
-  semisenior2('Semisenior 2', negocio: 2, blandas: 4, libres: 1, dictado: 1),
-  semisenior3('Semisenior 3', negocio: 1, blandas: 4, libres: 1, dictado: 2),
-  senior1('Senior 1', negocio: 0, blandas: 2, libres: 2, dictado: 4),
-  senior2('Senior 2', negocio: 0, blandas: 2, libres: 2, dictado: 4),
-  senior3('Senior 3', negocio: 0, blandas: 2, libres: 2, dictado: 4),
-  manager('Manager', negocio: 0, blandas: 0, libres: 8, dictado: 0);
+  trainee('Trainee', business: 4, softSkills: 4, exploration: 0, teaching: 0),
+  junior1('Junior 1', business: 4, softSkills: 4, exploration: 0, teaching: 0),
+  junior2('Junior 2', business: 4, softSkills: 4, exploration: 0, teaching: 0),
+  junior3('Junior 3', business: 3, softSkills: 4, exploration: 1, teaching: 0),
+  semisenior1(
+    'Semisenior 1',
+    business: 3,
+    softSkills: 4,
+    exploration: 1,
+    teaching: 0,
+  ),
+  semisenior2(
+    'Semisenior 2',
+    business: 2,
+    softSkills: 4,
+    exploration: 1,
+    teaching: 1,
+  ),
+  semisenior3(
+    'Semisenior 3',
+    business: 1,
+    softSkills: 4,
+    exploration: 1,
+    teaching: 2,
+  ),
+  senior1('Senior 1', business: 0, softSkills: 2, exploration: 2, teaching: 4),
+  senior2('Senior 2', business: 0, softSkills: 2, exploration: 2, teaching: 4),
+  senior3('Senior 3', business: 0, softSkills: 2, exploration: 2, teaching: 4),
+  manager('Manager', business: 0, softSkills: 0, exploration: 8, teaching: 0);
 
   final String label;
-  final double negocio;
-  final double blandas;
-  final double libres;
-  final double dictado;
+  final double business;
+  final double softSkills;
+  final double exploration;
+  final double teaching;
 
   const Seniority(
     this.label, {
-    required this.negocio,
-    required this.blandas,
-    required this.libres,
-    required this.dictado,
+    required this.business,
+    required this.softSkills,
+    required this.exploration,
+    required this.teaching,
   });
 
   /// Mapea el texto del Excel a su enum correspondiente
@@ -157,24 +175,24 @@ enum Seniority {
     return null;
   }
 
-  double horasRequeridas(TipoCurso tipo) {
-    switch (tipo) {
-      case TipoCurso.habilidadesDeNegocio:
-        return negocio;
-      case TipoCurso.habilidadesBlandas:
-        return blandas;
-      case TipoCurso.libresExploracion:
-        return libres;
-      case TipoCurso.dictadoCapacitaciones:
-        return dictado;
+  double requiredHours(CourseCategory type) {
+    switch (type) {
+      case CourseCategory.businessSkills:
+        return business;
+      case CourseCategory.softSkills:
+        return softSkills;
+      case CourseCategory.exploration:
+        return exploration;
+      case CourseCategory.teaching:
+        return teaching;
     }
   }
 
   /// Plan por defecto de este nivel; ver `PlanFormacion.porDefecto`.
-  Map<TipoCurso, double> get planFormacion => {
-    TipoCurso.habilidadesDeNegocio: negocio,
-    TipoCurso.habilidadesBlandas: blandas,
-    TipoCurso.libresExploracion: libres,
-    TipoCurso.dictadoCapacitaciones: dictado,
+  Map<CourseCategory, double> get trainingPlan => {
+    CourseCategory.businessSkills: business,
+    CourseCategory.softSkills: softSkills,
+    CourseCategory.exploration: exploration,
+    CourseCategory.teaching: teaching,
   };
 }

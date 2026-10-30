@@ -70,13 +70,13 @@ class _TeamsOverviewContent extends ConsumerWidget {
     final teams = summary.teams;
     final query = ref.watch(teamSearchQueryProvider);
     final selectedStatus = ref.watch(teamStatusFilterProvider);
-    final selectedScope = ref.watch(alcancePeriodoProvider);
-    final selectedMonth = ref.watch(filtroMesPeriodoProvider);
-    final selectedYear = ref.watch(filtroAnioPeriodoProvider);
+    final selectedScope = ref.watch(periodScopeProvider);
+    final selectedMonth = ref.watch(periodMonthFilterProvider);
+    final selectedYear = ref.watch(periodYearFilterProvider);
     final hasActiveFilters = query.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(
-      padding: paddingPantalla,
+      padding: screenPadding,
       children: [
         Text(
           'Vista general',
@@ -97,16 +97,12 @@ class _TeamsOverviewContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 18),
-        const PeriodoFilterPanel(),
+        const PeriodFilterPanel(),
         const SizedBox(height: 22),
         if (!summary.hasData)
-          EmptyDataState.periodoSinDatos(
+          EmptyDataState.periodWithoutData(
             icon: Icons.groups_outlined,
-            periodo: etiquetaPeriodo(
-              selectedScope,
-              selectedMonth,
-              selectedYear,
-            ),
+            period: periodLabel(selectedScope, selectedMonth, selectedYear),
           )
         else if (teams.isEmpty)
           const EmptyDataState(
@@ -117,22 +113,20 @@ class _TeamsOverviewContent extends ConsumerWidget {
                 'Verificá la nómina elegible para el período seleccionado.',
           )
         else ...[
-          TeamsKpiSection(  
+          TeamsKpiSection(
             teamCount: summary.teamCount,
             employeeCount: summary.employeeCount,
             completedHours: summary.completedHours,
             targetHours: summary.targetHours,
             overallCompletion: summary.overallCompletion,
-            isAnnual: selectedScope == AlcancePeriodo.anual,
+            isAnnual: selectedScope == PeriodScope.annual,
             year: selectedYear,
             month: selectedMonth,
             variation: ref
-                .watch(
-                  variacionCumplimientoProvider((area: null, equipo: null)),
-                )
+                .watch(complianceVariationProvider((area: null, team: null)))
                 .value,
             projection: ref
-                .watch(proyeccionAnualProvider((area: null, equipo: null)))
+                .watch(annualProjectionProvider((area: null, team: null)))
                 .value,
           ),
           const SizedBox(height: 16),
@@ -148,14 +142,14 @@ class _TeamsOverviewContent extends ConsumerWidget {
               softSkillsHours: summary.softSkillsHours,
               explorationHours: summary.explorationHours,
               teachingHours: summary.teachingHours,
-              isAnnual: selectedScope == AlcancePeriodo.anual,
+              isAnnual: selectedScope == PeriodScope.annual,
             ),
           ),
 
           if (ref.watch(teamComplianceProvider).value case final items?
               when items.isNotEmpty) ...[
             const SizedBox(height: 16),
-            ComparacionMoodleCrmCards(cumplimientos: items),
+            MoodleCrmComparisonCards(complianceList: items),
           ],
           const SizedBox(height: 24),
           FilterBar(
@@ -184,7 +178,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
               ),
               teams: filteredTeams,
               teamCount: summary.teamCount,
-              isAnnual: selectedScope == AlcancePeriodo.anual,
+              isAnnual: selectedScope == PeriodScope.annual,
             ),
           ),
         ],

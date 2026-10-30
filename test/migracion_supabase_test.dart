@@ -21,13 +21,13 @@ import 'package:app_finnegans/domain/repositorios/carga_de_horas_crm_repository.
 import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart';
 import 'package:app_finnegans/domain/servicios/importacion_service.dart';
 
-Curso course({String id = '107', String nombre = 'Curso LMS'}) => Curso(
+Course course({String id = '107', String name = 'Curso LMS'}) => Course(
   id: id,
-  nombre: nombre,
-  clasificacion: TipoCurso.habilidadesDeNegocio,
-  areaCurso: 'Solo local',
-  instructorLegajo: 'Solo local',
-  cargaHorariaHs: 4,
+  name: name,
+  category: CourseCategory.businessSkills,
+  courseArea: 'Solo local',
+  instructorEmployeeId: 'Solo local',
+  workloadHours: 4,
 );
 
 SupabaseTableMapping mapping(
@@ -70,29 +70,29 @@ final completionMapping = mapping(
 
 /// Respuesta de PostgREST con el total en `content-range`, como la manda
 /// Supabase cuando se pide el conteo.
-http.Response _filas(
+http.Response _rows(
   http.BaseRequest request,
   List<Map<String, dynamic>> rows, {
   int? total,
 }) {
   final offset = int.parse(request.url.queryParameters['offset'] ?? '0');
-  final rango = rows.isEmpty ? '*' : '$offset-${offset + rows.length - 1}';
+  final range = rows.isEmpty ? '*' : '$offset-${offset + rows.length - 1}';
   return http.Response(
     jsonEncode(rows),
     200,
     request: request,
     headers: {
       'content-type': 'application/json',
-      'content-range': '$rango/${total ?? rows.length}',
+      'content-range': '$range/${total ?? rows.length}',
     },
   );
 }
 
-class Audit implements ImportacionesRepository {
-  final records = <RegistroImportacion>[];
+class Audit implements ImportRecordsRepository {
+  final records = <ImportRecord>[];
   @override
-  Future<void> registrar(RegistroImportacion registro) async {
-    records.add(registro);
+  Future<void> register(ImportRecord record) async {
+    records.add(record);
   }
 }
 
@@ -103,17 +103,17 @@ void main() {
   test(
     'Course matching trims/cases, rejects ambiguity and never interprets Caso as ID',
     () {
-      expect(resolverCurso('  CURSO lms ', [course()]).id, '107');
+      expect(courseResolver('  CURSO lms ', [course()]).id, '107');
       expect(
-        () => resolverCurso('Choras - 107', [course()]),
+        () => courseResolver('Choras - 107', [course()]),
         throwsFormatException,
       );
       expect(
-        () => resolverCurso('Curso', [course(nombre: 'Curso LMS')]),
+        () => courseResolver('Curso', [course(name: 'Curso LMS')]),
         throwsFormatException,
       );
       expect(
-        () => resolverCurso('Curso LMS', [course(), course(id: '2')]),
+        () => courseResolver('Curso LMS', [course(), course(id: '2')]),
         throwsFormatException,
       );
     },
@@ -130,38 +130,31 @@ void main() {
       'Infinity',
       '0',
     ]) {
-      expect(
-        () => fechaObligatoria(value),
-        throwsFormatException,
-        reason: value,
-      );
+      expect(() => requiredDate(value), throwsFormatException, reason: value);
     }
-    expect(fechaObligatoria('15/09/2025'), DateTime(2025, 9, 15));
-    expect(fechaObligatoria('2025-09-15'), DateTime(2025, 9, 15));
-    expect(fechaObligatoria('45915'), DateTime(2025, 9, 15));
+    expect(requiredDate('15/09/2025'), DateTime(2025, 9, 15));
+    expect(requiredDate('2025-09-15'), DateTime(2025, 9, 15));
+    expect(requiredDate('45915'), DateTime(2025, 9, 15));
     expect(
-      fechaObligatoria('2025-01-01T00:00:00+03:00'),
+      requiredDate('2025-01-01T00:00:00+03:00'),
       DateTime.utc(2024, 12, 31, 21),
     );
     expect(
-      () => CargaDeHorasCRM.fromJson({'fecha': 'invalid'}),
+      () => CrmTimeEntry.fromJson({'fecha': 'invalid'}),
       throwsFormatException,
     );
     expect(
-      () => CertificacionMoodle.fromJson({'fechaFinalizacion': '2025-02-31'}),
+      () => LmsCertification.fromJson({'fechaFinalizacion': '2025-02-31'}),
       throwsFormatException,
     );
   });
 
   test('Local fallback reads mocks without recursion', () async {
-    expect(await LocalEmpleadosRepository().getEmpleados(), isNotEmpty);
-    expect(await LocalCursosRepository().getCursos(), isNotEmpty);
+    expect(await LocalEmployeesRepository().getEmployees(), isNotEmpty);
+    expect(await LocalCoursesRepository().getCourses(), isNotEmpty);
+    expect(await LocalCrmTimeEntriesRepository().getTimeEntries(), isNotEmpty);
     expect(
-      await LocalCargaDeHorasCRMRepository().getCargasDeHoras(),
-      isNotEmpty,
-    );
-    expect(
-      await LocalCertificacionesMoodleRepository().getCertificaciones(),
+      await LocalLmsCertificationsRepository().getCertifications(),
       isEmpty,
     );
   });
@@ -169,28 +162,27 @@ void main() {
   test(
     'Local UPSERT preserves old CRM data and updates same transaction',
     () async {
-      final repo = LocalCargaDeHorasCRMRepository();
-      CargaDeHorasCRM item(String id, int month, double hours) =>
-          CargaDeHorasCRM(
-            id: id,
-            cursoNombre: 'Curso LMS',
-            cursoId: '107',
-            empleadoLegajo: '10',
-            fecha: DateTime(2025, month, 1),
-            horasTotales: hours,
-            tipo: TipoCargaDeHoras.tomada,
-          );
-      await repo.replaceCargasDeHoras([item('old', 1, 2)]);
-      await repo.upsertCargasDeHoras([item('new', 2, 3)]);
-      await repo.upsertCargasDeHoras([item('new', 2, 4)]);
-      final all = await repo.getCargasDeHoras();
+      final repo = LocalCrmTimeEntriesRepository();
+      CrmTimeEntry item(String id, int month, double hours) => CrmTimeEntry(
+        id: id,
+        courseName: 'Curso LMS',
+        courseId: '107',
+        employeeId: '10',
+        date: DateTime(2025, month, 1),
+        hours: hours,
+        kind: TimeEntryKind.taken,
+      );
+      await repo.replaceTimeEntries([item('old', 1, 2)]);
+      await repo.upsertTimeEntries([item('new', 2, 3)]);
+      await repo.upsertTimeEntries([item('new', 2, 4)]);
+      final all = await repo.getTimeEntries();
       expect(all.length, 2);
-      expect(all.singleWhere((i) => i.id == 'old').horasTotales, 2);
-      expect(all.singleWhere((i) => i.id == 'new').horasTotales, 4);
+      expect(all.singleWhere((i) => i.id == 'old').hours, 2);
+      expect(all.singleWhere((i) => i.id == 'new').hours, 4);
       expect(
-        (await repo.getCargasDeHoras(
-          desde: DateTime(2025, 2),
-          hasta: DateTime(2025, 3),
+        (await repo.getTimeEntries(
+          from: DateTime(2025, 2),
+          until: DateTime(2025, 3),
         )).length,
         1,
       );
@@ -200,43 +192,43 @@ void main() {
   test(
     'First local imports persist only imported records, retaining mocks as fallback',
     () async {
-      final repo = LocalCursosRepository();
-      await repo.upsertCursos([course()]);
-      expect((await repo.getCursos()).map((c) => c.id), ['107']);
+      final repo = LocalCoursesRepository();
+      await repo.upsertCourses([course()]);
+      expect((await repo.getCourses()).map((c) => c.id), ['107']);
       await repo.resetToMock();
-      expect(await repo.getCursos(), isNotEmpty);
+      expect(await repo.getCourses(), isNotEmpty);
     },
   );
 
   test(
     'Local completions keep one row per employee/course and repeated import is idempotent',
     () async {
-      final repo = LocalCertificacionesMoodleRepository();
-      final january = CertificacionMoodle(
-        legajo: '10',
-        cursoNombre: 'Curso LMS',
-        finalizoCurso: true,
-        fechaFinalizacion: DateTime(2025, 1, 1),
+      final repo = LocalLmsCertificationsRepository();
+      final january = LmsCertification(
+        employeeId: '10',
+        courseName: 'Curso LMS',
+        isCompleted: true,
+        completedAt: DateTime(2025, 1, 1),
       );
-      final february = CertificacionMoodle(
-        legajo: '10',
-        cursoNombre: 'Curso LMS',
-        finalizoCurso: true,
-        fechaFinalizacion: DateTime(2025, 2, 1),
+      final february = LmsCertification(
+        employeeId: '10',
+        courseName: 'Curso LMS',
+        isCompleted: true,
+        completedAt: DateTime(2025, 2, 1),
       );
-      await repo.upsertCertificaciones([january]);
-      await repo.upsertCertificaciones([february]);
-      await repo.upsertCertificaciones([february]);
-      final rows = await repo.getCertificaciones();
+      await repo.upsertCertifications([january]);
+      await repo.upsertCertifications([february]);
+      await repo.upsertCertifications([february]);
+      final rows = await repo.getCertifications();
       expect(rows.length, 1);
-      expect(rows.single.fechaFinalizacion, DateTime(2025, 2, 1));
+      expect(rows.single.completedAt, DateTime(2025, 2, 1));
     },
   );
 
   test('Remote paging reads every page, the rest in parallel, even when the '
       'server caps pages below the requested size', () async {
     const total = 1001;
-    const tope = 500;
+    const cap = 500;
     final requests = <http.Request>[];
     final client = SupabaseClient(
       'https://test.supabase.co',
@@ -245,19 +237,19 @@ void main() {
         requests.add(request);
         final offset = int.parse(request.url.queryParameters['offset']!);
         final limit = int.parse(request.url.queryParameters['limit']!);
-        final count = [limit, tope, total - offset].reduce(min);
-        return _filas(request, [
+        final count = [limit, cap, total - offset].reduce(min);
+        return _rows(request, [
           for (var i = 0; i < count; i++)
             courseMapping.encode(course(id: '${offset + i}').toJson()),
         ], total: total);
       }),
     );
-    final cursos = await SupabaseCursosRepository(
+    final courses = await SupabaseCoursesRepository(
       client,
       courseMapping,
-    ).getCursos();
-    expect(cursos.length, total);
-    expect(cursos.map((c) => c.id).toSet().length, total);
+    ).getCourses();
+    expect(courses.length, total);
+    expect(courses.map((c) => c.id).toSet().length, total);
     expect(requests.map((r) => r.url.queryParameters['offset']), [
       '0',
       '500',
@@ -274,7 +266,7 @@ void main() {
       'formacion_carga_de_horas_crm': '[{"fecha":"invalid"}]',
     });
     await expectLater(
-      LocalCargaDeHorasCRMRepository().getCargasDeHoras(),
+      LocalCrmTimeEntriesRepository().getTimeEntries(),
       throwsFormatException,
     );
   });
@@ -305,20 +297,20 @@ void main() {
         'public-test-key',
         httpClient: MockClient((request) async {
           requests.add(request);
-          return _filas(request, []);
+          return _rows(request, []);
         }),
       );
-      final courses = SupabaseCursosRepository(client, courseMapping);
-      final hours = SupabaseCargaDeHorasCRMRepository(
+      final courses = SupabaseCoursesRepository(client, courseMapping);
+      final hours = SupabaseCrmTimeEntriesRepository(
         client,
         hoursMapping,
         courses,
       );
-      await hours.getCargasDeHoras(
-        empleadoLegajo: '10',
-        cursoId: '107',
-        desde: DateTime(2025, 1),
-        hasta: DateTime(2025, 2),
+      await hours.getTimeEntries(
+        employeeId: '10',
+        courseId: '107',
+        from: DateTime(2025, 1),
+        until: DateTime(2025, 2),
       );
       final params = requests.single.url.queryParametersAll;
       expect(params['col_empleadoLegajo'], ['eq.10']);
@@ -332,11 +324,11 @@ void main() {
       );
       // El catálogo se lee una vez; los filtros por nombre o ID se
       // resuelven sobre esa lectura.
-      final antes = requests.length;
-      await courses.getCursos(nombre: '  A_100%  ');
-      await courses.getCursos(id: '107');
-      await courses.getCursos();
-      expect(requests.length, antes + 1);
+      final before = requests.length;
+      await courses.getCourses(name: '  A_100%  ');
+      await courses.getCourses(id: '107');
+      await courses.getCourses();
+      expect(requests.length, before + 1);
       final denied = SupabaseClient(
         'https://test.supabase.co',
         'public-test-key',
@@ -350,7 +342,7 @@ void main() {
         ),
       );
       await expectLater(
-        SupabaseCursosRepository(denied, courseMapping).getCursos(),
+        SupabaseCoursesRepository(denied, courseMapping).getCourses(),
         throwsA(isA<PostgrestException>()),
       );
       await client.dispose();
@@ -368,32 +360,32 @@ void main() {
         httpClient: MockClient((request) async {
           requests.add(request);
           if (request.method == 'GET') {
-            return _filas(request, [courseMapping.encode(course().toJson())]);
+            return _rows(request, [courseMapping.encode(course().toJson())]);
           }
           return http.Response('', 201, request: request);
         }),
       );
-      final courses = SupabaseCursosRepository(client, courseMapping);
-      final hours = SupabaseCargaDeHorasCRMRepository(
+      final courses = SupabaseCoursesRepository(client, courseMapping);
+      final hours = SupabaseCrmTimeEntriesRepository(
         client,
         hoursMapping,
         courses,
       );
-      await hours.replaceCargasDeHoras([
-        CargaDeHorasCRM(
+      await hours.replaceTimeEntries([
+        CrmTimeEntry(
           id: 'txn',
-          cursoNombre: ' CURSO LMS ',
-          cursoId: 'wrong-source-id',
-          empleadoLegajo: '10',
-          fecha: DateTime(2025, 1, 1),
-          horasTotales: 2,
-          tipo: TipoCargaDeHoras.tomada,
-          caso: 'Choras - 90',
-          clasificacion: 'CRM original',
-          descripcionCurso: 'Descripción',
-          proyecto: 'P',
-          proyectoItem: 'I',
-          descripcion: 'D',
+          courseName: ' CURSO LMS ',
+          courseId: 'wrong-source-id',
+          employeeId: '10',
+          date: DateTime(2025, 1, 1),
+          hours: 2,
+          kind: TimeEntryKind.taken,
+          caseRef: 'Choras - 90',
+          classification: 'CRM original',
+          courseDescription: 'Descripción',
+          project: 'P',
+          projectItem: 'I',
+          description: 'D',
         ),
       ]);
       final post = requests.last;
@@ -406,7 +398,7 @@ void main() {
       expect(row['col_clasificacion'], 'CRM original');
       expect(row.keys, isNot(contains('tipo')));
       expect(requests.any((r) => r.method == 'DELETE'), isFalse);
-      await courses.upsertCursos([course()]);
+      await courses.upsertCourses([course()]);
       final courseRow = (jsonDecode(requests.last.body) as List).single as Map;
       expect(
         courseRow.keys,
@@ -436,21 +428,21 @@ void main() {
                   'fechaFinalizacion': '2025-01-15',
                 })
               : courseMapping.encode(course().toJson());
-          return _filas(request, [row]);
+          return _rows(request, [row]);
         }),
       );
-      final repo = SupabaseCertificacionesMoodleRepository(
+      final repo = SupabaseLmsCertificationsRepository(
         client,
         completionMapping,
-        SupabaseCursosRepository(client, courseMapping),
+        SupabaseCoursesRepository(client, courseMapping),
       );
-      final result = await repo.getCertificaciones(
-        legajo: '10',
-        cursoId: '107',
+      final result = await repo.getCertifications(
+        employeeId: '10',
+        courseId: '107',
       );
-      expect(result.single.cursoNombre, 'Curso LMS');
-      expect(result.single.cursoId, '107');
-      expect(result.single.fechaFinalizacion, DateTime(2025, 1, 15));
+      expect(result.single.courseName, 'Curso LMS');
+      expect(result.single.courseId, '107');
+      expect(result.single.completedAt, DateTime(2025, 1, 15));
       await client.dispose();
     },
   );
@@ -459,25 +451,25 @@ void main() {
     'Audit hooks record success/failure without inventing insert/update counts',
     () async {
       final audit = Audit();
-      final service = ImportacionService(auditoria: audit);
-      await service.ejecutar(
-        tipoArchivo: 'horas_crm',
-        nombreArchivo: 'file.xlsx',
-        procesar: () async => const ResultadoUpsert(registrosProcesados: 1),
+      final service = ImportAuditService(audit: audit);
+      await service.run(
+        fileType: 'horas_crm',
+        fileName: 'file.xlsx',
+        process: () async => const UpsertResult(processedRecords: 1),
       );
-      expect(audit.records.single.estado, EstadoImportacion.completada);
-      expect(audit.records.single.insertados, isNull);
-      expect(audit.records.single.actualizados, isNull);
+      expect(audit.records.single.status, ImportStatus.completed);
+      expect(audit.records.single.inserted, isNull);
+      expect(audit.records.single.updated, isNull);
       await expectLater(
-        service.ejecutar(
-          tipoArchivo: 'horas_crm',
-          nombreArchivo: 'file.xlsx',
-          procesar: () async => throw const FormatException('Invalid data'),
+        service.run(
+          fileType: 'horas_crm',
+          fileName: 'file.xlsx',
+          process: () async => throw const FormatException('Invalid data'),
         ),
         throwsFormatException,
       );
-      expect(audit.records.last.estado, EstadoImportacion.fallida);
-      expect(audit.records.last.errores, isNotEmpty);
+      expect(audit.records.last.status, ImportStatus.failed);
+      expect(audit.records.last.errors, isNotEmpty);
     },
   );
 }

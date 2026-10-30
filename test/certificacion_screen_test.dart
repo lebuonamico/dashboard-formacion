@@ -15,7 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
+Future<GoRouter> _showCertifications(WidgetTester tester) async {
   tester.view.physicalSize = const Size(2200, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -24,45 +24,45 @@ Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith((ref) => AuthController(null)),
-      empleadosProvider.overrideWith(
+      employeesProvider.overrideWith(
         (ref) async => [
-          Empleado(
-            legajo: '10',
-            nombre: 'Ana',
-            apellido: 'Pérez',
+          Employee(
+            employeeId: '10',
+            firstName: 'Ana',
+            lastName: 'Pérez',
             seniority: Seniority.junior1,
             area: 'Servicios',
-            equipo: 'Soporte',
-            mail: 'ana@finnegans.com',
+            team: 'Soporte',
+            email: 'ana@finnegans.com',
           ),
         ],
       ),
-      cursosProvider.overrideWith(
+      coursesProvider.overrideWith(
         (ref) async => [
-          Curso(
+          Course(
             id: 'C1',
-            nombre: 'Oratoria',
-            clasificacion: TipoCurso.habilidadesBlandas,
-            areaCurso: '',
-            instructorLegajo: '',
-            cargaHorariaHs: 4,
+            name: 'Oratoria',
+            category: CourseCategory.softSkills,
+            courseArea: '',
+            instructorEmployeeId: '',
+            workloadHours: 4,
           ),
         ],
       ),
-      certificacionesMoodleProvider.overrideWith(
+      lmsCertificationsProvider.overrideWith(
         (ref) async => [
-          CertificacionMoodle(
-            legajo: '10',
-            cursoNombre: 'Oratoria',
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime(2026, 7, 20),
+          LmsCertification(
+            employeeId: '10',
+            courseName: 'Oratoria',
+            isCompleted: true,
+            completedAt: DateTime(2026, 7, 20),
           ),
           // Legajo que no está en la nómina: no tiene perfil.
-          CertificacionMoodle(
-            legajo: '99',
-            cursoNombre: 'Oratoria',
-            finalizoCurso: true,
-            fechaFinalizacion: DateTime(2026, 7, 10),
+          LmsCertification(
+            employeeId: '99',
+            courseName: 'Oratoria',
+            isCompleted: true,
+            completedAt: DateTime(2026, 7, 10),
           ),
         ],
       ),
@@ -72,11 +72,11 @@ Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
 
   // Cada pantalla monta el SideMenu, como el AppShell: así se ve qué sección
   // queda marcada al abrir el perfil.
-  Widget conMenu(Widget pantalla) => Scaffold(
+  Widget withMenu(Widget screen) => Scaffold(
     body: Row(
       children: [
         const SideMenu(),
-        Expanded(child: pantalla),
+        Expanded(child: screen),
       ],
     ),
   );
@@ -85,12 +85,12 @@ Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
     routes: [
       GoRoute(
         path: '/certificaciones',
-        builder: (context, state) => conMenu(const CertificacionScreen()),
+        builder: (context, state) => withMenu(const CertificationsScreen()),
       ),
       GoRoute(
         path: '/empleados/:legajo',
         builder: (context, state) =>
-            conMenu(Text('Perfil de ${state.pathParameters['legajo']}')),
+            withMenu(Text('Perfil de ${state.pathParameters['legajo']}')),
       ),
     ],
   );
@@ -118,12 +118,12 @@ Future<GoRouter> _mostrarCertificaciones(WidgetTester tester) async {
 }
 
 /// Si el ítem del menú lateral con esa etiqueta está marcado.
-bool _itemMarcado(WidgetTester tester, String etiqueta) {
+bool _checkedItem(WidgetTester tester, String label) {
   final item = tester.widget(
     find.byWidgetPredicate(
       (widget) =>
           widget.runtimeType.toString() == '_MenuItem' &&
-          (widget as dynamic).label == etiqueta,
+          (widget as dynamic).label == label,
     ),
   );
   return (item as dynamic).isSelected as bool;
@@ -135,7 +135,7 @@ void main() {
   testWidgets('Click en una certificación abre el perfil del colaborador', (
     tester,
   ) async {
-    final router = await _mostrarCertificaciones(tester);
+    final router = await _showCertifications(tester);
 
     await tester.tap(find.text('Ana Pérez'));
     await tester.pumpAndSettle();
@@ -143,17 +143,17 @@ void main() {
     expect(router.state.uri.toString(), '/empleados/10?origen=certificaciones');
     expect(find.text('Perfil de 10'), findsOneWidget);
     // El menú sigue en Certificaciones LMS, no salta a Empleados.
-    expect(_itemMarcado(tester, 'Certificaciones LMS'), isTrue);
-    expect(_itemMarcado(tester, 'Empleados'), isFalse);
+    expect(_checkedItem(tester, 'Certificaciones LMS'), isTrue);
+    expect(_checkedItem(tester, 'Empleados'), isFalse);
   });
 
   testWidgets('Un legajo fuera de la nómina no abre nada', (tester) async {
-    final router = await _mostrarCertificaciones(tester);
+    final router = await _showCertifications(tester);
 
     await tester.tap(find.text('Legajo 99'));
     await tester.pumpAndSettle();
 
     expect(router.state.uri.toString(), '/certificaciones');
-    expect(find.byType(CertificacionScreen), findsOneWidget);
+    expect(find.byType(CertificationsScreen), findsOneWidget);
   });
 }

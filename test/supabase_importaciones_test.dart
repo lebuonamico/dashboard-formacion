@@ -20,7 +20,7 @@ void main() {
     tearDown(() => container.dispose());
 
     test('Empleados conserva los campos y usa legajo como conflicto', () {
-      final mapping = container.read(supabaseMappingsProvider).empleados;
+      final mapping = container.read(supabaseMappingsProvider).employees;
       final source = <String, dynamic>{
         'legajo': '10',
         'mail': 'ana@example.com',
@@ -53,7 +53,7 @@ void main() {
     });
 
     test('Cursos usa id_curso y excluye campos ajenos al contrato LMS', () {
-      final mapping = container.read(supabaseMappingsProvider).cursos;
+      final mapping = container.read(supabaseMappingsProvider).courses;
       final source = <String, dynamic>{
         'id': '107',
         'nombre': 'Curso LMS',
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('Horas conserva trazabilidad y usa transaccion_id como conflicto', () {
-      final mapping = container.read(supabaseMappingsProvider).horas;
+      final mapping = container.read(supabaseMappingsProvider).hours;
       final source = <String, dynamic>{
         'id': 'txn-001',
         'empleadoLegajo': '10',
@@ -118,7 +118,7 @@ void main() {
     });
 
     test('Finalizaciones usa el conflicto compuesto legajo,curso_id', () {
-      final mapping = container.read(supabaseMappingsProvider).finalizaciones;
+      final mapping = container.read(supabaseMappingsProvider).completions;
       final source = <String, dynamic>{
         'legajo': '10',
         'cursoId': '107',
@@ -151,17 +151,17 @@ void main() {
         }),
       );
       addTearDown(client.dispose);
-      final registro = RegistroImportacion(
-        tipoArchivo: 'horas_crm',
-        nombreArchivo: 'horas.xlsx',
-        fechaHora: DateTime.utc(2026, 10, 3, 14, 30),
-        estado: EstadoImportacion.completada,
-        registrosProcesados: 7,
-        insertados: 5,
-        actualizados: 2,
+      final record = ImportRecord(
+        fileType: 'horas_crm',
+        fileName: 'horas.xlsx',
+        dateTime: DateTime.utc(2026, 10, 3, 14, 30),
+        status: ImportStatus.completed,
+        processedRecords: 7,
+        inserted: 5,
+        updated: 2,
       );
 
-      await SupabaseImportacionesRepository(client).registrar(registro);
+      await SupabaseImportRecordsRepository(client).register(record);
 
       final request = requests.single;
       expect(request.method, 'POST');
@@ -194,14 +194,14 @@ void main() {
         );
         addTearDown(client.dispose);
 
-        await SupabaseImportacionesRepository(client).registrar(
-          RegistroImportacion(
-            tipoArchivo: 'finalizaciones_lms',
-            nombreArchivo: 'finalizaciones.xlsx',
-            fechaHora: DateTime.utc(2026, 10, 3, 15),
-            estado: EstadoImportacion.fallida,
-            registrosProcesados: 3,
-            errores: const [
+        await SupabaseImportRecordsRepository(client).register(
+          ImportRecord(
+            fileType: 'finalizaciones_lms',
+            fileName: 'finalizaciones.xlsx',
+            dateTime: DateTime.utc(2026, 10, 3, 15),
+            status: ImportStatus.failed,
+            processedRecords: 3,
+            errors: const [
               'Fila 2: fecha inválida',
               'Fila 3: curso inexistente',
             ],
@@ -237,13 +237,13 @@ void main() {
       addTearDown(client.dispose);
 
       await expectLater(
-        SupabaseImportacionesRepository(client).registrar(
-          RegistroImportacion(
-            tipoArchivo: 'empleados',
-            nombreArchivo: 'empleados.xlsx',
-            fechaHora: DateTime.utc(2026, 10, 3),
-            estado: EstadoImportacion.completada,
-            registrosProcesados: 1,
+        SupabaseImportRecordsRepository(client).register(
+          ImportRecord(
+            fileType: 'empleados',
+            fileName: 'empleados.xlsx',
+            dateTime: DateTime.utc(2026, 10, 3),
+            status: ImportStatus.completed,
+            processedRecords: 1,
           ),
         ),
         throwsA(
@@ -269,7 +269,7 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        expect(container.read(importacionesRepositoryProvider), isNull);
+        expect(container.read(importRecordsRepositoryProvider), isNull);
         return;
       }
 
@@ -287,8 +287,8 @@ void main() {
       addTearDown(container.dispose);
 
       expect(
-        container.read(importacionesRepositoryProvider),
-        isA<SupabaseImportacionesRepository>(),
+        container.read(importRecordsRepositoryProvider),
+        isA<SupabaseImportRecordsRepository>(),
       );
     },
   );

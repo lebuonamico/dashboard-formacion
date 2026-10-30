@@ -2,43 +2,43 @@ import 'package:app_finnegans/domain/modelos/carga_de_horas_crm.dart';
 import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/team_overview.dart';
 
-class DashboardCumplimientoAcumulado {
-  final double horasValidas;
-  final double horasObjetivo;
-  final double cumplimiento;
+class DashboardAccumulatedCompliance {
+  final double creditedHours;
+  final double targetHours;
+  final double compliance;
 
-  const DashboardCumplimientoAcumulado({
-    required this.horasValidas,
-    required this.horasObjetivo,
-    required this.cumplimiento,
+  const DashboardAccumulatedCompliance({
+    required this.creditedHours,
+    required this.targetHours,
+    required this.compliance,
   });
 }
 
 class DashboardKpis {
-  final int colaboradores;
-  final int capacitandose;
-  final int mesesEvaluados;
-  final double horasValidas;
-  final double horasObjetivo;
-  final double horasDeclaradas;
-  final double cumplimiento;
-  final double ritmoMensual;
-  final double proyeccionAnual;
+  final int employees;
+  final int training;
+  final int evaluatedMonths;
+  final double creditedHours;
+  final double targetHours;
+  final double declaredHours;
+  final double compliance;
+  final double monthlyPace;
+  final double annualProjection;
 
   /// Objetivo de un año por colaborador, al ritmo de objetivo del período.
   /// Sale del plan de cada seniority: no es un valor fijo.
-  final double metaAnualPorPersona;
+  final double annualGoalPerPerson;
   const DashboardKpis({
-    required this.colaboradores,
-    required this.capacitandose,
-    required this.mesesEvaluados,
-    required this.horasValidas,
-    required this.horasObjetivo,
-    required this.horasDeclaradas,
-    required this.cumplimiento,
-    required this.ritmoMensual,
-    required this.proyeccionAnual,
-    required this.metaAnualPorPersona,
+    required this.employees,
+    required this.training,
+    required this.evaluatedMonths,
+    required this.creditedHours,
+    required this.targetHours,
+    required this.declaredHours,
+    required this.compliance,
+    required this.monthlyPace,
+    required this.annualProjection,
+    required this.annualGoalPerPerson,
   });
 }
 
@@ -46,71 +46,70 @@ class DashboardKpis {
 class DashboardKpisService {
   const DashboardKpisService();
 
-  DashboardCumplimientoAcumulado acumularCumplimiento(
-    Iterable<TeamsPeriodSummary> meses,
+  DashboardAccumulatedCompliance accumulateCompliance(
+    Iterable<TeamsPeriodSummary> months,
   ) {
-    var horasValidas = 0.0;
-    var horasObjetivo = 0.0;
-    for (final mes in meses) {
-      if (!mes.hasData || mes.employeeCount == 0) continue;
+    var creditedHours = 0.0;
+    var targetHours = 0.0;
+    for (final month in months) {
+      if (!month.hasData || month.employeeCount == 0) continue;
       // Las horas de cada mes ya respetan elegibilidad, categorías y topes.
-      horasValidas += mes.completedHours;
-      horasObjetivo += mes.targetHours;
+      creditedHours += month.completedHours;
+      targetHours += month.targetHours;
     }
-    return DashboardCumplimientoAcumulado(
-      horasValidas: horasValidas,
-      horasObjetivo: horasObjetivo,
-      cumplimiento: _cumplimiento(horasValidas, horasObjetivo),
+    return DashboardAccumulatedCompliance(
+      creditedHours: creditedHours,
+      targetHours: targetHours,
+      compliance: _compliance(creditedHours, targetHours),
     );
   }
 
-  double _cumplimiento(double horasValidas, double horasObjetivo) =>
-      horasObjetivo == 0 ? 0 : horasValidas / horasObjetivo * 100;
+  double _compliance(double creditedHours, double targetHours) =>
+      targetHours == 0 ? 0 : creditedHours / targetHours * 100;
 
-  DashboardKpis calcular({
-    required List<CumplimientoEmpleado> cumplimientos,
-    required List<CargaDeHorasCRM> cargas,
-    required int mesesEvaluados,
+  DashboardKpis calculate({
+    required List<EmployeeCompliance> complianceList,
+    required List<CrmTimeEntry> timeEntries,
+    required int evaluatedMonths,
   }) {
-    final legajos = {for (final item in cumplimientos) item.empleado.legajo};
-    final totalEmpleados = legajos.length;
-    final horasRealizadas = cumplimientos.fold<double>(
+    final employeeIds = {
+      for (final item in complianceList) item.employee.employeeId,
+    };
+    final totalEmployees = employeeIds.length;
+    final completedHours = complianceList.fold<double>(
       0,
-      (t, i) => t + i.totalHorasValidas,
+      (t, i) => t + i.totalCreditedHours,
     );
-    final horasObjetivo = cumplimientos.fold<double>(
+    final targetHours = complianceList.fold<double>(
       0,
-      (t, i) => t + i.totalHorasRequeridas,
+      (t, i) => t + i.totalRequiredHours,
     );
-    final meses = mesesEvaluados < 1 ? 1 : mesesEvaluados;
-    final ritmo = totalEmpleados == 0
+    final months = evaluatedMonths < 1 ? 1 : evaluatedMonths;
+    final pace = totalEmployees == 0
         ? 0.0
-        : horasRealizadas / totalEmpleados / meses;
+        : completedHours / totalEmployees / months;
     // Mismo denominador que el ritmo, así la proyección y su meta comparan.
-    final objetivoMensual = totalEmpleados == 0
+    final monthlyTarget = totalEmployees == 0
         ? 0.0
-        : horasObjetivo / totalEmpleados / meses;
-    final cargasNomina = cargas
-        .where((c) => legajos.contains(c.empleadoLegajo))
+        : targetHours / totalEmployees / months;
+    final payrollTimeEntries = timeEntries
+        .where((c) => employeeIds.contains(c.employeeId))
         .toList();
     return DashboardKpis(
-      colaboradores: totalEmpleados,
-      capacitandose: cargasNomina
-          .where((c) => !c.esDictada)
-          .map((c) => c.empleadoLegajo)
+      employees: totalEmployees,
+      training: payrollTimeEntries
+          .where((c) => !c.isTaught)
+          .map((c) => c.employeeId)
           .toSet()
           .length,
-      mesesEvaluados: meses,
-      horasValidas: horasRealizadas,
-      horasObjetivo: horasObjetivo,
-      horasDeclaradas: cargasNomina.fold<double>(
-        0,
-        (t, c) => t + c.horasTotales,
-      ),
-      cumplimiento: _cumplimiento(horasRealizadas, horasObjetivo),
-      ritmoMensual: ritmo,
-      proyeccionAnual: ritmo * 12,
-      metaAnualPorPersona: objetivoMensual * 12,
+      evaluatedMonths: months,
+      creditedHours: completedHours,
+      targetHours: targetHours,
+      declaredHours: payrollTimeEntries.fold<double>(0, (t, c) => t + c.hours),
+      compliance: _compliance(completedHours, targetHours),
+      monthlyPace: pace,
+      annualProjection: pace * 12,
+      annualGoalPerPerson: monthlyTarget * 12,
     );
   }
 }

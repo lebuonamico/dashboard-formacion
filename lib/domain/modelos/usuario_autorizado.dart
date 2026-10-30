@@ -1,78 +1,76 @@
 import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 
-enum EstadoUsuario {
-  activo('Activo'),
-  bloqueado('Bloqueado'),
-  eliminado('Eliminado');
+enum UserStatus {
+  active('Activo'),
+  blocked('Bloqueado'),
+  deleted('Eliminado');
 
   final String label;
-  const EstadoUsuario(this.label);
+  const UserStatus(this.label);
 }
 
-class UsuarioAutorizado {
+class AuthorizedUser {
   final String email;
-  final String rol;
-  final bool activo;
-  final DateTime? ffAlta;
-  final DateTime? ffBloqueo;
-  final DateTime? ffEliminar;
+  final String role;
+  final bool isActive;
+  final DateTime? createdAt;
+  final DateTime? blockedAt;
+  final DateTime? deletedAt;
 
-  UsuarioAutorizado({
+  AuthorizedUser({
     required String email,
-    required this.rol,
-    required this.activo,
-    this.ffAlta,
-    this.ffBloqueo,
-    this.ffEliminar,
+    required this.role,
+    required this.isActive,
+    this.createdAt,
+    this.blockedAt,
+    this.deletedAt,
   }) : email = email.trim().toLowerCase();
 
-  UsuarioAutorizado.nuevo({
+  AuthorizedUser.create({
     required String email,
-    required RolUsuario rol,
-    required DateTime ahora,
-  }) : this(email: email, rol: rol.name, activo: true, ffAlta: ahora);
+    required UserRole role,
+    required DateTime now,
+  }) : this(email: email, role: role.name, isActive: true, createdAt: now);
 
-  RolUsuario? get rolConocido => RolUsuario.fromString(rol);
+  UserRole? get knownRole => UserRole.fromString(role);
 
-  bool get esAdmin => rolConocido == RolUsuario.admin;
+  bool get isAdmin => knownRole == UserRole.admin;
 
-  EstadoUsuario get estado {
-    if (ffEliminar != null) return EstadoUsuario.eliminado;
-    if (ffBloqueo != null) return EstadoUsuario.bloqueado;
-    return EstadoUsuario.activo;
+  UserStatus get status {
+    if (deletedAt != null) return UserStatus.deleted;
+    if (blockedAt != null) return UserStatus.blocked;
+    return UserStatus.active;
   }
 
-  bool esMismoUsuario(String? emailSesion) =>
-      emailSesion != null && emailSesion.trim().toLowerCase() == email;
+  bool isSameUser(String? sessionEmail) =>
+      sessionEmail != null && sessionEmail.trim().toLowerCase() == email;
 
-  UsuarioAutorizado conRol(RolUsuario nuevoRol) => _con(rol: nuevoRol.name);
+  AuthorizedUser withRole(UserRole newRole) => _with(role: newRole.name);
 
-  UsuarioAutorizado bloqueado(DateTime ahora) => _con(ffBloqueo: ahora);
+  AuthorizedUser blocked(DateTime now) => _with(blockedAt: now);
 
-  UsuarioAutorizado desbloqueado() => _con(limpiarBloqueo: true);
+  AuthorizedUser unblocked() => _with(clearBlock: true);
 
-  UsuarioAutorizado eliminado(DateTime ahora) => _con(ffEliminar: ahora);
+  AuthorizedUser deleted(DateTime now) => _with(deletedAt: now);
 
-  UsuarioAutorizado restaurado() => _con(limpiarEliminacion: true);
+  AuthorizedUser restored() => _with(clearDeletion: true);
 
-  UsuarioAutorizado _con({
-    String? rol,
-    DateTime? ffBloqueo,
-    DateTime? ffEliminar,
-    bool limpiarBloqueo = false,
-    bool limpiarEliminacion = false,
+  AuthorizedUser _with({
+    String? role,
+    DateTime? blockedAt,
+    DateTime? deletedAt,
+    bool clearBlock = false,
+    bool clearDeletion = false,
   }) {
-    final bloqueo = limpiarBloqueo ? null : (ffBloqueo ?? this.ffBloqueo);
-    final eliminacion = limpiarEliminacion
-        ? null
-        : (ffEliminar ?? this.ffEliminar);
-    return UsuarioAutorizado(
+    final block = clearBlock ? null : (blockedAt ?? this.blockedAt);
+    final deletion = clearDeletion ? null : (deletedAt ?? this.deletedAt);
+    return AuthorizedUser(
       email: email,
-      rol: rol ?? this.rol,
-      activo: eliminacion == null && bloqueo == null,
-      ffAlta: ffAlta,
-      ffBloqueo: bloqueo,
-      ffEliminar: eliminacion,
+      role: role ?? this.role,
+      isActive: deletion == null && block == null,
+      createdAt: createdAt,
+      blockedAt: block,
+      deletedAt: deletion,
     );
   }
 }

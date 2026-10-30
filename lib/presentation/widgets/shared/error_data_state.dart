@@ -4,27 +4,27 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Explica en lenguaje simple por qué no se pudieron cargar los datos. El
 /// detalle técnico queda en la consola, no en pantalla.
-String mensajeErrorCarga(Object error) {
+String timeEntryErrorMessage(Object error) {
   if (error is FormatException) return error.message;
   if (error is PostgrestException) {
-    final codigo = error.code ?? '';
+    final code = error.code ?? '';
     // Columna o tabla inexistente: la base y la aplicación no coinciden.
-    if (const {'42703', '42P01', 'PGRST204', 'PGRST205'}.contains(codigo)) {
+    if (const {'42703', '42P01', 'PGRST204', 'PGRST205'}.contains(code)) {
       return 'La base de datos no coincide con esta versión de la aplicación. '
           'Recargá la página y, si sigue igual, avisá al administrador.';
     }
-    if (codigo == '42501' || codigo == 'PGRST301') {
+    if (code == '42501' || code == 'PGRST301') {
       return 'No tenés permisos para ver esta información.';
     }
   }
   if (error is AuthException) {
     return 'Tu sesión venció. Volvé a iniciar sesión.';
   }
-  final texto = error.toString();
-  if (texto.contains('SocketException') ||
-      texto.contains('ClientException') ||
-      texto.contains('Failed to fetch') ||
-      texto.contains('TimeoutException')) {
+  final text = error.toString();
+  if (text.contains('SocketException') ||
+      text.contains('ClientException') ||
+      text.contains('Failed to fetch') ||
+      text.contains('TimeoutException')) {
     return 'No se pudo conectar con el servidor. Revisá tu conexión y '
         'recargá la página.';
   }
@@ -72,7 +72,7 @@ class ErrorDataState extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              mensajeErrorCarga(error),
+              timeEntryErrorMessage(error),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),

@@ -13,12 +13,12 @@ import 'package:app_finnegans/presentation/widgets/shared/seniority_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CursadasScreen extends ConsumerWidget {
-  const CursadasScreen({super.key});
+class TimeEntriesScreen extends ConsumerWidget {
+  const TimeEntriesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cursadasAsync = ref.watch(cargasDeHorasCompletasProvider);
+    final timeEntriesAsync = ref.watch(joinedTimeEntriesProvider);
 
     return Scaffold(
       body: Column(
@@ -28,31 +28,31 @@ class CursadasScreen extends ConsumerWidget {
           // Contenido
           Expanded(
             child: Padding(
-              padding: paddingPantalla,
+              padding: screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _BarraFiltrosCrm(),
+                  const _BarFiltersCrm(),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: cursadasAsync.when(
+                    child: timeEntriesAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar las horas CRM',
                         error: err,
                       ),
-                      data: (lista) => FadeIn(
+                      data: (items) => FadeIn(
                         child: (() {
-                          if (lista.isEmpty) {
-                            final hayCargas =
+                          if (items.isEmpty) {
+                            final hasTimeEntries =
                                 ref
-                                    .watch(cargasDeHorasCRMProvider)
+                                    .watch(crmTimeEntriesProvider)
                                     .value
                                     ?.isNotEmpty ??
                                 false;
                             return SingleChildScrollView(
-                              child: hayCargas
+                              child: hasTimeEntries
                                   ? const EmptyDataState(
                                       icon: Icons.search_off_outlined,
                                       title:
@@ -68,7 +68,7 @@ class CursadasScreen extends ConsumerWidget {
                                     ),
                             );
                           }
-                          return _TablaCargasPaginada(cargas: lista);
+                          return _PaginatedTimeEntriesTable(timeEntries: items);
                         })(),
                       ),
                     ),
@@ -85,22 +85,22 @@ class CursadasScreen extends ConsumerWidget {
 
 /// Buscador por texto (colaborador, legajo, curso o área) y desplegables de
 /// año y mes.
-class _BarraFiltrosCrm extends ConsumerWidget {
-  const _BarraFiltrosCrm();
+class _BarFiltersCrm extends ConsumerWidget {
+  const _BarFiltersCrm();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final busqueda = ref.watch(busquedaCargaDeHorasProvider);
-    final anio = ref.watch(filtroAnioCargaProvider);
-    final mes = ref.watch(filtroMesCargaProvider);
-    final anios = ref.watch(aniosCargasDisponiblesProvider).value ?? const [];
+    final search = ref.watch(timeEntrySearchProvider);
+    final year = ref.watch(timeEntryYearFilterProvider);
+    final month = ref.watch(timeEntryMonthFilterProvider);
+    final years = ref.watch(availableTimeEntryYearsProvider).value ?? const [];
 
     return FilterBar(
       scope: 'crm',
-      hasActiveFilters: busqueda.isNotEmpty || anio != null || mes != null,
+      hasActiveFilters: search.isNotEmpty || year != null || month != null,
       filters: [
         FilterDropdown<int?>(
-          value: anio,
+          value: year,
           hint: 'Todos los años',
           icon: Icons.event_outlined,
           width: 220,
@@ -111,15 +111,15 @@ class _BarraFiltrosCrm extends ConsumerWidget {
             ),
             // Si el año elegido ya no tiene cargas, se mantiene visible para
             // que el desplegable no quede con un valor inexistente.
-            for (final a in {...anios, ?anio})
+            for (final a in {...years, ?year})
               DropdownMenuItem<int?>(value: a, child: Text('$a')),
           ],
           onChanged: (value) {
-            ref.read(filtroAnioCargaProvider.notifier).state = value;
+            ref.read(timeEntryYearFilterProvider.notifier).state = value;
           },
         ),
         FilterDropdown<int?>(
-          value: mes,
+          value: month,
           hint: 'Todos los meses',
           icon: Icons.calendar_month_outlined,
           width: 240,
@@ -129,53 +129,55 @@ class _BarraFiltrosCrm extends ConsumerWidget {
               child: Text('Todos los meses'),
             ),
             for (var m = 1; m <= 12; m++)
-              DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
+              DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
           ],
           onChanged: (value) =>
-              ref.read(filtroMesCargaProvider.notifier).state = value,
+              ref.read(timeEntryMonthFilterProvider.notifier).state = value,
         ),
       ],
       onClear: () {
-        ref.read(busquedaCargaDeHorasProvider.notifier).state = '';
-        ref.read(filtroAnioCargaProvider.notifier).state = null;
-        ref.read(filtroMesCargaProvider.notifier).state = null;
+        ref.read(timeEntrySearchProvider.notifier).state = '';
+        ref.read(timeEntryYearFilterProvider.notifier).state = null;
+        ref.read(timeEntryMonthFilterProvider.notifier).state = null;
       },
     );
   }
 }
 
 /// Tabla de cargas de horas, de a una página por vez y a todo el ancho.
-class _TablaCargasPaginada extends StatefulWidget {
-  final List<CargaDeHorasCRMViewModel> cargas;
+class _PaginatedTimeEntriesTable extends StatefulWidget {
+  final List<CrmTimeEntryViewModel> timeEntries;
 
-  const _TablaCargasPaginada({required this.cargas});
+  const _PaginatedTimeEntriesTable({required this.timeEntries});
 
   @override
-  State<_TablaCargasPaginada> createState() => _TablaCargasPaginadaState();
+  State<_PaginatedTimeEntriesTable> createState() =>
+      _PaginatedTimeEntriesTableState();
 }
 
-class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
+class _PaginatedTimeEntriesTableState
+    extends State<_PaginatedTimeEntriesTable> {
   // Filas de dos líneas: colaborador + legajo y área + equipo.
-  static const _altoFila = 56.0;
-  static const _altoEncabezado = 44.0;
-  static const _altoPaginador = 60.0;
-  static const _separacion = 12.0;
+  static const _rowHeight = 56.0;
+  static const _headerHeight = 44.0;
+  static const _paginatorHeight = 60.0;
+  static const _spacing = 12.0;
 
   /// Debajo de este ancho las columnas se aprietan demasiado: aparece el
   /// scroll horizontal en lugar de cortar todos los textos.
-  static const _anchoMinimo = 1000.0;
+  static const _minimumWidth = 1000.0;
 
   /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimoPorPagina = 5;
+  static const _minimumPerPage = 5;
 
-  int _paginaActual = 0;
+  int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant _TablaCargasPaginada oldWidget) {
+  void didUpdateWidget(covariant _PaginatedTimeEntriesTable oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Al cambiar un filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.cargas != widget.cargas) {
-      _paginaActual = 0;
+    if (oldWidget.timeEntries != widget.timeEntries) {
+      _currentPage = 0;
     }
   }
 
@@ -183,32 +185,30 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final total = widget.cargas.length;
+        final total = widget.timeEntries.length;
 
         // Cuántas filas entran en el alto disponible, para que la tabla llene
         // la página sin dejar un hueco antes del paginador.
-        final altoParaTabla =
-            constraints.maxHeight - _altoPaginador - _separacion;
-        final porPagina = ((altoParaTabla - _altoEncabezado) / _altoFila)
+        final heightForTable =
+            constraints.maxHeight - _paginatorHeight - _spacing;
+        final perPage = ((heightForTable - _headerHeight) / _rowHeight)
             .floor()
             .clamp(
-              _minimoPorPagina,
-              total < _minimoPorPagina ? _minimoPorPagina : total,
+              _minimumPerPage,
+              total < _minimumPerPage ? _minimumPerPage : total,
             );
 
-        final totalPaginas = total == 0
-            ? 1
-            : (total + porPagina - 1) ~/ porPagina;
-        final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-        final inicio = paginaSegura * porPagina;
-        final finCalculado = inicio + porPagina;
-        final fin = finCalculado > total ? total : finCalculado;
-        final visibles = widget.cargas.sublist(inicio, fin);
+        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
+        final safePage = _currentPage.clamp(0, totalPages - 1);
+        final start = safePage * perPage;
+        final calculatedEnd = start + perPage;
+        final end = calculatedEnd > total ? total : calculatedEnd;
+        final visible = widget.timeEntries.sublist(start, end);
 
         // Ancho fijo (no un mínimo): las columnas flex necesitan un ancho
         // acotado para repartirse, si no colapsan dentro del scroll.
-        final ancho = constraints.maxWidth < _anchoMinimo
-            ? _anchoMinimo
+        final width = constraints.maxWidth < _minimumWidth
+            ? _minimumWidth
             : constraints.maxWidth;
 
         return Column(
@@ -218,27 +218,27 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: ancho,
+                  width: width,
                   // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _tabla(visibles)),
+                  child: SingleChildScrollView(child: _table(visible)),
                 ),
               ),
             ),
-            if (totalPaginas > 1) ...[
-              const SizedBox(height: _separacion),
-              PaginacionResultados(
-                paginaActual: paginaSegura,
-                cantidadPaginas: totalPaginas,
-                desde: inicio + 1,
-                hasta: fin,
-                totalResultados: total,
-                etiquetaResultados: 'registros',
-                icono: Icons.schedule_outlined,
-                onPrevious: paginaSegura > 0
-                    ? () => setState(() => _paginaActual = paginaSegura - 1)
+            if (totalPages > 1) ...[
+              const SizedBox(height: _spacing),
+              ResultsPagination(
+                currentPage: safePage,
+                pageCount: totalPages,
+                from: start + 1,
+                until: end,
+                totalResults: total,
+                resultsLabel: 'registros',
+                icon: Icons.schedule_outlined,
+                onPrevious: safePage > 0
+                    ? () => setState(() => _currentPage = safePage - 1)
                     : null,
-                onNext: paginaSegura < totalPaginas - 1
-                    ? () => setState(() => _paginaActual = paginaSegura + 1)
+                onNext: safePage < totalPages - 1
+                    ? () => setState(() => _currentPage = safePage + 1)
                     : null,
               ),
             ],
@@ -248,15 +248,15 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _tabla(List<CargaDeHorasCRMViewModel> visibles) {
+  Widget _table(List<CrmTimeEntryViewModel> visible) {
     final cs = context.colorScheme;
-    final secundario = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
+    final secondary = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       columnSpacing: 24,
-      headingRowHeight: _altoEncabezado,
-      dataRowMinHeight: _altoFila,
-      dataRowMaxHeight: _altoFila,
+      headingRowHeight: _headerHeight,
+      dataRowMinHeight: _rowHeight,
+      dataRowMaxHeight: _rowHeight,
       // Proporciones del ancho: el curso y el colaborador son lo que más se
       // lee, la fecha y el ID son datos cortos.
       columns: const [
@@ -275,33 +275,33 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
         ),
       ],
       rows: [
-        for (final vm in visibles)
+        for (final vm in visible)
           DataRow(
             cells: [
               DataCell(
                 Text(
-                  _formatFecha(vm.carga.fecha),
+                  _formatDate(vm.timeEntry.date),
                   style: TextStyle(
                     fontSize: 13,
-                    color: context.colores.textoIntermedio,
+                    color: context.colors.intermediateText,
                   ),
                 ),
               ),
-              DataCell(_celdaColaborador(vm)),
-              DataCell(_celdaAreaEquipo(vm)),
+              DataCell(_employeeCell(vm)),
+              DataCell(_areaTeamCell(vm)),
               DataCell(
-                vm.empleado == null
+                vm.employee == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : SeniorityChip(seniority: vm.empleado!.seniority),
+                    : SeniorityChip(seniority: vm.employee!.seniority),
               ),
-              DataCell(_celdaCurso(vm)),
-              DataCell(_celdaHoras(vm)),
+              DataCell(_courseCell(vm)),
+              DataCell(_hoursCell(vm)),
               DataCell(
                 Text(
-                  vm.carga.id,
+                  vm.timeEntry.id,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: secundario,
+                  style: secondary,
                 ),
               ),
             ],
@@ -310,10 +310,10 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaColaborador(CargaDeHorasCRMViewModel vm) {
+  Widget _employeeCell(CrmTimeEntryViewModel vm) {
     final cs = context.colorScheme;
-    final emp = vm.empleado;
-    final legajo = vm.carga.empleadoLegajo;
+    final emp = vm.employee;
+    final employeeId = vm.timeEntry.employeeId;
 
     return Row(
       children: [
@@ -321,9 +321,9 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
           radius: 14,
           backgroundColor: cs.outlineVariant,
           child: Text(
-            emp == null || emp.nombre.isEmpty
+            emp == null || emp.firstName.isEmpty
                 ? '?'
-                : emp.nombre.substring(0, 1),
+                : emp.firstName.substring(0, 1),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -339,8 +339,8 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
             children: [
               Text(
                 emp == null
-                    ? 'Legajo $legajo'
-                    : '${emp.nombre} ${emp.apellido}',
+                    ? 'Legajo $employeeId'
+                    : '${emp.firstName} ${emp.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -350,13 +350,13 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
                 ),
               ),
               Text(
-                emp == null ? 'Fuera de la nómina' : 'Legajo $legajo',
+                emp == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
                   color: emp == null
-                      ? context.colores.advertencia.texto
+                      ? context.colors.warning.text
                       : cs.onSurfaceVariant,
                 ),
               ),
@@ -367,9 +367,9 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaAreaEquipo(CargaDeHorasCRMViewModel vm) {
+  Widget _areaTeamCell(CrmTimeEntryViewModel vm) {
     final cs = context.colorScheme;
-    final emp = vm.empleado;
+    final emp = vm.employee;
     if (emp == null) {
       return Text('-', style: TextStyle(color: cs.onSurfaceVariant));
     }
@@ -379,16 +379,16 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _mostrarDato(emp.area),
+          _showData(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
-            color: context.colores.textoIntermedio,
+            color: context.colors.intermediateText,
           ),
         ),
         Text(
-          _mostrarDato(emp.equipo),
+          _showData(emp.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
@@ -397,15 +397,15 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaCurso(CargaDeHorasCRMViewModel vm) {
-    final nombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
+  Widget _courseCell(CrmTimeEntryViewModel vm) {
+    final name = vm.course?.name ?? vm.timeEntry.courseName;
 
     // El nombre se corta con puntos suspensivos; el tooltip muestra el nombre
     // completo.
     return Tooltip(
-      message: nombre,
+      message: name,
       child: Text(
-        nombre,
+        name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
@@ -417,22 +417,22 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  Widget _celdaHoras(CargaDeHorasCRMViewModel vm) {
-    final carga = vm.carga;
-    final exito = context.colores.exito;
+  Widget _hoursCell(CrmTimeEntryViewModel vm) {
+    final timeEntry = vm.timeEntry;
+    final success = context.colors.success;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: exito.fondo,
+        color: success.background,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        '${carga.horasTotales.toStringAsFixed(2)} hs${carga.esDictada ? ' (dictadas)' : ' (tomadas)'}',
+        '${timeEntry.hours.toStringAsFixed(2)} hs${timeEntry.isTaught ? ' (dictadas)' : ' (tomadas)'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: exito.texto,
+          color: success.text,
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
@@ -440,11 +440,11 @@ class _TablaCargasPaginadaState extends State<_TablaCargasPaginada> {
     );
   }
 
-  String _formatFecha(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    return '$dia/$mes/${fecha.year}';
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 
-  String _mostrarDato(String valor) => valor.trim().isEmpty ? '-' : valor;
+  String _showData(String value) => value.trim().isEmpty ? '-' : value;
 }

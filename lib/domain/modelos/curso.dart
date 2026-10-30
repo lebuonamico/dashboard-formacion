@@ -1,61 +1,60 @@
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
-class Curso {
+class Course {
   final String id;
-  final String nombre;
-  final TipoCurso clasificacion;
-  final String areaCurso;
-  final String instructorLegajo; // Empleado que dicta
-  final double cargaHorariaHs;
-  final bool activo;
+  final String name;
+  final CourseCategory category;
+  final String courseArea;
+  final String instructorEmployeeId; // Empleado que dicta
+  final double workloadHours;
+  final bool isActive;
 
-  Curso({
+  Course({
     required this.id,
-    required this.nombre,
-    required this.clasificacion,
-    required this.areaCurso,
-    required this.instructorLegajo,
-    required this.cargaHorariaHs,
-    this.activo = true,
+    required this.name,
+    required this.category,
+    required this.courseArea,
+    required this.instructorEmployeeId,
+    required this.workloadHours,
+    this.isActive = true,
   });
 
   // La clasificación histórica se conserva para CRM y cumplimiento.
-  TipoCurso? get clasificacionLms => switch (clasificacion) {
-    TipoCurso.habilidadesDeNegocio ||
-    TipoCurso.habilidadesBlandas => clasificacion,
+  CourseCategory? get classificationLms => switch (category) {
+    CourseCategory.businessSkills || CourseCategory.softSkills => category,
     _ => null,
   };
 
-  Curso copyWith({String? id, bool? activo}) => Curso(
+  Course copyWith({String? id, bool? active}) => Course(
     id: id ?? this.id,
-    nombre: nombre,
-    clasificacion: clasificacion,
-    areaCurso: areaCurso,
-    instructorLegajo: instructorLegajo,
-    cargaHorariaHs: cargaHorariaHs,
-    activo: activo ?? this.activo,
+    name: name,
+    category: category,
+    courseArea: courseArea,
+    instructorEmployeeId: instructorEmployeeId,
+    workloadHours: workloadHours,
+    isActive: active ?? isActive,
   );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'nombre': nombre,
-        'clasificacion': clasificacion.name,
-        'areaCurso': areaCurso,
-        'instructorLegajo': instructorLegajo,
-        'cargaHorariaHs': cargaHorariaHs,
-        'activo': activo,
-      };
+    'id': id,
+    'nombre': name,
+    'clasificacion': category.name,
+    'areaCurso': courseArea,
+    'instructorLegajo': instructorEmployeeId,
+    'cargaHorariaHs': workloadHours,
+    'activo': isActive,
+  };
 
-  factory Curso.fromJson(Map<String, dynamic> json) => Curso(
-        id: json['id']?.toString() ?? '',
-        nombre: json['nombre']?.toString() ?? '',
-        clasificacion: TipoCurso.values.firstWhere(
-          (tipo) => tipo.name == json['clasificacion'],
-          orElse: () => TipoCurso.libresExploracion,
-        ),
-        areaCurso: json['areaCurso']?.toString() ?? '',
-        instructorLegajo: json['instructorLegajo']?.toString() ?? '',
-        cargaHorariaHs: double.tryParse(json['cargaHorariaHs'].toString()) ?? 0,
-        activo: json['activo'] as bool? ?? true,
-      );
+  factory Course.fromJson(Map<String, dynamic> json) => Course(
+    id: json['id']?.toString() ?? '',
+    name: json['nombre']?.toString() ?? '',
+    category: CourseCategory.values.firstWhere(
+      (type) => type.name == json['clasificacion'],
+      orElse: () => CourseCategory.exploration,
+    ),
+    courseArea: json['areaCurso']?.toString() ?? '',
+    instructorEmployeeId: json['instructorLegajo']?.toString() ?? '',
+    workloadHours: double.tryParse(json['cargaHorariaHs'].toString()) ?? 0,
+    isActive: json['activo'] as bool? ?? true,
+  );
 }

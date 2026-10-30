@@ -77,7 +77,7 @@ class TeamDetailHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: team.status.colores(context).fondo,
+                color: team.status.colors(context).background,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -85,7 +85,7 @@ class TeamDetailHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: team.status.colores(context).texto,
+                  color: team.status.colors(context).text,
                 ),
               ),
             ),
@@ -173,11 +173,11 @@ class _TeamProgressPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatearPorcentaje(team.completionPercentage),
+                formatPercentage(team.completionPercentage),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: team.status.colores(context).texto,
+                  color: team.status.colors(context).text,
                 ),
               ),
               Text(
@@ -196,8 +196,8 @@ class _TeamProgressPanel extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 9,
-              backgroundColor: context.colores.graficoPista,
-              color: team.status.colores(context).texto,
+              backgroundColor: context.colors.chartTrack,
+              color: team.status.colors(context).text,
             ),
           ),
           const SizedBox(height: 20),

@@ -1,29 +1,30 @@
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 
-class Cursada {
+class LegacyTimeEntry {
   final String id;
-  final String cursoId;
-  final String empleadoLegajo; // Alumno que tomó la clase
-  final DateTime fecha;
+  final String courseId;
+  final String employeeId; // Alumno que tomó la clase
+  final DateTime date;
 
-  Cursada({
+  LegacyTimeEntry({
     required this.id,
-    required this.cursoId,
-    required this.empleadoLegajo,
-    required this.fecha,
+    required this.courseId,
+    required this.employeeId,
+    required this.date,
   });
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'cursoId': cursoId,
-    'empleadoLegajo': empleadoLegajo,
-    'fecha': fecha.toIso8601String(),
+    'cursoId': courseId,
+    'empleadoLegajo': employeeId,
+    'fecha': date.toIso8601String(),
   };
 
-  factory Cursada.fromJson(Map<String, dynamic> json) => Cursada(
-    id: json['id']?.toString() ?? '',
-    cursoId: json['cursoId']?.toString() ?? '',
-    empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
-    fecha: fechaObligatoria(json['fecha']?.toString() ?? ''),
-  );
+  factory LegacyTimeEntry.fromJson(Map<String, dynamic> json) =>
+      LegacyTimeEntry(
+        id: json['id']?.toString() ?? '',
+        courseId: json['cursoId']?.toString() ?? '',
+        employeeId: json['empleadoLegajo']?.toString() ?? '',
+        date: requiredDate(json['fecha']?.toString() ?? ''),
+      );
 }

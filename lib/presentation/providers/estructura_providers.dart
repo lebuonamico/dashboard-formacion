@@ -13,79 +13,70 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 /// usuario en la misma pestaña: con RLS, cada usuario recibe filas distintas.
 /// Mira solo estos tres campos, así no se recalcula en cada
 /// `notifyListeners` de [AuthController] (por ejemplo, al validar).
-final sesionDatosProvider =
-    Provider<({bool habilitada, String? email, String? rol})>(
+final sessionDataProvider =
+    Provider<({bool enabled, String? email, String? role})>(
       (ref) => ref.watch(
         authControllerProvider.select(
-          (auth) =>
-              (habilitada: auth.enabled, email: auth.email, rol: auth.rol),
+          (auth) => (enabled: auth.enabled, email: auth.email, role: auth.role),
         ),
       ),
     );
 
 /// Áreas, equipos y líderes. `null` en modo local, donde no hay sesión.
-final estructuraProvider = FutureProvider<EstructuraOrganizacional?>((
-  ref,
-) async {
-  if (!ref.watch(sesionDatosProvider).habilitada) return null;
-  final repositorio = ref.watch(estructuraRepositoryProvider);
-  if (repositorio == null) return null;
-  return repositorio.getEstructura();
+final orgStructureProvider = FutureProvider<OrgStructure?>((ref) async {
+  if (!ref.watch(sessionDataProvider).enabled) return null;
+  final repository = ref.watch(orgStructureRepositoryProvider);
+  if (repository == null) return null;
+  return repository.getStructure();
 });
 
 /// Qué colaboradores ve el usuario de la sesión. En modo local no hay roles
 /// y se ve todo.
-final alcanceUsuarioProvider = FutureProvider<AlcanceUsuario>((ref) async {
-  final sesion = ref.watch(sesionDatosProvider);
-  if (!sesion.habilitada) return const AlcanceUsuario.total();
-  final rol = RolUsuario.fromString(sesion.rol);
-  if (rol != null && rol.esGestor) return const AlcanceUsuario.total();
-  final estructura = await ref.watch(estructuraProvider.future);
-  return AlcanceUsuario.de(
-    rol: rol,
-    email: sesion.email,
-    estructura: estructura,
-  );
+final userScopeProvider = FutureProvider<UserScope>((ref) async {
+  final session = ref.watch(sessionDataProvider);
+  if (!session.enabled) return const UserScope.total();
+  final role = UserRole.fromString(session.role);
+  if (role != null && role.canManage) return const UserScope.total();
+  final structure = await ref.watch(orgStructureProvider.future);
+  return UserScope.of(role: role, email: session.email, structure: structure);
 });
 
 /// Fila de la nómina del usuario de la sesión, buscada por su email: el área
 /// y el equipo a los que pertenece. Usa la nómina sin filtrar y no
-/// [empleadosProvider], porque un líder puede no estar en lo que lidera (el
+/// [employeesProvider], porque un líder puede no estar en lo que lidera (el
 /// RLS le deja leer su propia fila). `null` en modo local o si no figura.
-final empleadoDeSesionProvider = FutureProvider<Empleado?>((ref) async {
-  final sesion = ref.watch(sesionDatosProvider);
-  if (!sesion.habilitada || sesion.email == null) return null;
-  final empleados = await ref.watch(nominaProvider.future);
-  return Empleado.porMail(empleados, sesion.email);
+final sessionEmployeeProvider = FutureProvider<Employee?>((ref) async {
+  final session = ref.watch(sessionDataProvider);
+  if (!session.enabled || session.email == null) return null;
+  final employees = await ref.watch(payrollProvider.future);
+  return Employee.byEmail(employees, session.email);
 });
 
 /// Etiquetas de líderes para las tarjetas de equipos y áreas.
-class EtiquetasLideres {
-  final EstructuraOrganizacional _estructura;
-  final Map<String, String> _nombrePorEmail;
+class LeaderLabels {
+  final OrgStructure _structure;
+  final Map<String, String> _nameByEmail;
 
-  EtiquetasLideres(this._estructura, this._nombrePorEmail);
+  LeaderLabels(this._structure, this._nameByEmail);
 
   /// `null` si el equipo no tiene líderes asignados.
-  String? deEquipo(String area, String equipo) =>
-      _etiqueta(_estructura.lideresDeEquipo(area, equipo));
+  String? forTeam(String area, String team) =>
+      _label(_structure.teamLeaders(area, team));
 
-  String? deArea(String area) => _etiqueta(_estructura.lideresDeArea(area));
+  String? forArea(String area) => _label(_structure.areaLeaders(area));
 
-  String? _etiqueta(Set<String> emails) => emails.isEmpty
-      ? null
-      : EstructuraOrganizacional.etiquetaLideres(emails, _nombrePorEmail);
+  String? _label(Set<String> emails) =>
+      emails.isEmpty ? null : OrgStructure.leadersLabel(emails, _nameByEmail);
 }
 
 /// `null` en modo local, donde no hay líderes asignados.
-final etiquetasLideresProvider = FutureProvider<EtiquetasLideres?>((ref) async {
-  final estructura = await ref.watch(estructuraProvider.future);
-  if (estructura == null) return null;
-  final empleados = await ref.watch(empleadosProvider.future);
-  return EtiquetasLideres(estructura, {
-    for (final empleado in empleados)
-      if (empleado.mail.trim().isNotEmpty)
-        EstructuraOrganizacional.normalizarEmail(empleado.mail):
-            empleado.nombreCompleto,
+final leaderLabelsProvider = FutureProvider<LeaderLabels?>((ref) async {
+  final structure = await ref.watch(orgStructureProvider.future);
+  if (structure == null) return null;
+  final employees = await ref.watch(employeesProvider.future);
+  return LeaderLabels(structure, {
+    for (final employee in employees)
+      if (employee.email.trim().isNotEmpty)
+        OrgStructure.normalizeEmail(employee.email): employee.fullName,
   });
 });

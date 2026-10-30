@@ -18,25 +18,25 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.light(),
-          home: const Scaffold(body: PeriodoFilterPanel()),
+          home: const Scaffold(body: PeriodFilterPanel()),
         ),
       ),
     );
     await tester.pump();
 
-    final mes = find.byIcon(Icons.calendar_month_outlined);
-    expect(mes, findsOne);
+    final month = find.byIcon(Icons.calendar_month_outlined);
+    expect(month, findsOne);
 
-    final alcance = ProviderScope.containerOf(
-      tester.element(find.byType(PeriodoFilterPanel)),
-    ).read(alcancePeriodoProvider.notifier);
+    final scope = ProviderScope.containerOf(
+      tester.element(find.byType(PeriodFilterPanel)),
+    ).read(periodScopeProvider.notifier);
 
-    alcance.state = AlcancePeriodo.anual;
+    scope.state = PeriodScope.annual;
     await tester.pump();
-    expect(mes, findsNothing);
+    expect(month, findsNothing);
 
-    alcance.state = AlcancePeriodo.mensual;
+    scope.state = PeriodScope.monthly;
     await tester.pump();
-    expect(mes, findsOne);
+    expect(month, findsOne);
   });
 }

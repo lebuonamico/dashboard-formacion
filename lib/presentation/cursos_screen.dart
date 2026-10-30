@@ -13,12 +13,12 @@ import 'package:app_finnegans/presentation/widgets/shared/tipo_curso_chip.dart';
 import 'package:app_finnegans/presentation/widgets/shared/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CursosScreen extends ConsumerWidget {
-  const CursosScreen({super.key});
+class CoursesScreen extends ConsumerWidget {
+  const CoursesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cursosAsync = ref.watch(cursosConInstructorProvider);
+    final coursesAsync = ref.watch(courseStatsProvider);
 
     return Scaffold(
       body: Column(
@@ -28,28 +28,28 @@ class CursosScreen extends ConsumerWidget {
           // Contenido
           Expanded(
             child: Padding(
-              padding: paddingPantalla,
+              padding: screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildFilterBar(ref),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: cursosAsync.when(
+                    child: coursesAsync.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar los cursos',
                         error: err,
                       ),
-                      data: (cursosList) => FadeIn(
+                      data: (coursesList) => FadeIn(
                         child: (() {
-                          if (cursosList.isEmpty) {
-                            final hayCursos =
-                                ref.watch(cursosProvider).value?.isNotEmpty ??
+                          if (coursesList.isEmpty) {
+                            final hasCourses =
+                                ref.watch(coursesProvider).value?.isNotEmpty ??
                                 false;
                             return SingleChildScrollView(
-                              child: hayCursos
+                              child: hasCourses
                                   ? const EmptyDataState(
                                       icon: Icons.search_off_outlined,
                                       title:
@@ -65,7 +65,7 @@ class CursosScreen extends ConsumerWidget {
                                     ),
                             );
                           }
-                          return _TablaCursosPaginada(cursos: cursosList);
+                          return _PaginatedCoursesTable(courses: coursesList);
                         })(),
                       ),
                     ),
@@ -80,25 +80,25 @@ class CursosScreen extends ConsumerWidget {
   }
 
   Widget _buildFilterBar(WidgetRef ref) {
-    final busqueda = ref.watch(busquedaCursoProvider);
-    final tipoSeleccionado = ref.watch(filtroTipoCursoProvider);
-    final anio = ref.watch(filtroAnioCursosProvider);
-    final mes = ref.watch(filtroMesCursosProvider);
-    final anios = ref.watch(aniosCursosDisponiblesProvider).value ?? <int>[];
+    final search = ref.watch(courseSearchProvider);
+    final selectedType = ref.watch(courseCategoryFilterProvider);
+    final year = ref.watch(courseYearFilterProvider);
+    final month = ref.watch(courseMonthFilterProvider);
+    final years = ref.watch(availableCourseYearsProvider).value ?? <int>[];
 
-    final aniosOrdenados = <int>{...anios, ?anio}.toList()
+    final sortedYears = <int>{...years, ?year}.toList()
       ..sort((a, b) => b.compareTo(a));
 
     return FilterBar(
       scope: 'cursos',
       hasActiveFilters:
-          busqueda.isNotEmpty ||
-          tipoSeleccionado != null ||
-          anio != null ||
-          mes != null,
+          search.isNotEmpty ||
+          selectedType != null ||
+          year != null ||
+          month != null,
       filters: [
         FilterDropdown<int?>(
-          value: anio,
+          value: year,
           hint: 'Año (métricas)',
           icon: Icons.event_outlined,
           items: [
@@ -106,15 +106,15 @@ class CursosScreen extends ConsumerWidget {
               value: null,
               child: Text('Todos los años'),
             ),
-            for (final a in aniosOrdenados)
+            for (final a in sortedYears)
               DropdownMenuItem<int?>(value: a, child: Text('$a')),
           ],
           onChanged: (value) {
-            ref.read(filtroAnioCursosProvider.notifier).state = value;
+            ref.read(courseYearFilterProvider.notifier).state = value;
           },
         ),
         FilterDropdown<int?>(
-          value: mes,
+          value: month,
           hint: 'Mes (métricas)',
           icon: Icons.calendar_month_outlined,
           items: [
@@ -123,50 +123,50 @@ class CursosScreen extends ConsumerWidget {
               child: Text('Todos los meses'),
             ),
             for (var m = 1; m <= 12; m++)
-              DropdownMenuItem<int?>(value: m, child: Text(nombreMes(m))),
+              DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
           ],
           onChanged: (value) {
-            ref.read(filtroMesCursosProvider.notifier).state = value;
+            ref.read(courseMonthFilterProvider.notifier).state = value;
           },
         ),
       ],
       onClear: () {
-        ref.read(busquedaCursoProvider.notifier).state = '';
-        ref.read(filtroTipoCursoProvider.notifier).state = null;
-        ref.read(filtroAnioCursosProvider.notifier).state = null;
-        ref.read(filtroMesCursosProvider.notifier).state = null;
+        ref.read(courseSearchProvider.notifier).state = '';
+        ref.read(courseCategoryFilterProvider.notifier).state = null;
+        ref.read(courseYearFilterProvider.notifier).state = null;
+        ref.read(courseMonthFilterProvider.notifier).state = null;
       },
     );
   }
 }
 
 /// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
-class _TablaCursosPaginada extends StatefulWidget {
-  final List<CursoViewModel> cursos;
+class _PaginatedCoursesTable extends StatefulWidget {
+  final List<CourseViewModel> courses;
 
-  const _TablaCursosPaginada({required this.cursos});
+  const _PaginatedCoursesTable({required this.courses});
 
   @override
-  State<_TablaCursosPaginada> createState() => _TablaCursosPaginadaState();
+  State<_PaginatedCoursesTable> createState() => _PaginatedCoursesTableState();
 }
 
-class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
-  static const _altoFila = 44.0;
-  static const _altoEncabezado = 44.0;
-  static const _altoPaginador = 60.0;
-  static const _separacion = 12.0;
+class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
+  static const _rowHeight = 44.0;
+  static const _headerHeight = 44.0;
+  static const _paginatorHeight = 60.0;
+  static const _spacing = 12.0;
 
   /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimoPorPagina = 5;
+  static const _minimumPerPage = 5;
 
-  int _paginaActual = 0;
+  int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant _TablaCursosPaginada oldWidget) {
+  void didUpdateWidget(covariant _PaginatedCoursesTable oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Al cambiar el filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.cursos != widget.cursos) {
-      _paginaActual = 0;
+    if (oldWidget.courses != widget.courses) {
+      _currentPage = 0;
     }
   }
 
@@ -174,28 +174,28 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final total = widget.cursos.length;
+        final total = widget.courses.length;
 
         // Cuántas filas entran en el alto que nos dieron. Así la tabla llena la
         // página y no queda un hueco entre la última fila y el paginador.
-        final altoParaTabla =
-            constraints.maxHeight - _altoPaginador - _separacion;
-        final cursosPorPagina = ((altoParaTabla - _altoEncabezado) / _altoFila)
+        final heightForTable =
+            constraints.maxHeight - _paginatorHeight - _spacing;
+        final coursesPerPage = ((heightForTable - _headerHeight) / _rowHeight)
             .floor()
             .clamp(
-              _minimoPorPagina,
+              _minimumPerPage,
               // Nunca más filas que cursos hay.
-              total < _minimoPorPagina ? _minimoPorPagina : total,
+              total < _minimumPerPage ? _minimumPerPage : total,
             );
 
-        final totalPaginas = total == 0
+        final totalPages = total == 0
             ? 1
-            : (total + cursosPorPagina - 1) ~/ cursosPorPagina;
-        final paginaSegura = _paginaActual.clamp(0, totalPaginas - 1);
-        final inicio = paginaSegura * cursosPorPagina;
-        final finCalculado = inicio + cursosPorPagina;
-        final fin = finCalculado > total ? total : finCalculado;
-        final visibles = widget.cursos.sublist(inicio, fin);
+            : (total + coursesPerPage - 1) ~/ coursesPerPage;
+        final safePage = _currentPage.clamp(0, totalPages - 1);
+        final start = safePage * coursesPerPage;
+        final calculatedEnd = start + coursesPerPage;
+        final end = calculatedEnd > total ? total : calculatedEnd;
+        final visible = widget.courses.sublist(start, end);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,25 +208,25 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: constraints.maxWidth),
                   // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _tabla(visibles)),
+                  child: SingleChildScrollView(child: _table(visible)),
                 ),
               ),
             ),
-            if (totalPaginas > 1) ...[
-              const SizedBox(height: _separacion),
-              PaginacionResultados(
-                paginaActual: paginaSegura,
-                cantidadPaginas: totalPaginas,
-                desde: inicio + 1,
-                hasta: fin,
-                totalResultados: total,
-                etiquetaResultados: 'cursos',
-                icono: Icons.school_outlined,
-                onPrevious: paginaSegura > 0
-                    ? () => setState(() => _paginaActual = paginaSegura - 1)
+            if (totalPages > 1) ...[
+              const SizedBox(height: _spacing),
+              ResultsPagination(
+                currentPage: safePage,
+                pageCount: totalPages,
+                from: start + 1,
+                until: end,
+                totalResults: total,
+                resultsLabel: 'cursos',
+                icon: Icons.school_outlined,
+                onPrevious: safePage > 0
+                    ? () => setState(() => _currentPage = safePage - 1)
                     : null,
-                onNext: paginaSegura < totalPaginas - 1
-                    ? () => setState(() => _paginaActual = paginaSegura + 1)
+                onNext: safePage < totalPages - 1
+                    ? () => setState(() => _currentPage = safePage + 1)
                     : null,
               ),
             ],
@@ -236,15 +236,15 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
     );
   }
 
-  Widget _tabla(List<CursoViewModel> visibles) {
+  Widget _table(List<CourseViewModel> visible) {
     final cs = context.colorScheme;
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       columnSpacing: 24,
       // Filas más compactas: entran más cursos sin que se vea apretado.
-      headingRowHeight: _altoEncabezado,
-      dataRowMinHeight: _altoFila,
-      dataRowMaxHeight: _altoFila,
+      headingRowHeight: _headerHeight,
+      dataRowMinHeight: _rowHeight,
+      dataRowMaxHeight: _rowHeight,
       columns: const [
         DataColumn(label: Text('ID')),
         DataColumn(label: Text('Nombre del curso')),
@@ -274,14 +274,14 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
         ),
       ],
       rows: [
-        for (final vm in visibles)
+        for (final vm in visible)
           DataRow(
             cells: [
               // El ID es dato secundario: va en gris para que no le compita al
               // nombre del curso.
               DataCell(
                 Text(
-                  vm.curso.id,
+                  vm.course.id,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -291,7 +291,7 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
               ),
               DataCell(
                 Text(
-                  vm.curso.nombre,
+                  vm.course.name,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -300,13 +300,13 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                 ),
               ),
               DataCell(
-                vm.curso.clasificacionLms == null
+                vm.course.classificationLms == null
                     ? const Text('-')
-                    : TipoCursoChip(tipo: vm.curso.clasificacionLms!),
+                    : CourseCategoryChip(type: vm.course.classificationLms!),
               ),
               DataCell(
                 Text(
-                  '${vm.curso.cargaHorariaHs.toStringAsFixed(0)} hs',
+                  '${vm.course.workloadHours.toStringAsFixed(0)} hs',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -314,22 +314,19 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
                   ),
                 ),
               ),
-              DataCell(_celdaMetrica('${vm.personas}', vm.personas == 0)),
+              DataCell(_metricCell('${vm.people}', vm.people == 0)),
               DataCell(
-                _celdaMetrica(
-                  '${_formatoHoras(vm.horasCrm)} hs',
-                  vm.personas == 0,
-                ),
+                _metricCell('${_hoursFormat(vm.crmHours)} hs', vm.people == 0),
               ),
               DataCell(
-                _celdaMetrica(
-                  vm.promedioHorasPorPersona == null
+                _metricCell(
+                  vm.averageHoursPerPerson == null
                       ? '—'
-                      : '${_formatoHoras(vm.promedioHorasPorPersona!)} hs',
-                  vm.promedioHorasPorPersona == null,
+                      : '${_hoursFormat(vm.averageHoursPerPerson!)} hs',
+                  vm.averageHoursPerPerson == null,
                 ),
               ),
-              DataCell(_celdaMetrica('${vm.finalizaron}', vm.finalizaron == 0)),
+              DataCell(_metricCell('${vm.completed}', vm.completed == 0)),
             ],
           ),
       ],
@@ -337,20 +334,20 @@ class _TablaCursosPaginadaState extends State<_TablaCursosPaginada> {
   }
 
   /// Los ceros van en gris: así se ve de un vistazo qué cursos no tomó nadie.
-  Widget _celdaMetrica(String texto, bool vacia) {
+  Widget _metricCell(String text, bool empty) {
     final cs = context.colorScheme;
     return Text(
-      texto,
+      text,
       style: TextStyle(
         fontSize: 13,
-        fontWeight: vacia ? FontWeight.w400 : FontWeight.w600,
-        color: vacia ? cs.onSurfaceVariant : cs.onSurface,
+        fontWeight: empty ? FontWeight.w400 : FontWeight.w600,
+        color: empty ? cs.onSurfaceVariant : cs.onSurface,
       ),
     );
   }
 
   /// Sin decimales si son horas enteras, con uno si no.
-  static String _formatoHoras(double horas) => horas == horas.roundToDouble()
-      ? horas.toStringAsFixed(0)
-      : horas.toStringAsFixed(1);
+  static String _hoursFormat(double hours) => hours == hours.roundToDouble()
+      ? hours.toStringAsFixed(0)
+      : hours.toStringAsFixed(1);
 }

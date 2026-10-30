@@ -113,7 +113,7 @@ class _DonutLegendItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: context.colores.textoIntermedio,
+                color: context.colors.intermediateText,
               ),
             ),
           ),
@@ -133,7 +133,7 @@ class _DonutLegendItem extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: context.colores.textoIntermedio,
+              color: context.colors.intermediateText,
             ),
           ),
         ],

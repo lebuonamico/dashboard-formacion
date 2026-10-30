@@ -5,20 +5,16 @@ import 'package:app_finnegans/presentation/widgets/areas/area_category_distribut
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/presentation/widgets/shared/estado_colores.dart';
 
-class AreaDetalleHeader extends StatelessWidget {
+class AreaDetailHeader extends StatelessWidget {
   final AreaGlobalViewModel area;
-  final String periodo;
+  final String period;
 
-  const AreaDetalleHeader({
-    super.key,
-    required this.area,
-    required this.periodo,
-  });
+  const AreaDetailHeader({super.key, required this.area, required this.period});
 
   @override
   Widget build(BuildContext context) {
-    final colaboradores = area.cantidadIntegrantes;
-    final equipos = area.equiposGenerales.length;
+    final employees = area.memberCount;
+    final teams = area.generalTeams.length;
 
     return Wrap(
       alignment: WrapAlignment.spaceBetween,
@@ -30,7 +26,7 @@ class AreaDetalleHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              area.nombre,
+              area.name,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
@@ -39,9 +35,9 @@ class AreaDetalleHeader extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              '$colaboradores ${colaboradores == 1 ? 'colaborador' : 'colaboradores'}'
-              ' · $equipos ${equipos == 1 ? 'equipo general' : 'equipos generales'}'
-              '${area.lideres == null ? '' : ' · Líder de área: ${area.lideres}'}',
+              '$employees ${employees == 1 ? 'colaborador' : 'colaboradores'}'
+              ' · $teams ${teams == 1 ? 'equipo general' : 'equipos generales'}'
+              '${area.leaders == null ? '' : ' · Líder de área: ${area.leaders}'}',
               style: TextStyle(
                 fontSize: 14,
                 color: context.colorScheme.onSurfaceVariant,
@@ -68,7 +64,7 @@ class AreaDetalleHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    periodo,
+                    period,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -82,15 +78,15 @@ class AreaDetalleHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: area.semaforo.colores(context).fondo,
+                color: area.level.colors(context).background,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                area.semaforo.label,
+                area.level.label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: area.semaforo.colores(context).texto,
+                  color: area.level.colors(context).text,
                 ),
               ),
             ),
@@ -101,32 +97,32 @@ class AreaDetalleHeader extends StatelessWidget {
   }
 }
 
-class AreaDetalleResumen extends StatelessWidget {
+class AreaDetailSummary extends StatelessWidget {
   final AreaGlobalViewModel area;
-  final bool esAnual;
+  final bool isAnnual;
 
-  const AreaDetalleResumen({
+  const AreaDetailSummary({
     super.key,
     required this.area,
-    this.esAnual = false,
+    this.isAnnual = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final distribucion = AreasCategoryDistribution(
-          horasNegocio: area.horasNegocio,
-          horasBlandas: area.horasBlandas,
-          horasLibres: area.horasLibres,
-          horasDictado: area.horasDictado,
-          esAnual: esAnual,
+        final distribution = AreasCategoryDistribution(
+          businessHours: area.businessHours,
+          softSkillsHours: area.softSkillsHours,
+          explorationHours: area.explorationHours,
+          teachingHours: area.teachingHours,
+          isAnnual: isAnnual,
         );
-        final avance = _AreaProgressPanel(area: area, esAnual: esAnual);
+        final progress = _AreaProgressPanel(area: area, isAnnual: isAnnual);
 
         if (constraints.maxWidth < 1050) {
           return Column(
-            children: [distribucion, const SizedBox(height: 16), avance],
+            children: [distribution, const SizedBox(height: 16), progress],
           );
         }
 
@@ -134,9 +130,9 @@ class AreaDetalleResumen extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: distribucion),
+              Expanded(child: distribution),
               const SizedBox(width: 16),
-              Expanded(child: avance),
+              Expanded(child: progress),
             ],
           ),
         );
@@ -147,19 +143,19 @@ class AreaDetalleResumen extends StatelessWidget {
 
 class _AreaProgressPanel extends StatelessWidget {
   final AreaGlobalViewModel area;
-  final bool esAnual;
+  final bool isAnnual;
 
-  const _AreaProgressPanel({required this.area, required this.esAnual});
+  const _AreaProgressPanel({required this.area, required this.isAnnual});
 
   @override
   Widget build(BuildContext context) {
-    final progress = (area.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
-    final promedio = area.cantidadIntegrantes == 0
+    final progress = (area.compliancePercentage / 100).clamp(0.0, 1.0);
+    final average = area.memberCount == 0
         ? 0.0
-        : area.horasRealizadas / area.cantidadIntegrantes;
-    final enObjetivo = _MetricRow(
+        : area.completedHours / area.memberCount;
+    final onTarget = _MetricRow(
       label: 'Integrantes en objetivo',
-      value: '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes}',
+      value: '${area.membersOnTarget} de ${area.memberCount}',
     );
 
     return Container(
@@ -180,15 +176,15 @@ class _AreaProgressPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                formatearPorcentaje(area.porcentajeCumplimiento),
+                formatPercentage(area.compliancePercentage),
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: area.semaforo.colores(context).texto,
+                  color: area.level.colors(context).text,
                 ),
               ),
               Text(
-                '${area.horasRealizadas.toStringAsFixed(1)} de ${area.horasObjetivo.toStringAsFixed(1)} h',
+                '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} h',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -203,30 +199,30 @@ class _AreaProgressPanel extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 9,
-              backgroundColor: context.colores.graficoPista,
-              color: area.semaforo.colores(context).texto,
+              backgroundColor: context.colors.chartTrack,
+              color: area.level.colors(context).text,
             ),
           ),
           const SizedBox(height: 20),
-          if (esAnual)
+          if (isAnnual)
             Tooltip(
               message:
                   'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.',
-              child: enObjetivo,
+              child: onTarget,
             )
           else
-            enObjetivo,
+            onTarget,
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',
-            value: '${promedio.toStringAsFixed(1)} h',
+            value: '${average.toStringAsFixed(1)} h',
           ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: area.desvioHoras >= 0
-                ? '+${area.desvioHoras.toStringAsFixed(1)} h'
-                : '-${area.desvioHoras.abs().toStringAsFixed(1)} h',
+            value: area.hoursDeviation >= 0
+                ? '+${area.hoursDeviation.toStringAsFixed(1)} h'
+                : '-${area.hoursDeviation.abs().toStringAsFixed(1)} h',
           ),
         ],
       ),

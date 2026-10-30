@@ -1,24 +1,24 @@
-enum EstadoImportacion { completada, fallida }
+enum ImportStatus { completed, failed }
 
 /// Audit result; legacy repositories may leave persistence counts unknown.
-class RegistroImportacion {
-  final String tipoArchivo;
-  final String nombreArchivo;
-  final DateTime fechaHora;
-  final EstadoImportacion estado;
-  final int registrosProcesados;
-  final int? insertados;
-  final int? actualizados;
-  final List<String> errores;
+class ImportRecord {
+  final String fileType;
+  final String fileName;
+  final DateTime dateTime;
+  final ImportStatus status;
+  final int processedRecords;
+  final int? inserted;
+  final int? updated;
+  final List<String> errors;
 
-  const RegistroImportacion({
-    required this.tipoArchivo,
-    required this.nombreArchivo,
-    required this.fechaHora,
-    required this.estado,
-    required this.registrosProcesados,
-    this.insertados,
-    this.actualizados,
-    this.errores = const [],
+  const ImportRecord({
+    required this.fileType,
+    required this.fileName,
+    required this.dateTime,
+    required this.status,
+    required this.processedRecords,
+    this.inserted,
+    this.updated,
+    this.errors = const [],
   });
 }

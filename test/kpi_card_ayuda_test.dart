@@ -3,7 +3,7 @@ import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _card({String? ayuda}) => MaterialApp(
+Widget _card({String? help}) => MaterialApp(
   theme: AppTheme.light(),
   home: Scaffold(
     body: SizedBox(
@@ -17,7 +17,7 @@ Widget _card({String? ayuda}) => MaterialApp(
         footer: '',
         icon: Icons.schedule_outlined,
         color: Colors.blue,
-        ayuda: ayuda,
+        help: help,
       ),
     ),
   ),
@@ -25,12 +25,12 @@ Widget _card({String? ayuda}) => MaterialApp(
 
 void main() {
   testWidgets('Con ayuda muestra el ícono y su explicación', (tester) async {
-    await tester.pumpWidget(_card(ayuda: ayudaHorasValidasMes));
+    await tester.pumpWidget(_card(help: monthCreditedHoursHelp));
 
     expect(find.byIcon(Icons.info_outline), findsOne);
     expect(
       tester.widget<Tooltip>(find.byType(Tooltip)).message,
-      ayudaHorasValidasMes,
+      monthCreditedHoursHelp,
     );
   });
 

@@ -9,127 +9,129 @@ import 'package:app_finnegans/presentation/providers/empleados_providers.dart';
 import 'package:app_finnegans/presentation/providers/cursos_providers.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-final cargasDeHorasCRMProvider = FutureProvider<List<CargaDeHorasCRM>>((
-  ref,
-) async {
-  final repo = ref.watch(cargaDeHorasCRMRepositoryProvider);
+final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
+  final repo = ref.watch(crmTimeEntriesRepositoryProvider);
   // Solo las horas de los colaboradores que ve el usuario de la sesión.
-  final legajos = await ref.watch(legajosVisiblesProvider.future);
-  final cargas = await repo.getCargasDeHoras();
-  if (legajos == null) return cargas;
-  return cargas
-      .where((carga) => legajos.contains(carga.empleadoLegajo))
+  final employeeIds = await ref.watch(visibleEmployeeIdsProvider.future);
+  final timeEntries = await repo.getTimeEntries();
+  if (employeeIds == null) return timeEntries;
+  return timeEntries
+      .where((timeEntry) => employeeIds.contains(timeEntry.employeeId))
       .toList();
 });
 
-class CargaDeHorasCRMViewModel {
-  final CargaDeHorasCRM carga;
-  final Empleado? empleado;
-  final Curso? curso;
+class CrmTimeEntryViewModel {
+  final CrmTimeEntry timeEntry;
+  final Employee? employee;
+  final Course? course;
 
-  CargaDeHorasCRMViewModel({
-    required this.carga,
-    required this.empleado,
-    required this.curso,
+  CrmTimeEntryViewModel({
+    required this.timeEntry,
+    required this.employee,
+    required this.course,
   });
-
 }
 
-final busquedaCargaDeHorasProvider = StateProvider<String>((ref) => '');
+final timeEntrySearchProvider = StateProvider<String>((ref) => '');
 
 // Filtros propios del listado del CRM (null = todos). No son el período
 // global: filtrar acá no cambia lo que muestran Dashboard o Equipos.
-final filtroAnioCargaProvider = StateProvider<int?>((ref) => null);
-final filtroMesCargaProvider = StateProvider<int?>((ref) => null);
+final timeEntryYearFilterProvider = StateProvider<int?>((ref) => null);
+final timeEntryMonthFilterProvider = StateProvider<int?>((ref) => null);
 
 /// Años con cargas de horas, del más reciente al más viejo.
-final aniosCargasDisponiblesProvider = Provider<AsyncValue<List<int>>>((ref) {
-  return ref.watch(cargasDeHorasCRMProvider).whenData((cargas) {
-    return ({for (final carga in cargas) carga.fecha.year}.toList()
+final availableTimeEntryYearsProvider = Provider<AsyncValue<List<int>>>((ref) {
+  return ref.watch(crmTimeEntriesProvider).whenData((timeEntries) {
+    return ({for (final timeEntry in timeEntries) timeEntry.date.year}.toList()
       ..sort((a, b) => b.compareTo(a)));
   });
 });
 
-final cargasDeHorasCompletasProvider =
-    Provider<AsyncValue<List<CargaDeHorasCRMViewModel>>>((ref) {
-      final cargasAsync = ref.watch(cargasDeHorasCRMProvider);
-      final empleadosAsync = ref.watch(empleadosProvider);
-      final cursosAsync = ref.watch(cursosProvider);
-      final query = ref.watch(busquedaCargaDeHorasProvider).toLowerCase();
-      final anioFiltro = ref.watch(filtroAnioCargaProvider);
-      final mesFiltro = ref.watch(filtroMesCargaProvider);
+final joinedTimeEntriesProvider =
+    Provider<AsyncValue<List<CrmTimeEntryViewModel>>>((ref) {
+      final timeEntriesAsync = ref.watch(crmTimeEntriesProvider);
+      final employeesAsync = ref.watch(employeesProvider);
+      final coursesAsync = ref.watch(coursesProvider);
+      final query = ref.watch(timeEntrySearchProvider).toLowerCase();
+      final yearFilter = ref.watch(timeEntryYearFilterProvider);
+      final filterMonth = ref.watch(timeEntryMonthFilterProvider);
       final selection = ref.watch(dataFilterSelectionProvider('crm'));
-      final cursoIds = ref.watch(courseFilterIdentifiersProvider);
+      final courseIds = ref.watch(courseFilterIdentifiersProvider);
 
-      if (cargasAsync.isLoading ||
-          empleadosAsync.isLoading ||
-          cursosAsync.isLoading) {
+      if (timeEntriesAsync.isLoading ||
+          employeesAsync.isLoading ||
+          coursesAsync.isLoading) {
         return const AsyncValue.loading();
       }
 
-      if (cargasAsync.hasError) {
-        return AsyncValue.error(cargasAsync.error!, cargasAsync.stackTrace!);
-      }
-
-      if (empleadosAsync.hasError) {
+      if (timeEntriesAsync.hasError) {
         return AsyncValue.error(
-          empleadosAsync.error!,
-          empleadosAsync.stackTrace!,
+          timeEntriesAsync.error!,
+          timeEntriesAsync.stackTrace!,
         );
       }
 
-      if (cursosAsync.hasError) {
-        return AsyncValue.error(cursosAsync.error!, cursosAsync.stackTrace!);
+      if (employeesAsync.hasError) {
+        return AsyncValue.error(
+          employeesAsync.error!,
+          employeesAsync.stackTrace!,
+        );
       }
 
-      final cargas = cargasAsync.value ?? [];
-      final empMap = {for (var e in (empleadosAsync.value ?? [])) e.legajo: e};
-      final cursoMap = {
-        for (final curso in (cursosAsync.value ?? []))
-          curso.nombre.trim().toLowerCase(): curso,
+      if (coursesAsync.hasError) {
+        return AsyncValue.error(coursesAsync.error!, coursesAsync.stackTrace!);
+      }
+
+      final timeEntries = timeEntriesAsync.value ?? [];
+      final employeeMap = {
+        for (final e in employeesAsync.value ?? <Employee>[]) e.employeeId: e,
+      };
+      final courseMap = {
+        for (final course in coursesAsync.value ?? <Course>[])
+          course.name.trim().toLowerCase(): course,
       };
 
       final viewModels =
-          cargas
-              .map((carga) {
-                return CargaDeHorasCRMViewModel(
-                  carga: carga,
-                  empleado: empMap[carga.empleadoLegajo],
-                  curso: cursoMap[carga.cursoNombre.trim().toLowerCase()],
+          timeEntries
+              .map((timeEntry) {
+                return CrmTimeEntryViewModel(
+                  timeEntry: timeEntry,
+                  employee: employeeMap[timeEntry.employeeId],
+                  course: courseMap[timeEntry.courseName.trim().toLowerCase()],
                 );
               })
               .where((vm) {
-                final empNombre = vm.empleado != null
-                    ? '${vm.empleado!.nombre} ${vm.empleado!.apellido}'
+                final employeeName = vm.employee != null
+                    ? '${vm.employee!.firstName} ${vm.employee!.lastName}'
                     : '';
                 // Si el curso no está en el catálogo se busca por el nombre del CRM.
-                final cursoNombre = vm.curso?.nombre ?? vm.carga.cursoNombre;
-                final legajo = vm.carga.empleadoLegajo;
-                final area = vm.empleado?.area ?? '';
-                final fecha = vm.carga.fecha;
+                final courseName = vm.course?.name ?? vm.timeEntry.courseName;
+                final employeeId = vm.timeEntry.employeeId;
+                final area = vm.employee?.area ?? '';
+                final date = vm.timeEntry.date;
 
                 final matchesQuery =
-                    empNombre.toLowerCase().contains(query) ||
-                    cursoNombre.toLowerCase().contains(query) ||
-                    legajo.toLowerCase().contains(query) ||
+                    employeeName.toLowerCase().contains(query) ||
+                    courseName.toLowerCase().contains(query) ||
+                    employeeId.toLowerCase().contains(query) ||
                     area.toLowerCase().contains(query);
 
-                final matchesPeriodo = coincidePeriodo(
-                  fecha,
-                  anio: anioFiltro,
-                  mes: mesFiltro,
+                final periodMatch = matchesPeriod(
+                  date,
+                  year: yearFilter,
+                  month: filterMonth,
                 );
 
                 return matchesQuery &&
-                    matchesPeriodo &&
+                    periodMatch &&
                     matchesDataFilters(
                       selection,
-                      crmFilterRow(vm, cursoIdsPorNombre: cursoIds),
+                      crmFilterRow(vm, courseIdsByName: courseIds),
                     );
               })
               .toList()
             // Lo más reciente primero.
-            ..sort((a, b) => b.carga.fecha.compareTo(a.carga.fecha));
+            ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
 
       return AsyncValue.data(viewModels);
     });

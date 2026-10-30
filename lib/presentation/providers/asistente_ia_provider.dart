@@ -11,45 +11,45 @@ import 'package:app_finnegans/presentation/providers/asistente_datos_provider.da
 
 export 'package:app_finnegans/presentation/providers/asistente_datos_provider.dart';
 
-final asistenteIaApiProvider = Provider<AsistenteIaApi>(
-  (ref) => AsistenteIaApi(
+final assistantApiProvider = Provider<AssistantApi>(
+  (ref) => AssistantApi(
     SupabaseConfig.enabled ? ref.watch(supabaseClientProvider) : null,
   ),
 );
 
-final asistenteChatProvider =
-    NotifierProvider<AsistenteChatController, EstadoChat>(
-      AsistenteChatController.new,
+final assistantChatProvider =
+    NotifierProvider<AssistantChatController, ChatState>(
+      AssistantChatController.new,
     );
 
-class _ConsultaPendiente {
-  final String pregunta;
-  final DestinoAsistente destino;
-  final MensajeChat mensajeUsuario;
+class _PendingQuery {
+  final String question;
+  final AssistantDestination destination;
+  final ChatMessage userMessage;
   String? payload;
-  String contexto;
+  String context;
 
-  _ConsultaPendiente(this.pregunta, this.destino)
-    : contexto = destino.modulo.etiqueta,
-      mensajeUsuario = MensajeChat(
-        texto: pregunta,
-        esUsuario: true,
-        contexto: destino.modulo.etiqueta,
+  _PendingQuery(this.question, this.destination)
+    : context = destination.module.label,
+      userMessage = ChatMessage(
+        text: question,
+        isUser: true,
+        context: destination.module.label,
       );
 }
 
-class AsistenteChatController extends Notifier<EstadoChat> {
+class AssistantChatController extends Notifier<ChatState> {
   int _revision = 0;
-  bool _ocupado = false;
-  _ConsultaPendiente? _consultaFallida;
-  Completer<void>? _cancelacion;
+  bool _busy = false;
+  _PendingQuery? _failedQuery;
+  Completer<void>? _cancellation;
 
   @override
-  EstadoChat build() {
+  ChatState build() {
     ref.onDispose(() {
       _revision++;
-      _cancelarOperacion();
-      _consultaFallida = null;
+      _cancelOperation();
+      _failedQuery = null;
     });
     ref.listen(authControllerProvider.select((auth) => auth.email), (
       prev,
@@ -57,173 +57,161 @@ class AsistenteChatController extends Notifier<EstadoChat> {
     ) {
       if (prev != next) {
         _revision++;
-        _cancelarOperacion();
-        _consultaFallida = null;
+        _cancelOperation();
+        _failedQuery = null;
         // La operación anterior no puede publicar en la sesión nueva.
-        state = EstadoChat(enviando: _ocupado);
+        state = ChatState(sending: _busy);
       }
     });
-    return const EstadoChat();
+    return const ChatState();
   }
 
-  void abrir() => state = state.copyWith(abierto: true, error: state.error);
-  void cerrar() => state = state.copyWith(abierto: false, error: state.error);
+  void open() => state = state.copyWith(open: true, error: state.error);
+  void close() => state = state.copyWith(open: false, error: state.error);
 
-  void limpiar() {
+  void clear() {
     _revision++;
-    _cancelarOperacion();
-    _consultaFallida = null;
-    state = EstadoChat(abierto: state.abierto, enviando: _ocupado);
+    _cancelOperation();
+    _failedQuery = null;
+    state = ChatState(open: state.open, sending: _busy);
   }
 
-  void _cancelarOperacion() {
-    final cancelacion = _cancelacion;
-    if (cancelacion != null && !cancelacion.isCompleted) cancelacion.complete();
+  void _cancelOperation() {
+    final cancellation = _cancellation;
+    if (cancellation != null && !cancellation.isCompleted)
+      cancellation.complete();
   }
 
-  void _validarSesion() {
+  void _validateSession() {
     final auth = ref.read(authControllerProvider);
     if (!auth.enabled || !auth.hasValidSession) {
-      throw AsistenteIaException.http(401);
+      throw AssistantException.http(401);
     }
-    if (!auth.isAuthorized) throw AsistenteIaException.http(403);
+    if (!auth.isAuthorized) throw AssistantException.http(403);
   }
 
-  Future<void> enviar(String texto, DestinoAsistente destino) async {
-    if (_ocupado) return;
-    final pregunta = texto.trim();
-    final validacion = ref
-        .read(asistenteContextoServiceProvider)
-        .validarPregunta(pregunta);
-    if (validacion != null) {
-      state = state.copyWith(error: validacion, puedeReintentar: false);
+  Future<void> send(String text, AssistantDestination destination) async {
+    if (_busy) return;
+    final question = text.trim();
+    final validation = ref
+        .read(assistantContextServiceProvider)
+        .validateQuestion(question);
+    if (validation != null) {
+      state = state.copyWith(error: validation, canRetry: false);
       return;
     }
     try {
-      _validarSesion();
-    } on AsistenteIaException catch (error) {
+      _validateSession();
+    } on AssistantException catch (error) {
       // No se vacía el editor ni se ofrece reintento de un fallo de acceso.
-      state = state.copyWith(error: error.mensaje, puedeReintentar: false);
+      state = state.copyWith(error: error.message, canRetry: false);
       return;
     }
-    await _procesar(
-      _ConsultaPendiente(pregunta, destino),
-      agregarMensaje: true,
-    );
+    await _process(_PendingQuery(question, destination), addMessage: true);
   }
 
-  Future<void> reintentar() async {
-    final consulta = _consultaFallida;
-    if (_ocupado || consulta == null || !state.puedeReintentar) return;
-    await _procesar(consulta, agregarMensaje: false);
+  Future<void> retry() async {
+    final query = _failedQuery;
+    if (_busy || query == null || !state.canRetry) return;
+    await _process(query, addMessage: false);
   }
 
-  bool _vigente(int ticket) => ref.mounted && ticket == _revision;
+  bool _current(int ticket) => ref.mounted && ticket == _revision;
 
-  void _registrarError(int ticket, AsistenteIaException error) {
-    if (_vigente(ticket)) {
+  void _registerError(int ticket, AssistantException error) {
+    if (_current(ticket)) {
       state = state.copyWith(
-        enviando: true,
-        error: error.mensaje,
-        puedeReintentar: error.permiteReintentar,
+        sending: true,
+        error: error.message,
+        canRetry: error.allowsRetry,
       );
     }
   }
 
-  Future<void> _procesar(
-    _ConsultaPendiente consulta, {
-    required bool agregarMensaje,
-  }) async {
-    if (_ocupado) return;
+  Future<void> _process(_PendingQuery query, {required bool addMessage}) async {
+    if (_busy) return;
     final ticket = ++_revision;
-    _ocupado = true;
-    _cancelacion = Completer<void>();
-    _consultaFallida = consulta;
+    _busy = true;
+    _cancellation = Completer<void>();
+    _failedQuery = query;
     try {
-      _validarSesion();
-      final mensajes = [
-        ...state.mensajes,
-        if (agregarMensaje) consulta.mensajeUsuario,
-      ];
+      _validateSession();
+      final messages = [...state.messages, if (addMessage) query.userMessage];
       // Guardar la pregunta antes de preparar el contexto: tampoco se pierde
       // si esa preparación falla. Reintentar reutiliza la misma burbuja.
       state = state.copyWith(
-        enviando: true,
-        puedeReintentar: false,
-        mensajes: List.unmodifiable(
-          mensajes.skip(mensajes.length > 39 ? mensajes.length - 39 : 0),
+        sending: true,
+        canRetry: false,
+        messages: List.unmodifiable(
+          messages.skip(messages.length > 39 ? messages.length - 39 : 0),
         ),
       );
-      if (consulta.payload == null) {
-        final contexto = await ref.read(prepararContextoIaProvider)(
-          consulta.destino,
-          consulta.pregunta,
+      if (query.payload == null) {
+        final context = await ref.read(prepareAiContextProvider)(
+          query.destination,
+          query.question,
         );
-        if (!_vigente(ticket)) return;
-        consulta.payload = ref
-            .read(asistenteContextoServiceProvider)
-            .componerMensaje(consulta.pregunta, contexto);
-        consulta.contexto = contexto.etiqueta;
+        if (!_current(ticket)) return;
+        query.payload = ref
+            .read(assistantContextServiceProvider)
+            .composeMessage(query.question, context);
+        query.context = context.label;
       }
-      if (!_vigente(ticket)) return;
-      _validarSesion();
+      if (!_current(ticket)) return;
+      _validateSession();
       // Conservar el contexto de la consulta fallida aun si se navega a otro
       // módulo/período. Nunca enviar el historial ni errores como contexto.
-      final respuesta = await ref
-          .read(asistenteIaApiProvider)
-          .consultar(consulta.payload!, cancelacion: _cancelacion!.future);
-      if (!_vigente(ticket)) return;
-      _validarSesion();
-      _consultaFallida = null;
+      final response = await ref
+          .read(assistantApiProvider)
+          .query(query.payload!, cancellation: _cancellation!.future);
+      if (!_current(ticket)) return;
+      _validateSession();
+      _failedQuery = null;
       state = state.copyWith(
-        enviando: true,
-        puedeReintentar: false,
-        mensajes: List.unmodifiable([
-          ...state.mensajes,
-          MensajeChat(
-            texto: respuesta,
-            esUsuario: false,
-            contexto: consulta.contexto,
-          ),
+        sending: true,
+        canRetry: false,
+        messages: List.unmodifiable([
+          ...state.messages,
+          ChatMessage(text: response, isUser: false, context: query.context),
         ]),
       );
-    } on AsistenteIaException catch (error) {
-      _registrarError(ticket, error);
+    } on AssistantException catch (error) {
+      _registerError(ticket, error);
     } on TimeoutException {
-      _registrarError(
+      _registerError(
         ticket,
-        const AsistenteIaException(
-          AsistenteIaException.mensajeConexion,
-          tipo: TipoErrorAsistente.conexion,
+        const AssistantException(
+          AssistantException.connectionMessage,
+          type: AssistantErrorType.connection,
         ),
       );
     } on FormatException catch (error) {
       // Solo validaciones redactadas por nuestro servicio; nunca propagar
       // mensajes arbitrarios de repositorios, Supabase o proveedores.
-      final mensaje = switch (error.message) {
+      final message = switch (error.message) {
         'Indicá un mes válido entre 1 y 12.' => error.message,
         'La consulta supera el contexto disponible. Pedí menos períodos o precisá el equipo, área o curso.' =>
           error.message,
-        _ => AsistenteIaException.mensajeDesconocido,
+        _ => AssistantException.unknownMessage,
       };
-      if (_vigente(ticket)) {
+      if (_current(ticket)) {
         state = state.copyWith(
-          enviando: true,
-          error: mensaje,
-          puedeReintentar: mensaje == AsistenteIaException.mensajeDesconocido,
+          sending: true,
+          error: message,
+          canRetry: message == AssistantException.unknownMessage,
         );
       }
     } catch (_) {
-      _registrarError(
+      _registerError(
         ticket,
-        const AsistenteIaException(AsistenteIaException.mensajeDesconocido),
+        const AssistantException(AssistantException.unknownMessage),
       );
     } finally {
-      _cancelarOperacion();
-      _cancelacion = null;
-      _ocupado = false;
+      _cancelOperation();
+      _cancellation = null;
+      _busy = false;
       if (ref.mounted) {
-        state = state.copyWith(enviando: false, error: state.error);
+        state = state.copyWith(sending: false, error: state.error);
       }
     }
   }

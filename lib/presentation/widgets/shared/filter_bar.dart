@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 String? _entitySubtitle(String dimension, String value) =>
-    dimension == personaFilterDimension
+    dimension == personFilterDimension
     ? 'Legajo $value'
-    : dimension == cursoFilterDimension
+    : dimension == courseFilterDimension
     ? 'ID $value'
     : null;
 
@@ -74,8 +74,8 @@ class FilterBar extends ConsumerWidget {
           itemTitleBuilder: (value) =>
               _entityTitle(entry.key, value, entry.value),
           itemSubtitleBuilder:
-              entry.key == personaFilterDimension ||
-                  entry.key == cursoFilterDimension
+              entry.key == personFilterDimension ||
+                  entry.key == courseFilterDimension
               ? (value) => _entitySubtitle(entry.key, value)
               : null,
           hint: entry.key,

@@ -30,7 +30,7 @@ SupabaseTableMapping _mapping(
   conflictFields: keys,
 );
 
-final _empleadosMapping = _mapping(
+final _employeesMapping = _mapping(
   'empleados',
   [
     'legajo',
@@ -45,12 +45,12 @@ final _empleadosMapping = _mapping(
   ],
   ['legajo'],
 );
-final _cursosMapping = _mapping(
+final _coursesMapping = _mapping(
   'cursos',
   ['id', 'nombre', 'clasificacion', 'cargaHorariaHs'],
   ['id'],
 );
-final _horasMapping = _mapping(
+final _hoursMapping = _mapping(
   'horas_capacitacion',
   [
     'id',
@@ -67,57 +67,57 @@ final _horasMapping = _mapping(
   ],
   ['id'],
 );
-final _finalizacionesMapping = _mapping(
+final _completionsMapping = _mapping(
   'finalizaciones_cursos',
   ['legajo', 'cursoId', 'finalizoCurso', 'fechaFinalizacion'],
   ['legajo', 'cursoId'],
 );
 
-Curso _curso(String id) => Curso(
+Course _course(String id) => Course(
   id: id,
-  nombre: 'Curso $id',
-  clasificacion: TipoCurso.habilidadesDeNegocio,
-  areaCurso: '',
-  instructorLegajo: '',
-  cargaHorariaHs: 2,
+  name: 'Curso $id',
+  category: CourseCategory.businessSkills,
+  courseArea: '',
+  instructorEmployeeId: '',
+  workloadHours: 2,
 );
-Empleado _empleado(String legajo, {String area = 'Sector A'}) => Empleado(
-  legajo: legajo,
-  nombre: 'Nombre',
-  apellido: 'Apellido',
+Employee _employee(String employeeId, {String area = 'Sector A'}) => Employee(
+  employeeId: employeeId,
+  firstName: 'Nombre',
+  lastName: 'Apellido',
   seniority: Seniority.junior1,
   area: area,
-  mail: 'empleado$legajo@example.com',
+  email: 'empleado$employeeId@example.com',
 );
-CargaDeHorasCRM _hora(String id, {double horas = 2}) => CargaDeHorasCRM(
+CrmTimeEntry _hour(String id, {double hours = 2}) => CrmTimeEntry(
   id: id,
-  cursoNombre: 'Curso 1',
-  empleadoLegajo: '10',
-  fecha: DateTime(2025, 1, 1),
-  horasTotales: horas,
-  tipo: TipoCargaDeHoras.tomada,
+  courseName: 'Curso 1',
+  employeeId: '10',
+  date: DateTime(2025, 1, 1),
+  hours: hours,
+  kind: TimeEntryKind.taken,
 );
-CertificacionMoodle _finalizacion(
-  String legajo,
-  String cursoId, {
-  bool finalizo = true,
-}) => CertificacionMoodle(
-  legajo: legajo,
-  cursoNombre: 'Curso $cursoId',
-  finalizoCurso: finalizo,
-  fechaFinalizacion: finalizo ? DateTime(2025, 1, 1) : null,
+LmsCertification _completion(
+  String employeeId,
+  String courseId, {
+  bool completed = true,
+}) => LmsCertification(
+  employeeId: employeeId,
+  courseName: 'Curso $courseId',
+  isCompleted: completed,
+  completedAt: completed ? DateTime(2025, 1, 1) : null,
 );
 
-class _Catalogo implements CursosRepository {
+class _Catalog implements CoursesRepository {
   @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async => [
+  Future<List<Course>> getCourses({String? id, String? name}) async => [
     for (final courseId in ['1', '2'])
       if ((id == null || id == courseId) &&
-          (nombre == null || nombre.trim().toLowerCase() == 'curso $courseId'))
-        _curso(courseId),
+          (name == null || name.trim().toLowerCase() == 'curso $courseId'))
+        _course(courseId),
   ];
   @override
-  Future<void> replaceCursos(List<Curso> cursos) async =>
+  Future<void> replaceCourses(List<Course> courses) async =>
       throw UnsupportedError('No se escribe el catálogo de esta prueba.');
   @override
   Future<void> resetToMock() async {}
@@ -187,14 +187,14 @@ class _RemoteTable {
 }
 
 void _expectCounts(
-  ResultadoUpsert result,
+  UpsertResult result,
   int processed,
   int inserted,
   int updated,
 ) {
-  expect(result.registrosProcesados, processed);
-  expect(result.insertados, inserted);
-  expect(result.actualizados, updated);
+  expect(result.processedRecords, processed);
+  expect(result.inserted, inserted);
+  expect(result.updated, updated);
 }
 
 void main() {
@@ -203,40 +203,32 @@ void main() {
 
   test('Result sums known counts and preserves unknown counts', () {
     final result =
-        const ResultadoUpsert(
-          registrosProcesados: 3,
-          insertados: 1,
-          actualizados: 2,
-        ) +
-        const ResultadoUpsert(
-          registrosProcesados: 2,
-          insertados: 1,
-          actualizados: 1,
-        );
+        const UpsertResult(processedRecords: 3, inserted: 1, updated: 2) +
+        const UpsertResult(processedRecords: 2, inserted: 1, updated: 1);
     _expectCounts(result, 5, 2, 3);
-    final unknown = result + const ResultadoUpsert(registrosProcesados: 4);
-    expect(unknown.registrosProcesados, 9);
-    expect(unknown.insertados, isNull);
-    expect(unknown.actualizados, isNull);
-    _expectCounts(ResultadoUpsert.empty, 0, 0, 0);
+    final unknown = result + const UpsertResult(processedRecords: 4);
+    expect(unknown.processedRecords, 9);
+    expect(unknown.inserted, isNull);
+    expect(unknown.updated, isNull);
+    _expectCounts(UpsertResult.empty, 0, 0, 0);
   });
 
   test(
     'Employees count first import and identical reimport without duplicate keys',
     () async {
-      final remote = _RemoteTable(_empleadosMapping);
+      final remote = _RemoteTable(_employeesMapping);
       addTearDown(remote.client.dispose);
-      final EmpleadosRepository repo = SupabaseEmpleadosRepository(
+      final EmployeesRepository repo = SupabaseEmployeesRepository(
         remote.client,
         remote.mapping,
       );
       final batch = [
-        _empleado('10'),
-        _empleado('20'),
-        _empleado('10', area: 'Sector B'),
+        _employee('10'),
+        _employee('20'),
+        _employee('10', area: 'Sector B'),
       ];
-      _expectCounts(await repo.upsertEmpleadosConResultado(batch), 3, 2, 0);
-      _expectCounts(await repo.upsertEmpleadosConResultado(batch), 3, 0, 2);
+      _expectCounts(await repo.upsertEmployeesWithResult(batch), 3, 2, 0);
+      _expectCounts(await repo.upsertEmployeesWithResult(batch), 3, 0, 2);
       expect(remote.rows.length, 2);
       expect(
         remote.rows.values.singleWhere(
@@ -254,15 +246,15 @@ void main() {
   test(
     'Courses count first import and identical reimport without duplicate keys',
     () async {
-      final remote = _RemoteTable(_cursosMapping);
+      final remote = _RemoteTable(_coursesMapping);
       addTearDown(remote.client.dispose);
-      final CursosRepository repo = SupabaseCursosRepository(
+      final CoursesRepository repo = SupabaseCoursesRepository(
         remote.client,
         remote.mapping,
       );
-      final batch = [_curso('1'), _curso('2'), _curso('1')];
-      _expectCounts(await repo.upsertCursosConResultado(batch), 3, 2, 0);
-      _expectCounts(await repo.upsertCursosConResultado(batch), 3, 0, 2);
+      final batch = [_course('1'), _course('2'), _course('1')];
+      _expectCounts(await repo.upsertCoursesWithResult(batch), 3, 2, 0);
+      _expectCounts(await repo.upsertCoursesWithResult(batch), 3, 0, 2);
       expect(remote.rows.length, 2);
       expect(remote.requests.where((r) => r.method == 'GET').length, 2);
     },
@@ -271,16 +263,16 @@ void main() {
   test(
     'CRM transactions count first import and identical reimport without duplicate keys',
     () async {
-      final remote = _RemoteTable(_horasMapping);
+      final remote = _RemoteTable(_hoursMapping);
       addTearDown(remote.client.dispose);
-      final CargaDeHorasCRMRepository repo = SupabaseCargaDeHorasCRMRepository(
+      final CrmTimeEntriesRepository repo = SupabaseCrmTimeEntriesRepository(
         remote.client,
         remote.mapping,
-        _Catalogo(),
+        _Catalog(),
       );
-      final batch = [_hora('txn1'), _hora('txn2'), _hora('txn1', horas: 4)];
-      _expectCounts(await repo.upsertCargasDeHorasConResultado(batch), 3, 2, 0);
-      _expectCounts(await repo.upsertCargasDeHorasConResultado(batch), 3, 0, 2);
+      final batch = [_hour('txn1'), _hour('txn2'), _hour('txn1', hours: 4)];
+      _expectCounts(await repo.upsertTimeEntriesWithResult(batch), 3, 2, 0);
+      _expectCounts(await repo.upsertTimeEntriesWithResult(batch), 3, 0, 2);
       expect(remote.rows.length, 2);
       expect(
         remote.rows.values.singleWhere(
@@ -295,31 +287,21 @@ void main() {
   test(
     'Completions count first import and identical reimport by composite key',
     () async {
-      final remote = _RemoteTable(_finalizacionesMapping);
+      final remote = _RemoteTable(_completionsMapping);
       addTearDown(remote.client.dispose);
-      final CertificacionesMoodleRepository repo =
-          SupabaseCertificacionesMoodleRepository(
+      final LmsCertificationsRepository repo =
+          SupabaseLmsCertificationsRepository(
             remote.client,
             remote.mapping,
-            _Catalogo(),
+            _Catalog(),
           );
       final batch = [
-        _finalizacion('10', '1'),
-        _finalizacion('10', '2'),
-        _finalizacion('10', '1', finalizo: false),
+        _completion('10', '1'),
+        _completion('10', '2'),
+        _completion('10', '1', completed: false),
       ];
-      _expectCounts(
-        await repo.upsertCertificacionesConResultado(batch),
-        3,
-        2,
-        0,
-      );
-      _expectCounts(
-        await repo.upsertCertificacionesConResultado(batch),
-        3,
-        0,
-        2,
-      );
+      _expectCounts(await repo.upsertCertificationsWithResult(batch), 3, 2, 0);
+      _expectCounts(await repo.upsertCertificationsWithResult(batch), 3, 0, 2);
       expect(remote.rows.length, 2);
       expect(
         remote.rows.values.singleWhere(
@@ -337,21 +319,21 @@ void main() {
   );
 
   test('Composite counts exclude crossed employee/course pairs', () async {
-    final remote = _RemoteTable(_finalizacionesMapping);
+    final remote = _RemoteTable(_completionsMapping);
     addTearDown(remote.client.dispose);
     for (final pair in [('10', '2'), ('20', '1'), ('10', '1')]) {
       final row = {'col_legajo': pair.$1, 'col_cursoId': pair.$2};
       remote.rows[remote.key(row)] = row;
     }
-    final repo = SupabaseCertificacionesMoodleRepository(
+    final repo = SupabaseLmsCertificationsRepository(
       remote.client,
       remote.mapping,
-      _Catalogo(),
+      _Catalog(),
     );
     _expectCounts(
-      await repo.upsertCertificacionesConResultado([
-        _finalizacion('10', '1'),
-        _finalizacion('20', '2'),
+      await repo.upsertCertificationsWithResult([
+        _completion('10', '1'),
+        _completion('20', '2'),
       ]),
       2,
       1,
@@ -367,17 +349,17 @@ void main() {
   test(
     'Composite filters escape punctuation, quotes and backslashes in values',
     () async {
-      final remote = _RemoteTable(_finalizacionesMapping);
+      final remote = _RemoteTable(_completionsMapping);
       addTearDown(remote.client.dispose);
-      const legajo = '10,"(x)\\';
-      final repo = SupabaseCertificacionesMoodleRepository(
+      const employeeId = '10,"(x)\\';
+      final repo = SupabaseLmsCertificationsRepository(
         remote.client,
         remote.mapping,
-        _Catalogo(),
+        _Catalog(),
       );
       _expectCounts(
-        await repo.upsertCertificacionesConResultado([
-          _finalizacion(legajo, '1'),
+        await repo.upsertCertificationsWithResult([
+          _completion(employeeId, '1'),
         ]),
         1,
         1,
@@ -385,11 +367,11 @@ void main() {
       );
       expect(
         remote.requests.first.url.queryParameters['or'],
-        '(and(col_legajo.eq.${jsonEncode(legajo)},col_cursoId.eq."1"))',
+        '(and(col_legajo.eq.${jsonEncode(employeeId)},col_cursoId.eq."1"))',
       );
       _expectCounts(
-        await repo.upsertCertificacionesConResultado([
-          _finalizacion(legajo, '1'),
+        await repo.upsertCertificationsWithResult([
+          _completion(employeeId, '1'),
         ]),
         1,
         0,
@@ -401,15 +383,15 @@ void main() {
   test(
     'Key reads use bounded batches and page existing keys, never full models',
     () async {
-      final remote = _RemoteTable(_cursosMapping);
+      final remote = _RemoteTable(_coursesMapping);
       addTearDown(remote.client.dispose);
-      final batch = List.generate(321, (i) => _curso('$i'));
-      for (final curso in batch.take(160)) {
-        final row = {'col_id': curso.id};
+      final batch = List.generate(321, (i) => _course('$i'));
+      for (final course in batch.take(160)) {
+        final row = {'col_id': course.id};
         remote.rows[remote.key(row)] = row;
       }
-      final repo = SupabaseCursosRepository(remote.client, remote.mapping);
-      _expectCounts(await repo.upsertCursosConResultado(batch), 321, 161, 160);
+      final repo = SupabaseCoursesRepository(remote.client, remote.mapping);
+      _expectCounts(await repo.upsertCoursesWithResult(batch), 321, 161, 160);
       final gets = remote.requests.where((r) => r.method == 'GET').toList();
       expect(gets.length, 4); // 3 batches; first batch needs 2 pages.
       expect(gets.any((r) => r.url.queryParameters['offset'] == '100'), isTrue);
@@ -442,10 +424,10 @@ void main() {
     );
     addTearDown(client.dispose);
     _expectCounts(
-      await SupabaseCursosRepository(
+      await SupabaseCoursesRepository(
         client,
-        _cursosMapping,
-      ).upsertCursosConResultado([_curso('7')]),
+        _coursesMapping,
+      ).upsertCoursesWithResult([_course('7')]),
       1,
       0,
       1,
@@ -473,10 +455,10 @@ void main() {
         );
         addTearDown(client.dispose);
         await expectLater(
-          SupabaseCursosRepository(
+          SupabaseCoursesRepository(
             client,
-            _cursosMapping,
-          ).upsertCursosConResultado([_curso('1')]),
+            _coursesMapping,
+          ).upsertCoursesWithResult([_course('1')]),
           throwsA(isA<PostgrestException>()),
         );
         expect(requests.length, failingMethod == 'GET' ? 1 : 2);
@@ -493,42 +475,42 @@ void main() {
   test(
     'Empty counted batches return zero and make no network requests',
     () async {
-      final remote = _RemoteTable(_cursosMapping);
+      final remote = _RemoteTable(_coursesMapping);
       addTearDown(remote.client.dispose);
       _expectCounts(
-        await SupabaseEmpleadosRepository(
+        await SupabaseEmployeesRepository(
           remote.client,
-          _empleadosMapping,
-        ).upsertEmpleadosConResultado([]),
+          _employeesMapping,
+        ).upsertEmployeesWithResult([]),
         0,
         0,
         0,
       );
       _expectCounts(
-        await SupabaseCursosRepository(
+        await SupabaseCoursesRepository(
           remote.client,
-          _cursosMapping,
-        ).upsertCursosConResultado([]),
+          _coursesMapping,
+        ).upsertCoursesWithResult([]),
         0,
         0,
         0,
       );
       _expectCounts(
-        await SupabaseCargaDeHorasCRMRepository(
+        await SupabaseCrmTimeEntriesRepository(
           remote.client,
-          _horasMapping,
-          _Catalogo(),
-        ).upsertCargasDeHorasConResultado([]),
+          _hoursMapping,
+          _Catalog(),
+        ).upsertTimeEntriesWithResult([]),
         0,
         0,
         0,
       );
       _expectCounts(
-        await SupabaseCertificacionesMoodleRepository(
+        await SupabaseLmsCertificationsRepository(
           remote.client,
-          _finalizacionesMapping,
-          _Catalogo(),
-        ).upsertCertificacionesConResultado([]),
+          _completionsMapping,
+          _Catalog(),
+        ).upsertCertificationsWithResult([]),
         0,
         0,
         0,
@@ -540,27 +522,27 @@ void main() {
   test(
     'Local fallback persists through existing methods and leaves counts unknown',
     () async {
-      final employees = LocalEmpleadosRepository();
-      final courses = LocalCursosRepository();
-      final hours = LocalCargaDeHorasCRMRepository();
-      final completions = LocalCertificacionesMoodleRepository();
+      final employees = LocalEmployeesRepository();
+      final courses = LocalCoursesRepository();
+      final hours = LocalCrmTimeEntriesRepository();
+      final completions = LocalLmsCertificationsRepository();
       final results = [
-        await employees.upsertEmpleadosConResultado([_empleado('10')]),
-        await courses.upsertCursosConResultado([_curso('1')]),
-        await hours.upsertCargasDeHorasConResultado([_hora('txn1')]),
-        await completions.upsertCertificacionesConResultado([
-          _finalizacion('10', '1'),
+        await employees.upsertEmployeesWithResult([_employee('10')]),
+        await courses.upsertCoursesWithResult([_course('1')]),
+        await hours.upsertTimeEntriesWithResult([_hour('txn1')]),
+        await completions.upsertCertificationsWithResult([
+          _completion('10', '1'),
         ]),
       ];
       for (final result in results) {
-        expect(result.registrosProcesados, 1);
-        expect(result.insertados, isNull);
-        expect(result.actualizados, isNull);
+        expect(result.processedRecords, 1);
+        expect(result.inserted, isNull);
+        expect(result.updated, isNull);
       }
-      expect((await employees.getEmpleados()).single.legajo, '10');
-      expect((await courses.getCursos()).single.id, '1');
-      expect((await hours.getCargasDeHoras()).single.id, 'txn1');
-      expect((await completions.getCertificaciones()).single.legajo, '10');
+      expect((await employees.getEmployees()).single.employeeId, '10');
+      expect((await courses.getCourses()).single.id, '1');
+      expect((await hours.getTimeEntries()).single.id, 'txn1');
+      expect((await completions.getCertifications()).single.employeeId, '10');
     },
   );
 }

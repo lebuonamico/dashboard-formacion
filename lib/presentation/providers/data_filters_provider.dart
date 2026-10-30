@@ -19,8 +19,8 @@ import 'package:app_finnegans/presentation/providers/areas_providers.dart';
 typedef FilterRow = Map<String, String>;
 typedef FilterLabels = Map<String, Map<String, String>>;
 
-const personaFilterDimension = 'Persona / Legajo';
-const cursoFilterDimension = 'Curso / ID';
+const personFilterDimension = 'Persona / Legajo';
+const courseFilterDimension = 'Curso / ID';
 
 // La cascada compara claves estables; los nombres son solo presentación.
 class _LabeledFilterRow extends MapView<String, String> {
@@ -28,117 +28,117 @@ class _LabeledFilterRow extends MapView<String, String> {
   _LabeledFilterRow(super.values, this.labels);
 }
 
-String _personaLabel(String nombre, String legajo) =>
-    '${nombre.trim().isEmpty ? 'Persona sin nombre' : nombre.trim()} — '
-    '${legajo.trim().isEmpty ? 'Sin legajo' : 'Legajo ${legajo.trim()}'}';
-String _cursoLabel(String nombre, String id) =>
-    '${nombre.trim().isEmpty ? 'Curso sin nombre' : nombre.trim()} — '
+String _personLabel(String name, String employeeId) =>
+    '${name.trim().isEmpty ? 'Persona sin nombre' : name.trim()} — '
+    '${employeeId.trim().isEmpty ? 'Sin legajo' : 'Legajo ${employeeId.trim()}'}';
+String _courseLabel(String name, String id) =>
+    '${name.trim().isEmpty ? 'Curso sin nombre' : name.trim()} — '
     '${id.trim().isEmpty ? 'Sin ID' : 'ID ${id.trim()}'}';
 
 // No se resuelven homónimos ambiguos ni se usan IDs de transacciones.
 final courseFilterIdentifiersProvider = Provider<Map<String, String>>((ref) {
   final ids = <String, String>{};
-  for (final curso in ref.watch(cursosProvider).value ?? <Curso>[]) {
-    final nombre = CumplimientoService.normalizarNombreCurso(curso.nombre);
-    final id = curso.id.trim();
-    if (nombre.isEmpty || id.isEmpty) continue;
-    if (ids.containsKey(nombre) && ids[nombre] != id) {
-      ids[nombre] = '';
+  for (final course in ref.watch(coursesProvider).value ?? <Course>[]) {
+    final name = ComplianceService.normalizeCourseName(course.name);
+    final id = course.id.trim();
+    if (name.isEmpty || id.isEmpty) continue;
+    if (ids.containsKey(name) && ids[name] != id) {
+      ids[name] = '';
     } else {
-      ids.putIfAbsent(nombre, () => id);
+      ids.putIfAbsent(name, () => id);
     }
   }
   return Map.unmodifiable(ids);
 });
 
-String _courseId(String? id, String nombre, Map<String, String> idsPorNombre) =>
+String _courseId(String? id, String name, Map<String, String> idsByName) =>
     (id?.trim().isNotEmpty ?? false)
     ? id!.trim()
-    : idsPorNombre[CumplimientoService.normalizarNombreCurso(nombre)] ?? '';
+    : idsByName[ComplianceService.normalizeCourseName(name)] ?? '';
 
-FilterRow empleadoFilterRow(Empleado e) => _LabeledFilterRow(
+FilterRow employeeFilterRow(Employee e) => _LabeledFilterRow(
   {
-    personaFilterDimension: e.legajo.trim(),
+    personFilterDimension: e.employeeId.trim(),
     'Área': e.area,
-    'Equipo': e.equipo,
-    'Líder': e.gerente,
-    'Email': e.mail,
+    'Equipo': e.team,
+    'Líder': e.manager,
+    'Email': e.email,
     'Seniority': e.seniority.label,
   },
-  {personaFilterDimension: _personaLabel(e.nombreCompleto, e.legajo)},
+  {personFilterDimension: _personLabel(e.fullName, e.employeeId)},
 );
-FilterRow cursoFilterRow(Curso c, String instructor) => _LabeledFilterRow(
+FilterRow courseFilterRow(Course c, String instructor) => _LabeledFilterRow(
   {
-    cursoFilterDimension: c.id.trim(),
-    'Área': c.areaCurso,
+    courseFilterDimension: c.id.trim(),
+    'Área': c.courseArea,
     'Instructor': instructor,
-    'Tipo': c.clasificacionLms?.label ?? '',
+    'Tipo': c.classificationLms?.label ?? '',
   },
-  {cursoFilterDimension: _cursoLabel(c.nombre, c.id)},
+  {courseFilterDimension: _courseLabel(c.name, c.id)},
 );
-FilterRow equipoFilterRow(TeamOverview e) => {
+FilterRow teamFilterRow(TeamOverview e) => {
   'Equipo': e.name,
   'Área': e.area,
   'Líder': e.leader,
   'Estado': e.status.label,
 };
 FilterRow crmFilterRow(
-  CargaDeHorasCRMViewModel vm, {
-  Map<String, String> cursoIdsPorNombre = const {},
+  CrmTimeEntryViewModel vm, {
+  Map<String, String> courseIdsByName = const {},
 }) {
   final id = _courseId(
-    vm.carga.cursoId,
-    vm.carga.cursoNombre,
-    cursoIdsPorNombre,
+    vm.timeEntry.courseId,
+    vm.timeEntry.courseName,
+    courseIdsByName,
   );
   return _LabeledFilterRow(
     {
-      personaFilterDimension: vm.carga.empleadoLegajo.trim(),
-      cursoFilterDimension: id,
-      'Área': vm.empleado?.area ?? '',
+      personFilterDimension: vm.timeEntry.employeeId.trim(),
+      courseFilterDimension: id,
+      'Área': vm.employee?.area ?? '',
     },
     {
-      personaFilterDimension: _personaLabel(
-        vm.empleado?.nombreCompleto ?? '',
-        vm.carga.empleadoLegajo,
+      personFilterDimension: _personLabel(
+        vm.employee?.fullName ?? '',
+        vm.timeEntry.employeeId,
       ),
-      cursoFilterDimension: _cursoLabel(vm.carga.cursoNombre, id),
+      courseFilterDimension: _courseLabel(vm.timeEntry.courseName, id),
     },
   );
 }
 
-FilterRow certificacionFilterRow(
-  CertificacionViewModel vm, {
-  Map<String, String> cursoIdsPorNombre = const {},
+FilterRow certificationFilterRow(
+  CertificationViewModel vm, {
+  Map<String, String> courseIdsByName = const {},
 }) {
   final id = _courseId(
-    vm.certificacion.cursoId,
-    vm.certificacion.cursoNombre,
-    cursoIdsPorNombre,
+    vm.certification.courseId,
+    vm.certification.courseName,
+    courseIdsByName,
   );
   return _LabeledFilterRow(
     {
-      personaFilterDimension: vm.certificacion.legajo.trim(),
-      cursoFilterDimension: id,
-      'Área': vm.empleado?.area ?? '',
-      'Equipo': vm.empleado?.equipo ?? '',
-      'Tipo': vm.curso?.clasificacionLms?.label ?? '',
-      'Estado': vm.certificacion.finalizoCurso ? 'Finalizado' : 'Pendiente',
+      personFilterDimension: vm.certification.employeeId.trim(),
+      courseFilterDimension: id,
+      'Área': vm.employee?.area ?? '',
+      'Equipo': vm.employee?.team ?? '',
+      'Tipo': vm.course?.classificationLms?.label ?? '',
+      'Estado': vm.certification.isCompleted ? 'Finalizado' : 'Pendiente',
     },
     {
-      personaFilterDimension: _personaLabel(
-        vm.empleado?.nombreCompleto ?? '',
-        vm.certificacion.legajo,
+      personFilterDimension: _personLabel(
+        vm.employee?.fullName ?? '',
+        vm.certification.employeeId,
       ),
-      cursoFilterDimension: _cursoLabel(vm.certificacion.cursoNombre, id),
+      courseFilterDimension: _courseLabel(vm.certification.courseName, id),
     },
   );
 }
 
-FilterRow adminFilterRow(UsuarioAutorizado usuario) => {
-  'Email': usuario.email,
-  'Rol': usuario.rolConocido?.label ?? usuario.rol,
-  'Estado': usuario.estado.label,
+FilterRow adminFilterRow(AuthorizedUser user) => {
+  'Email': user.email,
+  'Rol': user.knownRole?.label ?? user.role,
+  'Estado': user.status.label,
 };
 
 typedef DataFilterValues = Map<String, Set<String>>;
@@ -248,113 +248,108 @@ final dataFilterRowsProvider =
       switch (scope) {
         case 'personas':
           return ref
-              .watch(empleadosProvider)
-              .whenData((items) => items.map(empleadoFilterRow).toList());
+              .watch(employeesProvider)
+              .whenData((items) => items.map(employeeFilterRow).toList());
         case 'equipos':
           return ref
               .watch(teamsPeriodSummaryProvider)
-              .whenData((data) => data.teams.map(equipoFilterRow).toList());
+              .whenData((data) => data.teams.map(teamFilterRow).toList());
         case 'areas':
           return ref
-              .watch(resumenAreasPeriodoProvider)
+              .watch(areasPeriodSummaryProvider)
               .whenData(
                 (data) => [
                   for (final a in data.areas)
-                    for (final equipo
-                        in a.equiposGenerales.isEmpty
-                            ? ['']
-                            : a.equiposGenerales)
-                      {
-                        'Área': a.nombre,
-                        'Equipo': equipo,
-                        'Estado': a.semaforo.label,
-                      },
+                    for (final team
+                        in a.generalTeams.isEmpty ? [''] : a.generalTeams)
+                      {'Área': a.name, 'Equipo': team, 'Estado': a.level.label},
                 ],
               );
         case 'cursos':
-          final empleadosAsync = ref.watch(empleadosProvider);
-          if (empleadosAsync.isLoading) return const AsyncValue.loading();
-          if (empleadosAsync.hasError) {
+          final employeesAsync = ref.watch(employeesProvider);
+          if (employeesAsync.isLoading) return const AsyncValue.loading();
+          if (employeesAsync.hasError) {
             return AsyncValue.error(
-              empleadosAsync.error!,
-              empleadosAsync.stackTrace!,
+              employeesAsync.error!,
+              employeesAsync.stackTrace!,
             );
           }
-          final empleados = empleadosAsync.value ?? <Empleado>[];
-          final nombres = {
-            for (final e in empleados) e.legajo: e.nombreCompleto,
-          };
+          final employees = employeesAsync.value ?? <Employee>[];
+          final names = {for (final e in employees) e.employeeId: e.fullName};
           return ref
-              .watch(cursosProvider)
+              .watch(coursesProvider)
               .whenData(
                 (items) => items
                     .map(
-                      (c) => cursoFilterRow(
+                      (c) => courseFilterRow(
                         c,
-                        nombres[c.instructorLegajo] ?? c.instructorLegajo,
+                        names[c.instructorEmployeeId] ?? c.instructorEmployeeId,
                       ),
                     )
                     .toList(),
               );
         case 'crm':
-          final cursoIds = ref.watch(courseFilterIdentifiersProvider);
-          final cursosAsync = ref.watch(cursosProvider);
-          if (cursosAsync.isLoading) return const AsyncValue.loading();
-          if (cursosAsync.hasError) {
+          final courseIds = ref.watch(courseFilterIdentifiersProvider);
+          final coursesAsync = ref.watch(coursesProvider);
+          if (coursesAsync.isLoading) return const AsyncValue.loading();
+          if (coursesAsync.hasError) {
             return AsyncValue.error(
-              cursosAsync.error!,
-              cursosAsync.stackTrace!,
+              coursesAsync.error!,
+              coursesAsync.stackTrace!,
             );
           }
-          final anio = ref.watch(filtroAnioCargaProvider);
-          final mes = ref.watch(filtroMesCargaProvider);
-          final empleadosAsync = ref.watch(empleadosProvider);
-          if (empleadosAsync.isLoading) return const AsyncValue.loading();
-          if (empleadosAsync.hasError) {
+          final year = ref.watch(timeEntryYearFilterProvider);
+          final month = ref.watch(timeEntryMonthFilterProvider);
+          final employeesAsync = ref.watch(employeesProvider);
+          if (employeesAsync.isLoading) return const AsyncValue.loading();
+          if (employeesAsync.hasError) {
             return AsyncValue.error(
-              empleadosAsync.error!,
-              empleadosAsync.stackTrace!,
+              employeesAsync.error!,
+              employeesAsync.stackTrace!,
             );
           }
-          final empleados = empleadosAsync.value ?? <Empleado>[];
-          final nombres = {for (final e in empleados) e.legajo: e};
+          final employees = employeesAsync.value ?? <Employee>[];
+          final names = {for (final e in employees) e.employeeId: e};
           return ref
-              .watch(cargasDeHorasCRMProvider)
+              .watch(crmTimeEntriesProvider)
               .whenData(
                 (items) => items
                     .where(
-                      (carga) =>
-                          coincidePeriodo(carga.fecha, anio: anio, mes: mes),
+                      (timeEntry) => matchesPeriod(
+                        timeEntry.date,
+                        year: year,
+                        month: month,
+                      ),
                     )
                     .map(
                       (c) => crmFilterRow(
-                        CargaDeHorasCRMViewModel(
-                          carga: c,
-                          empleado: nombres[c.empleadoLegajo],
-                          curso: null,
+                        CrmTimeEntryViewModel(
+                          timeEntry: c,
+                          employee: names[c.employeeId],
+                          course: null,
                         ),
-                        cursoIdsPorNombre: cursoIds,
+                        courseIdsByName: courseIds,
                       ),
                     )
                     .toList(),
               );
         case 'admin':
-          if (ref.watch(accesoAdminProvider) != AccesoAdmin.permitido) {
+          if (ref.watch(accessAdminProvider) != AccessAdmin.allowed) {
             return const AsyncValue.data([]);
           }
           return ref
-              .watch(usuariosAutorizadosProvider)
+              .watch(authorizedUsersProvider)
               .whenData((items) => items.map(adminFilterRow).toList());
         case 'lms':
-          final cursoIds = ref.watch(courseFilterIdentifiersProvider);
+          final courseIds = ref.watch(courseFilterIdentifiersProvider);
           return ref
-              .watch(certificacionesCompletasProvider)
+              .watch(joinedCertificationsProvider)
               .whenData(
                 (items) => items
                     .map(
-                      (vm) => certificacionFilterRow(
+                      (vm) => certificationFilterRow(
                         vm,
-                        cursoIdsPorNombre: cursoIds,
+                        courseIdsByName: courseIds,
                       ),
                     )
                     .toList(),

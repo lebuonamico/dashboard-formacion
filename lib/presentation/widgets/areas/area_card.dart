@@ -8,38 +8,39 @@ import 'package:go_router/go_router.dart';
 
 class AreaCard extends StatelessWidget {
   final AreaGlobalViewModel area;
-  final bool esAnual;
+  final bool isAnnual;
 
   /// Sección del menú desde la que se llegó, para que el detalle la resalte.
-  final String? origen;
+  final String? origin;
 
   const AreaCard({
     super.key,
     required this.area,
-    this.esAnual = false,
-    this.origen,
+    this.isAnnual = false,
+    this.origin,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = (area.porcentajeCumplimiento / 100).clamp(0.0, 1.0);
-    final destino = '/areas/${Uri.encodeComponent(area.nombre)}';
+    final progress = (area.compliancePercentage / 100).clamp(0.0, 1.0);
+    final destination = '/areas/${Uri.encodeComponent(area.name)}';
 
     return Material(
       color: context.colorScheme.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () =>
-            context.push(origen == null ? destino : '$destino?origen=$origen'),
+        onTap: () => context.push(
+          origin == null ? destination : '$destination?origen=$origin',
+        ),
         child: Container(
-          decoration: context.panel(sombra: true),
+          decoration: context.panel(shadow: true),
           child: Column(
             children: [
               Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: area.semaforo.colores(context).texto,
+                  color: area.level.colors(context).text,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(7),
                   ),
@@ -53,16 +54,16 @@ class AreaCard extends StatelessWidget {
                     children: [
                       _CardHeader(area: area),
                       const SizedBox(height: 13),
-                      _EquiposRow(equipos: area.equiposGenerales),
-                      if (area.lideres != null) ...[
+                      _TeamsRow(teams: area.generalTeams),
+                      if (area.leaders != null) ...[
                         const SizedBox(height: 6),
-                        _LideresRow(lideres: area.lideres!),
+                        _LeadersRow(leaders: area.leaders!),
                       ],
                       const Spacer(),
                       _ProgressSection(
                         area: area,
                         progress: progress,
-                        esAnual: esAnual,
+                        isAnnual: isAnnual,
                       ),
                       const SizedBox(height: 9),
                       _CardFooter(area: area),
@@ -85,7 +86,7 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colaboradores = area.cantidadIntegrantes;
+    final employees = area.memberCount;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +96,7 @@ class _CardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                area.nombre,
+                area.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -107,7 +108,7 @@ class _CardHeader extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                '$colaboradores ${colaboradores == 1 ? 'colaborador' : 'colaboradores'}',
+                '$employees ${employees == 1 ? 'colaborador' : 'colaboradores'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -120,23 +121,23 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        _StatusBadge(semaforo: area.semaforo),
+        _StatusBadge(trafficLight: area.level),
       ],
     );
   }
 }
 
 /// En el lugar del líder de Equipos: los equipos generales del área.
-class _EquiposRow extends StatelessWidget {
-  final List<String> equipos;
+class _TeamsRow extends StatelessWidget {
+  final List<String> teams;
 
-  const _EquiposRow({required this.equipos});
+  const _TeamsRow({required this.teams});
 
   @override
   Widget build(BuildContext context) {
-    final texto = equipos.isEmpty
+    final text = teams.isEmpty
         ? 'Sin equipo general asignado'
-        : 'Equipos: ${equipos.join(', ')}';
+        : 'Equipos: ${teams.join(', ')}';
 
     return Row(
       children: [
@@ -148,9 +149,9 @@ class _EquiposRow extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Tooltip(
-            message: texto,
+            message: text,
             child: Text(
-              texto,
+              text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -166,14 +167,14 @@ class _EquiposRow extends StatelessWidget {
 }
 
 /// Líderes de área asignados en el panel de administración.
-class _LideresRow extends StatelessWidget {
-  final String lideres;
+class _LeadersRow extends StatelessWidget {
+  final String leaders;
 
-  const _LideresRow({required this.lideres});
+  const _LeadersRow({required this.leaders});
 
   @override
   Widget build(BuildContext context) {
-    final texto = 'Líder de área: $lideres';
+    final text = 'Líder de área: $leaders';
 
     return Row(
       children: [
@@ -185,9 +186,9 @@ class _LideresRow extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Tooltip(
-            message: texto,
+            message: text,
             child: Text(
-              texto,
+              text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -205,12 +206,12 @@ class _LideresRow extends StatelessWidget {
 class _ProgressSection extends StatelessWidget {
   final AreaGlobalViewModel area;
   final double progress;
-  final bool esAnual;
+  final bool isAnnual;
 
   const _ProgressSection({
     required this.area,
     required this.progress,
-    required this.esAnual,
+    required this.isAnnual,
   });
 
   @override
@@ -225,7 +226,7 @@ class _ProgressSection extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes} en objetivo',
+                      '${area.membersOnTarget} de ${area.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -236,7 +237,7 @@ class _ProgressSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Tooltip(
-                    message: esAnual
+                    message: isAnnual
                         ? 'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.'
                         : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
                     child: Icon(
@@ -252,11 +253,11 @@ class _ProgressSection extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatearPorcentaje(area.porcentajeCumplimiento),
+              formatPercentage(area.compliancePercentage),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: area.semaforo.colores(context).texto,
+                color: area.level.colors(context).text,
               ),
             ),
           ],
@@ -267,8 +268,8 @@ class _ProgressSection extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
-            backgroundColor: context.colores.graficoPista,
-            color: area.semaforo.colores(context).texto,
+            backgroundColor: context.colors.chartTrack,
+            color: area.level.colors(context).text,
           ),
         ),
       ],
@@ -290,7 +291,7 @@ class _CardFooter extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '${area.horasRealizadas.toStringAsFixed(1)} de ${area.horasObjetivo.toStringAsFixed(1)} hs',
+                  '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
@@ -301,13 +302,13 @@ class _CardFooter extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                _formatDesvio(area.desvioHoras),
+                _formatDeviation(area.hoursDeviation),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: area.desvioHoras >= 0
-                      ? context.colores.exito.texto
-                      : context.colores.peligro.texto,
+                  color: area.hoursDeviation >= 0
+                      ? context.colors.success.text
+                      : context.colors.danger.text,
                 ),
               ),
             ],
@@ -332,26 +333,26 @@ class _CardFooter extends StatelessWidget {
     );
   }
 
-  String _formatDesvio(double desvioHoras) {
-    if (desvioHoras >= 0) {
-      return '+${desvioHoras.toStringAsFixed(1)} hs';
+  String _formatDeviation(double hoursDeviation) {
+    if (hoursDeviation >= 0) {
+      return '+${hoursDeviation.toStringAsFixed(1)} hs';
     }
 
-    return '-${desvioHoras.abs().toStringAsFixed(1)} hs';
+    return '-${hoursDeviation.abs().toStringAsFixed(1)} hs';
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  final EstadoSemaforo semaforo;
+  final ComplianceLevel trafficLight;
 
-  const _StatusBadge({required this.semaforo});
+  const _StatusBadge({required this.trafficLight});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: semaforo.colores(context).fondo,
+        color: trafficLight.colors(context).background,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -361,15 +362,15 @@ class _StatusBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: semaforo.colores(context).texto,
+              color: trafficLight.colors(context).text,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 5),
           Text(
-            semaforo.label,
+            trafficLight.label,
             style: TextStyle(
-              color: semaforo.colores(context).texto,
+              color: trafficLight.colors(context).text,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),

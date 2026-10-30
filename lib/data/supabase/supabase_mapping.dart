@@ -46,15 +46,15 @@ class SupabaseTableMapping {
 }
 
 class SupabaseMappings {
-  final SupabaseTableMapping empleados;
-  final SupabaseTableMapping cursos;
-  final SupabaseTableMapping horas;
-  final SupabaseTableMapping finalizaciones;
+  final SupabaseTableMapping employees;
+  final SupabaseTableMapping courses;
+  final SupabaseTableMapping hours;
+  final SupabaseTableMapping completions;
 
   const SupabaseMappings({
-    required this.empleados,
-    required this.cursos,
-    required this.horas,
-    required this.finalizaciones,
+    required this.employees,
+    required this.courses,
+    required this.hours,
+    required this.completions,
   });
 }

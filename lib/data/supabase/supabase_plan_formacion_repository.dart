@@ -7,80 +7,80 @@ import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart
 
 /// Plan de formación en Supabase: una fila por mes de vigencia y seniority.
 /// La tabla y su RLS están versionados en `supabase/plan_formacion.sql`.
-class SupabasePlanFormacionRepository implements PlanFormacionRepository {
-  static const _tabla = 'plan_formacion';
-  static const _columnas = {
-    TipoCurso.habilidadesDeNegocio: 'negocio',
-    TipoCurso.habilidadesBlandas: 'blandas',
-    TipoCurso.libresExploracion: 'libres',
-    TipoCurso.dictadoCapacitaciones: 'dictado',
+class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
+  static const _table = 'plan_formacion';
+  static const _columns = {
+    CourseCategory.businessSkills: 'negocio',
+    CourseCategory.softSkills: 'blandas',
+    CourseCategory.exploration: 'libres',
+    CourseCategory.teaching: 'dictado',
   };
 
   final SupabaseClient _client;
 
-  SupabasePlanFormacionRepository(this._client);
+  SupabaseTrainingPlanRepository(this._client);
 
-  SupabaseQueryBuilder get _plan => _client.schema('public').from(_tabla);
+  SupabaseQueryBuilder get _plan => _client.schema('public').from(_table);
 
   @override
-  Future<PlanesFormacion> getPlanes() async {
+  Future<TrainingPlanHistory> getPlans() async {
     // Tabla chica (11 filas por versión): entra en una sola página.
-    final List<Map<String, dynamic>> filas;
+    final List<Map<String, dynamic>> rows;
     try {
-      filas = await _plan
-          .select('vigente_desde,seniority,${_columnas.values.join(',')}')
+      rows = await _plan
+          .select('vigente_desde,seniority,${_columns.values.join(',')}')
           .order('vigente_desde');
     } on PostgrestException catch (error) {
-      throw FormatException(_mensajeDeError(error, lectura: true));
+      throw FormatException(_errorMessage(error, read: true));
     }
 
-    final porMes = <String, Map<Seniority, Map<TipoCurso, double>>>{};
-    for (final fila in filas) {
-      final seniority = _seniority(fila['seniority']);
-      porMes.putIfAbsent(
-        fila['vigente_desde'].toString(),
+    final byMonth = <String, Map<Seniority, Map<CourseCategory, double>>>{};
+    for (final row in rows) {
+      final seniority = _seniority(row['seniority']);
+      byMonth.putIfAbsent(
+        row['vigente_desde'].toString(),
         () => {},
       )[seniority] = {
-        for (final MapEntry(key: tipo, value: columna) in _columnas.entries)
-          tipo: _horas(fila[columna], seniority, tipo),
+        for (final MapEntry(key: type, value: column) in _columns.entries)
+          type: _hours(row[column], seniority, type),
       };
     }
 
     // PlanFormacion rechaza una versión a la que le falte una seniority: no se
     // completa con los valores por defecto.
-    return PlanesFormacion([
-      for (final MapEntry(key: mes, value: horas) in porMes.entries)
-        VersionPlanFormacion(
-          vigenteDesde: DateTime.parse(mes),
-          plan: PlanFormacion(horas),
+    return TrainingPlanHistory([
+      for (final MapEntry(key: month, value: hours) in byMonth.entries)
+        TrainingPlanVersion(
+          validFrom: DateTime.parse(month),
+          plan: TrainingPlan(hours),
         ),
     ]);
   }
 
   @override
-  Future<void> guardarVersion(VersionPlanFormacion version) async {
-    final vigenteDesde = VersionPlanFormacion.fechaIso(version.vigenteDesde);
-    final filas = [
+  Future<void> saveVersion(TrainingPlanVersion version) async {
+    final validFrom = TrainingPlanVersion.dateIso(version.validFrom);
+    final rows = [
       for (final seniority in Seniority.values)
         {
-          'vigente_desde': vigenteDesde,
+          'vigente_desde': validFrom,
           'seniority': seniority.name,
-          for (final MapEntry(key: tipo, value: columna) in _columnas.entries)
-            columna: version.plan.horasRequeridas(seniority)[tipo],
+          for (final MapEntry(key: type, value: column) in _columns.entries)
+            column: version.plan.requiredHours(seniority)[type],
         },
     ];
 
-    final List<Map<String, dynamic>> guardadas;
+    final List<Map<String, dynamic>> saved;
     try {
-      guardadas = await _plan
-          .upsert(filas, onConflict: 'vigente_desde,seniority')
+      saved = await _plan
+          .upsert(rows, onConflict: 'vigente_desde,seniority')
           .select('seniority');
     } on PostgrestException catch (error) {
-      throw FormatException(_mensajeDeError(error, lectura: false));
+      throw FormatException(_errorMessage(error, read: false));
     }
     // PostgREST responde éxito aunque no escriba: sin las 11 filas de vuelta,
     // el plan no quedó guardado entero.
-    if (guardadas.length != filas.length) {
+    if (saved.length != rows.length) {
       throw const FormatException(
         'El plan no se guardó completo. Revisá los permisos sobre '
         'plan_formacion e intentá nuevamente.',
@@ -88,39 +88,43 @@ class SupabasePlanFormacionRepository implements PlanFormacionRepository {
     }
   }
 
-  static Seniority _seniority(Object? valor) {
-    final nombre = valor?.toString() ?? '';
+  static Seniority _seniority(Object? value) {
+    final name = value?.toString() ?? '';
     for (final seniority in Seniority.values) {
-      if (seniority.name == nombre) return seniority;
+      if (seniority.name == name) return seniority;
     }
     throw FormatException(
-      'El plan de formación tiene un seniority desconocido: "$nombre".',
+      'El plan de formación tiene un seniority desconocido: "$name".',
     );
   }
 
-  static double _horas(Object? valor, Seniority seniority, TipoCurso tipo) {
-    final horas = valor is num ? valor.toDouble() : double.tryParse('$valor');
-    if (horas == null) {
+  static double _hours(
+    Object? value,
+    Seniority seniority,
+    CourseCategory type,
+  ) {
+    final hours = value is num ? value.toDouble() : double.tryParse('$value');
+    if (hours == null) {
       throw FormatException(
-        'El plan de formación no tiene horas de ${tipo.label} para '
+        'El plan de formación no tiene horas de ${type.label} para '
         '${seniority.label}.',
       );
     }
-    return horas;
+    return hours;
   }
 
-  String _mensajeDeError(PostgrestException error, {required bool lectura}) {
+  String _errorMessage(PostgrestException error, {required bool read}) {
     debugPrint('plan_formacion ${error.code}: ${error.message}');
     return switch (error.code) {
       '42P01' || 'PGRST205' =>
         'Falta la tabla del plan de formación en la base. Corré '
             'supabase/plan_formacion.sql antes de usar esta versión.',
       '42501' =>
-        lectura
+        read
             ? 'No tenés permiso para leer el plan de formación.'
             : 'No tenés permiso para cambiar el plan de formación.',
       _ =>
-        lectura
+        read
             ? 'No se pudo leer el plan de formación. Intentá nuevamente y, si '
                   'sigue pasando, avisale al equipo técnico.'
             : 'No se pudo guardar el plan de formación. Intentá nuevamente y, '

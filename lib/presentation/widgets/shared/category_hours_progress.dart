@@ -3,19 +3,19 @@ import 'package:app_finnegans/domain/modelos/cumplimiento_empleado.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 import 'package:flutter/material.dart';
 
-class ProgresoHorasPorCategoria extends StatelessWidget {
-  final CumplimientoEmpleado? cumplimiento;
-  final bool mostrarSoloHorasAplicables;
+class CategoryHoursProgress extends StatelessWidget {
+  final EmployeeCompliance? compliance;
+  final bool showOnlyApplicableHours;
 
-  const ProgresoHorasPorCategoria({
+  const CategoryHoursProgress({
     super.key,
-    required this.cumplimiento,
-    this.mostrarSoloHorasAplicables = false,
+    required this.compliance,
+    this.showOnlyApplicableHours = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (cumplimiento == null) {
+    if (compliance == null) {
       return SizedBox(
         width: 256,
         child: Text(
@@ -31,39 +31,39 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
         spacing: 6,
         runSpacing: 4,
         children: [
-          for (final tipo in TipoCurso.values) _buildFicha(context, tipo),
+          for (final type in CourseCategory.values) _buildCard(context, type),
         ],
       ),
     );
   }
 
-  Widget _buildFicha(BuildContext context, TipoCurso tipo) {
-    final colores = context.colores;
-    final horasRegistradas = cumplimiento!.horasValidas[tipo] ?? 0.0;
-    final horasRealizadas = mostrarSoloHorasAplicables
-        ? cumplimiento!.horasAplicablesAlObjetivo(tipo)
-        : horasRegistradas;
-    final horasRequeridas = cumplimiento!.horasRequeridas[tipo] ?? 0.0;
-    final requerida = horasRequeridas > 0;
-    final cumple = requerida && horasRealizadas >= horasRequeridas;
-    final ParColores(texto: color, :fondo) = !requerida
-        ? colores.neutro
-        : cumple
-        ? colores.exito
-        : colores.advertencia;
+  Widget _buildCard(BuildContext context, CourseCategory type) {
+    final colors = context.colors;
+    final registeredHours = compliance!.creditedHours[type] ?? 0.0;
+    final completedHours = showOnlyApplicableHours
+        ? compliance!.applicableHours(type)
+        : registeredHours;
+    final requiredHours = compliance!.requiredHours[type] ?? 0.0;
+    final required = requiredHours > 0;
+    final meets = required && completedHours >= requiredHours;
+    final ColorPair(text: color, :background) = !required
+        ? colors.neutral
+        : meets
+        ? colors.success
+        : colors.warning;
 
     return Tooltip(
-      message: requerida
-          ? '${tipo.label}: ${_formatearHoras(horasRealizadas)} de ${_formatearHoras(horasRequeridas)} horas'
-          : horasRegistradas > 0
-          ? '${tipo.label}: no requerida; ${_formatearHoras(horasRegistradas)} h registradas no suman al cumplimiento'
-          : '${tipo.label}: no requerida; no suma al cumplimiento',
+      message: required
+          ? '${type.label}: ${_formatHours(completedHours)} de ${_formatHours(requiredHours)} horas'
+          : registeredHours > 0
+          ? '${type.label}: no requerida; ${_formatHours(registeredHours)} h registradas no suman al cumplimiento'
+          : '${type.label}: no requerida; no suma al cumplimiento',
       child: Container(
         width: 125,
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         decoration: BoxDecoration(
-          color: fondo,
+          color: background,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
@@ -71,15 +71,15 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                tipo.labelCorto,
+                type.shortLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: colores.textoIntermedio),
+                style: TextStyle(fontSize: 10, color: colors.intermediateText),
               ),
             ),
             const SizedBox(width: 6),
             Text(
-              '${_formatearHoras(horasRealizadas)}/${_formatearHoras(horasRequeridas)} h',
+              '${_formatHours(completedHours)}/${_formatHours(requiredHours)} h',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
@@ -92,7 +92,7 @@ class ProgresoHorasPorCategoria extends StatelessWidget {
     );
   }
 
-  String _formatearHoras(double horas) => horas == horas.roundToDouble()
-      ? horas.toStringAsFixed(0)
-      : horas.toStringAsFixed(1);
+  String _formatHours(double hours) => hours == hours.roundToDouble()
+      ? hours.toStringAsFixed(0)
+      : hours.toStringAsFixed(1);
 }

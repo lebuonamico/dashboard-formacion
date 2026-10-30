@@ -7,27 +7,27 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-({SupabaseEstructuraRepository repositorio, List<http.Request> requests})
-_fixture(Future<http.Response> Function(http.Request) responder) {
+({SupabaseOrgStructureRepository repositorio, List<http.Request> requests})
+_fixture(Future<http.Response> Function(http.Request) respond) {
   final requests = <http.Request>[];
   final client = SupabaseClient(
     'https://test.supabase.co',
     'public-test-key',
     httpClient: MockClient((request) async {
       requests.add(request);
-      return responder(request);
+      return respond(request);
     }),
   );
   addTearDown(client.dispose);
   return (
-    repositorio: SupabaseEstructuraRepository(client),
+    repositorio: SupabaseOrgStructureRepository(client),
     requests: requests,
   );
 }
 
-http.Response _json(http.Request request, Object cuerpo, [int status = 200]) =>
+http.Response _json(http.Request request, Object body, [int status = 200]) =>
     http.Response(
-      jsonEncode(cuerpo),
+      jsonEncode(body),
       status,
       request: request,
       headers: {'content-type': 'application/json'},
@@ -40,7 +40,7 @@ http.Response _error(http.Request request, String code) => _json(request, {
   'hint': null,
 }, code == '23505' ? 409 : 403);
 
-String _tabla(http.Request request) =>
+String _table(http.Request request) =>
     request.url.path.replaceFirst('/rest/v1/', '');
 
 void main() {
@@ -48,7 +48,7 @@ void main() {
 
   test('Lee las cuatro tablas y arma la estructura con sus líderes', () async {
     final fixture = _fixture((request) async {
-      return switch (_tabla(request)) {
+      return switch (_table(request)) {
         'areas' => _json(request, [
           {'id': 1, 'nombre': 'PRODUCTOS TECNOLÓGICOS'},
           {'id': 2, 'nombre': 'SERVICIOS'},
@@ -67,34 +67,34 @@ void main() {
       };
     });
 
-    final estructura = await fixture.repositorio.getEstructura();
+    final structure = await fixture.repositorio.getStructure();
 
-    expect(fixture.requests.map(_tabla).toSet(), {
+    expect(fixture.requests.map(_table).toSet(), {
       'areas',
       'equipos',
       'area_lideres',
       'equipo_lideres',
     });
     expect(fixture.requests.every((r) => r.method == 'GET'), isTrue);
-    final areas = fixture.requests.firstWhere((r) => _tabla(r) == 'areas');
+    final areas = fixture.requests.firstWhere((r) => _table(r) == 'areas');
     expect(areas.headers['accept-profile'], 'public');
     expect(areas.url.queryParameters['select'], 'id,nombre');
-    expect(estructura.areasOrdenadas.map((area) => area.nombre), [
+    expect(structure.sortedAreas.map((area) => area.name), [
       'PRODUCTOS TECNOLÓGICOS',
       'SERVICIOS',
     ]);
-    expect(estructura.lideresDeArea('PRODUCTOS TECNOLÓGICOS'), {
+    expect(structure.areaLeaders('PRODUCTOS TECNOLÓGICOS'), {
       'area@finnegans.com',
     });
-    expect(
-      estructura.lideresDeEquipo('PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
-      {'uno@finnegans.com', 'dos@finnegans.com'},
-    );
+    expect(structure.teamLeaders('PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'), {
+      'uno@finnegans.com',
+      'dos@finnegans.com',
+    });
   });
 
   test('Las faltantes crean primero las áreas y después sus equipos', () async {
     final fixture = _fixture((request) async {
-      if (request.method == 'GET' && _tabla(request) == 'areas') {
+      if (request.method == 'GET' && _table(request) == 'areas') {
         return _json(request, [
           {'id': 1, 'nombre': 'SERVICIOS'},
           {'id': 7, 'nombre': 'RRHH'},
@@ -103,17 +103,17 @@ void main() {
       return _json(request, [], 201);
     });
 
-    await fixture.repositorio.registrarFaltantes(
-      const FaltantesNomina(
+    await fixture.repositorio.registerMissing(
+      const PayrollGaps(
         areas: ['RRHH'],
-        equipos: [
-          (area: 'rrhh', equipo: 'Selección'),
-          (area: 'SERVICIOS', equipo: 'Soporte'),
+        teams: [
+          (area: 'rrhh', team: 'Selección'),
+          (area: 'SERVICIOS', team: 'Soporte'),
         ],
       ),
     );
 
-    expect(fixture.requests.map((r) => '${r.method} ${_tabla(r)}').toList(), [
+    expect(fixture.requests.map((r) => '${r.method} ${_table(r)}').toList(), [
       'POST areas',
       'GET areas',
       'POST equipos',
@@ -129,7 +129,7 @@ void main() {
 
   test('Sin faltantes no escribe nada', () async {
     final fixture = _fixture((request) async => _json(request, []));
-    await fixture.repositorio.registrarFaltantes(const FaltantesNomina());
+    await fixture.repositorio.registerMissing(const PayrollGaps());
     expect(fixture.requests, isEmpty);
   });
 
@@ -144,12 +144,12 @@ void main() {
       return _json(request, [], request.method == 'POST' ? 201 : 200);
     });
 
-    await fixture.repositorio.asignarLideresEquipo('10', {
+    await fixture.repositorio.assignTeamLeaders('10', {
       ' Queda@Finnegans.com',
       'entra@finnegans.com',
     });
 
-    expect(fixture.requests.map((r) => '${r.method} ${_tabla(r)}').toList(), [
+    expect(fixture.requests.map((r) => '${r.method} ${_table(r)}').toList(), [
       'GET equipo_lideres',
       'DELETE equipo_lideres',
       'POST equipo_lideres',
@@ -171,15 +171,15 @@ void main() {
         {'email': 'ana@finnegans.com'},
       ]),
     );
-    await fixture.repositorio.asignarLideresArea('1', {'ana@finnegans.com'});
+    await fixture.repositorio.assignLeadersArea('1', {'ana@finnegans.com'});
     expect(fixture.requests.single.method, 'GET');
-    expect(_tabla(fixture.requests.single), 'area_lideres');
+    expect(_table(fixture.requests.single), 'area_lideres');
   });
 
   test('Los errores de PostgREST llegan como mensajes para mostrar', () async {
-    final sinPermiso = _fixture((request) async => _error(request, '42501'));
+    final noPermission = _fixture((request) async => _error(request, '42501'));
     await expectLater(
-      sinPermiso.repositorio.asignarLideresArea('1', {'ana@finnegans.com'}),
+      noPermission.repositorio.assignLeadersArea('1', {'ana@finnegans.com'}),
       throwsA(
         isA<FormatException>().having(
           (error) => error.message,
@@ -189,13 +189,13 @@ void main() {
       ),
     );
     await expectLater(
-      sinPermiso.repositorio.getEstructura(),
+      noPermission.repositorio.getStructure(),
       throwsA(isA<FormatException>()),
     );
 
-    final sinTablas = _fixture((request) async => _error(request, '42P01'));
+    final missingTables = _fixture((request) async => _error(request, '42P01'));
     await expectLater(
-      sinTablas.repositorio.getEstructura(),
+      missingTables.repositorio.getStructure(),
       throwsA(
         isA<FormatException>().having(
           (error) => error.message,

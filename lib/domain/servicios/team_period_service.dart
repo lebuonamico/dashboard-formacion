@@ -12,8 +12,8 @@ class TeamPeriodService {
   const TeamPeriodService();
 
   bool hasDataInPeriod({
-    required List<CargaDeHorasCRM> timeEntries,
-    required List<CertificacionMoodle> certifications,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
     required int year,
     required int month,
     required bool isAnnual,
@@ -21,60 +21,60 @@ class TeamPeriodService {
     bool isInPeriod(DateTime date) =>
         date.year == year && (isAnnual || date.month == month);
 
-    return timeEntries.any((entry) => isInPeriod(entry.fecha)) ||
+    return timeEntries.any((entry) => isInPeriod(entry.date)) ||
         certifications.any((certification) {
-          final date = certification.fechaFinalizacion;
+          final date = certification.completedAt;
           return date != null && isInPeriod(date);
         });
   }
 
-  List<CargaDeHorasCRM> filterTimeEntriesByPeriod({
-    required List<CargaDeHorasCRM> timeEntries,
+  List<CrmTimeEntry> filterTimeEntriesByPeriod({
+    required List<CrmTimeEntry> timeEntries,
     required int year,
     required int month,
     required bool isAnnual,
   }) {
     return timeEntries.where((entry) {
-      final matchesYear = entry.fecha.year == year;
+      final matchesYear = entry.date.year == year;
       if (isAnnual) return matchesYear;
 
-      return matchesYear && entry.fecha.month == month;
+      return matchesYear && entry.date.month == month;
     }).toList();
   }
 
-  List<CertificacionMoodle> filterCertificationsByPeriod({
-    required List<CertificacionMoodle> certifications,
+  List<LmsCertification> filterCertificationsByPeriod({
+    required List<LmsCertification> certifications,
     required int year,
     required int month,
     required bool isAnnual,
   }) {
     return certifications.where((certification) {
-      final date = certification.fechaFinalizacion;
-      if (!certification.finalizoCurso || date == null || date.year != year) {
+      final date = certification.completedAt;
+      if (!certification.isCompleted || date == null || date.year != year) {
         return false;
       }
       return isAnnual || date.month == month;
     }).toList();
   }
 
-  List<Empleado> filterEmployeesByPeriod({
-    required List<Empleado> employees,
-    List<EmpleadoHistorial>? history,
+  List<Employee> filterEmployeesByPeriod({
+    required List<Employee> employees,
+    List<EmployeeHistoryEntry>? history,
     required int year,
     required int month,
     required bool isAnnual,
-    bool Function(Empleado)? includeEmployee,
+    bool Function(Employee)? includeEmployee,
   }) {
     final nextPeriodStart = DateTime(year, isAnnual ? 13 : month + 1);
     final lastDay = DateTime(year, isAnnual ? 13 : month + 1, 0);
-    final historyByEmployeeId = <String, List<EmpleadoHistorial>>{};
-    for (final entry in history ?? <EmpleadoHistorial>[]) {
-      historyByEmployeeId.putIfAbsent(entry.legajo, () => []).add(entry);
+    final historyByEmployeeId = <String, List<EmployeeHistoryEntry>>{};
+    for (final entry in history ?? <EmployeeHistoryEntry>[]) {
+      historyByEmployeeId.putIfAbsent(entry.employeeId, () => []).add(entry);
     }
 
-    final eligibleEmployees = <Empleado>[];
+    final eligibleEmployees = <Employee>[];
     for (final employee in employees) {
-      final employmentStart = employee.fechaIngreso;
+      final employmentStart = employee.hireDate;
       if (employmentStart == null) continue;
       final employmentStartDate = DateTime(
         employmentStart.year,
@@ -83,45 +83,43 @@ class TeamPeriodService {
       );
       if (employmentStartDate.isAfter(lastDay)) continue;
       if (history == null) {
-        if (employee.activo && (includeEmployee?.call(employee) ?? true)) {
+        if (employee.isActive && (includeEmployee?.call(employee) ?? true)) {
           eligibleEmployees.add(employee);
         }
         continue;
       }
 
-      final employeeHistory = historyByEmployeeId[employee.legajo] ?? [];
+      final employeeHistory = historyByEmployeeId[employee.employeeId] ?? [];
       final effectiveEntries = employeeHistory.where((entry) {
-        final endDate = entry.vigenteHasta;
-        return entry.vigenteDesde.isBefore(nextPeriodStart) &&
+        final endDate = entry.validTo;
+        return entry.validFrom.isBefore(nextPeriodStart) &&
             (endDate == null || !endDate.isBefore(nextPeriodStart));
       }).toList();
       // Before the first recorded state, use that earliest state rather than the current roster.
       if (effectiveEntries.isEmpty && employeeHistory.isNotEmpty) {
         final earliestEntry = employeeHistory.reduce(
-          (previous, current) =>
-              current.vigenteDesde.isBefore(previous.vigenteDesde)
+          (previous, current) => current.validFrom.isBefore(previous.validFrom)
               ? current
               : previous,
         );
-        if (!earliestEntry.vigenteDesde.isBefore(nextPeriodStart)) {
+        if (!earliestEntry.validFrom.isBefore(nextPeriodStart)) {
           effectiveEntries.addAll(
             employeeHistory.where(
-              (entry) => entry.vigenteDesde.isAtSameMomentAs(
-                earliestEntry.vigenteDesde,
-              ),
+              (entry) =>
+                  entry.validFrom.isAtSameMomentAs(earliestEntry.validFrom),
             ),
           );
         }
       }
       if (effectiveEntries.length != 1) {
         throw StateError(
-          'El historial del colaborador ${employee.legajo} no tiene una '
+          'El historial del colaborador ${employee.employeeId} no tiene una '
           'vigencia única al cierre de $month/$year.',
         );
       }
       final effectiveEntry = effectiveEntries.single;
-      if (effectiveEntry.activo) {
-        final historicalEmployee = effectiveEntry.reconstruir(employee);
+      if (effectiveEntry.isActive) {
+        final historicalEmployee = effectiveEntry.rebuild(employee);
         if (includeEmployee?.call(historicalEmployee) ?? true) {
           eligibleEmployees.add(historicalEmployee);
         }
@@ -131,8 +129,8 @@ class TeamPeriodService {
   }
 
   int? lastMonthWithData({
-    required List<CargaDeHorasCRM> timeEntries,
-    required List<CertificacionMoodle> certifications,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
     required int year,
   }) {
     for (var month = 12; month >= 1; month--) {
@@ -149,19 +147,19 @@ class TeamPeriodService {
     return null;
   }
 
-  List<CumplimientoEmpleado> calculateMonthlyCompliance({
-    required List<Empleado> employees,
-    List<EmpleadoHistorial>? history,
-    required List<Curso> courses,
-    required List<CargaDeHorasCRM> timeEntries,
-    required List<CertificacionMoodle> certifications,
+  List<EmployeeCompliance> calculateMonthlyCompliance({
+    required List<Employee> employees,
+    List<EmployeeHistoryEntry>? history,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
     required int year,
     required int month,
-    required CumplimientoService complianceService,
-    bool Function(Empleado)? includeEmployee,
+    required ComplianceService complianceService,
+    bool Function(Employee)? includeEmployee,
   }) {
-    return complianceService.calcularCumplimientoGlobal(
-      empleados: filterEmployeesByPeriod(
+    return complianceService.calculateComplianceGlobal(
+      employees: filterEmployeesByPeriod(
         employees: employees,
         history: history,
         year: year,
@@ -169,34 +167,34 @@ class TeamPeriodService {
         isAnnual: false,
         includeEmployee: includeEmployee,
       ),
-      cursos: courses,
-      cargasDeHoras: filterTimeEntriesByPeriod(
+      courses: courses,
+      timeEntries: filterTimeEntriesByPeriod(
         timeEntries: timeEntries,
         year: year,
         month: month,
         isAnnual: false,
       ),
-      certificacionesMoodle: filterCertificationsByPeriod(
+      lmsCertifications: filterCertificationsByPeriod(
         certifications: certifications,
         year: year,
         month: month,
         isAnnual: false,
       ),
       // The target uses the training plan in effect for the evaluated month.
-      anio: year,
-      mes: month,
+      year: year,
+      month: month,
     );
   }
 
-  List<CumplimientoEmpleado> calculateAnnualCompliance({
-    required List<Empleado> employees,
-    List<EmpleadoHistorial>? history,
-    required List<Curso> courses,
-    required List<CargaDeHorasCRM> timeEntries,
-    required List<CertificacionMoodle> certifications,
+  List<EmployeeCompliance> calculateAnnualCompliance({
+    required List<Employee> employees,
+    List<EmployeeHistoryEntry>? history,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
     required int year,
-    required CumplimientoService complianceService,
-    bool Function(Empleado)? includeEmployee,
+    required ComplianceService complianceService,
+    bool Function(Employee)? includeEmployee,
   }) {
     return accumulateMonths(
       calculateComplianceByMonth(
@@ -212,25 +210,25 @@ class TeamPeriodService {
     );
   }
 
-  Map<int, List<CumplimientoEmpleado>> calculateComplianceByMonth({
-    required List<Empleado> employees,
-    List<EmpleadoHistorial>? history,
-    required List<Curso> courses,
-    required List<CargaDeHorasCRM> timeEntries,
-    required List<CertificacionMoodle> certifications,
+  Map<int, List<EmployeeCompliance>> calculateComplianceByMonth({
+    required List<Employee> employees,
+    List<EmployeeHistoryEntry>? history,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
     required int year,
     int throughMonth = 12,
-    required CumplimientoService complianceService,
-    bool Function(Empleado)? includeEmployee,
+    required ComplianceService complianceService,
+    bool Function(Employee)? includeEmployee,
   }) {
-    final timeEntriesByMonth = <int, List<CargaDeHorasCRM>>{};
+    final timeEntriesByMonth = <int, List<CrmTimeEntry>>{};
     for (final entry in timeEntries) {
-      if (entry.fecha.year != year) continue;
-      timeEntriesByMonth.putIfAbsent(entry.fecha.month, () => []).add(entry);
+      if (entry.date.year != year) continue;
+      timeEntriesByMonth.putIfAbsent(entry.date.month, () => []).add(entry);
     }
-    final certificationsByMonth = <int, List<CertificacionMoodle>>{};
+    final certificationsByMonth = <int, List<LmsCertification>>{};
     for (final certification in certifications) {
-      final date = certification.fechaFinalizacion;
+      final date = certification.completedAt;
       if (date == null || date.year != year) continue;
       certificationsByMonth
           .putIfAbsent(date.month, () => [])
@@ -255,41 +253,41 @@ class TeamPeriodService {
     };
   }
 
-  List<CumplimientoEmpleado> accumulateMonths(
-    Iterable<List<CumplimientoEmpleado>> months,
+  List<EmployeeCompliance> accumulateMonths(
+    Iterable<List<EmployeeCompliance>> months,
   ) {
-    final accumulated = <String, CumplimientoEmpleado>{};
+    final accumulated = <String, EmployeeCompliance>{};
 
     for (final monthlyCompliance in months) {
       for (final monthly in monthlyCompliance) {
-        final employee = monthly.empleado;
+        final employee = monthly.employee;
         final key =
-            '${employee.legajo}::${employee.area}::'
-            '${normalizeTeamName(employee.equipo)}';
+            '${employee.employeeId}::${employee.area}::'
+            '${normalizeTeamName(employee.team)}';
         final previous = accumulated[key];
-        accumulated[key] = CumplimientoEmpleado(
-          empleado: monthly.empleado,
-          horasValidas: {
-            for (final category in TipoCurso.values)
+        accumulated[key] = EmployeeCompliance(
+          employee: monthly.employee,
+          creditedHours: {
+            for (final category in CourseCategory.values)
               // Annual hours compensate across months within the same category.
               // Only required months contribute; the accumulated target sets the cap.
               category:
-                  (previous?.horasValidas[category] ?? 0) +
-                  ((monthly.horasRequeridas[category] ?? 0) > 0
-                      ? monthly.horasValidas[category] ?? 0
+                  (previous?.creditedHours[category] ?? 0) +
+                  ((monthly.requiredHours[category] ?? 0) > 0
+                      ? monthly.creditedHours[category] ?? 0
                       : 0),
           },
-          horasDeclaradas: {
-            for (final category in TipoCurso.values)
+          declaredHours: {
+            for (final category in CourseCategory.values)
               category:
-                  (previous?.horasDeclaradas[category] ?? 0) +
-                  (monthly.horasDeclaradas[category] ?? 0),
+                  (previous?.declaredHours[category] ?? 0) +
+                  (monthly.declaredHours[category] ?? 0),
           },
-          horasRequeridas: {
-            for (final category in TipoCurso.values)
+          requiredHours: {
+            for (final category in CourseCategory.values)
               category:
-                  (previous?.horasRequeridas[category] ?? 0) +
-                  (monthly.horasRequeridas[category] ?? 0),
+                  (previous?.requiredHours[category] ?? 0) +
+                  (monthly.requiredHours[category] ?? 0),
           },
         );
       }
@@ -298,14 +296,14 @@ class TeamPeriodService {
     return accumulated.values.toList();
   }
 
-  bool belongsToTeam(Empleado employee, {String? area, String? team}) {
+  bool belongsToTeam(Employee employee, {String? area, String? team}) {
     if (area != null &&
         normalizeTeamComparison(employee.area) !=
             normalizeTeamComparison(area)) {
       return false;
     }
     return team == null ||
-        normalizeTeamComparison(normalizeTeamName(employee.equipo)) ==
+        normalizeTeamComparison(normalizeTeamName(employee.team)) ==
             normalizeTeamComparison(normalizeTeamName(team));
   }
 }

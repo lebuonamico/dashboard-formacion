@@ -4,24 +4,25 @@ import 'package:app_finnegans/presentation/widgets/areas/area_donut_chart.dart';
 import 'package:flutter/material.dart';
 
 class AreasCategoryDistribution extends StatelessWidget {
-  final double horasNegocio;
-  final double horasBlandas;
-  final double horasLibres;
-  final double horasDictado;
-  final bool esAnual;
+  final double businessHours;
+  final double softSkillsHours;
+  final double explorationHours;
+  final double teachingHours;
+  final bool isAnnual;
 
   const AreasCategoryDistribution({
     super.key,
-    required this.horasNegocio,
-    required this.horasBlandas,
-    required this.horasLibres,
-    required this.horasDictado,
-    this.esAnual = false,
+    required this.businessHours,
+    required this.softSkillsHours,
+    required this.explorationHours,
+    required this.teachingHours,
+    this.isAnnual = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final total = horasNegocio + horasBlandas + horasLibres + horasDictado;
+    final total =
+        businessHours + softSkillsHours + explorationHours + teachingHours;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -45,7 +46,7 @@ class AreasCategoryDistribution extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Tooltip(
-                    message: esAnual
+                    message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
                         : 'Horas validadas del período que aplican al objetivo de cada colaborador, agrupadas por categoría.',
                     child: Icon(
@@ -72,32 +73,32 @@ class AreasCategoryDistribution extends StatelessWidget {
                   valueSuffix: ' h',
                   slices: [
                     AreasDonutSlice(
-                      label: TipoCurso.habilidadesDeNegocio.labelCorto,
+                      label: CourseCategory.businessSkills.shortLabel,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
-                      value: horasNegocio,
-                      color: context.colores.negocio.texto,
+                      value: businessHours,
+                      color: context.colors.business.text,
                     ),
                     AreasDonutSlice(
-                      label: TipoCurso.habilidadesBlandas.labelCorto,
+                      label: CourseCategory.softSkills.shortLabel,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
-                      value: horasBlandas,
-                      color: context.colores.blandas.texto,
+                      value: softSkillsHours,
+                      color: context.colors.softSkills.text,
                     ),
                     AreasDonutSlice(
-                      label: TipoCurso.libresExploracion.labelCorto,
+                      label: CourseCategory.exploration.shortLabel,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los colaboradores de las áreas.',
-                      value: horasLibres,
-                      color: context.colores.exploracion.texto,
+                      value: explorationHours,
+                      color: context.colors.exploration.text,
                     ),
                     AreasDonutSlice(
-                      label: TipoCurso.dictadoCapacitaciones.labelCorto,
+                      label: CourseCategory.teaching.shortLabel,
                       help:
                           'Horas cargadas como dictado de capacitaciones por colaboradores de las áreas.',
-                      value: horasDictado,
-                      color: context.colores.dictado.texto,
+                      value: teachingHours,
+                      color: context.colors.teaching.text,
                     ),
                   ],
                 ),

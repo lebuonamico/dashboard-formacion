@@ -2,61 +2,61 @@ import 'package:app_finnegans/domain/modelos/registro_importacion.dart';
 import 'package:app_finnegans/domain/modelos/resultado_upsert.dart';
 import 'package:app_finnegans/domain/repositorios/importaciones_repository.dart';
 
-class ImportacionService {
-  final ImportacionesRepository? auditoria;
-  const ImportacionService({this.auditoria});
+class ImportAuditService {
+  final ImportRecordsRepository? audit;
+  const ImportAuditService({this.audit});
 
-  Future<ResultadoUpsert> ejecutar({
-    required String tipoArchivo,
-    required String nombreArchivo,
-    required Future<ResultadoUpsert> Function() procesar,
-    Future<void> Function()? refrescar,
+  Future<UpsertResult> run({
+    required String fileType,
+    required String fileName,
+    required Future<UpsertResult> Function() process,
+    Future<void> Function()? refresh,
   }) async {
-    final fechaHora = DateTime.now().toUtc();
-    var resultado = ResultadoUpsert.empty;
-    var persistida = false;
-    var auditada = false;
+    final dateTime = DateTime.now().toUtc();
+    var result = UpsertResult.empty;
+    var persisted = false;
+    var audited = false;
     try {
-      resultado = await procesar();
-      persistida = true;
-      await auditoria?.registrar(
-        RegistroImportacion(
-          tipoArchivo: tipoArchivo,
-          nombreArchivo: nombreArchivo,
-          fechaHora: fechaHora,
-          estado: EstadoImportacion.completada,
-          registrosProcesados: resultado.registrosProcesados,
-          insertados: resultado.insertados,
-          actualizados: resultado.actualizados,
+      result = await process();
+      persisted = true;
+      await audit?.register(
+        ImportRecord(
+          fileType: fileType,
+          fileName: fileName,
+          dateTime: dateTime,
+          status: ImportStatus.completed,
+          processedRecords: result.processedRecords,
+          inserted: result.inserted,
+          updated: result.updated,
         ),
       );
-      auditada = true;
-      await refrescar?.call();
-      return resultado;
+      audited = true;
+      await refresh?.call();
+      return result;
     } catch (error, stackTrace) {
-      if (persistida && auditada) {
+      if (persisted && audited) {
         // The import is durable; a failed read must not create a second audit.
         throw FormatException(
           'Los datos se guardaron, pero no se pudo actualizar la pantalla: $error',
         );
       }
       try {
-        await auditoria?.registrar(
-          RegistroImportacion(
-            tipoArchivo: tipoArchivo,
-            nombreArchivo: nombreArchivo,
-            fechaHora: fechaHora,
-            estado: EstadoImportacion.fallida,
-            registrosProcesados: resultado.registrosProcesados,
-            insertados: resultado.insertados,
-            actualizados: resultado.actualizados,
-            errores: [error.toString()],
+        await audit?.register(
+          ImportRecord(
+            fileType: fileType,
+            fileName: fileName,
+            dateTime: dateTime,
+            status: ImportStatus.failed,
+            processedRecords: result.processedRecords,
+            inserted: result.inserted,
+            updated: result.updated,
+            errors: [error.toString()],
           ),
         );
       } catch (_) {
         // Preserve the original failure when the audit backend also fails.
       }
-      if (persistida && !auditada) {
+      if (persisted && !audited) {
         throw FormatException(
           'Los datos se guardaron, pero falló el registro de importación: $error',
         );

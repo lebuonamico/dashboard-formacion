@@ -1,7 +1,7 @@
 import 'package:app_finnegans/presentation/widgets/shared/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 
-class PeriodoSegmentedControl<T> extends StatelessWidget {
+class PeriodSegmentedControl<T> extends StatelessWidget {
   final T selected;
   final List<T> options;
   final String Function(T) labelBuilder;
@@ -11,7 +11,7 @@ class PeriodoSegmentedControl<T> extends StatelessWidget {
   final Color selectedForegroundColor;
   final Color unselectedForegroundColor;
 
-  const PeriodoSegmentedControl({
+  const PeriodSegmentedControl({
     super.key,
     required this.selected,
     required this.options,

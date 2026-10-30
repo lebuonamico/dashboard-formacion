@@ -8,91 +8,91 @@ import 'package:app_finnegans/presentation/widgets/shared/comparacion_moodle_crm
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-CumplimientoEmpleado _c({
-  required Map<TipoCurso, double> moodle,
-  required Map<TipoCurso, double> crm,
-  String legajo = '1',
+EmployeeCompliance _c({
+  required Map<CourseCategory, double> moodle,
+  required Map<CourseCategory, double> crm,
+  String employeeId = '1',
 }) {
-  return CumplimientoEmpleado(
-    empleado: Empleado(
-      legajo: legajo,
-      nombre: 'Ana',
-      apellido: 'Pérez',
+  return EmployeeCompliance(
+    employee: Employee(
+      employeeId: employeeId,
+      firstName: 'Ana',
+      lastName: 'Pérez',
       seniority: Seniority.senior1,
       area: 'SERVICIOS',
-      mail: '$legajo@finnegans.com',
-      equipo: 'SOPORTE',
+      email: '$employeeId@finnegans.com',
+      team: 'SOPORTE',
     ),
-    horasValidas: moodle,
-    horasDeclaradas: crm,
-    horasRequeridas: {for (final tipo in TipoCurso.values) tipo: 4},
+    creditedHours: moodle,
+    declaredHours: crm,
+    requiredHours: {for (final type in CourseCategory.values) type: 4},
   );
 }
 
 final _items = [
   _c(
     moodle: {
-      TipoCurso.habilidadesDeNegocio: 8,
-      TipoCurso.habilidadesBlandas: 2,
+      CourseCategory.businessSkills: 8,
+      CourseCategory.softSkills: 2,
       // Libres válidas vienen del CRM: no son horas de Moodle.
-      TipoCurso.libresExploracion: 3,
+      CourseCategory.exploration: 3,
     },
     crm: {
-      TipoCurso.habilidadesDeNegocio: 10,
-      TipoCurso.habilidadesBlandas: 4,
-      TipoCurso.libresExploracion: 3,
-      TipoCurso.dictadoCapacitaciones: 5,
+      CourseCategory.businessSkills: 10,
+      CourseCategory.softSkills: 4,
+      CourseCategory.exploration: 3,
+      CourseCategory.teaching: 5,
     },
   ),
   _c(
-    legajo: '2',
-    moodle: {TipoCurso.habilidadesDeNegocio: 4},
-    crm: {TipoCurso.habilidadesDeNegocio: 2},
+    employeeId: '2',
+    moodle: {CourseCategory.businessSkills: 4},
+    crm: {CourseCategory.businessSkills: 2},
   ),
 ];
 
 void main() {
   test('Suma Moodle solo en Negocio y Blandas y CRM en las 4', () {
-    final comparacion = ComparacionMoodleCrm.desde(_items);
+    final comparison = MoodleCrmComparison.from(_items);
 
-    expect(comparacion.moodle, {
-      TipoCurso.habilidadesDeNegocio: 12,
-      TipoCurso.habilidadesBlandas: 2,
+    expect(comparison.moodle, {
+      CourseCategory.businessSkills: 12,
+      CourseCategory.softSkills: 2,
     });
-    expect(comparacion.totalMoodle(ComparacionMoodleCrm.comparables), 14);
-    expect(comparacion.totalCrm(ComparacionMoodleCrm.comparables), 16);
-    expect(comparacion.totalCrm(TipoCurso.values), 24);
+    expect(comparison.totalMoodle(MoodleCrmComparison.comparables), 14);
+    expect(comparison.totalCrm(MoodleCrmComparison.comparables), 16);
+    expect(comparison.totalCrm(CourseCategory.values), 24);
   });
 
   test('La diferencia de las comparables es CRM menos Moodle', () {
-    final comparacion = ComparacionMoodleCrm.desde(_items);
+    final comparison = MoodleCrmComparison.from(_items);
 
-    expect(comparacion.diferenciaComparable, 2);
-    expect(comparacion.diferenciaPorcentual, closeTo(14.29, 0.01));
-    expect(comparacion.coinciden, isFalse);
+    expect(comparison.differenceComparable, 2);
+    expect(comparison.percentageDifference, closeTo(14.29, 0.01));
+    expect(comparison.match, isFalse);
   });
 
   test('Sin horas en Moodle no hay porcentaje, y menos de 0.05 h coincide', () {
-    final soloCrm = ComparacionMoodleCrm.desde([
-      _c(moodle: const {}, crm: {TipoCurso.habilidadesBlandas: 3}),
+    final crmOnly = MoodleCrmComparison.from([
+      _c(moodle: const {}, crm: {CourseCategory.softSkills: 3}),
     ]);
-    expect(soloCrm.diferenciaPorcentual, isNull);
-    expect(soloCrm.coinciden, isFalse);
+    expect(crmOnly.percentageDifference, isNull);
+    expect(crmOnly.match, isFalse);
 
-    final iguales = ComparacionMoodleCrm.desde([
+    final equal = MoodleCrmComparison.from([
       _c(
-        moodle: {TipoCurso.habilidadesDeNegocio: 4},
-        crm: {TipoCurso.habilidadesDeNegocio: 4.04},
+        moodle: {CourseCategory.businessSkills: 4},
+        crm: {CourseCategory.businessSkills: 4.04},
       ),
     ]);
-    expect(iguales.coinciden, isTrue);
+    expect(equal.match, isTrue);
   });
 
-  for (final ancho in [1200.0, 500.0]) {
-    testWidgets('Las cards se muestran sin desbordes a $ancho px', (
+  for (final width in [1200.0, 500.0]) {
+    testWidgets('Las cards se muestran sin desbordes a $width px', (
       tester,
     ) async {
-      tester.view.physicalSize = Size(ancho, 1400);
+      tester.view.physicalSize = Size(width, 1400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 
@@ -101,7 +101,7 @@ void main() {
           theme: AppTheme.light(),
           home: Scaffold(
             body: SingleChildScrollView(
-              child: ComparacionMoodleCrmCards(cumplimientos: _items),
+              child: MoodleCrmComparisonCards(complianceList: _items),
             ),
           ),
         ),

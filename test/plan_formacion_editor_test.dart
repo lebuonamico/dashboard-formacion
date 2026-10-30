@@ -9,25 +9,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _PlanFake implements PlanFormacionRepository {
-  PlanesFormacion planes;
-  final guardadas = <VersionPlanFormacion>[];
+class _PlanFake implements TrainingPlanRepository {
+  TrainingPlanHistory plans;
+  final saved = <TrainingPlanVersion>[];
 
-  _PlanFake([this.planes = const PlanesFormacion.sinVersiones()]);
-
-  @override
-  Future<PlanesFormacion> getPlanes() async => planes;
+  _PlanFake([this.plans = const TrainingPlanHistory.empty()]);
 
   @override
-  Future<void> guardarVersion(VersionPlanFormacion version) async {
-    guardadas.add(version);
-    planes = planes.conVersion(version);
+  Future<TrainingPlanHistory> getPlans() async => plans;
+
+  @override
+  Future<void> saveVersion(TrainingPlanVersion version) async {
+    saved.add(version);
+    plans = plans.withVersion(version);
   }
 }
 
-Future<ProviderContainer> _mostrarEditor(
+Future<ProviderContainer> _showEditor(
   WidgetTester tester,
-  _PlanFake repositorio,
+  _PlanFake repository,
 ) async {
   tester.view.physicalSize = const Size(1400, 1400);
   tester.view.devicePixelRatio = 1;
@@ -35,7 +35,7 @@ Future<ProviderContainer> _mostrarEditor(
   addTearDown(tester.view.resetDevicePixelRatio);
 
   final container = ProviderContainer(
-    overrides: [planFormacionRepositoryProvider.overrideWithValue(repositorio)],
+    overrides: [trainingPlanRepositoryProvider.overrideWithValue(repository)],
   );
   addTearDown(container.dispose);
 
@@ -45,7 +45,7 @@ Future<ProviderContainer> _mostrarEditor(
       child: MaterialApp(
         theme: AppTheme.light(),
         home: const Scaffold(
-          body: SingleChildScrollView(child: PlanFormacionEditor()),
+          body: SingleChildScrollView(child: TrainingPlanEditor()),
         ),
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
@@ -61,13 +61,13 @@ Future<ProviderContainer> _mostrarEditor(
   return container;
 }
 
-Finder _campo(Seniority seniority, TipoCurso tipo) =>
-    find.byKey(Key('plan_${seniority.name}_${tipo.name}'));
+Finder _field(Seniority seniority, CourseCategory type) =>
+    find.byKey(Key('plan_${seniority.name}_${type.name}'));
 
 String _total(WidgetTester tester, Seniority seniority) =>
     tester.widget<Text>(find.byKey(Key('plan_total_${seniority.name}'))).data!;
 
-bool _puedeGuardar(WidgetTester tester) =>
+bool _canSave(WidgetTester tester) =>
     tester
         .widget<ButtonStyleButton>(find.byKey(const Key('plan_guardar')))
         .onPressed !=
@@ -79,119 +79,119 @@ void main() {
   testWidgets('Pasa Junior 1 a 6 h de negocio y 2 de blandas y lo guarda', (
     tester,
   ) async {
-    final repositorio = _PlanFake();
-    final container = await _mostrarEditor(tester, repositorio);
+    final repository = _PlanFake();
+    final container = await _showEditor(tester, repository);
 
     expect(_total(tester, Seniority.junior1), '8 h');
-    expect(_puedeGuardar(tester), isFalse);
+    expect(_canSave(tester), isFalse);
 
     await tester.enterText(
-      _campo(Seniority.junior1, TipoCurso.habilidadesDeNegocio),
+      _field(Seniority.junior1, CourseCategory.businessSkills),
       '6',
     );
     await tester.enterText(
-      _campo(Seniority.junior1, TipoCurso.habilidadesBlandas),
+      _field(Seniority.junior1, CourseCategory.softSkills),
       '2',
     );
     await tester.pump();
 
     expect(_total(tester, Seniority.junior1), '8 h');
-    expect(_puedeGuardar(tester), isTrue);
+    expect(_canSave(tester), isTrue);
 
     await tester.tap(find.byKey(const Key('plan_guardar')));
     await tester.pumpAndSettle();
 
-    final hoy = DateTime.now();
-    final guardada = repositorio.guardadas.single;
-    expect(guardada.vigenteDesde, DateTime(hoy.year, hoy.month));
-    expect(guardada.plan.horasRequeridas(Seniority.junior1), {
-      TipoCurso.habilidadesDeNegocio: 6,
-      TipoCurso.habilidadesBlandas: 2,
-      TipoCurso.libresExploracion: 0,
-      TipoCurso.dictadoCapacitaciones: 0,
+    final today = DateTime.now();
+    final saved = repository.saved.single;
+    expect(saved.validFrom, DateTime(today.year, today.month));
+    expect(saved.plan.requiredHours(Seniority.junior1), {
+      CourseCategory.businessSkills: 6,
+      CourseCategory.softSkills: 2,
+      CourseCategory.exploration: 0,
+      CourseCategory.teaching: 0,
     });
     // El resto queda como estaba.
     expect(
-      guardada.plan.horasRequeridas(Seniority.senior2),
-      Seniority.senior2.planFormacion,
+      saved.plan.requiredHours(Seniority.senior2),
+      Seniority.senior2.trainingPlan,
     );
     expect(find.textContaining('Plan guardado: rige desde'), findsOneWidget);
     // El plan guardado es la nueva base: no quedan cambios pendientes.
-    expect(_puedeGuardar(tester), isFalse);
+    expect(_canSave(tester), isFalse);
     // Y el cálculo de cumplimiento ya lo usa.
-    final servicio = await container.read(cumplimientoServiceProvider.future);
-    expect(servicio.planes.vigenteEn(hoy.year, hoy.month), guardada.plan);
+    final service = await container.read(complianceServiceProvider.future);
+    expect(service.plans.currentIn(today.year, today.month), saved.plan);
   });
 
   testWidgets('El total es libre y acepta coma decimal', (tester) async {
-    await _mostrarEditor(tester, _PlanFake());
+    await _showEditor(tester, _PlanFake());
 
     await tester.enterText(
-      _campo(Seniority.trainee, TipoCurso.habilidadesDeNegocio),
+      _field(Seniority.trainee, CourseCategory.businessSkills),
       '5,5',
     );
     await tester.pump();
 
     expect(_total(tester, Seniority.trainee), '9,5 h');
-    expect(_puedeGuardar(tester), isTrue);
+    expect(_canSave(tester), isTrue);
   });
 
   testWidgets('Un valor inválido marca el campo y no deja guardar', (
     tester,
   ) async {
-    final repositorio = _PlanFake();
-    await _mostrarEditor(tester, repositorio);
+    final repository = _PlanFake();
+    await _showEditor(tester, repository);
 
     await tester.enterText(
-      _campo(Seniority.manager, TipoCurso.libresExploracion),
+      _field(Seniority.manager, CourseCategory.exploration),
       '-2',
     );
     await tester.pump();
 
     expect(find.text('No puede ser negativo'), findsOneWidget);
     expect(_total(tester, Seniority.manager), '—');
-    expect(_puedeGuardar(tester), isFalse);
+    expect(_canSave(tester), isFalse);
 
     await tester.enterText(
-      _campo(Seniority.manager, TipoCurso.libresExploracion),
+      _field(Seniority.manager, CourseCategory.exploration),
       'ocho',
     );
     await tester.pump();
     expect(find.text('Ingresá un número'), findsOneWidget);
-    expect(_puedeGuardar(tester), isFalse);
-    expect(repositorio.guardadas, isEmpty);
+    expect(_canSave(tester), isFalse);
+    expect(repository.saved, isEmpty);
   });
 
   testWidgets('Restaurar trae los valores por defecto sin guardar', (
     tester,
   ) async {
-    final hoy = DateTime.now();
-    final cambiado = PlanFormacion({
+    final today = DateTime.now();
+    final changed = TrainingPlan({
       for (final seniority in Seniority.values)
         seniority: seniority == Seniority.junior1
             ? {
-                TipoCurso.habilidadesDeNegocio: 6,
-                TipoCurso.habilidadesBlandas: 2,
-                TipoCurso.libresExploracion: 0,
-                TipoCurso.dictadoCapacitaciones: 0,
+                CourseCategory.businessSkills: 6,
+                CourseCategory.softSkills: 2,
+                CourseCategory.exploration: 0,
+                CourseCategory.teaching: 0,
               }
-            : seniority.planFormacion,
+            : seniority.trainingPlan,
     });
-    final repositorio = _PlanFake(
-      PlanesFormacion([
-        VersionPlanFormacion(
-          vigenteDesde: DateTime(hoy.year, hoy.month),
-          plan: cambiado,
+    final repository = _PlanFake(
+      TrainingPlanHistory([
+        TrainingPlanVersion(
+          validFrom: DateTime(today.year, today.month),
+          plan: changed,
         ),
       ]),
     );
-    await _mostrarEditor(tester, repositorio);
+    await _showEditor(tester, repository);
 
     // Arranca con la versión guardada del mes actual.
     expect(
       tester
           .widget<TextField>(
-            _campo(Seniority.junior1, TipoCurso.habilidadesDeNegocio),
+            _field(Seniority.junior1, CourseCategory.businessSkills),
           )
           .controller!
           .text,
@@ -208,17 +208,17 @@ void main() {
     expect(
       tester
           .widget<TextField>(
-            _campo(Seniority.junior1, TipoCurso.habilidadesDeNegocio),
+            _field(Seniority.junior1, CourseCategory.businessSkills),
           )
           .controller!
           .text,
       '4',
     );
-    expect(_puedeGuardar(tester), isTrue);
-    expect(repositorio.guardadas, isEmpty);
+    expect(_canSave(tester), isTrue);
+    expect(repository.saved, isEmpty);
 
     await tester.tap(find.byKey(const Key('plan_descartar')));
     await tester.pump();
-    expect(_puedeGuardar(tester), isFalse);
+    expect(_canSave(tester), isFalse);
   });
 }

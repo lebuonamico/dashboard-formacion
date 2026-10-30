@@ -1,94 +1,94 @@
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/modelos/seniority.dart';
 
-class Empleado {
-  final DateTime? fechaIngreso;
-  final String legajo;
-  final String nombre;
-  final String apellido;
+class Employee {
+  final DateTime? hireDate;
+  final String employeeId;
+  final String firstName;
+  final String lastName;
   final Seniority seniority;
   final String area;
-  final String mail;
-  final String equipo;
-  final String gerente;
-  final bool activo;
+  final String email;
+  final String team;
+  final String manager;
+  final bool isActive;
 
-  Empleado({
-    this.fechaIngreso,
-    required this.legajo,
-    required this.nombre,
-    required this.apellido,
+  Employee({
+    this.hireDate,
+    required this.employeeId,
+    required this.firstName,
+    required this.lastName,
     required this.seniority,
     required this.area,
-    required this.mail,
-    this.equipo = '',
-    this.gerente = '',
-    this.activo = true,
+    required this.email,
+    this.team = '',
+    this.manager = '',
+    this.isActive = true,
   });
 
-  String get nombreCompleto => '$nombre $apellido';
+  String get fullName => '$firstName $lastName';
 
   /// El empleado de la nómina con ese mail, comparado sin espacios ni
   /// mayúsculas. Si hubiera dos filas, prefiere la activa.
-  static Empleado? porMail(Iterable<Empleado> empleados, String? mail) {
-    final buscado = mail?.trim().toLowerCase() ?? '';
-    if (buscado.isEmpty) return null;
-    Empleado? encontrado;
-    for (final empleado in empleados) {
-      if (empleado.mail.trim().toLowerCase() != buscado) continue;
-      if (empleado.activo) return empleado;
-      encontrado ??= empleado;
+  static Employee? byEmail(Iterable<Employee> employees, String? email) {
+    final searched = email?.trim().toLowerCase() ?? '';
+    if (searched.isEmpty) return null;
+    Employee? found;
+    for (final employee in employees) {
+      if (employee.email.trim().toLowerCase() != searched) continue;
+      if (employee.isActive) return employee;
+      found ??= employee;
     }
-    return encontrado;
+    return found;
   }
 
-  Empleado copyWith({
+  Employee copyWith({
     Seniority? seniority,
     String? area,
-    String? equipo,
-    String? gerente,
-    bool? activo,
-  }) => Empleado(
-    fechaIngreso: fechaIngreso,
-    legajo: legajo,
-    nombre: nombre,
-    apellido: apellido,
+    String? team,
+    String? manager,
+    bool? active,
+  }) => Employee(
+    hireDate: hireDate,
+    employeeId: employeeId,
+    firstName: firstName,
+    lastName: lastName,
     seniority: seniority ?? this.seniority,
     area: area ?? this.area,
-    mail: mail,
-    equipo: equipo ?? this.equipo,
-    gerente: gerente ?? this.gerente,
-    activo: activo ?? this.activo,
+    email: email,
+    team: team ?? this.team,
+    manager: manager ?? this.manager,
+    isActive: active ?? isActive,
   );
 
   Map<String, dynamic> toJson() => {
-    'fechaIngreso': fechaIngreso?.toIso8601String(),
-    'legajo': legajo,
-    'nombre': nombre,
-    'apellido': apellido,
+    'fechaIngreso': hireDate?.toIso8601String(),
+    'legajo': employeeId,
+    'nombre': firstName,
+    'apellido': lastName,
     'seniority': seniority.name,
     'area': area,
-    'mail': mail,
-    'equipo': equipo,
-    'gerente': gerente,
-    'activo': activo,
+    'mail': email,
+    'equipo': team,
+    'gerente': manager,
+    'activo': isActive,
   };
 
-  factory Empleado.fromJson(Map<String, dynamic> json) => Empleado(
-    fechaIngreso: json['fechaIngreso'] == null
+  factory Employee.fromJson(Map<String, dynamic> json) => Employee(
+    hireDate: json['fechaIngreso'] == null
         ? null
-        : fechaObligatoria(json['fechaIngreso'].toString()),
-    legajo: json['legajo']?.toString() ?? '',
-    nombre: json['nombre']?.toString() ?? '',
-    apellido: json['apellido']?.toString() ?? '',
+        : requiredDate(json['fechaIngreso'].toString()),
+    employeeId: json['legajo']?.toString() ?? '',
+    firstName: json['nombre']?.toString() ?? '',
+    lastName: json['apellido']?.toString() ?? '',
     seniority: Seniority.values.firstWhere(
       (s) => s.name == json['seniority'],
       orElse: () => Seniority.fromString(json['seniority']?.toString() ?? ''),
     ),
     area: json['area']?.toString() ?? '',
-    mail: json['mail']?.toString() ?? '',
-    equipo: json['equipo']?.toString() ?? '',
-    gerente: json['gerente']?.toString() ?? '',
-    activo: json['activo'] as bool? ?? true,
+    email: json['mail']?.toString() ?? '',
+    team: json['equipo']?.toString() ?? '',
+    manager: json['gerente']?.toString() ?? '',
+    isActive: json['activo'] as bool? ?? true,
   );
 }

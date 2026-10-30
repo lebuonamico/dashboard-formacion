@@ -6,11 +6,11 @@ abstract interface class UpsertRepository<T> {
 }
 
 // Masters synchronize a complete, validated snapshot; movements only UPSERT.
-abstract interface class FotoVigenteRepository<T> {
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(List<T> items);
+abstract interface class SnapshotRepository<T> {
+  Future<UpsertResult> syncSnapshotWithResult(List<T> items);
 }
 
 abstract interface class CountedUpsertRepository<T>
     implements UpsertRepository<T> {
-  Future<ResultadoUpsert> upsertConResultado(List<T> items);
+  Future<UpsertResult> upsertWithResult(List<T> items);
 }

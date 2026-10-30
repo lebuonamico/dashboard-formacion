@@ -1,54 +1,54 @@
-enum TipoCurso {
-  habilidadesDeNegocio('Habilidades de negocio', 'Negocio'),
-  habilidadesBlandas('Habilidades blandas', 'Blandas'),
-  libresExploracion('Libres / exploración', 'Libres'),
-  dictadoCapacitaciones('Dictado de capacitaciones', 'Dictado');
+enum CourseCategory {
+  businessSkills('Habilidades de negocio', 'Negocio'),
+  softSkills('Habilidades blandas', 'Blandas'),
+  exploration('Libres / exploración', 'Libres'),
+  teaching('Dictado de capacitaciones', 'Dictado');
 
   final String label;
 
   /// Para gráficos, leyendas y encabezados de tabla.
-  final String labelCorto;
+  final String shortLabel;
 
-  const TipoCurso(this.label, this.labelCorto);
+  const CourseCategory(this.label, this.shortLabel);
 
   /// Reconoce la categoría a partir de la Clasificación del CRM o del catálogo
   /// (p. ej. "Habilidades de Negocio y Herramientas", "Horas de Dictado",
   /// "Exploracion / Profundizacion"), sin distinguir mayúsculas, tildes ni
   /// símbolos.
-  static TipoCurso? desdeTexto(String? texto) {
-    if (texto == null) return null;
+  static CourseCategory? fromText(String? text) {
+    if (text == null) return null;
     // Se consulta una vez por carga de horas y hay muy pocos textos
     // distintos: se resuelve cada uno una sola vez.
-    if (_reconocidos.containsKey(texto)) return _reconocidos[texto];
-    return _reconocidos[texto] = _reconocer(texto);
+    if (_recognized.containsKey(text)) return _recognized[text];
+    return _recognized[text] = _recognize(text);
   }
 
-  static final _reconocidos = <String, TipoCurso?>{};
+  static final _recognized = <String, CourseCategory?>{};
 
-  static TipoCurso? _reconocer(String texto) {
-    final buscado = _normalizar(texto);
-    if (buscado.isEmpty) return null;
-    for (final tipo in TipoCurso.values) {
-      if (_normalizar(tipo.label) == buscado) return tipo;
+  static CourseCategory? _recognize(String text) {
+    final searched = _normalize(text);
+    if (searched.isEmpty) return null;
+    for (final type in CourseCategory.values) {
+      if (_normalize(type.label) == searched) return type;
     }
-    if (buscado.contains('negocio') || buscado.contains('business')) {
-      return TipoCurso.habilidadesDeNegocio;
+    if (searched.contains('negocio') || searched.contains('business')) {
+      return CourseCategory.businessSkills;
     }
-    if (buscado.contains('blanda') || buscado.contains('soft')) {
-      return TipoCurso.habilidadesBlandas;
+    if (searched.contains('blanda') || searched.contains('soft')) {
+      return CourseCategory.softSkills;
     }
-    if (buscado.contains('dictad') || buscado.contains('impart')) {
-      return TipoCurso.dictadoCapacitaciones;
+    if (searched.contains('dictad') || searched.contains('impart')) {
+      return CourseCategory.teaching;
     }
-    if (buscado.contains('libre') ||
-        buscado.contains('exploracion') ||
-        buscado.contains('profundizacion')) {
-      return TipoCurso.libresExploracion;
+    if (searched.contains('libre') ||
+        searched.contains('exploracion') ||
+        searched.contains('profundizacion')) {
+      return CourseCategory.exploration;
     }
     return null;
   }
 
-  static String _normalizar(String texto) => texto
+  static String _normalize(String text) => text
       .trim()
       .toLowerCase()
       .replaceAll('á', 'a')

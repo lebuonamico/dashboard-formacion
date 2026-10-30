@@ -5,12 +5,12 @@ import 'package:app_finnegans/presentation/reportes/pdf/estilo_reporte_pdf.dart'
 import 'package:pdf/widgets.dart' as pw;
 
 /// Encabezado de la primera página: marca, tipo, título, estado y período.
-class PortadaPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
-  final EstiloReportePdf estilo;
-  final DateTime generado;
+class PdfCover extends pw.StatelessWidget {
+  final TrainingReport report;
+  final PdfReportStyle style;
+  final DateTime generated;
 
-  PortadaPdf(this.reporte, this.estilo, {required this.generado});
+  PdfCover(this.report, this.style, {required this.generated});
 
   @override
   pw.Widget build(pw.Context context) => pw.Column(
@@ -22,36 +22,36 @@ class PortadaPdf extends pw.StatelessWidget {
           pw.ClipRRect(
             horizontalRadius: 6,
             verticalRadius: 6,
-            child: pw.Image(estilo.logo, width: 26, height: 26),
+            child: pw.Image(style.logo, width: 26, height: 26),
           ),
           pw.SizedBox(width: 8),
           pw.Text(
             'FINNEGANS · FORMACIÓN INTERNA',
             style: pw.TextStyle(
-              fontWeight: negrita,
+              fontWeight: bold,
               fontSize: 8,
               letterSpacing: 1.2,
-              color: ColoresReportePdf.tintaSuave,
+              color: PdfReportColors.softInk,
             ),
           ),
           pw.Spacer(),
           pw.Text(
-            'Generado el ${fechaHoraPdf(generado)}',
+            'Generado el ${pdfDateTime(generated)}',
             style: const pw.TextStyle(
               fontSize: 8,
-              color: ColoresReportePdf.tintaSuave,
+              color: PdfReportColors.softInk,
             ),
           ),
         ],
       ),
       pw.SizedBox(height: 18),
       pw.Text(
-        reporte.tipo.label.toUpperCase(),
+        report.type.label.toUpperCase(),
         style: pw.TextStyle(
-          fontWeight: negrita,
+          fontWeight: bold,
           fontSize: 9,
           letterSpacing: 1,
-          color: ColoresReportePdf.marca,
+          color: PdfReportColors.brand,
         ),
       ),
       pw.SizedBox(height: 4),
@@ -60,16 +60,16 @@ class PortadaPdf extends pw.StatelessWidget {
         children: [
           pw.Expanded(
             child: pw.Text(
-              reporte.titulo,
+              report.title,
               style: pw.TextStyle(
-                fontWeight: negrita,
+                fontWeight: bold,
                 fontSize: 22,
-                color: ColoresReportePdf.tinta,
+                color: PdfReportColors.ink,
               ),
             ),
           ),
           pw.SizedBox(width: 12),
-          ChipEstadoPdf(reporte.estado, reporte.nivel, grande: true),
+          PdfStatusChip(report.status, report.level, large: true),
         ],
       ),
       pw.SizedBox(height: 6),
@@ -77,64 +77,64 @@ class PortadaPdf extends pw.StatelessWidget {
         spacing: 14,
         runSpacing: 2,
         children: [
-          _dato('Período', reporte.periodo),
-          for (final detalle in reporte.detalles)
+          _data('Período', report.period),
+          for (final detail in report.details)
             pw.Text(
-              detalle,
+              detail,
               style: const pw.TextStyle(
-                color: ColoresReportePdf.tintaSuave,
+                color: PdfReportColors.softInk,
                 fontSize: 9,
               ),
             ),
         ],
       ),
       pw.SizedBox(height: 12),
-      pw.Container(height: 2, color: ColoresReportePdf.marca),
+      pw.Container(height: 2, color: PdfReportColors.brand),
     ],
   );
 
-  pw.Widget _dato(String etiqueta, String valor) => pw.RichText(
+  pw.Widget _data(String label, String value) => pw.RichText(
     text: pw.TextSpan(
       children: [
         pw.TextSpan(
-          text: '$etiqueta: ',
+          text: '$label: ',
           style: const pw.TextStyle(
-            color: ColoresReportePdf.tintaSuave,
+            color: PdfReportColors.softInk,
             fontSize: 9,
           ),
         ),
-        pw.TextSpan(text: valor, style: estilo.textoMedio(9)),
+        pw.TextSpan(text: value, style: style.mediumText(9)),
       ],
     ),
   );
 }
 
 /// Encabezado de las páginas siguientes a la primera.
-class EncabezadoCortoPdf extends pw.StatelessWidget {
-  final ReporteFormacion reporte;
-  final EstiloReportePdf estilo;
+class PdfShortHeader extends pw.StatelessWidget {
+  final TrainingReport report;
+  final PdfReportStyle style;
 
-  EncabezadoCortoPdf(this.reporte, this.estilo);
+  PdfShortHeader(this.report, this.style);
 
   @override
   pw.Widget build(pw.Context context) => pw.Container(
     margin: const pw.EdgeInsets.only(bottom: 12),
     padding: const pw.EdgeInsets.only(bottom: 6),
     decoration: const pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: ColoresReportePdf.linea)),
+      border: pw.Border(bottom: pw.BorderSide(color: PdfReportColors.line)),
     ),
     child: pw.Row(
       children: [
         pw.Text(
-          '${reporte.tipo.label} · ${reporte.titulo}',
-          style: estilo.textoMedio(8),
+          '${report.type.label} · ${report.title}',
+          style: style.mediumText(8),
         ),
         pw.Spacer(),
         pw.Text(
-          reporte.periodo,
+          report.period,
           style: const pw.TextStyle(
             fontSize: 8,
-            color: ColoresReportePdf.tintaSuave,
+            color: PdfReportColors.softInk,
           ),
         ),
       ],
@@ -142,25 +142,22 @@ class EncabezadoCortoPdf extends pw.StatelessWidget {
   );
 }
 
-class PiePdf extends pw.StatelessWidget {
-  final int pagina;
-  final int paginas;
+class PdfFooter extends pw.StatelessWidget {
+  final int page;
+  final int pages;
 
-  PiePdf({required this.pagina, required this.paginas});
+  PdfFooter({required this.page, required this.pages});
 
   @override
   pw.Widget build(pw.Context context) {
-    const estilo = pw.TextStyle(
-      fontSize: 7,
-      color: ColoresReportePdf.tintaSuave,
-    );
+    const style = pw.TextStyle(fontSize: 7, color: PdfReportColors.softInk);
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 10),
       child: pw.Row(
         children: [
-          pw.Text('Plan de formación interna · uso interno', style: estilo),
+          pw.Text('Plan de formación interna · uso interno', style: style),
           pw.Spacer(),
-          pw.Text('Página $pagina de $paginas', style: estilo),
+          pw.Text('Página $page de $pages', style: style),
         ],
       ),
     );

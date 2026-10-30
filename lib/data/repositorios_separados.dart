@@ -15,174 +15,173 @@ import 'package:app_finnegans/domain/repositorios/empleados_repository.dart';
 import 'package:app_finnegans/domain/repositorios/plan_formacion_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MockEmpleadosRepository implements EmpleadosRepository {
-  final MockFormacionRepository _source = MockFormacionRepository();
+class MockEmployeesRepository implements EmployeesRepository {
+  final MockTrainingRepository _source = MockTrainingRepository();
 
   @override
-  Future<List<Empleado>> getEmpleados({
-    String? legajo,
-    String? equipo,
+  Future<List<Employee>> getEmployees({
+    String? employeeId,
+    String? team,
     String? sector,
   }) async {
-    return (await _leerEmpleados())
+    return (await _readEmployees())
         .where(
           (item) =>
-              (legajo == null || item.legajo == legajo) &&
-              (equipo == null || item.equipo == equipo) &&
+              (employeeId == null || item.employeeId == employeeId) &&
+              (team == null || item.team == team) &&
               (sector == null || item.area == sector),
         )
         .toList();
   }
 
-  Future<List<Empleado>> _leerEmpleados() => _source.getEmpleados();
+  Future<List<Employee>> _readEmployees() => _source.getEmployees();
 
   @override
-  Future<void> replaceEmpleados(List<Empleado> empleados) async {}
+  Future<void> replaceEmployees(List<Employee> employees) async {}
 
   @override
   Future<void> resetToMock() async {}
 }
 
-class MockCursosRepository implements CursosRepository {
-  final MockFormacionRepository _source = MockFormacionRepository();
+class MockCoursesRepository implements CoursesRepository {
+  final MockTrainingRepository _source = MockTrainingRepository();
 
   @override
-  Future<List<Curso>> getCursos({String? id, String? nombre}) async {
-    return (await _leerCursos())
+  Future<List<Course>> getCourses({String? id, String? name}) async {
+    return (await _readCourses())
         .where(
           (item) =>
               (id == null || item.id == id) &&
-              (nombre == null ||
-                  item.nombre.trim().toLowerCase() ==
-                      nombre.trim().toLowerCase()),
+              (name == null ||
+                  item.name.trim().toLowerCase() == name.trim().toLowerCase()),
         )
         .toList();
   }
 
-  Future<List<Curso>> _leerCursos() => _source.getCursos();
+  Future<List<Course>> _readCourses() => _source.getCourses();
 
   @override
-  Future<void> replaceCursos(List<Curso> cursos) async {}
+  Future<void> replaceCourses(List<Course> courses) async {}
 
   @override
   Future<void> resetToMock() async {}
 }
 
-class MockCargaDeHorasCRMRepository implements CargaDeHorasCRMRepository {
-  final MockFormacionRepository _source = MockFormacionRepository();
+class MockCrmTimeEntriesRepository implements CrmTimeEntriesRepository {
+  final MockTrainingRepository _source = MockTrainingRepository();
 
   @override
-  Future<List<CargaDeHorasCRM>> getCargasDeHoras({
-    String? empleadoLegajo,
-    String? cursoId,
-    DateTime? desde,
-    DateTime? hasta,
+  Future<List<CrmTimeEntry>> getTimeEntries({
+    String? employeeId,
+    String? courseId,
+    DateTime? from,
+    DateTime? until,
   }) async {
-    return (await _leerCargaDeHorasCRM())
+    return (await _readCrmTimeEntry())
         .where(
           (item) =>
-              (empleadoLegajo == null ||
-                  item.empleadoLegajo == empleadoLegajo) &&
-              (cursoId == null || item.cursoId == cursoId) &&
-              (desde == null || !item.fecha.isBefore(desde)) &&
-              (hasta == null || item.fecha.isBefore(hasta)),
+              (employeeId == null || item.employeeId == employeeId) &&
+              (courseId == null || item.courseId == courseId) &&
+              (from == null || !item.date.isBefore(from)) &&
+              (until == null || item.date.isBefore(until)),
         )
         .toList();
   }
 
-  Future<List<CargaDeHorasCRM>> _leerCargaDeHorasCRM() async {
-    final cursos = await _source.getCursos();
-    final cursadas = await _source.getCursadas();
-    final cursosMap = {for (final curso in cursos) curso.id: curso};
-    return cursadas
+  Future<List<CrmTimeEntry>> _readCrmTimeEntry() async {
+    final courses = await _source.getCourses();
+    final legacyEntries = await _source.getLegacyTimeEntries();
+    final coursesMap = {for (final course in courses) course.id: course};
+    return legacyEntries
         .map(
-          (cursada) => CargaDeHorasCRM(
-            id: cursada.id,
-            cursoId: cursada.cursoId,
-            cursoNombre: cursosMap[cursada.cursoId]?.nombre ?? '',
-            empleadoLegajo: cursada.empleadoLegajo,
-            fecha: cursada.fecha,
-            horasTotales: cursosMap[cursada.cursoId]?.cargaHorariaHs ?? 0,
-            tipo: TipoCargaDeHoras.tomada,
+          (legacyEntry) => CrmTimeEntry(
+            id: legacyEntry.id,
+            courseId: legacyEntry.courseId,
+            courseName: coursesMap[legacyEntry.courseId]?.name ?? '',
+            employeeId: legacyEntry.employeeId,
+            date: legacyEntry.date,
+            hours: coursesMap[legacyEntry.courseId]?.workloadHours ?? 0,
+            kind: TimeEntryKind.taken,
           ),
         )
         .toList();
   }
 
   @override
-  Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) async {}
+  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {}
 
   @override
   Future<void> resetToMock() async {}
 }
 
-class LocalEmpleadosRepository extends MockEmpleadosRepository
-    implements UpsertRepository<Empleado>, FotoVigenteRepository<Empleado> {
+class LocalEmployeesRepository extends MockEmployeesRepository
+    implements UpsertRepository<Employee>, SnapshotRepository<Employee> {
   static const _key = 'formacion_empleados';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
 
   @override
-  Future<void> upsert(List<Empleado> items) async {
+  Future<void> upsert(List<Employee> items) async {
     if (items.isEmpty) return;
     final raw = (await _storage).getString(_key);
     final existing = raw == null
-        ? <Empleado>[]
-        : _decodeList(raw, Empleado.fromJson);
+        ? <Employee>[]
+        : _decodeList(raw, Employee.fromJson);
     final merged = {
-      for (final item in [...existing, ...items]) item.legajo: item,
+      for (final item in [...existing, ...items]) item.employeeId: item,
     };
-    await replaceEmpleados(merged.values.toList());
+    await replaceEmployees(merged.values.toList());
   }
 
   @override
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
-    List<Empleado> items,
-  ) async {
-    if (items.isEmpty || items.any((item) => item.legajo.trim().isEmpty)) {
+  Future<UpsertResult> syncSnapshotWithResult(List<Employee> items) async {
+    if (items.isEmpty || items.any((item) => item.employeeId.trim().isEmpty)) {
       throw const FormatException(
         'La foto de Nómina está vacía o tiene claves inválidas.',
       );
     }
     final raw = (await _storage).getString(_key);
-    final anteriores = raw == null
-        ? <Empleado>[]
-        : _decodeList(raw, Empleado.fromJson);
-    final actuales = {for (final item in anteriores) item.legajo: item};
-    final presentes = {
-      for (final item in items) item.legajo: item.copyWith(activo: true),
+    final previous = raw == null
+        ? <Employee>[]
+        : _decodeList(raw, Employee.fromJson);
+    final current = {for (final item in previous) item.employeeId: item};
+    final present = {
+      for (final item in items) item.employeeId: item.copyWith(active: true),
     };
-    final cambios = [
-      ...presentes.values,
-      for (final item in anteriores)
-        if (item.activo && !presentes.containsKey(item.legajo))
-          item.copyWith(activo: false),
+    final changes = [
+      ...present.values,
+      for (final item in previous)
+        if (item.isActive && !present.containsKey(item.employeeId))
+          item.copyWith(active: false),
     ];
-    final insertados = presentes.keys
-        .where((key) => !actuales.containsKey(key))
+    final inserted = present.keys
+        .where((key) => !current.containsKey(key))
         .length;
-    final merged = {...actuales, for (final item in cambios) item.legajo: item};
-    await replaceEmpleados(merged.values.toList());
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: insertados,
-      actualizados: cambios.length - insertados,
+    final merged = {
+      ...current,
+      for (final item in changes) item.employeeId: item,
+    };
+    await replaceEmployees(merged.values.toList());
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: inserted,
+      updated: changes.length - inserted,
     );
   }
 
   @override
-  Future<List<Empleado>> _leerEmpleados() async {
+  Future<List<Employee>> _readEmployees() async {
     final raw = (await _storage).getString(_key);
     return raw == null
-        ? super._leerEmpleados()
-        : _decodeList(raw, Empleado.fromJson);
+        ? super._readEmployees()
+        : _decodeList(raw, Employee.fromJson);
   }
 
   @override
-  Future<void> replaceEmpleados(List<Empleado> empleados) async {
+  Future<void> replaceEmployees(List<Employee> employees) async {
     await (await _storage).setString(
       _key,
-      jsonEncode(empleados.map((empleado) => empleado.toJson()).toList()),
+      jsonEncode(employees.map((employee) => employee.toJson()).toList()),
     );
   }
 
@@ -192,69 +191,71 @@ class LocalEmpleadosRepository extends MockEmpleadosRepository
   }
 }
 
-class LocalCursosRepository extends MockCursosRepository
-    implements UpsertRepository<Curso>, FotoVigenteRepository<Curso> {
+class LocalCoursesRepository extends MockCoursesRepository
+    implements UpsertRepository<Course>, SnapshotRepository<Course> {
   static const _key = 'formacion_cursos';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
 
   @override
-  Future<void> upsert(List<Curso> items) async {
+  Future<void> upsert(List<Course> items) async {
     if (items.isEmpty) return;
     final raw = (await _storage).getString(_key);
-    final existing = raw == null ? <Curso>[] : _decodeList(raw, Curso.fromJson);
+    final existing = raw == null
+        ? <Course>[]
+        : _decodeList(raw, Course.fromJson);
     final merged = {
       for (final item in [...existing, ...items]) item.id: item,
     };
-    await replaceCursos(merged.values.toList());
+    await replaceCourses(merged.values.toList());
   }
 
   @override
-  Future<ResultadoUpsert> sincronizarFotoVigenteConResultado(
-    List<Curso> items,
-  ) async {
+  Future<UpsertResult> syncSnapshotWithResult(List<Course> items) async {
     if (items.isEmpty || items.any((item) => item.id.trim().isEmpty)) {
       throw const FormatException(
         'La foto de Cursos está vacía o tiene claves inválidas.',
       );
     }
     final raw = (await _storage).getString(_key);
-    final anteriores = raw == null
-        ? <Curso>[]
-        : _decodeList(raw, Curso.fromJson);
-    final actuales = {for (final item in anteriores) item.id: item};
-    final presentes = {
-      for (final item in items) item.id: item.copyWith(activo: true),
+    final previous = raw == null
+        ? <Course>[]
+        : _decodeList(raw, Course.fromJson);
+    final current = {for (final item in previous) item.id: item};
+    final present = {
+      for (final item in items) item.id: item.copyWith(active: true),
     };
-    final cambios = [
-      ...presentes.values,
-      for (final item in anteriores)
-        if (item.activo && !presentes.containsKey(item.id))
-          item.copyWith(activo: false),
+    final changes = [
+      ...present.values,
+      for (final item in previous)
+        if (item.isActive && !present.containsKey(item.id))
+          item.copyWith(active: false),
     ];
-    final insertados = presentes.keys
-        .where((key) => !actuales.containsKey(key))
+    final inserted = present.keys
+        .where((key) => !current.containsKey(key))
         .length;
-    final merged = {...actuales, for (final item in cambios) item.id: item};
-    await replaceCursos(merged.values.toList());
-    return ResultadoUpsert(
-      registrosProcesados: items.length,
-      insertados: insertados,
-      actualizados: cambios.length - insertados,
+    final merged = {...current, for (final item in changes) item.id: item};
+    await replaceCourses(merged.values.toList());
+    return UpsertResult(
+      processedRecords: items.length,
+      inserted: inserted,
+      updated: changes.length - inserted,
     );
   }
 
   @override
-  Future<List<Curso>> _leerCursos() async {
+  Future<List<Course>> _readCourses() async {
     final raw = (await _storage).getString(_key);
-    return raw == null ? super._leerCursos() : _decodeList(raw, Curso.fromJson);
+    return raw == null
+        ? super._readCourses()
+        : _decodeList(raw, Course.fromJson);
   }
 
   @override
-  Future<void> replaceCursos(List<Curso> cursos) async {
+  Future<void> replaceCourses(List<Course> courses) async {
     await (await _storage).setString(
       _key,
-      jsonEncode(cursos.map((curso) => curso.toJson()).toList()),
+      jsonEncode(courses.map((course) => course.toJson()).toList()),
     );
   }
 
@@ -264,62 +265,62 @@ class LocalCursosRepository extends MockCursosRepository
   }
 }
 
-class LocalCargaDeHorasCRMRepository extends MockCargaDeHorasCRMRepository
-    implements UpsertRepository<CargaDeHorasCRM> {
+class LocalCrmTimeEntriesRepository extends MockCrmTimeEntriesRepository
+    implements UpsertRepository<CrmTimeEntry> {
   static const _key = 'formacion_carga_de_horas_crm';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
 
   @override
-  Future<void> upsert(List<CargaDeHorasCRM> items) async {
+  Future<void> upsert(List<CrmTimeEntry> items) async {
     if (items.isEmpty) return;
     final raw = (await _storage).getString(_key);
     final existing = raw == null
-        ? <CargaDeHorasCRM>[]
-        : _decodeList(raw, CargaDeHorasCRM.fromJson);
+        ? <CrmTimeEntry>[]
+        : _decodeList(raw, CrmTimeEntry.fromJson);
     final merged = {
       for (final item in [...existing, ...items]) item.id: item,
     };
-    await replaceCargasDeHoras(merged.values.toList());
+    await replaceTimeEntries(merged.values.toList());
   }
 
   @override
-  Future<List<CargaDeHorasCRM>> _leerCargaDeHorasCRM() async {
+  Future<List<CrmTimeEntry>> _readCrmTimeEntry() async {
     final raw = (await _storage).getString(_key);
-    if (raw == null) return super._leerCargaDeHorasCRM();
+    if (raw == null) return super._readCrmTimeEntry();
 
-    final cargas = _decodeList(raw, CargaDeHorasCRM.fromJson);
-    if (cargas.isEmpty ||
-        cargas.every((carga) => carga.cursoNombre.isNotEmpty)) {
-      return cargas;
+    final timeEntries = _decodeList(raw, CrmTimeEntry.fromJson);
+    if (timeEntries.isEmpty ||
+        timeEntries.every((timeEntry) => timeEntry.courseName.isNotEmpty)) {
+      return timeEntries;
     }
 
     try {
-      final registros = jsonDecode(raw) as List<dynamic>;
-      final cursos = await LocalCursosRepository().getCursos();
-      final cursosPorId = {for (final curso in cursos) curso.id: curso};
-      final cargasMigradas = registros.map((registro) {
-        final data = Map<String, dynamic>.from(registro as Map);
+      final records = jsonDecode(raw) as List<dynamic>;
+      final courses = await LocalCoursesRepository().getCourses();
+      final coursesById = {for (final course in courses) course.id: course};
+      final migratedTimeEntries = records.map((record) {
+        final data = Map<String, dynamic>.from(record as Map);
         if ((data['cursoNombre']?.toString().trim() ?? '').isEmpty) {
-          final cursoId = data['cursoId']?.toString();
-          data['cursoNombre'] = cursosPorId[cursoId]?.nombre ?? '';
+          final courseId = data['cursoId']?.toString();
+          data['cursoNombre'] = coursesById[courseId]?.name ?? '';
         }
-        return CargaDeHorasCRM.fromJson(data);
+        return CrmTimeEntry.fromJson(data);
       }).toList();
-      await replaceCargasDeHoras(cargasMigradas);
-      return cargasMigradas;
+      await replaceTimeEntries(migratedTimeEntries);
+      return migratedTimeEntries;
     } on FormatException {
-      return cargas;
+      return timeEntries;
     } on TypeError {
-      return cargas;
+      return timeEntries;
     }
   }
 
   @override
-  Future<void> replaceCargasDeHoras(List<CargaDeHorasCRM> cargas) async {
+  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {
     await (await _storage).setString(
       _key,
-      jsonEncode(cargas.map((carga) => carga.toJson()).toList()),
+      jsonEncode(timeEntries.map((timeEntry) => timeEntry.toJson()).toList()),
     );
   }
 
@@ -329,92 +330,89 @@ class LocalCargaDeHorasCRMRepository extends MockCargaDeHorasCRMRepository
   }
 }
 
-class MockCertificacionesMoodleRepository
-    implements CertificacionesMoodleRepository {
+class MockLmsCertificationsRepository implements LmsCertificationsRepository {
   @override
-  Future<List<CertificacionMoodle>> getCertificaciones({
-    String? legajo,
-    String? cursoId,
+  Future<List<LmsCertification>> getCertifications({
+    String? employeeId,
+    String? courseId,
   }) async {
-    return (await _leerCertificacionesMoodle())
+    return (await _readLmsCertifications())
         .where(
           (item) =>
-              (legajo == null || item.legajo == legajo) &&
-              (cursoId == null || item.cursoId == cursoId),
+              (employeeId == null || item.employeeId == employeeId) &&
+              (courseId == null || item.courseId == courseId),
         )
         .toList();
   }
 
-  Future<List<CertificacionMoodle>> _leerCertificacionesMoodle() async => [];
+  Future<List<LmsCertification>> _readLmsCertifications() async => [];
 
   @override
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
+  Future<void> replaceCertifications(
+    List<LmsCertification> certifications,
   ) async {}
 }
 
-class LocalCertificacionesMoodleRepository
-    extends MockCertificacionesMoodleRepository
-    implements UpsertRepository<CertificacionMoodle> {
+class LocalLmsCertificationsRepository extends MockLmsCertificationsRepository
+    implements UpsertRepository<LmsCertification> {
   static const _key = 'formacion_certificaciones_moodle';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
 
   @override
-  Future<void> upsert(List<CertificacionMoodle> items) async {
+  Future<void> upsert(List<LmsCertification> items) async {
     if (items.isEmpty) return;
     final raw = (await _storage).getString(_key);
     final existing = raw == null
-        ? <CertificacionMoodle>[]
-        : _decodeList(raw, CertificacionMoodle.fromJson);
+        ? <LmsCertification>[]
+        : _decodeList(raw, LmsCertification.fromJson);
     // Corrections replace the explicit employee/course state; absent pairs remain.
-    final registros = [...existing, ...items];
-    final idsPorNombre = idsCursosCertificaciones(registros);
+    final records = [...existing, ...items];
+    final idsByName = certificationCourseIds(records);
     final rows = {
-      for (final item in registros)
-        claveCertificacionMoodle(item, idsPorNombre): item,
+      for (final item in records) lmsCertificationKey(item, idsByName): item,
     };
-    await replaceCertificaciones(rows.values.toList());
+    await replaceCertifications(rows.values.toList());
   }
 
   @override
-  Future<List<CertificacionMoodle>> _leerCertificacionesMoodle() async {
+  Future<List<LmsCertification>> _readLmsCertifications() async {
     final raw = (await _storage).getString(_key);
     return raw == null
-        ? super._leerCertificacionesMoodle()
-        : _decodeList(raw, CertificacionMoodle.fromJson);
+        ? super._readLmsCertifications()
+        : _decodeList(raw, LmsCertification.fromJson);
   }
 
   @override
-  Future<void> replaceCertificaciones(
-    List<CertificacionMoodle> certificaciones,
+  Future<void> replaceCertifications(
+    List<LmsCertification> certifications,
   ) async {
     await (await _storage).setString(
       _key,
-      jsonEncode(certificaciones.map((item) => item.toJson()).toList()),
+      jsonEncode(certifications.map((item) => item.toJson()).toList()),
     );
   }
 }
 
 /// Sin versiones guardadas rige el plan por defecto de cada seniority.
-class LocalPlanFormacionRepository implements PlanFormacionRepository {
+class LocalTrainingPlanRepository implements TrainingPlanRepository {
   static const _key = 'formacion_plan_formacion';
 
   Future<SharedPreferences> get _storage => SharedPreferences.getInstance();
 
   @override
-  Future<PlanesFormacion> getPlanes() async {
+  Future<TrainingPlanHistory> getPlans() async {
     final raw = (await _storage).getString(_key);
-    if (raw == null) return const PlanesFormacion.sinVersiones();
-    return PlanesFormacion(_decodeList(raw, VersionPlanFormacion.fromJson));
+    if (raw == null) return const TrainingPlanHistory.empty();
+    return TrainingPlanHistory(_decodeList(raw, TrainingPlanVersion.fromJson));
   }
 
   @override
-  Future<void> guardarVersion(VersionPlanFormacion version) async {
-    final planes = (await getPlanes()).conVersion(version);
+  Future<void> saveVersion(TrainingPlanVersion version) async {
+    final plans = (await getPlans()).withVersion(version);
     await (await _storage).setString(
       _key,
-      jsonEncode(planes.versiones.map((item) => item.toJson()).toList()),
+      jsonEncode(plans.versions.map((item) => item.toJson()).toList()),
     );
   }
 }

@@ -22,23 +22,23 @@ import 'package:app_finnegans/presentation/widgets/shared/empty_data_state.dart'
 import 'package:app_finnegans/presentation/widgets/areas/area_kpi_section.dart';
 import 'package:app_finnegans/presentation/widgets/shared/kpi_card.dart';
 
-class AreaDetalleScreen extends ConsumerWidget {
-  final String nombreArea;
+class AreaDetailScreen extends ConsumerWidget {
+  final String areaName;
 
-  const AreaDetalleScreen({super.key, required this.nombreArea});
+  const AreaDetailScreen({super.key, required this.areaName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detalleAsync = ref.watch(detalleAreaProvider(nombreArea));
+    final detailAsync = ref.watch(areaDetailProvider(areaName));
     // Mantener la selección durante cargas o períodos sin integrantes.
-    final filtroMiembros = ref.watch(filtroEstadoMiembroAreaProvider);
-    final hayDatosAsync = ref.watch(hasTeamPeriodDataProvider);
-    final alcance = ref.watch(alcancePeriodoProvider);
-    final mes = ref.watch(filtroMesPeriodoProvider);
-    final anio = ref.watch(filtroAnioPeriodoProvider);
-    final periodControls = PeriodoFilterPanel(
-      incluidos: 'todas las áreas',
-      accion: BotonImprimirReporte(reporte: reporteAreaProvider(nombreArea)),
+    final membersFilter = ref.watch(areaMemberStatusFilterProvider);
+    final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
+    final scope = ref.watch(periodScopeProvider);
+    final month = ref.watch(periodMonthFilterProvider);
+    final year = ref.watch(periodYearFilterProvider);
+    final periodControls = PeriodFilterPanel(
+      included: 'todas las áreas',
+      action: PrintReportButton(report: areaReportProvider(areaName)),
     );
     final requestedOrigin = GoRouterState.of(
       context,
@@ -54,7 +54,7 @@ class AreaDetalleScreen extends ConsumerWidget {
         children: [
           AppTopBar(title: 'Detalle de área', onBack: () => context.pop()),
           Expanded(
-            child: detalleAsync.when(
+            child: detailAsync.when(
               loading: () => Center(
                 child: CircularProgressIndicator(
                   color: context.colorScheme.primary,
@@ -64,35 +64,35 @@ class AreaDetalleScreen extends ConsumerWidget {
                 title: 'No pudimos cargar el área',
                 error: error,
               ),
-              data: (detalle) => FadeIn(
+              data: (detail) => FadeIn(
                 child: (() {
-                  final periodo = etiquetaPeriodo(alcance, mes, anio);
-                  final hayDatos = hayDatosAsync.value ?? true;
+                  final period = periodLabel(scope, month, year);
+                  final hasData = hasDataAsync.value ?? true;
 
                   return ListView(
-                    padding: paddingPantalla,
+                    padding: screenPadding,
                     children: [
                       periodControls,
                       const SizedBox(height: 22),
-                      if (!hayDatos)
-                        EmptyDataState.periodoSinDatos(
+                      if (!hasData)
+                        EmptyDataState.periodWithoutData(
                           icon: Icons.apartment_outlined,
-                          periodo: periodo,
+                          period: period,
                         )
-                      else if (detalle == null)
+                      else if (detail == null)
                         EmptyDataState(
                           icon: Icons.apartment_outlined,
                           title:
-                              'El área $nombreArea no tiene colaboradores elegibles en $periodo.',
+                              'El área $areaName no tiene colaboradores elegibles en $period.',
                           message:
                               'Probá otro período o verificá la nómina del área.',
                         )
                       else
                         _AreaContent(
-                          detalle: detalle,
-                          filtro: filtroMiembros,
-                          periodo: etiquetaPeriodoDetallada(alcance, mes, anio),
-                          esAnual: alcance == AlcancePeriodo.anual,
+                          detail: detail,
+                          filter: membersFilter,
+                          period: detailedPeriodLabel(scope, month, year),
+                          isAnnual: scope == PeriodScope.annual,
                           origin: origin,
                         ),
                     ],
@@ -108,118 +108,108 @@ class AreaDetalleScreen extends ConsumerWidget {
 }
 
 class _AreaContent extends ConsumerWidget {
-  final DetalleAreaViewModel detalle;
-  final Set<String> filtro;
-  final String periodo;
-  final bool esAnual;
+  final AreaDetailViewModel detail;
+  final Set<String> filter;
+  final String period;
+  final bool isAnnual;
   final String origin;
 
   const _AreaContent({
-    required this.detalle,
-    required this.filtro,
-    required this.periodo,
-    required this.esAnual,
+    required this.detail,
+    required this.filter,
+    required this.period,
+    required this.isAnnual,
     required this.origin,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final area = detalle.area;
-    final anio = ref.watch(filtroAnioPeriodoProvider);
-    final mes = ref.watch(filtroMesPeriodoProvider);
+    final area = detail.area;
+    final year = ref.watch(periodYearFilterProvider);
+    final month = ref.watch(periodMonthFilterProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AreaDetalleHeader(area: area, periodo: periodo),
+        AreaDetailHeader(area: area, period: period),
         const SizedBox(height: 22),
         KpiCardRow(
           cards: [
             DashboardKpiCard(
               title: 'INTEGRANTES',
-              value: '${area.cantidadIntegrantes}',
+              value: '${area.memberCount}',
               suffix: 'nómina del área',
-              progress: area.cantidadIntegrantes == 0
+              progress: area.memberCount == 0
                   ? 0
-                  : area.integrantesEnObjetivo / area.cantidadIntegrantes,
+                  : area.membersOnTarget / area.memberCount,
               progressLabel:
-                  '${area.integrantesEnObjetivo} de ${area.cantidadIntegrantes} en objetivo',
+                  '${area.membersOnTarget} de ${area.memberCount} en objetivo',
               footer: '',
               icon: Icons.people_outline,
               color: context.colorScheme.primary,
-              ayuda: ayudaIntegrantes('del área'),
+              help: membersHelp('del área'),
             ),
-            horasValidasKpiCard(
+            creditedHoursKpiCard(
               context,
-              esAnual: esAnual,
-              anio: anio,
-              mes: mes,
-              horas: area.horasRealizadas,
-              objetivo: area.horasObjetivo,
+              isAnnual: isAnnual,
+              year: year,
+              month: month,
+              hours: area.completedHours,
+              target: area.targetHours,
             ),
             DashboardKpiCard(
               title: 'OBJETIVO DEL PERÍODO',
-              value: _horas(area.horasObjetivo),
+              value: _hours(area.targetHours),
               suffix: 'según seniority',
               progress: 1,
-              progressLabel: esAnual
+              progressLabel: isAnnual
                   ? 'Suma de los objetivos del año'
                   : 'Objetivo del mes',
               footer: '',
               icon: Icons.flag_outlined,
-              color: context.colores.acentoVioleta,
-              ayuda: ayudaObjetivo('el área'),
+              color: context.colors.violetAccent,
+              help: targetHelp('el área'),
             ),
-            cumplimientoKpiCard(
+            complianceKpiCard(
               context,
-              esAnual: esAnual,
-              anio: anio,
-              mes: mes,
-              porcentaje: area.porcentajeCumplimiento,
-              variacion: ref
+              isAnnual: isAnnual,
+              year: year,
+              month: month,
+              percentage: area.compliancePercentage,
+              variation: ref
                   .watch(
-                    variacionCumplimientoProvider((
-                      area: area.nombre,
-                      equipo: null,
-                    )),
+                    complianceVariationProvider((area: area.name, team: null)),
                   )
                   .value,
-              color: area.semaforo.colores(context).texto,
+              color: area.level.colors(context).text,
             ),
             if (ref
                     .watch(
-                      proyeccionAnualProvider((
-                        area: area.nombre,
-                        equipo: null,
-                      )),
+                      annualProjectionProvider((area: area.name, team: null)),
                     )
                     .value
-                case final proyeccion?)
-              proyeccionKpiCard(context, proyeccion),
+                case final projection?)
+              projectionKpiCard(context, projection),
           ],
         ),
         const SizedBox(height: 16),
-        AreaDetalleResumen(area: area, esAnual: esAnual),
-        if (detalle.miembros.isNotEmpty) ...[
+        AreaDetailSummary(area: area, isAnnual: isAnnual),
+        if (detail.members.isNotEmpty) ...[
           const SizedBox(height: 16),
-          ComparacionMoodleCrmCards(cumplimientos: detalle.miembros),
+          MoodleCrmComparisonCards(complianceList: detail.members),
         ],
         const SizedBox(height: 24),
-        AreaEquiposGrid(
-          equipos: detalle.equipos,
-          esAnual: esAnual,
-          origen: origin,
-        ),
+        AreaTeamsGrid(teams: detail.teams, isAnnual: isAnnual, origin: origin),
         const SizedBox(height: 24),
-        AreaMiembrosTable(
-          miembros: detalle.miembros,
-          filtro: filtro,
-          onFiltro: (value) =>
-              ref.read(filtroEstadoMiembroAreaProvider.notifier).state = value,
+        AreaMembersTable(
+          members: detail.members,
+          filter: filter,
+          onFilter: (value) =>
+              ref.read(areaMemberStatusFilterProvider.notifier).state = value,
         ),
       ],
     );
   }
 
-  String _horas(double value) => '${value.toStringAsFixed(1)} h';
+  String _hours(double value) => '${value.toStringAsFixed(1)} h';
 }

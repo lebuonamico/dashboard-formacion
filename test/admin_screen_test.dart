@@ -19,133 +19,127 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final _alta = DateTime.utc(2026, 1, 15, 10);
-final _sello = DateTime.utc(2026, 10, 3, 14, 30);
+final _creation = DateTime.utc(2026, 1, 15, 10);
+final _stamp = DateTime.utc(2026, 10, 3, 14, 30);
 
-class _UsuariosFake implements UsuariosAutorizadosRepository {
-  List<UsuarioAutorizado> usuarios;
-  final creados = <UsuarioAutorizado>[];
-  final guardados = <UsuarioAutorizado>[];
-  Object? errorAlGuardar;
+class _FakeUsers implements AuthorizedUsersRepository {
+  List<AuthorizedUser> users;
+  final created = <AuthorizedUser>[];
+  final saved = <AuthorizedUser>[];
+  Object? saveError;
 
-  _UsuariosFake(this.usuarios);
-
-  @override
-  Future<List<UsuarioAutorizado>> getUsuarios() async => usuarios;
+  _FakeUsers(this.users);
 
   @override
-  Future<void> crear(UsuarioAutorizado usuario) async {
-    creados.add(usuario);
-    usuarios = [...usuarios, usuario];
+  Future<List<AuthorizedUser>> getUsers() async => users;
+
+  @override
+  Future<void> create(AuthorizedUser user) async {
+    created.add(user);
+    users = [...users, user];
   }
 
   @override
-  Future<void> guardar(UsuarioAutorizado usuario) async {
-    final error = errorAlGuardar;
+  Future<void> save(AuthorizedUser user) async {
+    final error = saveError;
     if (error != null) throw error;
-    guardados.add(usuario);
-    usuarios = [
-      for (final actual in usuarios)
-        if (actual.email == usuario.email) usuario else actual,
+    saved.add(user);
+    users = [
+      for (final current in users)
+        if (current.email == user.email) user else current,
     ];
   }
 }
 
-UsuarioAutorizado _usuario({
+AuthorizedUser _user({
   required String email,
-  String rol = 'lider',
-  DateTime? ffBloqueo,
-  DateTime? ffEliminar,
-}) => UsuarioAutorizado(
+  String role = 'teamLead',
+  DateTime? blockedAt,
+  DateTime? deletedAt,
+}) => AuthorizedUser(
   email: email,
-  rol: rol,
-  activo: ffBloqueo == null && ffEliminar == null,
-  ffAlta: _alta,
-  ffBloqueo: ffBloqueo,
-  ffEliminar: ffEliminar,
+  role: role,
+  isActive: blockedAt == null && deletedAt == null,
+  createdAt: _creation,
+  blockedAt: blockedAt,
+  deletedAt: deletedAt,
 );
 
 /// Estructura en memoria que registra cada llamada como texto.
-class _EstructuraFake implements EstructuraRepository {
-  EstructuraOrganizacional estructura;
-  final llamadas = <String>[];
+class _FakeStructure implements OrgStructureRepository {
+  OrgStructure structure;
+  final calls = <String>[];
 
-  _EstructuraFake(this.estructura);
-
-  @override
-  Future<EstructuraOrganizacional> getEstructura() async => estructura;
+  _FakeStructure(this.structure);
 
   @override
-  Future<void> registrarFaltantes(FaltantesNomina faltantes) async =>
-      llamadas.add('faltantes');
+  Future<OrgStructure> getStructure() async => structure;
 
   @override
-  Future<void> asignarLideresArea(String areaId, Set<String> emails) async =>
-      llamadas.add(
-        'lideresArea $areaId ${(emails.toList()..sort()).join(',')}',
-      );
+  Future<void> registerMissing(PayrollGaps missing) async =>
+      calls.add('faltantes');
 
   @override
-  Future<void> asignarLideresEquipo(
-    String equipoId,
-    Set<String> emails,
-  ) async => llamadas.add(
-    'lideresEquipo $equipoId ${(emails.toList()..sort()).join(',')}',
-  );
+  Future<void> assignLeadersArea(String areaId, Set<String> emails) async =>
+      calls.add('lideresArea $areaId ${(emails.toList()..sort()).join(',')}');
+
+  @override
+  Future<void> assignTeamLeaders(String teamId, Set<String> emails) async =>
+      calls.add('lideresEquipo $teamId ${(emails.toList()..sort()).join(',')}');
 }
 
 /// PRODUCTOS TECNOLÓGICOS con PLATAFORMA CORE y un equipo que la nómina ya
 /// no trae (INFRA), y SERVICIOS sin equipos.
-EstructuraOrganizacional _estructuraPanel() => EstructuraOrganizacional(
+OrgStructure _structurePanel() => OrgStructure(
   areas: [
     Area(
       id: '1',
-      nombre: 'PRODUCTOS TECNOLÓGICOS',
-      lideres: {'area@finnegans.com'},
+      name: 'PRODUCTOS TECNOLÓGICOS',
+      leaders: {'area@finnegans.com'},
     ),
-    Area(id: '2', nombre: 'SERVICIOS'),
+    Area(id: '2', name: 'SERVICIOS'),
   ],
-  equipos: [
-    Equipo(
+  teams: [
+    Team(
       id: '10',
       areaId: '1',
-      nombre: 'PLATAFORMA CORE',
-      lideres: {'lider@finnegans.com'},
+      name: 'PLATAFORMA CORE',
+      leaders: {'lider@finnegans.com'},
     ),
-    Equipo(id: '11', areaId: '1', nombre: 'INFRA'),
+    Team(id: '11', areaId: '1', name: 'INFRA'),
   ],
 );
 
-Empleado _empleado(
-  String legajo,
+Employee _employee(
+  String employeeId,
   String area,
-  String equipo, {
-  String? mail,
-  bool activo = true,
-}) => Empleado(
-  legajo: legajo,
-  nombre: 'Persona',
-  apellido: legajo,
+  String team, {
+  String? email,
+  bool active = true,
+}) => Employee(
+  employeeId: employeeId,
+  firstName: 'Persona',
+  lastName: employeeId,
   seniority: Seniority.junior1,
   area: area,
-  mail: mail ?? 'persona$legajo@finnegans.com',
-  equipo: equipo,
-  activo: activo,
+  email: email ?? 'persona$employeeId@finnegans.com',
+  team: team,
+  isActive: active,
 );
 
-class _AuthGestor extends AuthController {
-  _AuthGestor() : super(null);
+class _ManagerAuth extends AuthController {
+  _ManagerAuth() : super(null);
 
   @override
-  bool get esGestor => true;
+  bool get canManage => true;
 }
 
-Future<ProviderContainer> _mostrarPanel(
+Future<ProviderContainer> _showPanel(
   WidgetTester tester, {
-  required AccesoAdmin acceso,
-  _UsuariosFake? repositorio,
-  _EstructuraFake? estructura,
-  List<Empleado> empleados = const [],
+  required AccessAdmin access,
+  _FakeUsers? repository,
+  _FakeStructure? structure,
+  List<Employee> employees = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
@@ -156,17 +150,17 @@ Future<ProviderContainer> _mostrarPanel(
   final container = ProviderContainer(
     overrides: [
       authControllerProvider.overrideWith((ref) => AuthController(null)),
-      accesoAdminProvider.overrideWithValue(acceso),
-      usuariosAutorizadosRepositoryProvider.overrideWithValue(repositorio),
-      if (estructura != null) ...[
-        sesionDatosProvider.overrideWithValue((
-          habilitada: true,
+      accessAdminProvider.overrideWithValue(access),
+      authorizedUsersRepositoryProvider.overrideWithValue(repository),
+      if (structure != null) ...[
+        sessionDataProvider.overrideWithValue((
+          enabled: true,
           email: 'admin@finnegans.com',
-          rol: 'admin',
+          role: 'admin',
         )),
-        estructuraRepositoryProvider.overrideWithValue(estructura),
+        orgStructureRepositoryProvider.overrideWithValue(structure),
         // Los conteos y Pertenece a salen de la nómina.
-        empleadosProvider.overrideWith((ref) async => empleados),
+        employeesProvider.overrideWith((ref) async => employees),
       ],
     ],
     retry: (_, _) => null,
@@ -202,14 +196,14 @@ Future<ProviderContainer> _mostrarPanel(
   return container;
 }
 
-OutlinedButton _boton(WidgetTester tester, String clave) =>
-    tester.widget<OutlinedButton>(find.byKey(Key(clave)));
+OutlinedButton _button(WidgetTester tester, String key) =>
+    tester.widget<OutlinedButton>(find.byKey(Key(key)));
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('Un no-admin ve el aviso y ninguna acción', (tester) async {
-    await _mostrarPanel(tester, acceso: AccesoAdmin.denegado);
+    await _showPanel(tester, access: AccessAdmin.denied);
 
     expect(find.text('No tenés permiso para ver esta sección'), findsOneWidget);
     expect(find.byKey(const Key('admin_crear')), findsNothing);
@@ -219,7 +213,7 @@ void main() {
   testWidgets('En modo local avisa que el panel no está disponible', (
     tester,
   ) async {
-    await _mostrarPanel(tester, acceso: AccesoAdmin.sinSupabase);
+    await _showPanel(tester, access: AccessAdmin.noSupabase);
 
     expect(find.text('El panel no está disponible'), findsOneWidget);
     expect(find.byKey(const Key('admin_crear')), findsNothing);
@@ -228,20 +222,20 @@ void main() {
   testWidgets('Las acciones se habilitan al seleccionar una fila', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([
-      _usuario(email: 'ana@finnegans.com', rol: 'academia'),
-      _usuario(email: 'beto@finnegans.com'),
+    final repository = _FakeUsers([
+      _user(email: 'ana@finnegans.com', role: 'academy'),
+      _user(email: 'beto@finnegans.com'),
     ]);
-    await _mostrarPanel(
+    await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
 
-    expect(_boton(tester, 'admin_crear').onPressed, isNotNull);
-    expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNull);
-    expect(_boton(tester, 'admin_bloquear').onPressed, isNull);
-    expect(_boton(tester, 'admin_eliminar').onPressed, isNull);
+    expect(_button(tester, 'admin_crear').onPressed, isNotNull);
+    expect(_button(tester, 'admin_cambiar_rol').onPressed, isNull);
+    expect(_button(tester, 'admin_bloquear').onPressed, isNull);
+    expect(_button(tester, 'admin_eliminar').onPressed, isNull);
     expect(
       find.text(
         'Seleccioná un usuario de la lista para habilitar las acciones.',
@@ -253,21 +247,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Seleccionado: ana@finnegans.com'), findsOneWidget);
-    expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNotNull);
-    expect(_boton(tester, 'admin_bloquear').onPressed, isNotNull);
-    expect(_boton(tester, 'admin_eliminar').onPressed, isNotNull);
+    expect(_button(tester, 'admin_cambiar_rol').onPressed, isNotNull);
+    expect(_button(tester, 'admin_bloquear').onPressed, isNotNull);
+    expect(_button(tester, 'admin_eliminar').onPressed, isNotNull);
 
     await tester.tap(find.text('ana@finnegans.com'));
     await tester.pumpAndSettle();
 
-    expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNull);
+    expect(_button(tester, 'admin_cambiar_rol').onPressed, isNull);
   });
 
   group('Protección anti-autobloqueo', () {
-    Future<void> montarBarra(
+    Future<void> mountBar(
       WidgetTester tester, {
-      required UsuarioAutorizado seleccionado,
-      required String? emailPropio,
+      required AuthorizedUser selected,
+      required String? ownEmail,
     }) async {
       tester.view.physicalSize = const Size(1800, 1800);
       tester.view.devicePixelRatio = 1;
@@ -278,16 +272,16 @@ void main() {
           theme: AppTheme.light(),
           home: Scaffold(
             body: AdminActionsBar(
-              seleccionado: seleccionado,
-              fueraDelFiltro: false,
-              accionEnCurso: null,
-              emailPropio: emailPropio,
-              onCrear: () {},
-              onCambiarRol: () {},
-              onBloquear: () {},
-              onDesbloquear: () {},
-              onEliminar: () {},
-              onRestaurar: () {},
+              selected: selected,
+              outsideFilter: false,
+              actionInProgress: null,
+              ownEmail: ownEmail,
+              onCreate: () {},
+              onRoleChange: () {},
+              onBlock: () {},
+              onUnblock: () {},
+              onDelete: () {},
+              onRestore: () {},
             ),
           ),
           builder: (context, child) => MediaQuery(
@@ -302,16 +296,16 @@ void main() {
     }
 
     testWidgets('Deshabilita todo sobre la propia fila', (tester) async {
-      await montarBarra(
+      await mountBar(
         tester,
-        seleccionado: _usuario(email: 'yo@finnegans.com', rol: 'admin'),
-        emailPropio: 'YO@finnegans.com',
+        selected: _user(email: 'yo@finnegans.com', role: 'admin'),
+        ownEmail: 'YO@finnegans.com',
       );
 
-      expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNull);
-      expect(_boton(tester, 'admin_bloquear').onPressed, isNull);
-      expect(_boton(tester, 'admin_eliminar').onPressed, isNull);
-      expect(_boton(tester, 'admin_crear').onPressed, isNotNull);
+      expect(_button(tester, 'admin_cambiar_rol').onPressed, isNull);
+      expect(_button(tester, 'admin_bloquear').onPressed, isNull);
+      expect(_button(tester, 'admin_eliminar').onPressed, isNull);
+      expect(_button(tester, 'admin_crear').onPressed, isNotNull);
       expect(
         find.text('Es tu propio usuario: no podés modificarlo desde acá.'),
         findsOneWidget,
@@ -319,40 +313,40 @@ void main() {
     });
 
     testWidgets('Habilita todo sobre la fila de otro', (tester) async {
-      await montarBarra(
+      await mountBar(
         tester,
-        seleccionado: _usuario(email: 'otro@finnegans.com'),
-        emailPropio: 'yo@finnegans.com',
+        selected: _user(email: 'otro@finnegans.com'),
+        ownEmail: 'yo@finnegans.com',
       );
 
-      expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNotNull);
-      expect(_boton(tester, 'admin_bloquear').onPressed, isNotNull);
-      expect(_boton(tester, 'admin_eliminar').onPressed, isNotNull);
+      expect(_button(tester, 'admin_cambiar_rol').onPressed, isNotNull);
+      expect(_button(tester, 'admin_bloquear').onPressed, isNotNull);
+      expect(_button(tester, 'admin_eliminar').onPressed, isNotNull);
     });
 
     testWidgets('A un eliminado le ofrece restaurar, no bloquear', (
       tester,
     ) async {
-      await montarBarra(
+      await mountBar(
         tester,
-        seleccionado: _usuario(email: 'otro@finnegans.com', ffEliminar: _sello),
-        emailPropio: 'yo@finnegans.com',
+        selected: _user(email: 'otro@finnegans.com', deletedAt: _stamp),
+        ownEmail: 'yo@finnegans.com',
       );
 
       expect(find.byKey(const Key('admin_restaurar')), findsOneWidget);
       expect(find.byKey(const Key('admin_eliminar')), findsNothing);
-      expect(_boton(tester, 'admin_bloquear').onPressed, isNull);
+      expect(_button(tester, 'admin_bloquear').onPressed, isNull);
     });
   });
 
   testWidgets('Bloquear sella la fecha y refresca la tabla', (tester) async {
-    final repositorio = _UsuariosFake([_usuario(email: 'ana@finnegans.com')]);
-    final container = await _mostrarPanel(
+    final repository = _FakeUsers([_user(email: 'ana@finnegans.com')]);
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
-    container.read(emailSeleccionadoAdminProvider.notifier).state =
+    container.read(selectedAdminEmailProvider.notifier).state =
         'ana@finnegans.com';
     await tester.pumpAndSettle();
 
@@ -362,26 +356,26 @@ void main() {
     await tester.tap(find.byKey(const Key('admin_confirmar')));
     await tester.pumpAndSettle();
 
-    final guardado = repositorio.guardados.single;
-    expect(guardado.email, 'ana@finnegans.com');
-    expect(guardado.ffBloqueo, isNotNull);
-    expect(guardado.activo, isFalse);
-    expect(guardado.estado, EstadoUsuario.bloqueado);
+    final saved = repository.saved.single;
+    expect(saved.email, 'ana@finnegans.com');
+    expect(saved.blockedAt, isNotNull);
+    expect(saved.isActive, isFalse);
+    expect(saved.status, UserStatus.blocked);
     expect(find.byKey(const Key('admin_desbloquear')), findsOneWidget);
     expect(find.byKey(const Key('admin_bloquear')), findsNothing);
   });
 
   testWidgets('Un error del repositorio se muestra y no rompe', (tester) async {
-    final repositorio = _UsuariosFake([_usuario(email: 'ana@finnegans.com')])
-      ..errorAlGuardar = const FormatException(
+    final repository = _FakeUsers([_user(email: 'ana@finnegans.com')])
+      ..saveError = const FormatException(
         'El usuario ya no existe o no tenés permiso para modificarlo.',
       );
-    final container = await _mostrarPanel(
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
-    container.read(emailSeleccionadoAdminProvider.notifier).state =
+    container.read(selectedAdminEmailProvider.notifier).state =
         'ana@finnegans.com';
     await tester.pumpAndSettle();
 
@@ -394,18 +388,18 @@ void main() {
       find.text('El usuario ya no existe o no tenés permiso para modificarlo.'),
       findsOneWidget,
     );
-    expect(repositorio.guardados, isEmpty);
+    expect(repository.saved, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('El alta pasa el rol elegido y selecciona al nuevo', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([]);
-    final container = await _mostrarPanel(
+    final repository = _FakeUsers([]);
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
 
     await tester.tap(find.byKey(const Key('admin_crear')));
@@ -417,13 +411,13 @@ void main() {
     await tester.tap(find.byKey(const Key('admin_alta_confirmar')));
     await tester.pumpAndSettle();
 
-    final creado = repositorio.creados.single;
-    expect(creado.email, 'nuevo.usuario@finnegans.com');
-    expect(creado.rolConocido, RolUsuario.lider);
-    expect(creado.activo, isTrue);
-    expect(creado.ffAlta, isNotNull);
+    final created = repository.created.single;
+    expect(created.email, 'nuevo.usuario@finnegans.com');
+    expect(created.knownRole, UserRole.teamLead);
+    expect(created.isActive, isTrue);
+    expect(created.createdAt, isNotNull);
     expect(
-      container.read(emailSeleccionadoAdminProvider),
+      container.read(selectedAdminEmailProvider),
       'nuevo.usuario@finnegans.com',
     );
   });
@@ -431,11 +425,11 @@ void main() {
   testWidgets('Un email inválido no cierra el diálogo ni crea nada', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([]);
-    await _mostrarPanel(
+    final repository = _FakeUsers([]);
+    await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
 
     await tester.tap(find.byKey(const Key('admin_crear')));
@@ -448,38 +442,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('El email no tiene un formato válido.'), findsOneWidget);
-    expect(repositorio.creados, isEmpty);
+    expect(repository.created, isEmpty);
   });
 
   testWidgets('El filtro por estado usa la precedencia del modelo', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([
-      _usuario(email: 'activa@finnegans.com'),
-      _usuario(email: 'bloqueada@finnegans.com', ffBloqueo: _sello),
-      _usuario(
-        email: 'ambas@finnegans.com',
-        ffBloqueo: _sello,
-        ffEliminar: _sello,
-      ),
+    final repository = _FakeUsers([
+      _user(email: 'activa@finnegans.com'),
+      _user(email: 'bloqueada@finnegans.com', blockedAt: _stamp),
+      _user(email: 'ambas@finnegans.com', blockedAt: _stamp, deletedAt: _stamp),
     ]);
-    final container = await _mostrarPanel(
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
 
-    expect(container.read(filtroEstadoAdminProvider), isNull);
+    expect(container.read(adminStatusFilterProvider), isNull);
     expect(find.text('ambas@finnegans.com'), findsOneWidget);
 
-    container.read(filtroEstadoAdminProvider.notifier).state =
-        EstadoUsuario.bloqueado;
+    container.read(adminStatusFilterProvider.notifier).state =
+        UserStatus.blocked;
     await tester.pumpAndSettle();
     expect(find.text('bloqueada@finnegans.com'), findsOneWidget);
     expect(find.text('ambas@finnegans.com'), findsNothing);
 
-    container.read(filtroEstadoAdminProvider.notifier).state =
-        EstadoUsuario.eliminado;
+    container.read(adminStatusFilterProvider.notifier).state =
+        UserStatus.deleted;
     await tester.pumpAndSettle();
     expect(find.text('ambas@finnegans.com'), findsOneWidget);
     expect(find.text('bloqueada@finnegans.com'), findsNothing);
@@ -488,52 +478,52 @@ void main() {
   testWidgets('La selección sobrevive a quedar fuera del filtro', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([
-      _usuario(email: 'ana@finnegans.com'),
-      _usuario(email: 'beto@finnegans.com', ffBloqueo: _sello),
+    final repository = _FakeUsers([
+      _user(email: 'ana@finnegans.com'),
+      _user(email: 'beto@finnegans.com', blockedAt: _stamp),
     ]);
-    final container = await _mostrarPanel(
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
-    container.read(emailSeleccionadoAdminProvider.notifier).state =
+    container.read(selectedAdminEmailProvider.notifier).state =
         'ana@finnegans.com';
-    container.read(filtroEstadoAdminProvider.notifier).state =
-        EstadoUsuario.bloqueado;
+    container.read(adminStatusFilterProvider.notifier).state =
+        UserStatus.blocked;
     await tester.pumpAndSettle();
 
     expect(find.text('ana@finnegans.com'), findsNothing);
     expect(find.text('Seleccionado: ana@finnegans.com'), findsOneWidget);
     expect(find.text('(no aparece con los filtros actuales)'), findsOneWidget);
-    expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNotNull);
+    expect(_button(tester, 'admin_cambiar_rol').onPressed, isNotNull);
   });
 
   testWidgets('Una selección que ya no existe deshabilita las acciones', (
     tester,
   ) async {
-    final repositorio = _UsuariosFake([_usuario(email: 'ana@finnegans.com')]);
-    final container = await _mostrarPanel(
+    final repository = _FakeUsers([_user(email: 'ana@finnegans.com')]);
+    final container = await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
-    container.read(emailSeleccionadoAdminProvider.notifier).state =
+    container.read(selectedAdminEmailProvider.notifier).state =
         'fantasma@finnegans.com';
     await tester.pumpAndSettle();
 
-    expect(_boton(tester, 'admin_cambiar_rol').onPressed, isNull);
-    expect(_boton(tester, 'admin_eliminar').onPressed, isNull);
+    expect(_button(tester, 'admin_cambiar_rol').onPressed, isNull);
+    expect(_button(tester, 'admin_eliminar').onPressed, isNull);
   });
 
   testWidgets('Un rol desconocido se muestra crudo y marcado', (tester) async {
-    final repositorio = _UsuariosFake([
-      _usuario(email: 'legacy@finnegans.com', rol: 'usuario'),
+    final repository = _FakeUsers([
+      _user(email: 'legacy@finnegans.com', role: 'usuario'),
     ]);
-    await _mostrarPanel(
+    await _showPanel(
       tester,
-      acceso: AccesoAdmin.permitido,
-      repositorio: repositorio,
+      access: AccessAdmin.allowed,
+      repository: repository,
     );
 
     expect(find.text('usuario'), findsOneWidget);
@@ -543,62 +533,60 @@ void main() {
   test('Academia y Administrador tienen acceso al panel', () {
     final container = ProviderContainer(
       overrides: [
-        authControllerProvider.overrideWith((ref) => _AuthGestor()),
-        usuariosAutorizadosRepositoryProvider.overrideWithValue(
-          _UsuariosFake([]),
-        ),
+        authControllerProvider.overrideWith((ref) => _ManagerAuth()),
+        authorizedUsersRepositoryProvider.overrideWithValue(_FakeUsers([])),
       ],
     );
     addTearDown(container.dispose);
-    expect(container.read(accesoAdminProvider), AccesoAdmin.permitido);
+    expect(container.read(accessAdminProvider), AccessAdmin.allowed);
   });
 
   group('Áreas y equipos', () {
-    final usuarios = [
-      _usuario(email: 'lider@finnegans.com'),
-      _usuario(email: 'otro.lider@finnegans.com'),
-      _usuario(email: 'bloqueado@finnegans.com', ffBloqueo: _sello),
-      _usuario(email: 'area@finnegans.com', rol: 'area'),
+    final users = [
+      _user(email: 'lider@finnegans.com'),
+      _user(email: 'otro.lider@finnegans.com'),
+      _user(email: 'bloqueado@finnegans.com', blockedAt: _stamp),
+      _user(email: 'area@finnegans.com', role: 'areaLead'),
     ];
-    final nomina = [
-      _empleado('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
-      _empleado('2', 'productos tecnológicos', 'plataforma core'),
-      _empleado(
+    final payroll = [
+      _employee('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
+      _employee('2', 'productos tecnológicos', 'plataforma core'),
+      _employee(
         '3',
         'PRODUCTOS TECNOLÓGICOS',
         'PLATAFORMA CORE',
-        activo: false,
+        active: false,
       ),
-      _empleado('4', 'SERVICIOS', ''),
+      _employee('4', 'SERVICIOS', ''),
       // El líder de PLATAFORMA CORE figura en la nómina en SERVICIOS.
-      _empleado(
+      _employee(
         '5',
         'SERVICIOS',
         'IMPLEMENTACIONES',
-        mail: 'Lider@finnegans.com',
+        email: 'Lider@finnegans.com',
       ),
-      _empleado('6', 'SERVICIOS', '', mail: 'area@finnegans.com'),
+      _employee('6', 'SERVICIOS', '', email: 'area@finnegans.com'),
     ];
 
-    Future<_EstructuraFake> abrirPestana(WidgetTester tester) async {
-      final estructura = _EstructuraFake(_estructuraPanel());
-      await _mostrarPanel(
+    Future<_FakeStructure> openTab(WidgetTester tester) async {
+      final structure = _FakeStructure(_structurePanel());
+      await _showPanel(
         tester,
-        acceso: AccesoAdmin.permitido,
-        repositorio: _UsuariosFake(usuarios),
-        estructura: estructura,
-        empleados: nomina,
+        access: AccessAdmin.allowed,
+        repository: _FakeUsers(users),
+        structure: structure,
+        employees: payroll,
       );
       await tester.tap(find.text('Áreas y equipos'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      return estructura;
+      return structure;
     }
 
     testWidgets('Lista las áreas y equipos de la nómina con sus conteos', (
       tester,
     ) async {
-      await abrirPestana(tester);
+      await openTab(tester);
 
       expect(find.text('PRODUCTOS TECNOLÓGICOS'), findsOneWidget);
       // 1 y 2 son el mismo equipo escrito distinto; 3 está dado de baja.
@@ -622,7 +610,7 @@ void main() {
     });
 
     testWidgets('No ofrece crear, renombrar ni eliminar', (tester) async {
-      await abrirPestana(tester);
+      await openTab(tester);
 
       expect(find.byKey(const Key('estructura_nueva_area')), findsNothing);
       expect(find.byKey(const Key('estructura_nuevo_equipo_1')), findsNothing);
@@ -643,7 +631,7 @@ void main() {
     testWidgets('Los líderes de equipo se eligen entre los líderes activos', (
       tester,
     ) async {
-      final estructura = await abrirPestana(tester);
+      final structure = await openTab(tester);
 
       await tester.tap(find.byKey(const Key('estructura_lideres_equipo_10')));
       await tester.pumpAndSettle();
@@ -673,7 +661,7 @@ void main() {
       await tester.tap(find.byKey(const Key('admin_lideres_confirmar')));
       await tester.pumpAndSettle();
 
-      expect(estructura.llamadas, [
+      expect(structure.calls, [
         'lideresEquipo 10 lider@finnegans.com,otro.lider@finnegans.com',
       ]);
     });
@@ -681,7 +669,7 @@ void main() {
     testWidgets('Los líderes de área se eligen entre los usuarios de área', (
       tester,
     ) async {
-      final estructura = await abrirPestana(tester);
+      final structure = await openTab(tester);
 
       await tester.tap(find.byKey(const Key('estructura_lideres_area_2')));
       await tester.pumpAndSettle();
@@ -690,21 +678,21 @@ void main() {
       await tester.tap(find.byKey(const Key('admin_lideres_confirmar')));
       await tester.pumpAndSettle();
 
-      expect(estructura.llamadas, ['lideresArea 2 area@finnegans.com']);
+      expect(structure.calls, ['lideresArea 2 area@finnegans.com']);
     });
 
     testWidgets(
       'La tabla de usuarios muestra lo que lidera y a qué pertenece',
       (tester) async {
-        await _mostrarPanel(
+        await _showPanel(
           tester,
-          acceso: AccesoAdmin.permitido,
-          repositorio: _UsuariosFake([
-            ...usuarios,
-            _usuario(email: 'academia@finnegans.com', rol: 'academia'),
+          access: AccessAdmin.allowed,
+          repository: _FakeUsers([
+            ...users,
+            _user(email: 'academia@finnegans.com', role: 'academy'),
           ]),
-          estructura: _EstructuraFake(_estructuraPanel()),
-          empleados: nomina,
+          structure: _FakeStructure(_structurePanel()),
+          employees: payroll,
         );
 
         expect(find.text('Lidera'), findsOneWidget);
@@ -718,10 +706,7 @@ void main() {
         expect(find.text('Toda la empresa'), findsOneWidget);
         // otro.lider y bloqueado tienen rol Líder, ningún equipo y no figuran.
         expect(find.text('Sin equipos asignados'), findsNWidgets(2));
-        expect(
-          find.text(EstructuraOrganizacional.noFiguraEnNomina),
-          findsNWidgets(2),
-        );
+        expect(find.text(OrgStructure.notInPayroll), findsNWidgets(2));
       },
     );
   });

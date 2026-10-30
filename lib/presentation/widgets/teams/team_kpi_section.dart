@@ -14,9 +14,9 @@ class TeamsKpiSection extends StatelessWidget {
   final int year;
   final int month;
 
-  final VariacionCumplimiento? variation;
+  final ComplianceVariation? variation;
 
-  final ProyeccionAnual? projection;
+  final AnnualProjection? projection;
 
   const TeamsKpiSection({
     super.key,
@@ -45,7 +45,7 @@ class TeamsKpiSection extends StatelessWidget {
           footer: '',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
-          ayuda:
+          help:
               'Equipos con al menos un colaborador elegible en el período '
               'elegido.',
         ),
@@ -57,27 +57,27 @@ class TeamsKpiSection extends StatelessWidget {
           progressLabel: 'Nómina elegible',
           footer: '',
           icon: Icons.people_outline,
-          color: context.colores.acentoCian,
-          ayuda: ayudaNominaElegible,
+          color: context.colors.cyanAccent,
+          help: eligiblePayrollHelp,
         ),
-        horasValidasKpiCard(
+        creditedHoursKpiCard(
           context,
-          esAnual: isAnnual,
-          anio: year,
-          mes: month,
-          horas: completedHours,
-          objetivo: targetHours,
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          hours: completedHours,
+          target: targetHours,
         ),
-        cumplimientoKpiCard(
+        complianceKpiCard(
           context,
-          esAnual: isAnnual,
-          anio: year,
-          mes: month,
-          porcentaje: overallCompletion,
-          variacion: variation,
+          isAnnual: isAnnual,
+          year: year,
+          month: month,
+          percentage: overallCompletion,
+          variation: variation,
         ),
         if (projection case final projection?)
-          proyeccionKpiCard(context, projection),
+          projectionKpiCard(context, projection),
       ],
     );
   }

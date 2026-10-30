@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Page<void> _conFundido(GoRouterState state, Widget child) {
+Page<void> _withFade(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
@@ -19,7 +19,7 @@ Page<void> _conFundido(GoRouterState state, Widget child) {
   );
 }
 
-Future<ProviderContainer> _mostrar(WidgetTester tester) async {
+Future<ProviderContainer> _show(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -40,14 +40,14 @@ Future<ProviderContainer> _mostrar(WidgetTester tester) async {
         routes: [
           GoRoute(
             path: '/dashboard',
-            pageBuilder: (context, state) => _conFundido(
+            pageBuilder: (context, state) => _withFade(
               state,
               const Scaffold(body: Center(child: Text('Pantalla Dashboard'))),
             ),
           ),
           GoRoute(
             path: '/empleados',
-            pageBuilder: (context, state) => _conFundido(
+            pageBuilder: (context, state) => _withFade(
               state,
               const Scaffold(body: Center(child: Text('Pantalla Empleados'))),
             ),
@@ -78,24 +78,24 @@ Future<ProviderContainer> _mostrar(WidgetTester tester) async {
   return container;
 }
 
-final _marca = AppTheme.light().colorScheme.primary;
+final _brand = AppTheme.light().colorScheme.primary;
 
-Color? _colorDelItem(WidgetTester tester, String etiqueta) {
-  final texto = tester.widget<Text>(
-    find.descendant(of: find.byType(SideMenu), matching: find.text(etiqueta)),
+Color? _itemColor(WidgetTester tester, String label) {
+  final text = tester.widget<Text>(
+    find.descendant(of: find.byType(SideMenu), matching: find.text(label)),
   );
-  return texto.style?.color;
+  return text.style?.color;
 }
 
 void main() {
   testWidgets('Navegar no reconstruye el menú y cambia el ítem activo', (
     tester,
   ) async {
-    await _mostrar(tester);
+    await _show(tester);
 
-    final estadoAntes = tester.state(find.byType(SideMenu));
+    final statusBefore = tester.state(find.byType(SideMenu));
     expect(find.text('Pantalla Dashboard'), findsOneWidget);
-    expect(_colorDelItem(tester, 'Empleados'), isNot(_marca));
+    expect(_itemColor(tester, 'Empleados'), isNot(_brand));
 
     // El menú navega con context.push, igual que en la app.
     await tester.tap(
@@ -108,18 +108,18 @@ void main() {
 
     expect(find.text('Pantalla Empleados'), findsOneWidget);
     // Misma instancia: el menú no se recreó, así su animación no se corta.
-    expect(tester.state(find.byType(SideMenu)), same(estadoAntes));
+    expect(tester.state(find.byType(SideMenu)), same(statusBefore));
     expect(find.byType(SideMenu), findsOneWidget);
     // El ítem activo sigue a la ruta.
-    expect(_colorDelItem(tester, 'Empleados'), _marca);
+    expect(_itemColor(tester, 'Empleados'), _brand);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('El ítem activo cambia de color con una transición', (
     tester,
   ) async {
-    await _mostrar(tester);
-    final inicial = _colorDelItem(tester, 'Empleados');
+    await _show(tester);
+    final initial = _itemColor(tester, 'Empleados');
 
     await tester.tap(
       find.descendant(
@@ -130,28 +130,28 @@ void main() {
     // A mitad de la transición el color no es ni el inicial ni el final.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 80));
-    final enTransicion = _colorDelItem(tester, 'Empleados');
-    expect(enTransicion, isNot(inicial));
-    expect(enTransicion, isNot(_marca));
+    final inTransition = _itemColor(tester, 'Empleados');
+    expect(inTransition, isNot(initial));
+    expect(inTransition, isNot(_brand));
 
     await tester.pumpAndSettle();
-    expect(_colorDelItem(tester, 'Empleados'), _marca);
+    expect(_itemColor(tester, 'Empleados'), _brand);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('Plegar el menú mientras se navega no se interrumpe', (
     tester,
   ) async {
-    final container = await _mostrar(tester);
+    final container = await _show(tester);
 
     await tester.tap(find.byKey(const Key('side_menu_toggle')));
     // A mitad de la animación, se navega a otra pantalla.
     await tester.pump(const Duration(milliseconds: 80));
-    final contexto = tester.element(find.byType(AppShell));
-    GoRouter.of(contexto).push('/empleados');
+    final context = tester.element(find.byType(AppShell));
+    GoRouter.of(context).push('/empleados');
     await tester.pumpAndSettle();
 
-    expect(container.read(sideMenuDesplegadoProvider), isFalse);
+    expect(container.read(sideMenuExpandedProvider), isFalse);
     expect(tester.getSize(find.byType(SideMenu)).width, 0);
     expect(find.text('Pantalla Empleados'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -168,10 +168,8 @@ void main() {
     );
 
     // Recién montado: casi transparente.
-    final opacidadInicial = tester
-        .widget<Opacity>(find.byType(Opacity))
-        .opacity;
-    expect(opacidadInicial, lessThan(0.1));
+    final initialOpacity = tester.widget<Opacity>(find.byType(Opacity)).opacity;
+    expect(initialOpacity, lessThan(0.1));
 
     await tester.pumpAndSettle();
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 1);

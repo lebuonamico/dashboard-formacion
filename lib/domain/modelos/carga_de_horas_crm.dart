@@ -1,88 +1,87 @@
 import 'package:app_finnegans/domain/importacion/valores_importacion.dart';
 import 'package:app_finnegans/domain/modelos/tipo_curso.dart';
 
-enum TipoCargaDeHoras { tomada, dictada }
+enum TimeEntryKind { taken, taught }
 
-class CargaDeHorasCRM {
-  final String? cursoId;
-  final String? caso;
-  final String? descripcionCurso;
-  final String? clasificacion;
-  final String? proyecto;
-  final String? proyectoItem;
-  final String? descripcion;
+class CrmTimeEntry {
+  final String? courseId;
+  final String? caseRef;
+  final String? courseDescription;
+  final String? classification;
+  final String? project;
+  final String? projectItem;
+  final String? description;
   final String id;
-  final String cursoNombre;
-  final String empleadoLegajo;
-  final DateTime fecha;
-  final double horasTotales;
-  final TipoCargaDeHoras tipo;
+  final String courseName;
+  final String employeeId;
+  final DateTime date;
+  final double hours;
+  final TimeEntryKind kind;
 
-  const CargaDeHorasCRM({
-    this.cursoId,
-    this.caso,
-    this.descripcionCurso,
-    this.clasificacion,
-    this.proyecto,
-    this.proyectoItem,
-    this.descripcion,
+  const CrmTimeEntry({
+    this.courseId,
+    this.caseRef,
+    this.courseDescription,
+    this.classification,
+    this.project,
+    this.projectItem,
+    this.description,
     required this.id,
-    required this.cursoNombre,
-    required this.empleadoLegajo,
-    required this.fecha,
-    required this.horasTotales,
-    required this.tipo,
+    required this.courseName,
+    required this.employeeId,
+    required this.date,
+    required this.hours,
+    required this.kind,
   });
 
   /// Categoría indicada en la columna Clasificación del CRM, si se reconoce.
-  TipoCurso? get categoriaClasificacion => TipoCurso.desdeTexto(clasificacion);
+  CourseCategory? get classificationCategory =>
+      CourseCategory.fromText(classification);
 
-  bool get esDictada =>
-      tipo == TipoCargaDeHoras.dictada ||
-      categoriaClasificacion == TipoCurso.dictadoCapacitaciones;
+  bool get isTaught =>
+      kind == TimeEntryKind.taught ||
+      classificationCategory == CourseCategory.teaching;
 
   /// Libres y Dictado nunca llegan por el LMS: se acreditan solo con el CRM.
-  TipoCurso? get categoriaSoloCrm {
-    if (esDictada) return TipoCurso.dictadoCapacitaciones;
-    if (categoriaClasificacion == TipoCurso.libresExploracion) {
-      return TipoCurso.libresExploracion;
+  CourseCategory? get categoryOnlyCrm {
+    if (isTaught) return CourseCategory.teaching;
+    if (classificationCategory == CourseCategory.exploration) {
+      return CourseCategory.exploration;
     }
     return null;
   }
 
   Map<String, dynamic> toJson() => {
-    'cursoId': cursoId,
-    'caso': caso,
-    'descripcionCurso': descripcionCurso,
-    'clasificacion': clasificacion,
-    'proyecto': proyecto,
-    'proyectoItem': proyectoItem,
-    'descripcion': descripcion,
+    'cursoId': courseId,
+    'caso': caseRef,
+    'descripcionCurso': courseDescription,
+    'clasificacion': classification,
+    'proyecto': project,
+    'proyectoItem': projectItem,
+    'descripcion': description,
     'id': id,
-    'cursoNombre': cursoNombre,
-    'empleadoLegajo': empleadoLegajo,
-    'fecha': fecha.toIso8601String(),
-    'horasTotales': horasTotales,
-    'tipo': tipo.name,
+    'cursoNombre': courseName,
+    'empleadoLegajo': employeeId,
+    'fecha': date.toIso8601String(),
+    'horasTotales': hours,
+    'tipo': kind.name,
   };
 
-  factory CargaDeHorasCRM.fromJson(Map<String, dynamic> json) =>
-      CargaDeHorasCRM(
-        cursoId: json['cursoId']?.toString(),
-        caso: json['caso']?.toString(),
-        descripcionCurso: json['descripcionCurso']?.toString(),
-        clasificacion: json['clasificacion']?.toString(),
-        proyecto: json['proyecto']?.toString(),
-        proyectoItem: json['proyectoItem']?.toString(),
-        descripcion: json['descripcion']?.toString(),
-        id: json['id']?.toString() ?? '',
-        cursoNombre: json['cursoNombre']?.toString() ?? '',
-        empleadoLegajo: json['empleadoLegajo']?.toString() ?? '',
-        fecha: fechaObligatoria(json['fecha']?.toString() ?? ''),
-        horasTotales:
-            double.tryParse(json['horasTotales']?.toString() ?? '') ?? 0,
-        tipo: json['tipo']?.toString() == TipoCargaDeHoras.dictada.name
-            ? TipoCargaDeHoras.dictada
-            : TipoCargaDeHoras.tomada,
-      );
+  factory CrmTimeEntry.fromJson(Map<String, dynamic> json) => CrmTimeEntry(
+    courseId: json['cursoId']?.toString(),
+    caseRef: json['caso']?.toString(),
+    courseDescription: json['descripcionCurso']?.toString(),
+    classification: json['clasificacion']?.toString(),
+    project: json['proyecto']?.toString(),
+    projectItem: json['proyectoItem']?.toString(),
+    description: json['descripcion']?.toString(),
+    id: json['id']?.toString() ?? '',
+    courseName: json['cursoNombre']?.toString() ?? '',
+    employeeId: json['empleadoLegajo']?.toString() ?? '',
+    date: requiredDate(json['fecha']?.toString() ?? ''),
+    hours: double.tryParse(json['horasTotales']?.toString() ?? '') ?? 0,
+    kind: json['tipo']?.toString() == TimeEntryKind.taught.name
+        ? TimeEntryKind.taught
+        : TimeEntryKind.taken,
+  );
 }

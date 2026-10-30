@@ -16,12 +16,12 @@ class EmptyDataState extends StatelessWidget {
     this.compact = false,
   });
 
-  const EmptyDataState.periodoSinDatos({
+  const EmptyDataState.periodWithoutData({
     super.key,
-    required String periodo,
+    required String period,
     this.icon = Icons.event_busy_outlined,
     this.compact = false,
-  }) : title = 'No hay datos cargados para $periodo.',
+  }) : title = 'No hay datos cargados para $period.',
        message =
            'Probá otro período o cargá información CRM/LMS para evaluarlo.';
 

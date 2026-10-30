@@ -9,20 +9,20 @@ export 'package:app_finnegans/core/theme/app_colors.dart';
 /// asistente). Los estilos de componentes compartidos (inputs, menús,
 /// divisores, botones) también salen de acá.
 abstract final class AppTheme {
-  static const _marca = Color(0xFF0D53C3);
+  static const _brand = Color(0xFF0D53C3);
 
-  static ThemeData light() => _construir(_esquemaClaro, AppColors.light);
+  static ThemeData light() => _build(_lightScheme, AppColors.light);
 
-  static ThemeData dark() => _construir(_esquemaOscuro, AppColors.dark);
+  static ThemeData dark() => _build(_darkScheme, AppColors.dark);
 
   // Slate de Tailwind sobre el azul Finnegans: es la paleta que ya usaba la
   // app, ahora con nombre según su función.
-  static final _esquemaClaro =
+  static final _lightScheme =
       ColorScheme.fromSeed(
-        seedColor: _marca,
+        seedColor: _brand,
         brightness: Brightness.light,
       ).copyWith(
-        primary: _marca,
+        primary: _brand,
         onPrimary: const Color(0xFFFFFFFF),
         primaryContainer: const Color(0xFFEFF6FF),
         onPrimaryContainer: const Color(0xFF1D4ED8),
@@ -46,9 +46,9 @@ abstract final class AppTheme {
 
   // Fondos slate profundos (no negro puro) y el azul de marca aclarado para
   // que textos y links cumplan contraste AA sobre superficies oscuras.
-  static final _esquemaOscuro =
+  static final _darkScheme =
       ColorScheme.fromSeed(
-        seedColor: _marca,
+        seedColor: _brand,
         brightness: Brightness.dark,
       ).copyWith(
         primary: const Color(0xFF60A5FA),
@@ -73,8 +73,8 @@ abstract final class AppTheme {
         surfaceTint: const Color(0x00000000),
       );
 
-  static ThemeData _construir(ColorScheme cs, AppColors colores) {
-    final bordeInput = OutlineInputBorder(
+  static ThemeData _build(ColorScheme cs, AppColors colors) {
+    final borderInput = OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
       borderSide: BorderSide(color: cs.outlineVariant),
     );
@@ -82,7 +82,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: cs,
-      extensions: [colores],
+      extensions: [colors],
       scaffoldBackgroundColor: cs.surfaceContainerLow,
       canvasColor: cs.surface,
       dividerTheme: DividerThemeData(color: cs.outlineVariant, thickness: 1),
@@ -108,10 +108,10 @@ abstract final class AppTheme {
           vertical: 13,
           horizontal: 10,
         ),
-        border: bordeInput,
-        enabledBorder: bordeInput,
-        disabledBorder: bordeInput,
-        focusedBorder: bordeInput.copyWith(
+        border: borderInput,
+        enabledBorder: borderInput,
+        disabledBorder: borderInput,
+        focusedBorder: borderInput.copyWith(
           borderSide: BorderSide(color: cs.primary, width: 1.5),
         ),
       ),
@@ -124,7 +124,7 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: cs.primary,
-          disabledForegroundColor: colores.textoTenue,
+          disabledForegroundColor: colors.faintText,
           side: BorderSide(color: cs.outlineVariant),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
@@ -143,27 +143,27 @@ abstract final class AppTheme {
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: cs.primary,
-        linearTrackColor: colores.graficoPista,
+        linearTrackColor: colors.chartTrack,
       ),
     );
   }
 }
 
 /// Acceso corto al tema desde los widgets.
-extension TemaContexto on BuildContext {
+extension ThemeContext on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
-  AppColors get colores => Theme.of(this).extension<AppColors>()!;
+  AppColors get colors => Theme.of(this).extension<AppColors>()!;
 
   /// Panel estándar (cards, tablas, barras de filtros): superficie, borde
   /// suave y radio 8, con sombra opcional.
-  BoxDecoration panel({bool sombra = false, double radio = 8}) {
+  BoxDecoration panel({bool shadow = false, double radius = 8}) {
     final cs = colorScheme;
     return BoxDecoration(
       color: cs.surface,
-      borderRadius: BorderRadius.circular(radio),
+      borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: cs.outlineVariant),
-      boxShadow: sombra
+      boxShadow: shadow
           ? [
               BoxShadow(
                 color: cs.shadow.withValues(alpha: 0.035),

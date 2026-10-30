@@ -4,30 +4,30 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Color? _fondo(WidgetTester tester) {
-  final contenedor = tester.widget<AnimatedContainer>(
+Color? _background(WidgetTester tester) {
+  final container = tester.widget<AnimatedContainer>(
     find.descendant(
       of: find.byType(AppBackButton),
       matching: find.byType(AnimatedContainer),
     ),
   );
-  return (contenedor.decoration as BoxDecoration?)?.color;
+  return (container.decoration as BoxDecoration?)?.color;
 }
 
 void main() {
   testWidgets('La flecha llama a onPressed al tocarla', (tester) async {
-    var toques = 0;
+    var taps = 0;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: Scaffold(body: AppBackButton(onPressed: () => toques++)),
+        home: Scaffold(body: AppBackButton(onPressed: () => taps++)),
       ),
     );
 
     await tester.tap(find.byType(AppBackButton));
     await tester.pumpAndSettle();
 
-    expect(toques, 1);
+    expect(taps, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -42,7 +42,7 @@ void main() {
         ),
       ),
     );
-    expect(_fondo(tester), Colors.transparent);
+    expect(_background(tester), Colors.transparent);
 
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
@@ -51,18 +51,18 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     // Con el mouse encima aparece el fondo.
-    expect(_fondo(tester), isNot(Colors.transparent));
+    expect(_background(tester), isNot(Colors.transparent));
 
     // Al presionar, el fondo se oscurece un poco más (no hay ripple).
-    final fondoHover = _fondo(tester);
+    final hoverBackground = _background(tester);
     await mouse.down(tester.getCenter(find.byType(AppBackButton)));
     await tester.pumpAndSettle();
-    expect(_fondo(tester), isNot(fondoHover));
+    expect(_background(tester), isNot(hoverBackground));
     await mouse.up();
     await tester.pumpAndSettle();
 
     await mouse.moveTo(const Offset(500, 500));
     await tester.pumpAndSettle();
-    expect(_fondo(tester), Colors.transparent);
+    expect(_background(tester), Colors.transparent);
   });
 }

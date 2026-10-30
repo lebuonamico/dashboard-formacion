@@ -12,8 +12,8 @@ class SeniorityChip extends StatelessWidget {
   const SeniorityChip({super.key, required this.seniority});
 
   @override
-  Widget build(BuildContext context) => EtiquetaColor(
-    texto: seniority.label,
-    colores: context.colores.nivel(seniority),
+  Widget build(BuildContext context) => ColorLabel(
+    text: seniority.label,
+    colors: context.colors.level(seniority),
   );
 }

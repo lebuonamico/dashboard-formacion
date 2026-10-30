@@ -1,29 +1,29 @@
 /// Counts for a successfully persisted import batch.
 /// Null counts mean the repository cannot distinguish inserts from updates.
-class ResultadoUpsert {
-  final int registrosProcesados;
-  final int? insertados;
-  final int? actualizados;
+class UpsertResult {
+  final int processedRecords;
+  final int? inserted;
+  final int? updated;
 
-  const ResultadoUpsert({
-    required this.registrosProcesados,
-    this.insertados,
-    this.actualizados,
+  const UpsertResult({
+    required this.processedRecords,
+    this.inserted,
+    this.updated,
   });
 
-  static const empty = ResultadoUpsert(
-    registrosProcesados: 0,
-    insertados: 0,
-    actualizados: 0,
+  static const empty = UpsertResult(
+    processedRecords: 0,
+    inserted: 0,
+    updated: 0,
   );
 
-  ResultadoUpsert operator +(ResultadoUpsert other) => ResultadoUpsert(
-    registrosProcesados: registrosProcesados + other.registrosProcesados,
-    insertados: insertados == null || other.insertados == null
+  UpsertResult operator +(UpsertResult other) => UpsertResult(
+    processedRecords: processedRecords + other.processedRecords,
+    inserted: inserted == null || other.inserted == null
         ? null
-        : insertados! + other.insertados!,
-    actualizados: actualizados == null || other.actualizados == null
+        : inserted! + other.inserted!,
+    updated: updated == null || other.updated == null
         ? null
-        : actualizados! + other.actualizados!,
+        : updated! + other.updated!,
   );
 }

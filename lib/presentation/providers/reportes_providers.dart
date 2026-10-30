@@ -14,171 +14,169 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Arman el reporte de cada pantalla con los mismos cálculos que sus cards.
 // `null` cuando el período no tiene nada para reportar.
 
-final reporteDashboardProvider = FutureProvider<ReporteFormacion?>((ref) async {
-  final periodo = _periodo(ref);
+final dashboardReportProvider = FutureProvider<TrainingReport?>((ref) async {
+  final period = _period(ref);
   if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
-  final cumplimientos = await ref.watch(cumplimientoDashboardProvider.future);
-  if (cumplimientos.isEmpty) return null;
+  final complianceList = await ref.watch(dashboardComplianceProvider.future);
+  if (complianceList.isEmpty) return null;
 
-  final cargas = await ref.watch(cargasDashboardProvider.future);
-  final mesesEvaluados = await ref.watch(
-    mesesEvaluadosDashboardProvider.future,
+  final timeEntries = await ref.watch(dashboardTimeEntriesProvider.future);
+  final evaluatedMonths = await ref.watch(
+    dashboardEvaluatedMonthsProvider.future,
   );
-  final areas = await ref.watch(semaforoPorAreaProvider.future);
-  final equipos = await ref.watch(teamOverviewsProvider.future);
-  final evolucion = await ref.watch(evolucionMensualDashboardProvider.future);
-  final proyeccion = await _proyeccionOpcional(ref, (area: null, equipo: null));
+  final areas = await ref.watch(complianceByAreaProvider.future);
+  final teams = await ref.watch(teamOverviewsProvider.future);
+  final evolution = await ref.watch(dashboardMonthlyEvolutionProvider.future);
+  final projection = await _optionalProjection(ref, (area: null, team: null));
 
-  final kpis = const DashboardKpisService().calcular(
-    cumplimientos: cumplimientos,
-    cargas: cargas,
-    mesesEvaluados: mesesEvaluados,
+  final kpis = const DashboardKpisService().calculate(
+    complianceList: complianceList,
+    timeEntries: timeEntries,
+    evaluatedMonths: evaluatedMonths,
   );
-  final estado = EstadoSemaforo.desdePorcentaje(kpis.cumplimiento);
-  return ReporteFormacion(
-    tipo: TipoReporte.general,
-    titulo: 'Plan de formación interna',
-    detalles: [
-      '${areas.length} áreas · ${equipos.length} equipos',
-      '${kpis.capacitandose} de ${kpis.colaboradores} capacitándose',
+  final status = ComplianceLevel.fromPercentage(kpis.compliance);
+  return TrainingReport(
+    type: ReportType.general,
+    title: 'Plan de formación interna',
+    details: [
+      '${areas.length} áreas · ${teams.length} equipos',
+      '${kpis.training} de ${kpis.employees} capacitándose',
     ],
-    periodo: periodo,
-    integrantes: kpis.colaboradores,
-    enObjetivo: _enObjetivo(cumplimientos),
-    horas: kpis.horasValidas,
-    objetivo: kpis.horasObjetivo,
-    porcentaje: kpis.cumplimiento,
-    estado: estado.label,
-    nivel: _nivelSemaforo(estado),
-    proyeccion: proyeccion,
-    miembros: cumplimientos,
-    desglose: [
+    period: period,
+    memberCount: kpis.employees,
+    onTarget: _onTarget(complianceList),
+    hours: kpis.creditedHours,
+    target: kpis.targetHours,
+    percentage: kpis.compliance,
+    status: status.label,
+    level: _reportLevelOf(status),
+    projection: projection,
+    members: complianceList,
+    breakdown: [
       for (final area in areas)
-        FilaDesgloseReporte(
-          nombre: area.area,
-          integrantes: area.cantidadColaboradores,
-          horas: area.horasCompletadas,
-          objetivo: area.horasRequeridas,
-          porcentaje: area.porcentajeCumplimiento,
-          estado: area.semaforo.label,
-          nivel: _nivelSemaforo(area.semaforo),
+        ReportBreakdownRow(
+          name: area.area,
+          memberCount: area.employeeCount,
+          hours: area.completedHours,
+          target: area.requiredHours,
+          percentage: area.compliancePercentage,
+          status: area.level.label,
+          level: _reportLevelOf(area.level),
         ),
     ],
-    evolucion: evolucion,
+    evolution: evolution,
   );
 });
 
-final reporteAreaProvider = FutureProvider.family<ReporteFormacion?, String>((
+final areaReportProvider = FutureProvider.family<TrainingReport?, String>((
   ref,
-  nombreArea,
+  areaName,
 ) async {
-  final periodo = _periodo(ref);
+  final period = _period(ref);
   if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
-  final detalle = await ref.watch(detalleAreaProvider(nombreArea).future);
-  if (detalle == null) return null;
+  final detail = await ref.watch(areaDetailProvider(areaName).future);
+  if (detail == null) return null;
 
-  final area = detalle.area;
-  final proyeccion = await _proyeccionOpcional(ref, (
-    area: area.nombre,
-    equipo: null,
+  final area = detail.area;
+  final projection = await _optionalProjection(ref, (
+    area: area.name,
+    team: null,
   ));
-  return ReporteFormacion(
-    tipo: TipoReporte.area,
-    titulo: area.nombre,
-    detalles: [
-      if (area.lideres case final lideres? when lideres.trim().isNotEmpty)
-        'Líder: $lideres',
-      '${detalle.equipos.length} equipos',
+  return TrainingReport(
+    type: ReportType.area,
+    title: area.name,
+    details: [
+      if (area.leaders case final leaders? when leaders.trim().isNotEmpty)
+        'Líder: $leaders',
+      '${detail.teams.length} equipos',
     ],
-    periodo: periodo,
-    integrantes: area.cantidadIntegrantes,
-    enObjetivo: area.integrantesEnObjetivo,
-    horas: area.horasRealizadas,
-    objetivo: area.horasObjetivo,
-    porcentaje: area.porcentajeCumplimiento,
-    estado: area.semaforo.label,
-    nivel: _nivelSemaforo(area.semaforo),
-    proyeccion: proyeccion,
-    miembros: detalle.miembros,
-    desglose: [
-      for (final equipo in detalle.equipos)
-        FilaDesgloseReporte(
-          nombre: equipo.name,
-          integrantes: equipo.memberCount,
-          horas: equipo.completedHours,
-          objetivo: equipo.targetHours,
-          porcentaje: equipo.completionPercentage,
-          estado: equipo.status.label,
-          nivel: _nivelEquipo(equipo.status),
+    period: period,
+    memberCount: area.memberCount,
+    onTarget: area.membersOnTarget,
+    hours: area.completedHours,
+    target: area.targetHours,
+    percentage: area.compliancePercentage,
+    status: area.level.label,
+    level: _reportLevelOf(area.level),
+    projection: projection,
+    members: detail.members,
+    breakdown: [
+      for (final team in detail.teams)
+        ReportBreakdownRow(
+          name: team.name,
+          memberCount: team.memberCount,
+          hours: team.completedHours,
+          target: team.targetHours,
+          percentage: team.completionPercentage,
+          status: team.status.label,
+          level: _teamLevel(team.status),
         ),
     ],
   );
 });
 
-final reporteEquipoProvider =
-    FutureProvider.family<ReporteFormacion?, ({String area, String equipo})>((
+final teamReportProvider =
+    FutureProvider.family<TrainingReport?, ({String area, String team})>((
       ref,
-      seccion,
+      section,
     ) async {
-      final periodo = _periodo(ref);
+      final period = _period(ref);
       if (!await ref.watch(hasTeamPeriodDataProvider.future)) return null;
-      final detalle = await ref.watch(
-        teamDetailProvider(seccion).future,
-      );
-      if (detalle == null) return null;
+      final detail = await ref.watch(teamDetailProvider(section).future);
+      if (detail == null) return null;
 
-      final equipo = detalle.overview;
-      final proyeccion = await _proyeccionOpcional(ref, (
-        area: equipo.area,
-        equipo: equipo.name,
+      final team = detail.overview;
+      final projection = await _optionalProjection(ref, (
+        area: team.area,
+        team: team.name,
       ));
-      return ReporteFormacion(
-        tipo: TipoReporte.equipo,
-        titulo: equipo.name,
-        detalles: [
-          'Área: ${equipo.area}',
-          if (equipo.leader.trim().isNotEmpty) 'Líder: ${equipo.leader}',
+      return TrainingReport(
+        type: ReportType.team,
+        title: team.name,
+        details: [
+          'Área: ${team.area}',
+          if (team.leader.trim().isNotEmpty) 'Líder: ${team.leader}',
         ],
-        periodo: periodo,
-        integrantes: equipo.memberCount,
-        enObjetivo: equipo.membersOnTarget,
-        horas: equipo.completedHours,
-        objetivo: equipo.targetHours,
-        porcentaje: equipo.completionPercentage,
-        estado: equipo.status.label,
-        nivel: _nivelEquipo(equipo.status),
-        proyeccion: proyeccion,
-        miembros: detalle.members,
+        period: period,
+        memberCount: team.memberCount,
+        onTarget: team.membersOnTarget,
+        hours: team.completedHours,
+        target: team.targetHours,
+        percentage: team.completionPercentage,
+        status: team.status.label,
+        level: _teamLevel(team.status),
+        projection: projection,
+        members: detail.members,
       );
     });
 
-typedef ImprimirReporte = Future<void> Function(ReporteFormacion reporte);
+typedef PrintReport = Future<void> Function(TrainingReport report);
 
 /// Maqueta el PDF y abre el diálogo de impresión. Los tests lo reemplazan
 /// para no depender de las fuentes ni del diálogo del sistema.
-final imprimirReporteProvider = Provider<ImprimirReporte>((ref) {
-  final impresion = ref.watch(impresionRepositoryProvider);
-  return (reporte) async {
+final printReportProvider = Provider<PrintReport>((ref) {
+  final print = ref.watch(printRepositoryProvider);
+  return (report) async {
     // Se genera antes de abrir el diálogo, así un error llega a quien llamó.
-    final bytes = await generarReportePdf(reporte);
-    await impresion.imprimirPdf(bytes, nombreArchivo: reporte.nombreArchivo);
+    final bytes = await generateReportPdf(report);
+    await print.printPdf(bytes, fileName: report.fileName);
   };
 });
 
-String _periodo(Ref ref) => etiquetaPeriodoDetallada(
-  ref.watch(alcancePeriodoProvider),
-  ref.watch(filtroMesPeriodoProvider),
-  ref.watch(filtroAnioPeriodoProvider),
+String _period(Ref ref) => detailedPeriodLabel(
+  ref.watch(periodScopeProvider),
+  ref.watch(periodMonthFilterProvider),
+  ref.watch(periodYearFilterProvider),
 );
 
 /// La proyección es una tarjeta opcional: si falla, el reporte sale sin ella,
 /// igual que la pantalla, que oculta la card.
-Future<ProyeccionAnual?> _proyeccionOpcional(
+Future<AnnualProjection?> _optionalProjection(
   Ref ref,
-  ({String? area, String? equipo}) seccion,
+  ({String? area, String? team}) section,
 ) async {
   try {
-    return await ref.watch(proyeccionAnualProvider(seccion).future);
+    return await ref.watch(annualProjectionProvider(section).future);
   } catch (_) {
     return null;
   }
@@ -186,19 +184,19 @@ Future<ProyeccionAnual?> _proyeccionOpcional(
 
 /// En el anual, quien cambió de equipo figura una vez por etapa: se cuenta
 /// una sola vez.
-int _enObjetivo(List<CumplimientoEmpleado> miembros) => {
-  for (final m in miembros)
-    if (m.cumpleObjetivo) m.empleado.legajo,
+int _onTarget(List<EmployeeCompliance> members) => {
+  for (final m in members)
+    if (m.meetsTarget) m.employee.employeeId,
 }.length;
 
-NivelReporte _nivelSemaforo(EstadoSemaforo estado) => switch (estado) {
-  EstadoSemaforo.verde => NivelReporte.ok,
-  EstadoSemaforo.amarillo => NivelReporte.atencion,
-  EstadoSemaforo.rojo => NivelReporte.critico,
+ReportLevel _reportLevelOf(ComplianceLevel status) => switch (status) {
+  ComplianceLevel.onTarget => ReportLevel.ok,
+  ComplianceLevel.atRisk => ReportLevel.attention,
+  ComplianceLevel.critical => ReportLevel.critical,
 };
 
-NivelReporte _nivelEquipo(TeamStatus estado) => switch (estado) {
-  TeamStatus.onTarget => NivelReporte.ok,
-  TeamStatus.atRisk => NivelReporte.atencion,
-  TeamStatus.critical => NivelReporte.critico,
+ReportLevel _teamLevel(TeamStatus status) => switch (status) {
+  TeamStatus.onTarget => ReportLevel.ok,
+  TeamStatus.atRisk => ReportLevel.attention,
+  TeamStatus.critical => ReportLevel.critical,
 };

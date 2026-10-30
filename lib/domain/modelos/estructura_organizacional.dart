@@ -5,47 +5,45 @@ import 'package:app_finnegans/domain/modelos/rol_usuario.dart';
 /// Sector tal como vino en el Excel, y no se edita desde la app.
 class Area {
   final String id;
-  final String nombre;
-  final Set<String> lideres;
+  final String name;
+  final Set<String> leaders;
 
-  Area({required this.id, required this.nombre, Set<String> lideres = const {}})
-    : lideres = {
-        for (final email in lideres)
-          EstructuraOrganizacional.normalizarEmail(email),
+  Area({required this.id, required this.name, Set<String> leaders = const {}})
+    : leaders = {
+        for (final email in leaders) OrgStructure.normalizeEmail(email),
       };
 
-  String get claveNomina => EstructuraOrganizacional.claveNomina(nombre);
+  String get payrollKey => OrgStructure.payrollKey(name);
 }
 
 /// Equipo de `public.equipos`. Pertenece a un área y, como ella, sale de la
 /// importación de nómina.
-class Equipo {
+class Team {
   final String id;
   final String areaId;
-  final String nombre;
-  final Set<String> lideres;
+  final String name;
+  final Set<String> leaders;
 
-  Equipo({
+  Team({
     required this.id,
     required this.areaId,
-    required this.nombre,
-    Set<String> lideres = const {},
-  }) : lideres = {
-         for (final email in lideres)
-           EstructuraOrganizacional.normalizarEmail(email),
+    required this.name,
+    Set<String> leaders = const {},
+  }) : leaders = {
+         for (final email in leaders) OrgStructure.normalizeEmail(email),
        };
 
-  String get claveNomina => EstructuraOrganizacional.claveNomina(nombre);
+  String get payrollKey => OrgStructure.payrollKey(name);
 }
 
 /// Áreas y equipos que trae una nómina y todavía no tienen fila.
-class FaltantesNomina {
+class PayrollGaps {
   final List<String> areas;
-  final List<({String area, String equipo})> equipos;
+  final List<({String area, String team})> teams;
 
-  const FaltantesNomina({this.areas = const [], this.equipos = const []});
+  const PayrollGaps({this.areas = const [], this.teams = const []});
 
-  bool get vacio => areas.isEmpty && equipos.isEmpty;
+  bool get empty => areas.isEmpty && teams.isEmpty;
 }
 
 /// Áreas, equipos y líderes, con las reglas que los cruzan con la nómina.
@@ -53,150 +51,147 @@ class FaltantesNomina {
 /// El empleado se une con su área y su equipo por la clave de nómina (el
 /// texto del Excel recortado y en minúsculas), así "RRHH" y "rrhh " son la
 /// misma área.
-class EstructuraOrganizacional {
+class OrgStructure {
   final List<Area> areas;
-  final List<Equipo> equipos;
+  final List<Team> teams;
 
-  final Map<String, Area> _areasPorClave;
-  final Map<(String, String), Equipo> _equiposPorClave;
+  final Map<String, Area> _areasByKey;
+  final Map<(String, String), Team> _teamsByKey;
 
-  EstructuraOrganizacional({required this.areas, required this.equipos})
-    : _areasPorClave = {for (final area in areas) area.claveNomina: area},
-      _equiposPorClave = {
-        for (final equipo in equipos)
-          (equipo.areaId, equipo.claveNomina): equipo,
+  OrgStructure({required this.areas, required this.teams})
+    : _areasByKey = {for (final area in areas) area.payrollKey: area},
+      _teamsByKey = {
+        for (final team in teams) (team.areaId, team.payrollKey): team,
       };
 
   /// Misma regla que `public.clave_nomina()` en la base.
-  static String claveNomina(String texto) => texto.trim().toLowerCase();
+  static String payrollKey(String text) => text.trim().toLowerCase();
 
-  static String normalizarEmail(String email) => email.trim().toLowerCase();
+  static String normalizeEmail(String email) => email.trim().toLowerCase();
 
-  static int _porNombre(String a, String b) =>
-      claveNomina(a).compareTo(claveNomina(b));
+  static int _byName(String a, String b) =>
+      payrollKey(a).compareTo(payrollKey(b));
 
   /// Áreas ordenadas por nombre.
-  List<Area> get areasOrdenadas =>
-      [...areas]..sort((a, b) => _porNombre(a.nombre, b.nombre));
+  List<Area> get sortedAreas =>
+      [...areas]..sort((a, b) => _byName(a.name, b.name));
 
   /// Equipos de un área, ordenados por nombre.
-  List<Equipo> equiposDe(String areaId) =>
-      equipos.where((equipo) => equipo.areaId == areaId).toList()
-        ..sort((a, b) => _porNombre(a.nombre, b.nombre));
+  List<Team> teamsOf(String areaId) =>
+      teams.where((team) => team.areaId == areaId).toList()
+        ..sort((a, b) => _byName(a.name, b.name));
 
   /// Área por el Sector de la nómina.
-  Area? areaDeNomina(String sector) => _areasPorClave[claveNomina(sector)];
+  Area? payrollArea(String sector) => _areasByKey[payrollKey(sector)];
 
   /// Equipo por el Sector y el Equipo de la nómina.
-  Equipo? equipoDeNomina(String sector, String equipo) {
-    final area = areaDeNomina(sector);
+  Team? payrollTeam(String sector, String team) {
+    final area = payrollArea(sector);
     if (area == null) return null;
-    return _equiposPorClave[(area.id, claveNomina(equipo))];
+    return _teamsByKey[(area.id, payrollKey(team))];
   }
 
-  Set<String> lideresDeArea(String sector) =>
-      areaDeNomina(sector)?.lideres ?? const {};
+  Set<String> areaLeaders(String sector) =>
+      payrollArea(sector)?.leaders ?? const {};
 
-  Set<String> lideresDeEquipo(String sector, String equipo) =>
-      equipoDeNomina(sector, equipo)?.lideres ?? const {};
+  Set<String> teamLeaders(String sector, String team) =>
+      payrollTeam(sector, team)?.leaders ?? const {};
 
-  List<Area> areasLideradasPor(String email) {
-    final normalizado = normalizarEmail(email);
-    return areasOrdenadas
-        .where((area) => area.lideres.contains(normalizado))
+  List<Area> ledAreasBy(String email) {
+    final normalized = normalizeEmail(email);
+    return sortedAreas
+        .where((area) => area.leaders.contains(normalized))
         .toList();
   }
 
   /// Equipos que lidera ese email, ordenados por área y por nombre.
-  List<({Area area, Equipo equipo})> equiposLideradosPor(String email) {
-    final normalizado = normalizarEmail(email);
+  List<({Area area, Team team})> teamsLedBy(String email) {
+    final normalized = normalizeEmail(email);
     return [
-      for (final area in areasOrdenadas)
-        for (final equipo in equiposDe(area.id))
-          if (equipo.lideres.contains(normalizado))
-            (area: area, equipo: equipo),
+      for (final area in sortedAreas)
+        for (final team in teamsOf(area.id))
+          if (team.leaders.contains(normalized)) (area: area, team: team),
     ];
   }
 
-  /// Lo que la importación de [empleados] tiene que crear: las áreas y los
+  /// Lo que la importación de [employees] tiene que crear: las áreas y los
   /// equipos cuya clave todavía no existe, con el texto del primer empleado
   /// que los trae.
-  FaltantesNomina faltantesDeNomina(Iterable<Empleado> empleados) {
-    final areasNuevas = <String, String>{};
-    final equiposNuevos = <(String, String), ({String area, String equipo})>{};
+  PayrollGaps missingFromPayroll(Iterable<Employee> employees) {
+    final newAreas = <String, String>{};
+    final newTeams = <(String, String), ({String area, String team})>{};
 
-    for (final empleado in empleados) {
-      final sector = empleado.area.trim();
-      final claveArea = claveNomina(sector);
-      if (claveArea.isEmpty) continue;
-      final area = _areasPorClave[claveArea];
-      if (area == null) areasNuevas.putIfAbsent(claveArea, () => sector);
+    for (final employee in employees) {
+      final sector = employee.area.trim();
+      final keyArea = payrollKey(sector);
+      if (keyArea.isEmpty) continue;
+      final area = _areasByKey[keyArea];
+      if (area == null) newAreas.putIfAbsent(keyArea, () => sector);
 
-      final equipo = empleado.equipo.trim();
-      final claveEquipo = claveNomina(equipo);
-      if (claveEquipo.isEmpty) continue;
-      if (area != null &&
-          _equiposPorClave.containsKey((area.id, claveEquipo))) {
+      final team = employee.team.trim();
+      final teamKey = payrollKey(team);
+      if (teamKey.isEmpty) continue;
+      if (area != null && _teamsByKey.containsKey((area.id, teamKey))) {
         continue;
       }
-      equiposNuevos.putIfAbsent((
-        claveArea,
-        claveEquipo,
-      ), () => (area: area?.nombre ?? areasNuevas[claveArea]!, equipo: equipo));
+      newTeams.putIfAbsent((
+        keyArea,
+        teamKey,
+      ), () => (area: area?.name ?? newAreas[keyArea]!, team: team));
     }
 
-    return FaltantesNomina(
-      areas: areasNuevas.values.toList(),
-      equipos: equiposNuevos.values.toList(),
+    return PayrollGaps(
+      areas: newAreas.values.toList(),
+      teams: newTeams.values.toList(),
     );
   }
 
   /// Lo que lidera un usuario según su rol: toda la empresa, o los nombres
   /// de las áreas o los equipos asignados. `null` para un rol desconocido.
-  String? lidera({required RolUsuario? rol, required String email}) {
-    switch (rol) {
+  String? leads({required UserRole? role, required String email}) {
+    switch (role) {
       case null:
         return null;
-      case RolUsuario.admin || RolUsuario.academia:
+      case UserRole.admin || UserRole.academy:
         return 'Toda la empresa';
-      case RolUsuario.area:
-        final areas = areasLideradasPor(email);
+      case UserRole.areaLead:
+        final areas = ledAreasBy(email);
         return areas.isEmpty
             ? 'Sin áreas asignadas'
-            : areas.map((area) => area.nombre).join(', ');
-      case RolUsuario.lider:
-        final equipos = equiposLideradosPor(email);
-        return equipos.isEmpty
+            : areas.map((area) => area.name).join(', ');
+      case UserRole.teamLead:
+        final teams = teamsLedBy(email);
+        return teams.isEmpty
             ? 'Sin equipos asignados'
-            : equipos.map((liderado) => liderado.equipo.nombre).join(', ');
+            : teams.map((led) => led.team.name).join(', ');
     }
   }
 
-  static const noFiguraEnNomina = 'No figura en la nómina';
+  static const notInPayroll = 'No figura en la nómina';
 
   /// Equipo y área a los que pertenece alguien según su fila de la nómina,
   /// para mostrar junto a lo que lidera (que es una asignación aparte).
-  static String pertenencia(Empleado? empleado) {
-    if (empleado == null) return noFiguraEnNomina;
-    final equipo = empleado.equipo.trim();
-    final area = empleado.area.trim();
-    final texto = [
-      equipo.isEmpty ? 'Sin equipo' : equipo,
+  static String membership(Employee? employee) {
+    if (employee == null) return notInPayroll;
+    final team = employee.team.trim();
+    final area = employee.area.trim();
+    final text = [
+      team.isEmpty ? 'Sin equipo' : team,
       if (area.isNotEmpty) area,
     ].join(' · ');
-    return empleado.activo ? texto : '$texto (baja en la nómina)';
+    return employee.isActive ? text : '$text (baja en la nómina)';
   }
 
   /// Líderes para mostrar: el nombre de la nómina si el email coincide con el
   /// de algún empleado visible, y si no el email.
-  static String etiquetaLideres(
+  static String leadersLabel(
     Iterable<String> emails,
-    Map<String, String> nombrePorEmail,
+    Map<String, String> nameByEmail,
   ) {
-    final nombres = [
+    final names = [
       for (final email in emails)
-        nombrePorEmail[normalizarEmail(email)] ?? normalizarEmail(email),
+        nameByEmail[normalizeEmail(email)] ?? normalizeEmail(email),
     ]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return nombres.join(', ');
+    return names.join(', ');
   }
 }

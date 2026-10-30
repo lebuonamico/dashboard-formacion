@@ -10,58 +10,58 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 /// Maqueta el reporte en A4. La impresión la hace `ImpresionRepository`.
-Future<Uint8List> generarReportePdf(ReporteFormacion reporte) async {
-  final estilo = await EstiloReportePdf.cargar();
+Future<Uint8List> generateReportPdf(TrainingReport report) async {
+  final style = await PdfReportStyle.load();
   final doc = pw.Document(
-    title: '${reporte.tipo.label} · ${reporte.titulo}',
+    title: '${report.type.label} · ${report.title}',
     author: 'Finnegans · Formación interna',
   );
-  final generado = DateTime.now();
+  final generated = DateTime.now();
   // Una instancia por posición: los widgets del PDF guardan su maquetado.
-  pw.Widget separacion() => pw.SizedBox(height: 18);
+  pw.Widget spacing() => pw.SizedBox(height: 18);
 
   doc.addPage(
     pw.MultiPage(
       pageTheme: pw.PageTheme(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.fromLTRB(36, 32, 36, 36),
-        theme: pw.ThemeData.withFont(base: estilo.regular, bold: estilo.bold)
+        theme: pw.ThemeData.withFont(base: style.regular, bold: style.bold)
             .copyWith(
               defaultTextStyle: const pw.TextStyle(
                 fontSize: 9,
-                color: ColoresReportePdf.tinta,
+                color: PdfReportColors.ink,
               ),
             ),
       ),
       header: (context) => context.pageNumber == 1
           ? pw.SizedBox()
-          : EncabezadoCortoPdf(reporte, estilo),
+          : PdfShortHeader(report, style),
       footer: (context) =>
-          PiePdf(pagina: context.pageNumber, paginas: context.pagesCount),
+          PdfFooter(page: context.pageNumber, pages: context.pagesCount),
       // Los bloques cortos no se parten entre páginas; las tablas largas sí,
       // repitiendo su encabezado.
       build: (context) => [
-        PortadaPdf(reporte, estilo, generado: generado),
+        PdfCover(report, style, generated: generated),
         pw.SizedBox(height: 16),
-        pw.Inseparable(child: KpisPdf(reporte)),
-        separacion(),
-        pw.Inseparable(child: EstadoPersonasPdf(reporte)),
-        separacion(),
-        pw.Inseparable(child: CategoriasPdf(reporte)),
-        separacion(),
-        pw.Inseparable(child: FuentesPdf(reporte)),
-        if (reporte.evolucion.isNotEmpty) ...[
-          separacion(),
-          pw.Inseparable(child: EvolucionPdf(reporte)),
+        pw.Inseparable(child: KpisPdf(report)),
+        spacing(),
+        pw.Inseparable(child: PdfPeopleStatus(report)),
+        spacing(),
+        pw.Inseparable(child: PdfCategories(report)),
+        spacing(),
+        pw.Inseparable(child: PdfSources(report)),
+        if (report.evolution.isNotEmpty) ...[
+          spacing(),
+          pw.Inseparable(child: PdfEvolution(report)),
         ],
-        if (reporte.desglose.isNotEmpty) ...[
-          separacion(),
-          ...desglosePdf(reporte, estilo),
+        if (report.breakdown.isNotEmpty) ...[
+          spacing(),
+          ...breakdownPdf(report, style),
         ],
-        separacion(),
-        ...integrantesPdf(reporte, estilo),
+        spacing(),
+        ...pdfMembers(report, style),
         pw.SizedBox(height: 14),
-        pw.Inseparable(child: NotasPdf()),
+        pw.Inseparable(child: PdfNotes()),
       ],
     ),
   );
