@@ -627,7 +627,7 @@ class _ConfiguracionScreenState extends ConsumerState<ConfiguracionScreen> {
                       (item) => item.id,
                     );
                   } else {
-                    throw FormatException(
+                    throw const FormatException(
                       'Encabezados no reconocidos en una hoja del archivo.',
                     );
                   }

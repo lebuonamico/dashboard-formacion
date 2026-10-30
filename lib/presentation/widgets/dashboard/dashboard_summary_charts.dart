@@ -296,7 +296,7 @@ class _SinDatosCategorias extends StatelessWidget {
             size: 30,
             color: context.colorScheme.onSurfaceVariant,
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             'No se encontraron datos.',
             textAlign: TextAlign.center,
@@ -305,7 +305,7 @@ class _SinDatosCategorias extends StatelessWidget {
               color: context.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'No hay horas válidas en ninguna categoría para este período.',
             textAlign: TextAlign.center,

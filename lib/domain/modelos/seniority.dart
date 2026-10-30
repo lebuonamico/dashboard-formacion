@@ -141,7 +141,7 @@ enum Seniority {
   }
 
   static Seniority _levelled(Seniority base, int level) {
-    final values = Seniority.values;
+    const values = Seniority.values;
     final index = values.indexOf(base) + level - 1;
     return values[index.clamp(0, values.length - 1)];
   }

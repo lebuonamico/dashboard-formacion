@@ -350,7 +350,7 @@ Future<ProviderContainer> _mostrarConfiguracion(
           // Ahem has unusually wide glyphs; keep the existing sidebar intact.
           data: MediaQuery.of(
             context,
-          ).copyWith(textScaler: TextScaler.linear(0.5)),
+          ).copyWith(textScaler: const TextScaler.linear(0.5)),
           child: child!,
         ),
       ),

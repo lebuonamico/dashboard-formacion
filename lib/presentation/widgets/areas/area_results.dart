@@ -203,7 +203,7 @@ class _EmptySearch extends StatelessWidget {
             size: 30,
             color: context.colorScheme.onSurfaceVariant,
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'No hay áreas que coincidan con la búsqueda.',
             style: TextStyle(
@@ -211,7 +211,7 @@ class _EmptySearch extends StatelessWidget {
               color: context.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda o estado.',
             style: TextStyle(

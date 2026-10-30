@@ -163,7 +163,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: FadeIn(child: Text('Contenido')),
+        home: const FadeIn(child: Text('Contenido')),
       ),
     );
 

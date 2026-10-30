@@ -86,7 +86,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                         color: context.colorScheme.onSurface,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       'Horas válidas promedio por colaborador vs meta (8,0 h)',
                       style: TextStyle(

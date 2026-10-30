@@ -52,7 +52,7 @@ void main() {
     List<Curso> cursos = const [],
     required List<CargaDeHorasCRM> cargas,
     List<CertificacionMoodle> certificaciones = const [],
-  }) => CumplimientoService().calcularCumplimientoGlobal(
+  }) => const CumplimientoService().calcularCumplimientoGlobal(
     empleados: [empleado],
     cursos: cursos,
     cargasDeHoras: cargas,
@@ -154,7 +154,7 @@ void main() {
 
   test('el cálculo mensual usa solo las finalizaciones y cargas del mes', () {
     List<CumplimientoEmpleado> mes(int numero) =>
-        EquiposService().calcularCumplimientoMensual(
+        const EquiposService().calcularCumplimientoMensual(
           empleados: [empleado],
           cursos: [curso('Arquitectura Cloud', TipoCurso.habilidadesDeNegocio, 8)],
           cargas: [
@@ -164,7 +164,7 @@ void main() {
           certificaciones: [finalizado('Arquitectura Cloud')],
           anio: 2026,
           mes: numero,
-          cumplimientoService: CumplimientoService(),
+          cumplimientoService: const CumplimientoService(),
         );
 
     // Cargas del 10/05 y finalización del 20/05.
@@ -209,7 +209,7 @@ void main() {
 
     test('el objetivo sale de la versión vigente en el mes evaluado', () {
       List<CumplimientoEmpleado> mes(int numero) =>
-          EquiposService().calcularCumplimientoMensual(
+          const EquiposService().calcularCumplimientoMensual(
             empleados: [empleado],
             cursos: const [],
             cargas: [carga('Taller', 5, clasif: 'Dictado de capacitaciones')],
@@ -235,7 +235,7 @@ void main() {
     });
 
     test('el anual suma los objetivos de cada mes con su versión', () {
-      final anual = EquiposService()
+      final anual = const EquiposService()
           .calcularCumplimientoAnual(
             empleados: [empleado],
             cursos: const [],
@@ -281,7 +281,7 @@ void main() {
             clasificacion: 'Dictado de capacitaciones',
           );
       CumplimientoEmpleado anual(List<CargaDeHorasCRM> cargas) =>
-          EquiposService()
+          const EquiposService()
               .calcularCumplimientoAnual(
                 empleados: [empleado],
                 cursos: const [],

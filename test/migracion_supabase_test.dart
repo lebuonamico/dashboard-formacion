@@ -463,7 +463,7 @@ void main() {
       await service.ejecutar(
         tipoArchivo: 'horas_crm',
         nombreArchivo: 'file.xlsx',
-        procesar: () async => ResultadoUpsert(registrosProcesados: 1),
+        procesar: () async => const ResultadoUpsert(registrosProcesados: 1),
       );
       expect(audit.records.single.estado, EstadoImportacion.completada);
       expect(audit.records.single.insertados, isNull);
