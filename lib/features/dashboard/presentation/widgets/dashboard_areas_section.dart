@@ -1,15 +1,19 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/widgets/summary_card/status_badge.dart';
+import 'package:app_finnegans/core/widgets/summary_card/summary_card.dart';
+import 'package:app_finnegans/core/widgets/summary_card/summary_card_footer.dart';
+import 'package:app_finnegans/core/widgets/summary_card/summary_card_header.dart';
+import 'package:app_finnegans/core/widgets/summary_card/summary_info_row.dart';
+import 'package:app_finnegans/core/widgets/summary_card/summary_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class DashboardAreasSection extends ConsumerWidget {
@@ -167,190 +171,33 @@ class DashboardAreaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (area.compliancePercentage / 100).clamp(0.0, 1.0);
+    final colors = area.level.colors(context);
 
-    return Material(
-      color: context.colorScheme.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => context.push(
-          '/areas/${Uri.encodeComponent(area.area)}?origen=dashboard',
-        ),
-        child: Container(
-          decoration: context.panel(shadow: true),
-          child: Column(
-            children: [
-              Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: area.level.colors(context).text,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(7),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  area.area,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.textTheme.bodyLarge?.copyWith(
-                                    height: 1.25,
-                                    fontWeight: FontWeight.w700,
-                                    color: context.colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  '${area.employeeCount} colaboradores',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _AreaStatusBadge(status: area.level),
-                        ],
-                      ),
-                      const SizedBox(height: 13),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 16,
-                            color: context.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '${area.employeeCount} colaboradores · $teamCount equipos',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Cumplimiento del área',
-                            style: context.textTheme.labelMedium?.copyWith(
-                              color: context.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Text(
-                            formatPercentage(area.compliancePercentage),
-                            style: context.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: area.level.colors(context).text,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 7),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 7,
-                          backgroundColor: context.colors.chartTrack,
-                          color: area.level.colors(context).text,
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      Row(
-                        children: [
-                          Text(
-                            '${area.completedHours.toStringAsFixed(1)} de ${area.requiredHours.toStringAsFixed(1)} hs',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: context.colorScheme.onSurface,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            'Ver detalle',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: context.colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 15,
-                            color: context.colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return SummaryCard(
+      colors: colors,
+      onTap: () => context.push(
+        '/areas/${Uri.encodeComponent(area.area)}?origen=dashboard',
       ),
-    );
-  }
-}
-
-class _AreaStatusBadge extends StatelessWidget {
-  final ComplianceLevel status;
-
-  const _AreaStatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: status.colors(context).background,
-        borderRadius: BorderRadius.circular(5),
+      header: SummaryCardHeader(
+        title: area.area,
+        subtitle: '${area.employeeCount} colaboradores',
+        badge: StatusBadge(label: area.level.label, colors: colors),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: status.colors(context).text,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            status.label,
-            style: context.textTheme.labelMedium?.copyWith(
-              color: status.colors(context).text,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+      details: [
+        SummaryInfoRow(
+          icon: Icons.people_outline,
+          text: '${area.employeeCount} colaboradores · $teamCount equipos',
+        ),
+      ],
+      progress: SummaryProgress(
+        caption: 'Cumplimiento del área',
+        percentage: area.compliancePercentage,
+        colors: colors,
+      ),
+      footer: SummaryCardFooter(
+        completedHours: area.completedHours,
+        targetHours: area.requiredHours,
+        actionLabel: 'Ver detalle',
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/teams/presentation/widgets/team_donut_chart.dart';
+import 'package:app_finnegans/core/widgets/legend_donut_chart.dart';
 import 'package:flutter/material.dart';
 
 class TeamsStatusSummary extends StatelessWidget {
@@ -24,11 +24,11 @@ class TeamsStatusSummary extends StatelessWidget {
       teamsRequiringAttention: teamsRequiringAttention,
     );
 
-    final chart = TeamDonutChart(
+    final chart = LegendDonutChart(
       centerValue: '$total',
       centerLabel: 'EQUIPOS',
       slices: [
-        TeamDonutSlice(
+        DonutSlice(
           label: 'En objetivo',
           value: onTarget.toDouble(),
           color: context.colors.success.text,
@@ -36,7 +36,7 @@ class TeamsStatusSummary extends StatelessWidget {
           help:
               'Equipos con 100% o más de horas y todos sus integrantes cumpliendo el objetivo por categoría.',
         ),
-        TeamDonutSlice(
+        DonutSlice(
           label: 'En riesgo',
           value: atRisk.toDouble(),
           color: context.colors.warning.text,
@@ -44,7 +44,7 @@ class TeamsStatusSummary extends StatelessWidget {
           help:
               'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
         ),
-        TeamDonutSlice(
+        DonutSlice(
           label: 'Críticos',
           value: critical.toDouble(),
           color: context.colors.danger.text,

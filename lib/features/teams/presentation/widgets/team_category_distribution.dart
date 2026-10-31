@@ -1,6 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/teams/presentation/widgets/team_donut_chart.dart';
+import 'package:app_finnegans/core/widgets/legend_donut_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
@@ -68,33 +68,33 @@ class TeamCategoryDistribution extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
-                child: TeamDonutChart(
+                child: LegendDonutChart(
                   centerValue: total.toStringAsFixed(1),
                   centerLabel: 'HORAS',
                   valueSuffix: ' h',
                   slices: [
-                    TeamDonutSlice(
+                    DonutSlice(
                       label: CourseCategory.businessSkills.shortLabel,
                       help:
                           'Horas de capacitaciones asociadas a habilidades de negocio y herramientas.',
                       value: businessHours,
                       color: context.colors.business.text,
                     ),
-                    TeamDonutSlice(
+                    DonutSlice(
                       label: CourseCategory.softSkills.shortLabel,
                       help:
                           'Horas de capacitaciones clasificadas como habilidades blandas.',
                       value: softSkillsHours,
                       color: context.colors.softSkills.text,
                     ),
-                    TeamDonutSlice(
+                    DonutSlice(
                       label: CourseCategory.exploration.shortLabel,
                       help:
                           'Horas de formación libre o exploratoria realizadas por los integrantes.',
                       value: explorationHours,
                       color: context.colors.exploration.text,
                     ),
-                    TeamDonutSlice(
+                    DonutSlice(
                       label: CourseCategory.teaching.shortLabel,
                       help:
                           'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',

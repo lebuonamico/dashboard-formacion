@@ -2,6 +2,7 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_category_distribution.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
@@ -215,9 +216,7 @@ class _AreaProgressPanel extends StatelessWidget {
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: area.hoursDeviation >= 0
-                ? '+${area.hoursDeviation.toStringAsFixed(1)} h'
-                : '-${area.hoursDeviation.abs().toStringAsFixed(1)} h',
+            value: formatHoursDeviation(area.hoursDeviation, unit: 'h'),
           ),
         ],
       ),

@@ -1,5 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/areas/presentation/widgets/area_donut_chart.dart';
+import 'package:app_finnegans/core/widgets/legend_donut_chart.dart';
 import 'package:flutter/material.dart';
 
 class AreasStatusSummary extends StatelessWidget {
@@ -37,11 +37,11 @@ class AreasStatusSummary extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
-                child: AreasDonutChart(
+                child: LegendDonutChart(
                   centerValue: '$total',
                   centerLabel: 'ÁREAS',
                   slices: [
-                    AreasDonutSlice(
+                    DonutSlice(
                       label: 'En objetivo',
                       value: onTarget.toDouble(),
                       color: context.colors.success.text,
@@ -49,7 +49,7 @@ class AreasStatusSummary extends StatelessWidget {
                       help:
                           'Áreas con 100% o más de las horas objetivo del período.',
                     ),
-                    AreasDonutSlice(
+                    DonutSlice(
                       label: 'En riesgo',
                       value: atRisk.toDouble(),
                       color: context.colors.warning.text,
@@ -57,7 +57,7 @@ class AreasStatusSummary extends StatelessWidget {
                       help:
                           'Áreas con al menos 70% de las horas objetivo, pero sin llegar al 100%.',
                     ),
-                    AreasDonutSlice(
+                    DonutSlice(
                       label: 'Críticas',
                       value: critical.toDouble(),
                       color: context.colors.danger.text,

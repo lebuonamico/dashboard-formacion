@@ -3,6 +3,7 @@ import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_category_distribution.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
@@ -218,9 +219,7 @@ class _TeamProgressPanel extends StatelessWidget {
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: team.hoursDeviation >= 0
-                ? '+${team.hoursDeviation.toStringAsFixed(1)} h'
-                : '-${team.hoursDeviation.abs().toStringAsFixed(1)} h',
+            value: formatHoursDeviation(team.hoursDeviation, unit: 'h'),
           ),
         ],
       ),

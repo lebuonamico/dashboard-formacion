@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/side_by_side_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,14 +141,14 @@ class _AreasContent extends ConsumerWidget {
                 .value,
           ),
           const SizedBox(height: 16),
-          _ChartsRow(
-            statusChart: AreasStatusSummary(
+          SideBySideCharts(
+            first: AreasStatusSummary(
               total: summary.totalAreas,
               onTarget: summary.onTarget,
               atRisk: summary.atRisk,
               critical: summary.critical,
             ),
-            categoryChart: AreasCategoryDistribution(
+            second: AreasCategoryDistribution(
               businessHours: summary.businessHours,
               softSkillsHours: summary.softSkillsHours,
               explorationHours: summary.explorationHours,
@@ -192,38 +193,6 @@ class _AreasContent extends ConsumerWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// Estado y categorías lado a lado; en pantallas angostas, uno debajo del otro.
-class _ChartsRow extends StatelessWidget {
-  final Widget statusChart;
-  final Widget categoryChart;
-
-  const _ChartsRow({required this.statusChart, required this.categoryChart});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 1180) {
-          return Column(
-            children: [statusChart, const SizedBox(height: 16), categoryChart],
-          );
-        }
-
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: statusChart),
-              const SizedBox(width: 16),
-              Expanded(child: categoryChart),
-            ],
-          ),
-        );
-      },
     );
   }
 }

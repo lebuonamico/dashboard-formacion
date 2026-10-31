@@ -2,16 +2,15 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/donut_chart.dart';
 import 'package:flutter/material.dart';
 
-class AreasDonutSlice {
+class DonutSlice {
   final String label;
   final double value;
   final Color color;
 
-  /// Fondo de la fila de la leyenda; por defecto el de la página.
   final Color? backgroundColor;
   final String help;
 
-  const AreasDonutSlice({
+  const DonutSlice({
     required this.label,
     required this.value,
     required this.color,
@@ -20,13 +19,13 @@ class AreasDonutSlice {
   });
 }
 
-class AreasDonutChart extends StatelessWidget {
-  final List<AreasDonutSlice> slices;
+class LegendDonutChart extends StatelessWidget {
+  final List<DonutSlice> slices;
   final String centerValue;
   final String centerLabel;
   final String valueSuffix;
 
-  const AreasDonutChart({
+  const LegendDonutChart({
     super.key,
     required this.slices,
     required this.centerValue,
@@ -74,7 +73,7 @@ class AreasDonutChart extends StatelessWidget {
 }
 
 class _DonutLegendItem extends StatelessWidget {
-  final AreasDonutSlice slice;
+  final DonutSlice slice;
   final double total;
   final String valueSuffix;
 

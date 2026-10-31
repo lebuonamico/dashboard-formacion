@@ -15,6 +15,7 @@ import 'package:app_finnegans/features/teams/presentation/widgets/team_category_
 import 'package:app_finnegans/features/teams/presentation/widgets/team_kpi_section.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_results.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_status_summary.dart';
+import 'package:app_finnegans/core/widgets/side_by_side_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -127,14 +128,14 @@ class _TeamsOverviewContent extends ConsumerWidget {
                 .value,
           ),
           const SizedBox(height: 16),
-          _TeamsChartsRow(
-            statusChart: TeamsStatusSummary(
+          SideBySideCharts(
+            first: TeamsStatusSummary(
               total: summary.teamCount,
               onTarget: summary.onTarget,
               atRisk: summary.atRisk,
               critical: summary.critical,
             ),
-            categoryChart: TeamCategoryDistribution(
+            second: TeamCategoryDistribution(
               businessHours: summary.businessHours,
               softSkillsHours: summary.softSkillsHours,
               explorationHours: summary.explorationHours,
@@ -177,41 +178,6 @@ class _TeamsOverviewContent extends ConsumerWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _TeamsChartsRow extends StatelessWidget {
-  static const _horizontalChartsBreakpoint = 1180.0;
-  final Widget statusChart;
-  final Widget categoryChart;
-
-  const _TeamsChartsRow({
-    required this.statusChart,
-    required this.categoryChart,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < _horizontalChartsBreakpoint) {
-          return Column(
-            children: [statusChart, const SizedBox(height: 16), categoryChart],
-          );
-        }
-
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: statusChart),
-              const SizedBox(width: 16),
-              Expanded(child: categoryChart),
-            ],
-          ),
-        );
-      },
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_card.dart';
+import 'package:app_finnegans/core/widgets/summary_card/count_badge.dart';
 import 'package:flutter/material.dart';
 
 const _maxCardWidth = 410.0;
@@ -86,7 +87,7 @@ class _TeamResultsState extends State<TeamResults> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _CountBadge(count: widget.teams.length),
+                CountBadge(count: widget.teams.length),
                 const Spacer(),
                 Text(
                   widget.teams.length == widget.teamCount
@@ -126,30 +127,6 @@ class _TeamResultsState extends State<TeamResults> {
           ],
         );
       },
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  final int count;
-
-  const _CountBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: context.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        '$count',
-        style: context.textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: context.colorScheme.primary,
-        ),
-      ),
     );
   }
 }

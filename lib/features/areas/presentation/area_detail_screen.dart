@@ -15,7 +15,7 @@ import 'package:app_finnegans/features/areas/presentation/widgets/area_detail_su
 import 'package:app_finnegans/features/areas/presentation/widgets/area_members_table.dart';
 import 'package:app_finnegans/features/reports/presentation/widgets/print_report_button.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
-import 'package:app_finnegans/features/areas/presentation/widgets/area_team_card.dart';
+import 'package:app_finnegans/features/areas/presentation/widgets/area_teams_grid.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
