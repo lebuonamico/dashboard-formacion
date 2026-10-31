@@ -12,7 +12,7 @@ import 'spreadsheet_fixtures.dart';
 /// - Mobile (Producto) is at risk: Carla completes everything and Diego only
 ///   business skills (12 of 16 h, 75 %).
 /// - Soporte (Operaciones) is critical: Elena declares hours without a
-///   completion and Fede completes 2 h (2 of 16 h).
+///   completion and Fede only completes a 4 h course (4 of 16 h, 25 %).
 const demoMonths = [7, 8, 9];
 
 const _months = {7: 'I', 8: 'II', 9: 'III'};
