@@ -1,13 +1,4 @@
-import 'package:app_finnegans/features/auth/domain/user_role.dart';
-
-enum UserStatus {
-  active('Activo'),
-  blocked('Bloqueado'),
-  deleted('Eliminado');
-
-  final String label;
-  const UserStatus(this.label);
-}
+enum UserStatus { active, blocked, deleted }
 
 class AuthorizedUser {
   final String email;
@@ -17,60 +8,28 @@ class AuthorizedUser {
   final DateTime? blockedAt;
   final DateTime? deletedAt;
 
-  AuthorizedUser({
-    required String email,
+  const AuthorizedUser({
+    required this.email,
     required this.role,
     required this.isActive,
     this.createdAt,
     this.blockedAt,
     this.deletedAt,
-  }) : email = email.trim().toLowerCase();
+  });
 
-  AuthorizedUser.create({
-    required String email,
-    required UserRole role,
-    required DateTime now,
-  }) : this(email: email, role: role.name, isActive: true, createdAt: now);
-
-  UserRole? get knownRole => UserRole.fromString(role);
-
-  bool get isAdmin => knownRole == UserRole.admin;
-
-  UserStatus get status {
-    if (deletedAt != null) return UserStatus.deleted;
-    if (blockedAt != null) return UserStatus.blocked;
-    return UserStatus.active;
-  }
-
-  bool isSameUser(String? sessionEmail) =>
-      sessionEmail != null && sessionEmail.trim().toLowerCase() == email;
-
-  AuthorizedUser withRole(UserRole newRole) => _with(role: newRole.name);
-
-  AuthorizedUser blocked(DateTime now) => _with(blockedAt: now);
-
-  AuthorizedUser unblocked() => _with(clearBlock: true);
-
-  AuthorizedUser deleted(DateTime now) => _with(deletedAt: now);
-
-  AuthorizedUser restored() => _with(clearDeletion: true);
-
-  AuthorizedUser _with({
+  AuthorizedUser copyWith({
+    String? email,
     String? role,
+    bool? isActive,
+    DateTime? createdAt,
     DateTime? blockedAt,
     DateTime? deletedAt,
-    bool clearBlock = false,
-    bool clearDeletion = false,
-  }) {
-    final block = clearBlock ? null : (blockedAt ?? this.blockedAt);
-    final deletion = clearDeletion ? null : (deletedAt ?? this.deletedAt);
-    return AuthorizedUser(
-      email: email,
-      role: role ?? this.role,
-      isActive: deletion == null && block == null,
-      createdAt: createdAt,
-      blockedAt: block,
-      deletedAt: deletion,
-    );
-  }
+  }) => AuthorizedUser(
+    email: email ?? this.email,
+    role: role ?? this.role,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt ?? this.createdAt,
+    blockedAt: blockedAt ?? this.blockedAt,
+    deletedAt: deletedAt ?? this.deletedAt,
+  );
 }

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/auth/data/user_role_codes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
@@ -25,7 +26,7 @@ class SupabaseAuthorizedUsersRepository implements AuthorizedUsersRepository {
   Future<void> create(AuthorizedUser user) async {
     try {
       await _client.schema('public').from(_table).insert({
-        'email': user.email,
+        'email': normalizeLoose(user.email),
         'rol': userRoleToDb(user.role),
         'activo': user.isActive,
         'ff_alta': user.createdAt?.toUtc().toIso8601String(),
@@ -50,7 +51,7 @@ class SupabaseAuthorizedUsersRepository implements AuthorizedUsersRepository {
             'ff_bloqueo': user.blockedAt?.toUtc().toIso8601String(),
             'ff_eliminar': user.deletedAt?.toUtc().toIso8601String(),
           })
-          .eq('email', user.email)
+          .eq('email', normalizeLoose(user.email))
           .select('email');
     } on PostgrestException catch (error) {
       throw FormatException(_errorMessage(error));
@@ -75,7 +76,7 @@ class SupabaseAuthorizedUsersRepository implements AuthorizedUsersRepository {
   }
 
   AuthorizedUser _fromRow(Map<String, dynamic> row) => AuthorizedUser(
-    email: row['email']?.toString() ?? '',
+    email: normalizeLoose(row['email']?.toString() ?? ''),
     role: userRoleFromDb(row['rol']?.toString() ?? ''),
     isActive: row['activo'] == true,
     createdAt: _date(row['ff_alta']),

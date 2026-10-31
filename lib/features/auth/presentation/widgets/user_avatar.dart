@@ -7,6 +7,8 @@ import 'package:app_finnegans/features/auth/presentation/providers/auth_provider
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/theme/theme_mode_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
+import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
+import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 
 /// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
 /// tarjeta con el detalle de la cuenta, incluido el rol, y el switch de tema
@@ -21,7 +23,7 @@ class UserAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final cs = context.colorScheme;
-    final role = UserRole.fromString(auth.role);
+    final role = const UserRoleParser().tryParse(auth.role);
     final isLeader = role == UserRole.teamLead || role == UserRole.areaLead;
     final data = _UserData(
       email: auth.email,
@@ -433,7 +435,7 @@ class _RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final known = UserRole.fromString(role);
+    final known = const UserRoleParser().tryParse(role);
     final raw = role?.trim() ?? '';
 
     final cs = context.colorScheme;

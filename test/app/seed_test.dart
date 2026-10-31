@@ -13,6 +13,7 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 import 'package:app_finnegans/features/time_entries/data/crm_time_entries_seed.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 
 void main() {
   group('Coherencia del seed', () {
@@ -65,7 +66,11 @@ void main() {
       };
       void expectLeader(String email, UserRole role) {
         final AuthorizedUser? user = usersByEmail[email];
-        expect(user?.knownRole, role, reason: email);
+        expect(
+          user == null ? null : const AuthorizedUserService().knownRole(user),
+          role,
+          reason: email,
+        );
         expect(user?.isActive, isTrue, reason: email);
       }
 

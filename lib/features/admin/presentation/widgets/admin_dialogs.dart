@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_styles.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
+import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 
 Future<({String email, UserRole role})?> showUserCreationDialog(
   BuildContext context,
@@ -75,9 +77,11 @@ class _LeadersDialogState extends State<_LeadersDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
+    const users = AuthorizedUserService();
     final candidates = {
       for (final user in widget.users)
-        if (user.status == UserStatus.active && user.knownRole == widget.role)
+        if (users.status(user) == UserStatus.active &&
+            users.knownRole(user) == widget.role)
           user.email,
     };
     // Los asignados que perdieron el rol o el acceso se listan igual, para

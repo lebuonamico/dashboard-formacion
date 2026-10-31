@@ -2,8 +2,11 @@ import 'package:app_finnegans/core/data_filters/presentation/data_filter_selecti
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
+import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
+import 'package:app_finnegans/features/admin/presentation/user_status_labels.dart';
 
 enum AccessAdmin { allowed, denied }
 
@@ -24,10 +27,17 @@ final selectedAdminEmailProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
-FilterRow adminUserFilterRow(AuthorizedUser user) => FilterRow({
+final authorizedUserServiceProvider = Provider<AuthorizedUserService>(
+  (ref) => const AuthorizedUserService(),
+);
+
+FilterRow adminUserFilterRow(
+  AuthorizedUser user, [
+  AuthorizedUserService users = const AuthorizedUserService(),
+]) => FilterRow({
   'Email': user.email,
-  'Rol': user.knownRole?.label ?? user.role,
-  'Estado': user.status.label,
+  'Rol': users.knownRole(user)?.label ?? user.role,
+  'Estado': users.status(user).label,
 });
 
 final adminUserFilterRowsProvider = FutureProvider.autoDispose<List<FilterRow>>(

@@ -9,6 +9,7 @@ import 'package:app_finnegans/features/auth/domain/auth_repository.dart';
 import 'package:app_finnegans/features/auth/domain/auth_user.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
 
 export 'package:app_finnegans/features/auth/domain/auth_user.dart';
 
@@ -71,7 +72,8 @@ class AuthState {
 
   String? get photoUrl => isAuthorized ? user?.photoUrl : null;
 
-  UserRole? get knownRole => isAuthorized ? UserRole.fromString(role) : null;
+  UserRole? get knownRole =>
+      isAuthorized ? const UserRoleParser().tryParse(role) : null;
 
   bool get canManage => knownRole?.canManage ?? false;
 

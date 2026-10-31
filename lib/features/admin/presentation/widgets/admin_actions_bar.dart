@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 
 class AdminActionsBar extends StatelessWidget {
   final AuthorizedUser? selected;
@@ -32,10 +33,12 @@ class AdminActionsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = selected;
     final hasAction = actionInProgress != null;
-    final isOwn = user?.isSameUser(ownEmail) ?? false;
+    const users = AuthorizedUserService();
+    final isOwn = user != null && users.isSameUser(user, ownEmail);
     final enabled = user != null && !isOwn && !hasAction;
-    final deleted = user?.status == UserStatus.deleted;
-    final blocked = user?.status == UserStatus.blocked;
+    final status = user == null ? null : users.status(user);
+    final deleted = status == UserStatus.deleted;
+    final blocked = status == UserStatus.blocked;
     final colors = context.colors;
 
     return Container(

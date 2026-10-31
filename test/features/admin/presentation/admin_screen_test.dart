@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 
 final _creation = DateTime.utc(2026, 1, 15, 10);
 final _stamp = DateTime.utc(2026, 10, 3, 14, 30);
@@ -354,7 +355,7 @@ void main() {
     expect(saved.email, 'ana@finnegans.com');
     expect(saved.blockedAt, isNotNull);
     expect(saved.isActive, isFalse);
-    expect(saved.status, UserStatus.blocked);
+    expect(const AuthorizedUserService().status(saved), UserStatus.blocked);
     expect(find.byKey(const Key('admin_desbloquear')), findsOneWidget);
     expect(find.byKey(const Key('admin_bloquear')), findsNothing);
   });
@@ -407,7 +408,7 @@ void main() {
 
     final created = repository.created.single;
     expect(created.email, 'nuevo.usuario@finnegans.com');
-    expect(created.knownRole, UserRole.teamLead);
+    expect(const AuthorizedUserService().knownRole(created), UserRole.teamLead);
     expect(created.isActive, isTrue);
     expect(created.createdAt, isNotNull);
     expect(

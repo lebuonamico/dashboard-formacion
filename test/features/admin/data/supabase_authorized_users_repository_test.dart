@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:app_finnegans/features/admin/data/supabase_authorized_users_repository.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -58,6 +59,8 @@ AuthorizedUser _user({
   deletedAt: deletedAt,
 );
 
+const _service = AuthorizedUserService();
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -97,11 +100,11 @@ void main() {
       expect(request.url.queryParameters['order'], 'email.asc.nullslast');
 
       expect(users, hasLength(2));
-      expect(users.first.knownRole, UserRole.admin);
-      expect(users.first.status, UserStatus.active);
+      expect(_service.knownRole(users.first), UserRole.admin);
+      expect(_service.status(users.first), UserStatus.active);
       expect(users.last.role, 'usuario');
-      expect(users.last.knownRole, isNull);
-      expect(users.last.status, UserStatus.blocked);
+      expect(_service.knownRole(users.last), isNull);
+      expect(_service.status(users.last), UserStatus.blocked);
       expect(users.last.blockedAt, DateTime.utc(2026, 3, 2, 12).toLocal());
     });
 
@@ -117,7 +120,19 @@ void main() {
       expect(user.role, '');
       expect(user.isActive, isFalse);
       expect(user.createdAt, isNull);
-      expect(user.status, UserStatus.active);
+      expect(_service.status(user), UserStatus.active);
+    });
+
+    test('Normaliza el email al leer', () async {
+      final fixture = _fixture(
+        (request) async => _json(request, [
+          {'email': '  Juan.Perez@Finnegans.COM  ', 'rol': 'lider'},
+        ]),
+      );
+
+      final user = (await fixture.repositorio.getUsers()).single;
+
+      expect(user.email, 'juan.perez@finnegans.com');
     });
   });
 
@@ -126,7 +141,7 @@ void main() {
       final fixture = _fixture((request) async => _json(request, []));
 
       await fixture.repositorio.create(
-        AuthorizedUser.create(
+        _service.create(
           email: 'Nuevo@Finnegans.com',
           role: UserRole.academy,
           now: _now,
@@ -159,7 +174,7 @@ void main() {
 
       await expectLater(
         fixture.repositorio.create(
-          AuthorizedUser.create(
+          _service.create(
             email: 'ana@finnegans.com',
             role: UserRole.teamLead,
             now: _now,
@@ -186,7 +201,7 @@ void main() {
 
       await expectLater(
         fixture.repositorio.create(
-          AuthorizedUser.create(
+          _service.create(
             email: 'ana@finnegans.com',
             role: UserRole.teamLead,
             now: _now,
@@ -211,7 +226,7 @@ void main() {
         ]),
       );
 
-      await fixture.repositorio.save(_user().blocked(_now));
+      await fixture.repositorio.save(_service.block(_user(), _now));
 
       final request = fixture.requests.single;
       expect(request.method, 'PATCH');
@@ -233,7 +248,7 @@ void main() {
         ]),
       );
 
-      await fixture.repositorio.save(_user().deleted(_now));
+      await fixture.repositorio.save(_service.delete(_user(), _now));
 
       expect(jsonDecode(fixture.requests.single.body), {
         'rol': 'lider',
@@ -250,7 +265,7 @@ void main() {
         ]),
       );
 
-      await fixture.repositorio.save(_user(blockedAt: _now).unblocked());
+      await fixture.repositorio.save(_service.unblock(_user(blockedAt: _now)));
 
       expect(jsonDecode(fixture.requests.single.body), {
         'rol': 'lider',
@@ -268,7 +283,7 @@ void main() {
       );
 
       await fixture.repositorio.save(
-        _user(blockedAt: _now, deletedAt: _now).unblocked(),
+        _service.unblock(_user(blockedAt: _now, deletedAt: _now)),
       );
 
       expect(jsonDecode(fixture.requests.single.body), {
@@ -287,7 +302,7 @@ void main() {
       );
 
       await fixture.repositorio.save(
-        _user(blockedAt: _now).withRole(UserRole.admin),
+        _service.withRole(_user(blockedAt: _now), UserRole.admin),
       );
 
       expect(jsonDecode(fixture.requests.single.body), {
@@ -302,7 +317,7 @@ void main() {
       final fixture = _fixture((request) async => _json(request, []));
 
       await expectLater(
-        fixture.repositorio.save(_user().blocked(_now)),
+        fixture.repositorio.save(_service.block(_user(), _now)),
         throwsA(
           isA<FormatException>().having(
             (error) => error.message,
@@ -320,7 +335,7 @@ void main() {
       );
 
       await expectLater(
-        fixture.repositorio.save(_user().blocked(_now)),
+        fixture.repositorio.save(_service.block(_user(), _now)),
         throwsA(
           isA<FormatException>().having(
             (error) => error.message,

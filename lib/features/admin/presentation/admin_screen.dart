@@ -18,6 +18,8 @@ import 'package:app_finnegans/features/admin/presentation/widgets/admin_structur
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_users_table.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_filters.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
+import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
@@ -163,6 +165,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   AuthorizedUsersRepository _repository() =>
       ref.read(authorizedUsersRepositoryProvider);
 
+  AuthorizedUserService get _users => ref.read(authorizedUserServiceProvider);
+
   Future<void> _createUser() async {
     final data = await showUserCreationDialog(context);
     if (data == null) return;
@@ -171,7 +175,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       affectedEmail: data.email,
       success: 'Se dio de alta a ${data.email}.',
       action: (repository) => repository.create(
-        AuthorizedUser.create(
+        _users.create(
           email: data.email,
           role: data.role,
           now: DateTime.now().toUtc(),
@@ -194,12 +198,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final role = await showRoleChangeDialog(
       context,
       email: user.email,
-      currentRole: user.knownRole,
+      currentRole: _users.knownRole(user),
     );
     if (role == null) return;
     await _save(
       key: 'admin_cambiar_rol',
-      user: user.withRole(role),
+      user: _users.withRole(user, role),
       success: '${user.email} ahora tiene el rol ${role.label}.',
     );
   }
@@ -220,7 +224,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (!confirmed) return;
     await _save(
       key: 'admin_bloquear',
-      user: user.blocked(DateTime.now().toUtc()),
+      user: _users.block(user, DateTime.now().toUtc()),
       success: 'Se bloqueó a ${user.email}.',
     );
   }
@@ -238,7 +242,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (!confirmed) return;
     await _save(
       key: 'admin_desbloquear',
-      user: user.unblocked(),
+      user: _users.unblock(user),
       success: 'Se desbloqueó a ${user.email}.',
     );
   }
@@ -259,7 +263,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (!confirmed) return;
     await _save(
       key: 'admin_eliminar',
-      user: user.deleted(DateTime.now().toUtc()),
+      user: _users.delete(user, DateTime.now().toUtc()),
       success: 'Se eliminó a ${user.email}.',
     );
   }
@@ -278,7 +282,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (!confirmed) return;
     await _save(
       key: 'admin_restaurar',
-      user: user.restored(),
+      user: _users.restore(user),
       success: 'Se restauró a ${user.email}.',
     );
   }

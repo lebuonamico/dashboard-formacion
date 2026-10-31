@@ -4,11 +4,16 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_styles.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
+import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
+import 'package:app_finnegans/features/admin/presentation/user_status_labels.dart';
+
+const _users = AuthorizedUserService();
 
 class AdminUsersTable extends StatefulWidget {
   static const usersPerPage = 8;
@@ -171,8 +176,8 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
     final cs = context.colorScheme;
     final colors = context.colors;
     final selected = user.email == widget.selectedEmail;
-    final isOwn = user.isSameUser(widget.ownEmail);
-    final role = user.knownRole;
+    final isOwn = _users.isSameUser(user, widget.ownEmail);
+    final role = _users.knownRole(user);
     final brand = ColorPair(cs.onPrimaryContainer, cs.primaryContainer);
 
     return DataRow(
@@ -215,8 +220,8 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
         DataCell(_membership(user)),
         DataCell(
           ColorLabel(
-            text: user.status.label,
-            colors: userStatusColors(colors, user.status),
+            text: _users.status(user).label,
+            colors: userStatusColors(colors, _users.status(user)),
           ),
         ),
         DataCell(_stamp(user.createdAt)),
@@ -229,7 +234,7 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
   /// Qué ve el usuario: toda la empresa, o las áreas o los equipos que
   /// lidera según su rol.
   Widget _scope(AuthorizedUser user) {
-    final role = user.knownRole;
+    final role = _users.knownRole(user);
     // Los gestores ven todo aunque la estructura no haya cargado.
     final text = role != null && role.canManage
         ? 'Toda la empresa'
@@ -240,7 +245,7 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
   /// Equipo y área de su fila en la nómina, buscada por email. Solo para los
   /// líderes: puede no coincidir con lo que lideran.
   Widget _membership(AuthorizedUser user) {
-    final role = user.knownRole;
+    final role = _users.knownRole(user);
     final payroll = widget.payroll;
     if (payroll == null ||
         (role != UserRole.teamLead && role != UserRole.areaLead)) {

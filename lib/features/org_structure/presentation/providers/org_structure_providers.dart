@@ -6,12 +6,12 @@ import 'package:app_finnegans/features/org_structure/domain/user_scope_service.d
 import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
-import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
 
 /// Identidad de la sesión que define qué datos se leen.
 ///
@@ -48,7 +48,7 @@ final userScopeServiceProvider = Provider<UserScopeService>(
 final userScopeProvider = FutureProvider<UserScope>((ref) async {
   final session = ref.watch(sessionDataProvider);
   if (!session.enabled) return const UserScope.total();
-  final role = UserRole.fromString(session.role);
+  final role = const UserRoleParser().tryParse(session.role);
   if (role != null && role.canManage) return const UserScope.total();
   final scopes = ref.watch(userScopeServiceProvider);
   final structure = await ref.watch(orgStructureProvider.future);
