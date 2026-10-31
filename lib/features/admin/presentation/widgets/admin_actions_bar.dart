@@ -2,11 +2,12 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
 
 class AdminActionsBar extends StatelessWidget {
   final AuthorizedUser? selected;
   final bool outsideFilter;
-  final String? actionInProgress;
+  final AdminUserAction? pendingAction;
   final String? ownEmail;
   final VoidCallback onCreate;
   final VoidCallback onRoleChange;
@@ -19,7 +20,7 @@ class AdminActionsBar extends StatelessWidget {
     super.key,
     required this.selected,
     required this.outsideFilter,
-    required this.actionInProgress,
+    required this.pendingAction,
     required this.ownEmail,
     required this.onCreate,
     required this.onRoleChange,
@@ -32,7 +33,7 @@ class AdminActionsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = selected;
-    final hasAction = actionInProgress != null;
+    final hasAction = pendingAction != null;
     const users = AuthorizedUserService();
     final isOwn = user != null && users.isSameUser(user, ownEmail);
     final enabled = user != null && !isOwn && !hasAction;
@@ -56,6 +57,7 @@ class AdminActionsBar extends StatelessWidget {
             children: [
               _button(
                 context,
+                action: AdminUserAction.create,
                 key: 'admin_crear',
                 label: 'Nuevo usuario',
                 icon: Icons.person_add_alt_1_outlined,
@@ -64,6 +66,7 @@ class AdminActionsBar extends StatelessWidget {
               ),
               _button(
                 context,
+                action: AdminUserAction.changeRole,
                 key: 'admin_cambiar_rol',
                 label: 'Cambiar rol',
                 icon: Icons.badge_outlined,
@@ -73,6 +76,7 @@ class AdminActionsBar extends StatelessWidget {
               if (blocked)
                 _button(
                   context,
+                  action: AdminUserAction.unblock,
                   key: 'admin_desbloquear',
                   label: 'Desbloquear',
                   icon: Icons.lock_open_outlined,
@@ -82,6 +86,7 @@ class AdminActionsBar extends StatelessWidget {
               else
                 _button(
                   context,
+                  action: AdminUserAction.block,
                   key: 'admin_bloquear',
                   label: 'Bloquear',
                   icon: Icons.block_outlined,
@@ -94,6 +99,7 @@ class AdminActionsBar extends StatelessWidget {
               if (deleted)
                 _button(
                   context,
+                  action: AdminUserAction.restore,
                   key: 'admin_restaurar',
                   label: 'Restaurar',
                   icon: Icons.restore_outlined,
@@ -103,6 +109,7 @@ class AdminActionsBar extends StatelessWidget {
               else
                 _button(
                   context,
+                  action: AdminUserAction.delete,
                   key: 'admin_eliminar',
                   label: 'Eliminar',
                   icon: Icons.person_remove_outlined,
@@ -183,6 +190,7 @@ class AdminActionsBar extends StatelessWidget {
 
   Widget _button(
     BuildContext context, {
+    required AdminUserAction action,
     required String key,
     required String label,
     required IconData icon,
@@ -192,7 +200,7 @@ class AdminActionsBar extends StatelessWidget {
     bool highlighted = false,
   }) {
     final cs = context.colorScheme;
-    final inProgress = actionInProgress == key;
+    final inProgress = pendingAction == action;
     final button = OutlinedButton.icon(
       key: Key(key),
       onPressed: inProgress ? null : onPressed,

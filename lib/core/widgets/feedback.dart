@@ -6,6 +6,30 @@ void showAppSnackBar(BuildContext context, String message) {
     ..showSnackBar(SnackBar(content: Text(message)));
 }
 
+const actionFailedMessage =
+    'No se pudo completar la acción. Intentá nuevamente.';
+
+String actionErrorMessage(Object error) =>
+    error is FormatException ? error.message : actionFailedMessage;
+
+/// Waits for [action] and reports the outcome with a SnackBar. Returns
+/// whether it succeeded.
+Future<bool> runWithFeedback(
+  BuildContext context, {
+  required Future<void> Function() action,
+  required String success,
+  String Function(Object error) failure = actionErrorMessage,
+}) async {
+  try {
+    await action();
+  } on Object catch (error) {
+    if (context.mounted) showAppSnackBar(context, failure(error));
+    return false;
+  }
+  if (context.mounted) showAppSnackBar(context, success);
+  return true;
+}
+
 Future<bool> showConfirmationDialog(
   BuildContext context, {
   required String title,

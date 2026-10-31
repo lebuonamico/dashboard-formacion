@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
@@ -30,6 +32,7 @@ class _FakeUsers implements AuthorizedUsersRepository {
   final created = <AuthorizedUser>[];
   final saved = <AuthorizedUser>[];
   Object? saveError;
+  Completer<void>? gate;
 
   _FakeUsers(this.users);
 
@@ -44,6 +47,7 @@ class _FakeUsers implements AuthorizedUsersRepository {
 
   @override
   Future<void> save(AuthorizedUser user) async {
+    await gate?.future;
     final error = saveError;
     if (error != null) throw error;
     saved.add(user);
@@ -269,7 +273,7 @@ void main() {
             body: AdminActionsBar(
               selected: selected,
               outsideFilter: false,
-              actionInProgress: null,
+              pendingAction: null,
               ownEmail: ownEmail,
               onCreate: () {},
               onRoleChange: () {},
@@ -341,8 +345,9 @@ void main() {
       access: AccessAdmin.allowed,
       repository: repository,
     );
-    container.read(selectedAdminEmailProvider.notifier).state =
-        'ana@finnegans.com';
+    container
+        .read(selectedAdminEmailProvider.notifier)
+        .select('ana@finnegans.com');
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('admin_bloquear')));
@@ -360,6 +365,36 @@ void main() {
     expect(find.byKey(const Key('admin_bloquear')), findsNothing);
   });
 
+  testWidgets('Mientras bloquea muestra el progreso y frena las acciones', (
+    tester,
+  ) async {
+    final repository = _FakeUsers([_user(email: 'ana@finnegans.com')]);
+    final gate = repository.gate = Completer<void>();
+    final container = await _showPanel(
+      tester,
+      access: AccessAdmin.allowed,
+      repository: repository,
+    );
+    container
+        .read(selectedAdminEmailProvider.notifier)
+        .select('ana@finnegans.com');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('admin_bloquear')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admin_confirmar')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('loading_admin_bloquear')), findsOneWidget);
+    expect(_button(tester, 'admin_crear').onPressed, isNull);
+    expect(_button(tester, 'admin_eliminar').onPressed, isNull);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('loading_admin_bloquear')), findsNothing);
+    expect(find.text('Se bloqueó a ana@finnegans.com.'), findsOneWidget);
+  });
+
   testWidgets('Un error del repositorio se muestra y no rompe', (tester) async {
     final repository = _FakeUsers([_user(email: 'ana@finnegans.com')])
       ..saveError = const FormatException(
@@ -370,8 +405,9 @@ void main() {
       access: AccessAdmin.allowed,
       repository: repository,
     );
-    container.read(selectedAdminEmailProvider.notifier).state =
-        'ana@finnegans.com';
+    container
+        .read(selectedAdminEmailProvider.notifier)
+        .select('ana@finnegans.com');
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('admin_eliminar')));
@@ -489,8 +525,9 @@ void main() {
       access: AccessAdmin.allowed,
       repository: repository,
     );
-    container.read(selectedAdminEmailProvider.notifier).state =
-        'ana@finnegans.com';
+    container
+        .read(selectedAdminEmailProvider.notifier)
+        .select('ana@finnegans.com');
     container
         .read(dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier)
         .select('Estado', {'Bloqueado'});
@@ -511,8 +548,9 @@ void main() {
       access: AccessAdmin.allowed,
       repository: repository,
     );
-    container.read(selectedAdminEmailProvider.notifier).state =
-        'fantasma@finnegans.com';
+    container
+        .read(selectedAdminEmailProvider.notifier)
+        .select('fantasma@finnegans.com');
     await tester.pumpAndSettle();
 
     expect(_button(tester, 'admin_cambiar_rol').onPressed, isNull);

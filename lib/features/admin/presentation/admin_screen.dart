@@ -4,12 +4,9 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
-import 'package:app_finnegans/features/admin/domain/authorized_users_repository.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_actions_bar.dart';
@@ -18,21 +15,13 @@ import 'package:app_finnegans/features/admin/presentation/widgets/admin_structur
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_users_table.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_filters.dart';
-import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 
-class AdminScreen extends ConsumerStatefulWidget {
+class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
   @override
-  ConsumerState<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends ConsumerState<AdminScreen> {
-  String? _actionInProgress;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final access = ref.watch(accessAdminProvider);
 
     return Scaffold(
@@ -41,7 +30,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           const AppTopBar(title: 'Panel de administrador'),
           Expanded(
             child: switch (access) {
-              AccessAdmin.allowed => _tabs(),
+              AccessAdmin.allowed => const _Tabs(),
               AccessAdmin.denied => const _CenteredState(
                 icon: Icons.lock_outline,
                 title: 'No tenés permiso para ver esta sección',
@@ -55,8 +44,13 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       ),
     );
   }
+}
 
-  Widget _tabs() {
+class _Tabs extends StatelessWidget {
+  const _Tabs();
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
     return DefaultTabController(
       length: 2,
@@ -79,17 +73,25 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: TabBarView(children: [_content(), const AdminStructure()]),
+          const Expanded(
+            child: TabBarView(children: [_UsersTab(), AdminStructure()]),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _content() {
+class _UsersTab extends ConsumerWidget {
+  const _UsersTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final filteredUsers = ref.watch(filteredAdminUsersProvider);
     final selected = ref.watch(selectedAdminUserProvider);
+    final pendingAction = ref.watch(
+      adminUsersProvider.select((users) => users.value?.pendingAction),
+    );
     final auth = ref.watch(authProvider);
     final cs = context.colorScheme;
 
@@ -117,14 +119,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         AdminActionsBar(
           selected: selected,
           outsideFilter: ref.watch(adminSelectionOutsideFilterProvider),
-          actionInProgress: _actionInProgress,
+          pendingAction: pendingAction,
           ownEmail: auth.email,
-          onCreate: _createUser,
-          onRoleChange: _changeRole,
-          onBlock: _block,
-          onUnblock: _unblock,
-          onDelete: _delete,
-          onRestore: _restore,
+          onCreate: () => _create(context, ref),
+          onRoleChange: () => _changeRole(context, ref),
+          onBlock: () => _block(context, ref),
+          onUnblock: () => _unblock(context, ref),
+          onDelete: () => _delete(context, ref),
+          onRestore: () => _restore(context, ref),
         ),
         const SizedBox(height: 20),
         filteredUsers.when(
@@ -152,9 +154,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     payroll: ref.watch(employeesProvider).value,
                     selectedEmail: ref.watch(selectedAdminEmailProvider),
                     ownEmail: auth.email,
-                    onSelect: (email) =>
-                        ref.read(selectedAdminEmailProvider.notifier).state =
-                            email,
+                    onSelect: (email) {
+                      final selection = ref.read(
+                        selectedAdminEmailProvider.notifier,
+                      );
+                      email == null
+                          ? selection.clear()
+                          : selection.select(email);
+                    },
                   ),
           ),
         ),
@@ -162,53 +169,41 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
   }
 
-  AuthorizedUsersRepository _repository() =>
-      ref.read(authorizedUsersRepositoryProvider);
+  AdminUsersNotifier _users(WidgetRef ref) =>
+      ref.read(adminUsersProvider.notifier);
 
-  AuthorizedUserService get _users => ref.read(authorizedUserServiceProvider);
-
-  Future<void> _createUser() async {
+  Future<void> _create(BuildContext context, WidgetRef ref) async {
     final data = await showUserCreationDialog(context);
-    if (data == null) return;
-    await _run(
-      key: 'admin_crear',
-      affectedEmail: data.email,
+    if (data == null || !context.mounted) return;
+    final created = await runWithFeedback(
+      context,
+      action: () => _users(ref).create(email: data.email, role: data.role),
       success: 'Se dio de alta a ${data.email}.',
-      action: (repository) => repository.create(
-        _users.create(
-          email: data.email,
-          role: data.role,
-          now: DateTime.now().toUtc(),
-        ),
-      ),
-      onFinish: () {
-        ref
-            .read(
-              dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier,
-            )
-            .clear();
-        ref.read(selectedAdminEmailProvider.notifier).state = data.email;
-      },
     );
+    if (!created || !context.mounted) return;
+    ref
+        .read(dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier)
+        .clear();
+    ref.read(selectedAdminEmailProvider.notifier).select(data.email);
   }
 
-  Future<void> _changeRole() async {
+  Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
     final role = await showRoleChangeDialog(
       context,
       email: user.email,
-      currentRole: _users.knownRole(user),
+      currentRole: ref.read(authorizedUserServiceProvider).knownRole(user),
     );
-    if (role == null) return;
-    await _save(
-      key: 'admin_cambiar_rol',
-      user: _users.withRole(user, role),
+    if (role == null || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _users(ref).changeRole(user, role),
       success: '${user.email} ahora tiene el rol ${role.label}.',
     );
   }
 
-  Future<void> _block() async {
+  Future<void> _block(BuildContext context, WidgetRef ref) async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
@@ -221,15 +216,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       confirmColor: context.colors.warning.text,
       confirmKey: const Key('admin_confirmar'),
     );
-    if (!confirmed) return;
-    await _save(
-      key: 'admin_bloquear',
-      user: _users.block(user, DateTime.now().toUtc()),
+    if (!confirmed || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _users(ref).block(user),
       success: 'Se bloqueó a ${user.email}.',
     );
   }
 
-  Future<void> _unblock() async {
+  Future<void> _unblock(BuildContext context, WidgetRef ref) async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
@@ -239,15 +234,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       confirmLabel: 'Desbloquear',
       confirmKey: const Key('admin_confirmar'),
     );
-    if (!confirmed) return;
-    await _save(
-      key: 'admin_desbloquear',
-      user: _users.unblock(user),
+    if (!confirmed || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _users(ref).unblock(user),
       success: 'Se desbloqueó a ${user.email}.',
     );
   }
 
-  Future<void> _delete() async {
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
@@ -260,15 +255,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       confirmColor: context.colorScheme.error,
       confirmKey: const Key('admin_confirmar'),
     );
-    if (!confirmed) return;
-    await _save(
-      key: 'admin_eliminar',
-      user: _users.delete(user, DateTime.now().toUtc()),
+    if (!confirmed || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _users(ref).delete(user),
       success: 'Se eliminó a ${user.email}.',
     );
   }
 
-  Future<void> _restore() async {
+  Future<void> _restore(BuildContext context, WidgetRef ref) async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
@@ -279,62 +274,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       confirmLabel: 'Restaurar',
       confirmKey: const Key('admin_confirmar'),
     );
-    if (!confirmed) return;
-    await _save(
-      key: 'admin_restaurar',
-      user: _users.restore(user),
+    if (!confirmed || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _users(ref).restore(user),
       success: 'Se restauró a ${user.email}.',
     );
-  }
-
-  Future<void> _save({
-    required String key,
-    required AuthorizedUser user,
-    required String success,
-  }) {
-    return _run(
-      key: key,
-      affectedEmail: user.email,
-      success: success,
-      action: (repository) => repository.save(user),
-    );
-  }
-
-  Future<void> _run({
-    required String key,
-    required String affectedEmail,
-    required String success,
-    required Future<void> Function(AuthorizedUsersRepository) action,
-    VoidCallback? onFinish,
-  }) async {
-    if (_actionInProgress != null) return;
-    setState(() => _actionInProgress = key);
-    try {
-      await action(_repository());
-      ref.invalidate(authorizedUsersProvider);
-      // Cambiar un rol borra en la base las asignaciones que dejan de
-      // aplicar: la columna Lidera y los líderes tienen que recargarse.
-      ref.invalidate(orgStructureProvider);
-      await ref.read(authorizedUsersProvider.future);
-      if (affectedEmail == ref.read(authProvider).email) {
-        await ref.read(authProvider.notifier).validateAuthorization();
-      }
-      onFinish?.call();
-      if (!mounted) return;
-      showAppSnackBar(context, success);
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(context, error.message);
-    } on Object catch (error) {
-      debugPrint('Panel de administración: $error');
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        'No se pudo completar la acción. Intentá nuevamente.',
-      );
-    } finally {
-      if (mounted) setState(() => _actionInProgress = null);
-    }
   }
 
   static String _errorMessage(Object error) => error is FormatException
