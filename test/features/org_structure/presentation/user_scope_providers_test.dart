@@ -15,7 +15,6 @@ import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/org_structure/data/in_memory_org_structure_repository.dart';
 import 'package:app_finnegans/features/training_plan/data/in_memory_training_plan_repository.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
-import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
@@ -30,6 +29,8 @@ import 'package:app_finnegans/features/org_structure/presentation/providers/org_
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../assistant/support/assistant_fixtures.dart';
 
 const _year = 2026;
 
@@ -282,7 +283,8 @@ void main() {
         structure: _structure(),
       );
 
-      final context = await container.read(prepareAiContextProvider)(
+      final context = await contextFor(
+        container,
         const AssistantDestination(AssistantModule.dashboard),
         '¿Cómo viene el cumplimiento general?',
       );
@@ -448,7 +450,8 @@ void main() {
       () async {
         // Su contenedor no tiene padre: si armara su propia sesión, en junio
         // contaría también a la persona 2, que estaba en Backend.
-        final context = await container(6).read(prepareAiContextProvider)(
+        final context = await contextFor(
+          container(6),
           const AssistantDestination(AssistantModule.dashboard),
           '¿Cómo viene el cumplimiento general?',
         );

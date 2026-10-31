@@ -35,7 +35,7 @@ Map<String, Object?> _contextOf(String message) {
 }
 
 Map<String, Object?> _list(int count, {String name = 'curso'}) =>
-    const AssistantContextBuilder().selection(
+    AssistantContextBuilder().selection(
       [
         for (var i = 0; i < count; i++) {'curso': '$name $i', 'horas': 4.0},
       ],

@@ -7,9 +7,11 @@ import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
+import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_context.dart';
+import 'package:app_finnegans/features/assistant/presentation/providers/assistant_providers.dart';
 
-export 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
+export 'package:app_finnegans/features/assistant/presentation/providers/assistant_providers.dart';
 
 final assistantChatProvider =
     NotifierProvider<AssistantChatController, ChatState>(
@@ -113,6 +115,24 @@ class AssistantChatController extends Notifier<ChatState> {
 
   bool _current(int ticket) => ref.mounted && ticket == _revision;
 
+  /// Runs only when sending, with the data and the period the screens show.
+  Future<AssistantContext> _prepareContext(
+    AssistantDestination destination,
+    String question,
+  ) {
+    final query = ref
+        .read(assistantQueryPlannerProvider)
+        .plan(question, destination, ref.read(periodFilterProvider));
+    return ref
+        .read(assistantContextBuilderProvider)
+        .build(
+          query,
+          dynamic: ref.read(aiRealContextProvider),
+          loadData: () => ref.read(assistantDataProvider.future),
+        )
+        .timeout(const Duration(seconds: 30));
+  }
+
   void _registerError(int ticket, AssistantException error) {
     if (_current(ticket)) {
       state = state.copyWith(
@@ -142,7 +162,7 @@ class AssistantChatController extends Notifier<ChatState> {
         ),
       );
       if (query.payload == null) {
-        final context = await ref.read(prepareAiContextProvider)(
+        final context = await _prepareContext(
           query.destination,
           query.question,
         );
