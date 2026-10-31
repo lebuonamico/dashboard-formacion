@@ -33,13 +33,14 @@ TeamOverview _team({
   status: status,
 );
 
-const _area = AreaGlobalViewModel(
+const _area = AreaSummary(
   name: 'Desarrollo',
   generalTeams: ['Core', 'Mobile'],
   memberCount: 4,
   membersOnTarget: 1,
   completedHours: 20,
   targetHours: 32,
+  hoursDeviation: -12,
   businessHours: 10,
   softSkillsHours: 10,
   explorationHours: 0,
@@ -52,7 +53,7 @@ const _area = AreaGlobalViewModel(
 ProviderContainer _container({
   bool hasData = true,
   TeamDetail? team,
-  AreaDetailViewModel? area,
+  AreaDetail? area,
   bool projectionFails = false,
 }) {
   final container = ProviderContainer(
@@ -122,7 +123,7 @@ void main() {
 
   test('El reporte del área desglosa sus equipos', () async {
     final container = _container(
-      area: AreaDetailViewModel(
+      area: AreaDetail(
         area: _area,
         teams: [
           _team(),

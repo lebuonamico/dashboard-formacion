@@ -8,7 +8,7 @@ import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class AreaDetailHeader extends StatelessWidget {
-  final AreaGlobalViewModel area;
+  final AreaSummary area;
   final String period;
 
   const AreaDetailHeader({super.key, required this.area, required this.period});
@@ -96,7 +96,7 @@ class AreaDetailHeader extends StatelessWidget {
 }
 
 class AreaDetailSummary extends StatelessWidget {
-  final AreaGlobalViewModel area;
+  final AreaSummary area;
   final bool isAnnual;
 
   const AreaDetailSummary({
@@ -140,7 +140,7 @@ class AreaDetailSummary extends StatelessWidget {
 }
 
 class _AreaProgressPanel extends StatelessWidget {
-  final AreaGlobalViewModel area;
+  final AreaSummary area;
   final bool isAnnual;
 
   const _AreaProgressPanel({required this.area, required this.isAnnual});

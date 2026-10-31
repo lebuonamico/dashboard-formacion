@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/features/areas/domain/areas_service.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_members_table.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
@@ -11,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _area = 'SERVICIOS';
+
 EmployeeCompliance _member(String employeeId, String lastName, double hours) =>
     const EmployeeComplianceService().summarize(
       employee: Employee(
@@ -18,7 +21,7 @@ EmployeeCompliance _member(String employeeId, String lastName, double hours) =>
         firstName: 'Persona',
         lastName: lastName,
         seniority: Seniority.junior1,
-        area: 'SERVICIOS',
+        area: _area,
         email: 'persona$employeeId@finnegans.com',
         team: 'IMPLEMENTACIONES',
         isActive: true,
@@ -34,17 +37,52 @@ final _members = [
   _member('3', 'Critica', 1),
 ];
 
-class _FilteredTable extends ConsumerWidget {
-  const _FilteredTable();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => AreaMembersTable(
-    members: _members,
-    filter: ref.watch(areaMemberStatusFilterProvider),
-    onFilter: (levels) =>
-        ref.read(areaMemberStatusFilterProvider.notifier).select(levels),
+ProviderContainer _container() {
+  final container = ProviderContainer(
+    overrides: [
+      areaDetailProvider(_area).overrideWith(
+        (ref) async => AreaDetail(
+          area: const AreasService().summarize(_area, _members),
+          teams: const [],
+          members: _members,
+        ),
+      ),
+    ],
   );
+  addTearDown(container.dispose);
+  return container;
 }
+
+Future<void> _show(WidgetTester tester, ProviderContainer container) async {
+  tester.view.physicalSize = const Size(1800, 1400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: SingleChildScrollView(child: AreaMembersTable(areaName: _area)),
+        ),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(0.5)),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+List<String> _visibleNames(WidgetTester tester) => tester
+    .widgetList<Text>(find.textContaining('Persona '))
+    .map((text) => text.data!)
+    .toList();
 
 void main() {
   test('El filtro de integrantes se elige y se limpia', () {
@@ -63,31 +101,8 @@ void main() {
   });
 
   testWidgets('Filtrar por Críticos deja solo a los críticos', (tester) async {
-    tester.view.physicalSize = const Size(1800, 1400);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const Scaffold(
-            body: SingleChildScrollView(child: _FilteredTable()),
-          ),
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(0.5)),
-            child: child!,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    final container = _container();
+    await _show(tester, container);
 
     expect(find.text('Integrantes (3)'), findsOneWidget);
 
@@ -101,5 +116,32 @@ void main() {
     expect(find.text('Persona Cumplida'), findsNothing);
     expect(find.text('Persona Riesgosa'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Tocar Cumplimiento ordena de menor a mayor y después al revés', (
+    tester,
+  ) async {
+    await _show(tester, _container());
+    expect(_visibleNames(tester), [
+      'Persona Cumplida',
+      'Persona Riesgosa',
+      'Persona Critica',
+    ]);
+
+    await tester.tap(find.text('Cumplimiento'));
+    await tester.pumpAndSettle();
+    expect(_visibleNames(tester), [
+      'Persona Critica',
+      'Persona Riesgosa',
+      'Persona Cumplida',
+    ]);
+
+    await tester.tap(find.text('Cumplimiento'));
+    await tester.pumpAndSettle();
+    expect(_visibleNames(tester), [
+      'Persona Cumplida',
+      'Persona Riesgosa',
+      'Persona Critica',
+    ]);
   });
 }

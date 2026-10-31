@@ -1,97 +1,101 @@
-import 'package:app_finnegans/core/data_filters/domain/data_filter.dart';
-import 'package:app_finnegans/core/data_filters/domain/data_filter_service.dart';
-import 'package:app_finnegans/features/compliance/presentation/member_sort.dart';
-import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
+import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
-import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
+import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/domain/member_order.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
+import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
-import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
+
+const _membersPerPage = 8;
+const _minimumTableWidth = 1100.0;
+const _columns = <(String, MemberSort?)>[
+  ('Legajo', MemberSort.employeeId),
+  ('Colaborador', MemberSort.employee),
+  ('Equipo', MemberSort.team),
+  ('Seniority', MemberSort.seniority),
+  ('Horas realizadas / objetivo', MemberSort.hours),
+  ('Cumplimiento', MemberSort.compliance),
+  ('Por categoría', null),
+];
 
 /// Integrantes del área, paginados y con selector para filtrar por avance.
-class AreaMembersTable extends StatefulWidget {
-  final List<EmployeeCompliance> members;
+class AreaMembersTable extends ConsumerStatefulWidget {
+  final String areaName;
 
-  /// Vacío = todos.
-  final Set<ComplianceLevel> filter;
-  final ValueChanged<Set<ComplianceLevel>> onFilter;
-
-  const AreaMembersTable({
-    super.key,
-    required this.members,
-    required this.filter,
-    required this.onFilter,
-  });
+  const AreaMembersTable({super.key, required this.areaName});
 
   @override
-  State<AreaMembersTable> createState() => _AreaMembersTableState();
+  ConsumerState<AreaMembersTable> createState() => _AreaMembersTableState();
 }
 
-class _AreaMembersTableState extends State<AreaMembersTable> {
-  static const _membersPerPage = 8;
+class _AreaMembersTableState extends ConsumerState<AreaMembersTable> {
   int _currentPage = 0;
-  var _order = const MemberSortState();
-
-  /// Columnas en el orden en que se muestran; null = no ordenable.
-  static const _columns = <(String, MemberSort?)>[
-    ('Legajo', MemberSort.employeeId),
-    ('Colaborador', MemberSort.employee),
-    ('Equipo', MemberSort.team),
-    ('Seniority', MemberSort.seniority),
-    ('Horas realizadas / objetivo', MemberSort.hours),
-    ('Cumplimiento', MemberSort.compliance),
-    ('Por categoría', null),
-  ];
-
-  @override
-  void didUpdateWidget(covariant AreaMembersTable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.members != widget.members ||
-        oldWidget.filter != widget.filter) {
-      _currentPage = 0;
-    }
-  }
-
-  ComplianceLevel _memberLevel(EmployeeCompliance member) =>
-      const ComplianceLevelService().fromPercentage(member.totalPercentage);
-
-  List<EmployeeCompliance> get _filteredMembers => widget.members
-      .where(
-        (member) =>
-            widget.filter.isEmpty ||
-            widget.filter.contains(_memberLevel(member)),
-      )
-      .toList();
 
   @override
   Widget build(BuildContext context) {
-    final statusOptions = const DataFilterService().cascade(
-      [
-        for (final member in widget.members)
-          FilterRow({'Estado': _memberLevel(member).name}),
-      ],
-      {'Estado': widget.filter.map((level) => level.name).toSet()},
-    )['Estado'];
-    final filteredVisible = _order.apply(_filteredMembers);
-    final orderIndex = _columns.indexWhere(
-      (column) => column.$2 != null && column.$2 == _order.column,
-    );
-    final totalMembers = filteredVisible.length;
+    final viewProvider = areaMembersViewProvider(widget.areaName);
+    ref.listen(viewProvider, (previous, next) {
+      if (previous?.value?.members != next.value?.members) {
+        setState(() => _currentPage = 0);
+      }
+    });
+
+    return ref
+        .watch(viewProvider)
+        .when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ErrorDataState(
+            title: 'No pudimos cargar los integrantes',
+            error: error,
+            compact: true,
+            onRetry: () => ref.invalidate(viewProvider),
+          ),
+          data: (view) => _MembersPage(
+            view: view,
+            currentPage: _currentPage,
+            onPage: (page) => setState(() => _currentPage = page),
+          ),
+        );
+  }
+}
+
+class _MembersPage extends ConsumerWidget {
+  final AreaMembersView view;
+  final int currentPage;
+  final ValueChanged<int> onPage;
+
+  const _MembersPage({
+    required this.view,
+    required this.currentPage,
+    required this.onPage,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final order = ref.watch(memberOrderProvider(MemberTable.area));
+    final members = view.members;
+    final totalMembers = members.length;
     final totalPages = totalMembers == 0
         ? 1
         : (totalMembers + _membersPerPage - 1) ~/ _membersPerPage;
-    final safePage = _currentPage.clamp(0, totalPages - 1);
+    final safePage = currentPage.clamp(0, totalPages - 1);
     final start = safePage * _membersPerPage;
-    final calculatedEnd = start + _membersPerPage;
-    final end = calculatedEnd > totalMembers ? totalMembers : calculatedEnd;
-    final visibleMembers = filteredVisible.sublist(start, end);
+    final end = (start + _membersPerPage).clamp(0, totalMembers);
+    final orderIndex = _columns.indexWhere(
+      (column) => column.$2 != null && column.$2 == order.column,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,29 +116,27 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
             SizedBox(
               width: 250,
               child: FilterDropdown<ComplianceLevel>.multiple(
-                selectedValues: widget.filter,
-                incompatibleValues: {
-                  for (final name
-                      in statusOptions?.incompatibleValues ?? const <String>{})
-                    ComplianceLevel.values.byName(name),
-                },
+                selectedValues: ref.watch(areaMemberStatusFilterProvider),
+                incompatibleValues: view.incompatibleLevels,
                 hint: 'Estado',
                 icon: Icons.traffic_outlined,
                 items: [
                   for (final level in ComplianceLevel.values)
-                    if (statusOptions?.values.contains(level.name) ?? false)
+                    if (view.levelOptions.contains(level))
                       DropdownMenuItem(
                         value: level,
                         child: Text(level.pluralLabel),
                       ),
                 ],
-                onSelectionChanged: widget.onFilter,
+                onSelectionChanged: (levels) => ref
+                    .read(areaMemberStatusFilterProvider.notifier)
+                    .select(levels),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        if (visibleMembers.isEmpty)
+        if (members.isEmpty)
           const EmptyDataState(
             compact: true,
             icon: Icons.filter_alt_off_outlined,
@@ -150,11 +152,9 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
               totalResults: totalMembers,
               resultsLabel: 'integrantes',
               icon: Icons.people_outline,
-              onPrevious: safePage > 0
-                  ? () => setState(() => _currentPage = safePage - 1)
-                  : null,
+              onPrevious: safePage > 0 ? () => onPage(safePage - 1) : null,
               onNext: safePage < totalPages - 1
-                  ? () => setState(() => _currentPage = safePage + 1)
+                  ? () => onPage(safePage + 1)
                   : null,
             ),
             const SizedBox(height: 12),
@@ -168,8 +168,8 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
                   scrollDirection: Axis.horizontal,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth < 1100
-                          ? 1100
+                      minWidth: constraints.maxWidth < _minimumTableWidth
+                          ? _minimumTableWidth
                           : constraints.maxWidth,
                     ),
                     child: DataTable(
@@ -178,20 +178,26 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
                         context.colorScheme.surfaceContainerLow,
                       ),
                       sortColumnIndex: orderIndex < 0 ? null : orderIndex,
-                      sortAscending: _order.ascending,
+                      sortAscending: order.ascending,
                       columns: [
-                        for (final (title, order) in _columns)
+                        for (final (title, column) in _columns)
                           DataColumn(
                             label: Text(title),
-                            onSort: order == null
+                            onSort: column == null
                                 ? null
-                                : (_, _) => setState(() {
-                                    _order = _order.toggle(order);
-                                    _currentPage = 0;
-                                  }),
+                                : (_, _) => ref
+                                      .read(
+                                        memberOrderProvider(
+                                          MemberTable.area,
+                                        ).notifier,
+                                      )
+                                      .sortBy(column),
                           ),
                       ],
-                      rows: visibleMembers.map(_buildRow).toList(),
+                      rows: members
+                          .sublist(start, end)
+                          .map((member) => _buildRow(context, member))
+                          .toList(),
                     ),
                   ),
                 );
@@ -203,9 +209,8 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
     );
   }
 
-  DataRow _buildRow(EmployeeCompliance member) {
+  DataRow _buildRow(BuildContext context, EmployeeCompliance member) {
     final employee = member.employee;
-    final meets = member.meetsTarget;
     final team = employee.team.trim();
 
     return DataRow(
@@ -239,7 +244,7 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
             formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: meets
+              color: member.meetsTarget
                   ? context.colors.success.text
                   : context.colors.warning.text,
             ),

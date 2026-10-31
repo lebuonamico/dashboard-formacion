@@ -4,7 +4,6 @@ import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.d
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/print_repository_provider.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/report_pdf.dart';
@@ -27,7 +26,7 @@ final dashboardReportProvider = FutureProvider<TrainingReport?>((ref) async {
   final evaluatedMonths = await ref.watch(
     dashboardEvaluatedMonthsProvider.future,
   );
-  final areas = await ref.watch(complianceByAreaProvider.future);
+  final areas = await ref.watch(areasByComplianceProvider.future);
   final teams = await ref.watch(teamOverviewsProvider.future);
   final evolution = await ref.watch(dashboardMonthlyEvolutionProvider.future);
   final projection = await _optionalProjection(ref, (area: null, team: null));
@@ -58,10 +57,10 @@ final dashboardReportProvider = FutureProvider<TrainingReport?>((ref) async {
     breakdown: [
       for (final area in areas)
         ReportBreakdownRow(
-          name: area.area,
-          memberCount: area.employeeCount,
+          name: area.name,
+          memberCount: area.memberCount,
           hours: area.completedHours,
-          target: area.requiredHours,
+          target: area.targetHours,
           percentage: area.compliancePercentage,
           status: area.level.label,
           level: _reportLevelOf(area.level),

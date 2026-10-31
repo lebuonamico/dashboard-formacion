@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/compliance/domain/employee_compliance.dar
 import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
+import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +17,7 @@ export 'package:app_finnegans/core/widgets/kpi_card.dart';
 class DashboardKpiGrid extends StatelessWidget {
   final AsyncValue<List<EmployeeCompliance>> complianceListAsync;
   final AsyncValue<List<CrmTimeEntry>> timeEntriesAsync;
-  final AsyncValue<List<AreaComplianceViewModel>> areasAsync;
+  final AsyncValue<List<AreaSummary>> areasAsync;
   final AsyncValue<List<TeamOverview>> teamsAsync;
   final PeriodScope scope;
   final int selectedMonth;

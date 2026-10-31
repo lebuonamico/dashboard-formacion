@@ -71,7 +71,7 @@ class AreasScreen extends ConsumerWidget {
 
 class _AreasContent extends ConsumerWidget {
   final AreasPeriodSummary summary;
-  final AsyncValue<List<AreaGlobalViewModel>> filteredAreasAsync;
+  final AsyncValue<List<AreaSummary>> filteredAreasAsync;
   final String? origin;
 
   const _AreasContent({
@@ -124,12 +124,12 @@ class _AreasContent extends ConsumerWidget {
           )
         else ...[
           AreasKpiSection(
-            totalAreas: summary.totalAreas,
-            totalEmployees: summary.employees,
+            totalAreas: summary.areaCount,
+            totalEmployees: summary.employeeCount,
             completedHours: summary.completedHours,
             targetHours: summary.targetHours,
             hoursDeviation: summary.hoursDeviation,
-            complianceGlobal: summary.complianceGlobal,
+            complianceGlobal: summary.overallCompletion,
             isAnnual: isAnnual,
             year: selectedYear,
             month: selectedMonth,
@@ -143,7 +143,7 @@ class _AreasContent extends ConsumerWidget {
           const SizedBox(height: 16),
           SideBySideCharts(
             first: AreasStatusSummary(
-              total: summary.totalAreas,
+              total: summary.areaCount,
               onTarget: summary.onTarget,
               atRisk: summary.atRisk,
               critical: summary.critical,
@@ -186,7 +186,7 @@ class _AreasContent extends ConsumerWidget {
                 '${ref.watch(dataFilterSelectionProvider(DataFilterScope.areas)).values}',
               ),
               areas: filteredAreas,
-              totalAreas: summary.totalAreas,
+              totalAreas: summary.areaCount,
               isAnnual: isAnnual,
               origin: origin,
             ),

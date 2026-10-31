@@ -21,7 +21,6 @@ import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_cr
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 class AreaDetailScreen extends ConsumerWidget {
   final String areaName;
@@ -30,13 +29,9 @@ class AreaDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(areaDetailProvider(areaName));
-    // Mantener la selección durante cargas o períodos sin integrantes.
-    final membersFilter = ref.watch(areaMemberStatusFilterProvider);
-    final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final scope = ref.watch(periodFilterProvider).scope;
-    final month = ref.watch(periodFilterProvider).month;
-    final year = ref.watch(periodFilterProvider).year;
+    // Keeps the members filter while the detail reloads.
+    ref.watch(areaMemberStatusFilterProvider);
+    final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
       included: 'todas las áreas',
       action: PrintReportButton(report: areaReportProvider(areaName)),
@@ -55,53 +50,35 @@ class AreaDetailScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Detalle de área', backTo: '/areas'),
           Expanded(
-            child: detailAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  color: context.colorScheme.primary,
-                ),
-              ),
-              error: (error, _) => ErrorDataState(
-                title: 'No pudimos cargar el área',
-                error: error,
-                onRetry: () => ref.invalidate(areaDetailProvider(areaName)),
-              ),
-              data: (detail) => FadeIn(
-                child: (() {
-                  final period = periodLabel(scope, month, year);
-                  final hasData = hasDataAsync.value ?? true;
-
-                  return ListView(
-                    padding: screenPadding,
-                    children: [
-                      periodControls,
-                      const SizedBox(height: 22),
-                      if (!hasData)
-                        EmptyDataState.periodWithoutData(
-                          icon: Icons.apartment_outlined,
-                          period: period,
-                        )
-                      else if (detail == null)
-                        EmptyDataState(
-                          icon: Icons.apartment_outlined,
-                          title:
-                              'El área $areaName no tiene colaboradores elegibles en $period.',
-                          message:
-                              'Probá otro período o verificá la nómina del área.',
-                        )
-                      else
-                        _AreaContent(
-                          detail: detail,
-                          filter: membersFilter,
-                          period: detailedPeriodLabel(scope, month, year),
-                          isAnnual: scope == PeriodScope.annual,
+            child: ref
+                .watch(hasTeamPeriodDataProvider)
+                .when(
+                  loading: () => const _Loading(),
+                  error: (error, _) => ErrorDataState(
+                    title: 'No pudimos cargar el área',
+                    error: error,
+                    onRetry: () => ref.invalidate(hasTeamPeriodDataProvider),
+                  ),
+                  data: (hasData) => hasData
+                      ? _AreaDetailBody(
+                          areaName: areaName,
                           origin: origin,
+                          periodControls: periodControls,
+                        )
+                      : FadeIn(
+                          child: _PeriodList(
+                            periodControls: periodControls,
+                            child: EmptyDataState.periodWithoutData(
+                              icon: Icons.apartment_outlined,
+                              period: periodLabel(
+                                period.scope,
+                                period.month,
+                                period.year,
+                              ),
+                            ),
+                          ),
                         ),
-                    ],
-                  );
-                })(),
-              ),
-            ),
+                ),
           ),
         ],
       ),
@@ -109,16 +86,92 @@ class AreaDetailScreen extends ConsumerWidget {
   }
 }
 
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: CircularProgressIndicator(color: context.colorScheme.primary),
+  );
+}
+
+class _PeriodList extends StatelessWidget {
+  final Widget periodControls;
+  final Widget child;
+
+  const _PeriodList({required this.periodControls, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: screenPadding,
+      children: [periodControls, const SizedBox(height: 22), child],
+    );
+  }
+}
+
+class _AreaDetailBody extends ConsumerWidget {
+  final String areaName;
+  final String origin;
+  final Widget periodControls;
+
+  const _AreaDetailBody({
+    required this.areaName,
+    required this.origin,
+    required this.periodControls,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(periodFilterProvider);
+
+    return ref
+        .watch(areaDetailProvider(areaName))
+        .when(
+          loading: () => const _Loading(),
+          error: (error, _) => ErrorDataState(
+            title: 'No pudimos cargar el área',
+            error: error,
+            onRetry: () => ref.invalidate(areaDetailProvider(areaName)),
+          ),
+          data: (detail) => FadeIn(
+            child: _PeriodList(
+              periodControls: periodControls,
+              child: detail == null
+                  ? EmptyDataState(
+                      icon: Icons.apartment_outlined,
+                      title:
+                          'El área $areaName no tiene colaboradores elegibles en ${periodLabel(period.scope, period.month, period.year)}.',
+                      message:
+                          'Probá otro período o verificá la nómina del área.',
+                    )
+                  : _AreaContent(
+                      areaName: areaName,
+                      detail: detail,
+                      period: detailedPeriodLabel(
+                        period.scope,
+                        period.month,
+                        period.year,
+                      ),
+                      isAnnual: period.scope == PeriodScope.annual,
+                      origin: origin,
+                    ),
+            ),
+          ),
+        );
+  }
+}
+
 class _AreaContent extends ConsumerWidget {
-  final AreaDetailViewModel detail;
-  final Set<ComplianceLevel> filter;
+  final String areaName;
+  final AreaDetail detail;
   final String period;
   final bool isAnnual;
   final String origin;
 
   const _AreaContent({
+    required this.areaName,
     required this.detail,
-    required this.filter,
     required this.period,
     required this.isAnnual,
     required this.origin,
@@ -203,12 +256,7 @@ class _AreaContent extends ConsumerWidget {
         const SizedBox(height: 24),
         AreaTeamsGrid(teams: detail.teams, isAnnual: isAnnual, origin: origin),
         const SizedBox(height: 24),
-        AreaMembersTable(
-          members: detail.members,
-          filter: filter,
-          onFilter: (levels) =>
-              ref.read(areaMemberStatusFilterProvider.notifier).select(levels),
-        ),
+        AreaMembersTable(areaName: areaName),
       ],
     );
   }

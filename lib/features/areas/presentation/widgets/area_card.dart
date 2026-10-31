@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AreaCard extends StatelessWidget {
-  final AreaGlobalViewModel area;
+  final AreaSummary area;
   final bool isAnnual;
 
   /// Sección del menú desde la que se llegó, para que el detalle la resalte.

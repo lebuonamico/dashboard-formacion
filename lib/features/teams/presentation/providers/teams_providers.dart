@@ -166,11 +166,12 @@ final teamDetailProvider =
       );
     });
 
-final sortedTeamMembersProvider =
-    FutureProvider.family<
-      List<EmployeeCompliance>,
-      ({String area, String team})
-    >((ref, section) async {
+/// Discarded with the table, together with its order.
+final sortedTeamMembersProvider = FutureProvider.autoDispose
+    .family<List<EmployeeCompliance>, ({String area, String team})>((
+      ref,
+      section,
+    ) async {
       final detail = await ref.watch(teamDetailProvider(section).future);
       final order = ref.watch(memberOrderProvider(MemberTable.team));
       return ref

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_card.dart';
@@ -10,7 +11,7 @@ const _gridSpacing = 16.0;
 const _rowsPerPage = 2;
 
 class AreasResults extends StatefulWidget {
-  final List<AreaGlobalViewModel> areas;
+  final List<AreaSummary> areas;
   final int totalAreas;
   final bool isAnnual;
   final String? origin;
@@ -33,28 +34,19 @@ class _AreasResultsState extends State<AreasResults> {
   @override
   void didUpdateWidget(covariant AreasResults oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Si cambian los resultados, volver a la primera página.
     if (!_sameAreas(oldWidget.areas, widget.areas)) {
       _currentPage = 0;
     }
   }
 
-  bool _sameAreas(
-    List<AreaGlobalViewModel> previous,
-    List<AreaGlobalViewModel> current,
-  ) {
-    if (previous.length != current.length) return false;
-    for (var index = 0; index < current.length; index++) {
-      final previousValue = previous[index];
-      final currentValue = current[index];
-      if (previousValue.name != currentValue.name ||
-          previousValue.completedHours != currentValue.completedHours ||
-          previousValue.targetHours != currentValue.targetHours) {
-        return false;
-      }
-    }
-    return true;
-  }
+  bool _sameAreas(List<AreaSummary> previous, List<AreaSummary> current) =>
+      const ListEquality<(String, double, double)>().equals(
+        previous.map(_resultKey).toList(),
+        current.map(_resultKey).toList(),
+      );
+
+  (String, double, double) _resultKey(AreaSummary area) =>
+      (area.name, area.completedHours, area.targetHours);
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +125,7 @@ class _AreasResultsState extends State<AreasResults> {
 }
 
 class _AreasGrid extends StatelessWidget {
-  final List<AreaGlobalViewModel> areas;
+  final List<AreaSummary> areas;
   final bool isAnnual;
   final String? origin;
 

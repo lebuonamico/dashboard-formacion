@@ -1,6 +1,6 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
+import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
@@ -17,7 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class DashboardAreasSection extends ConsumerWidget {
-  final AsyncValue<List<AreaComplianceViewModel>> areasAsync;
+  final AsyncValue<List<AreaSummary>> areasAsync;
 
   const DashboardAreasSection({super.key, required this.areasAsync});
 
@@ -127,7 +127,7 @@ class DashboardAreasSection extends ConsumerWidget {
                               final area = filteredAreas[index];
                               return DashboardAreaCard(
                                 area: area,
-                                teamCount: teamsByArea[area.area] ?? 0,
+                                teamCount: teamsByArea[area.name] ?? 0,
                               );
                             },
                           );
@@ -143,8 +143,8 @@ class DashboardAreasSection extends ConsumerWidget {
     );
   }
 
-  FilterRow _filterRow(AreaComplianceViewModel area) =>
-      FilterRow({'Área': area.area, 'Estado': area.level.label});
+  FilterRow _filterRow(AreaSummary area) =>
+      FilterRow({'Área': area.name, 'Estado': area.level.label});
 }
 
 class _AreasFilterBar extends StatelessWidget {
@@ -160,7 +160,7 @@ class _AreasFilterBar extends StatelessWidget {
 }
 
 class DashboardAreaCard extends StatelessWidget {
-  final AreaComplianceViewModel area;
+  final AreaSummary area;
   final int teamCount;
 
   const DashboardAreaCard({
@@ -176,17 +176,17 @@ class DashboardAreaCard extends StatelessWidget {
     return SummaryCard(
       colors: colors,
       onTap: () => context.push(
-        '/areas/${Uri.encodeComponent(area.area)}?origen=dashboard',
+        '/areas/${Uri.encodeComponent(area.name)}?origen=dashboard',
       ),
       header: SummaryCardHeader(
-        title: area.area,
-        subtitle: '${area.employeeCount} colaboradores',
+        title: area.name,
+        subtitle: '${area.memberCount} colaboradores',
         badge: StatusBadge(label: area.level.label, colors: colors),
       ),
       details: [
         SummaryInfoRow(
           icon: Icons.people_outline,
-          text: '${area.employeeCount} colaboradores · $teamCount equipos',
+          text: '${area.memberCount} colaboradores · $teamCount equipos',
         ),
       ],
       progress: SummaryProgress(
@@ -196,7 +196,7 @@ class DashboardAreaCard extends StatelessWidget {
       ),
       footer: SummaryCardFooter(
         completedHours: area.completedHours,
-        targetHours: area.requiredHours,
+        targetHours: area.targetHours,
         actionLabel: 'Ver detalle',
       ),
     );

@@ -2,7 +2,7 @@ import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
+import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
@@ -26,7 +26,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
     final complianceAsync = ref.watch(dashboardComplianceProvider);
-    final areasAsync = ref.watch(complianceByAreaProvider);
+    final areasAsync = ref.watch(areasByComplianceProvider);
     final timeEntriesAsync = ref.watch(dashboardTimeEntriesProvider);
     final teamsAsync = ref.watch(teamOverviewsProvider);
     final evaluatedMonths =
