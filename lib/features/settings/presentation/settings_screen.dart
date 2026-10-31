@@ -5,7 +5,6 @@ import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
 
-import 'package:app_finnegans/features/imports/data/spreadsheet_reader.dart';
 import 'package:app_finnegans/features/imports/domain/import_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +30,7 @@ import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/imports/data/payroll_file_parser.dart';
 import 'package:app_finnegans/features/imports/data/course_catalog_file_parser.dart';
 import 'package:app_finnegans/features/imports/data/crm_time_entries_file_parser.dart';
+import 'package:app_finnegans/features/imports/data/lms_certifications_file_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -237,104 +237,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final certifications = <LmsCertification>[];
+      var certifications = <LmsCertification>[];
       await container
           .read(importAuditServiceProvider)
           .run(
             fileType: 'finalizaciones',
             fileName: result.files.single.name,
             process: () async {
-              final rowsBySheet = const SpreadsheetReader().readExcel(
-                result.files.single.bytes!,
+              certifications = const LmsCertificationsFileParser().parse(
+                ImportFile(
+                  name: result.files.single.name,
+                  bytes: result.files.single.bytes!,
+                ),
               );
-              for (final rows in rowsBySheet.values) {
-                if (rows.length < 2) continue;
-                final headerIndex = _findLmsCertificationsRow(rows);
-                if (headerIndex == -1) continue;
-                final headers = rows[headerIndex]
-                    .map((header) => normalizeKey(header.toString()))
-                    .toList();
-                final employeeIdIndex = _findColumn(headers, const [
-                  'idempleadolegajo',
-                  'idempleado',
-                  'nlegajo',
-                  'legajo',
-                ]);
-                final courseIndex = _findColumn(headers, const [
-                  'nombredelcurso',
-                  'nombrecurso',
-                  'coursename',
-                  'coursefullname',
-                  'fullname',
-                  'curso',
-                ]);
-                final completedIndex = _findColumn(headers, const [
-                  'finalizoelcurso',
-                  'finalizocurso',
-                  'completado',
-                  'completed',
-                ]);
-                final completedAtIndex = _findColumn(headers, const [
-                  'fechadefinalizacion',
-                  'fechafinalizacion',
-                  'completiondate',
-                  'datecompleted',
-                  'timecompleted',
-                ]);
-                if (completedAtIndex == -1) {
-                  throw const FormatException(
-                    'Falta la columna Fecha de finalización en el Excel de Moodle.',
-                  );
-                }
-                for (final row in rows.skip(headerIndex + 1)) {
-                  if ([
-                    employeeIdIndex,
-                    courseIndex,
-                    completedIndex,
-                    completedAtIndex,
-                  ].any((index) => index < 0 || index >= row.length)) {
-                    continue;
-                  }
-                  final employeeId = row[employeeIdIndex].toString().trim();
-                  final courseName = row[courseIndex].toString().trim();
-                  final completed = _booleanMoodle(
-                    row[completedIndex].toString(),
-                  );
-                  final completedAt = _dateMoodle(
-                    row[completedAtIndex].toString(),
-                  );
-                  if (row[completedAtIndex].toString().trim().isNotEmpty &&
-                      completedAt == null) {
-                    throw FormatException(
-                      'Fecha de finalización inválida para el legajo $employeeId: ${row[completedAtIndex]}.',
-                    );
-                  }
-                  if (employeeId.isEmpty ||
-                      courseName.isEmpty ||
-                      completed == null) {
-                    continue;
-                  }
-                  if (completed && completedAt == null) {
-                    throw FormatException(
-                      'Falta una fecha de finalización válida para el legajo $employeeId y el curso $courseName.',
-                    );
-                  }
-                  certifications.add(
-                    LmsCertification(
-                      employeeId: employeeId,
-                      courseName: courseName,
-                      isCompleted: completed,
-                      completedAt: completedAt,
-                    ),
-                  );
-                }
-              }
-
-              if (certifications.isEmpty) {
-                throw const FormatException(
-                  'No se encontraron filas LMS válidas en el Excel.',
-                );
-              }
               return container
                   .read(lmsCertificationsRepositoryProvider)
                   .upsert(certifications);
@@ -361,64 +276,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _finishImport('finalizaciones');
     }
   }
-
-  int _findLmsCertificationsRow(List<List<dynamic>> rows) {
-    for (var index = 0; index < rows.length && index < 15; index++) {
-      final headers = rows[index]
-          .map((cell) => normalizeKey(cell.toString()))
-          .toList();
-      if (_findColumn(headers, const [
-                'idempleadolegajo',
-                'idempleado',
-                'nlegajo',
-                'legajo',
-              ]) !=
-              -1 &&
-          _findColumn(headers, const [
-                'nombredelcurso',
-                'nombrecurso',
-                'coursename',
-                'coursefullname',
-                'fullname',
-                'curso',
-              ]) !=
-              -1 &&
-          _findColumn(headers, const [
-                'finalizoelcurso',
-                'finalizocurso',
-                'completado',
-                'completed',
-              ]) !=
-              -1 &&
-          _findColumn(headers, const [
-                'fechadefinalizacion',
-                'fechafinalizacion',
-                'completiondate',
-                'datecompleted',
-                'timecompleted',
-              ]) !=
-              -1) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
-  bool? _booleanMoodle(String value) {
-    return switch (normalizeKey(value)) {
-      'true' || 'verdadero' || 'si' || 's' || '1' || 'yes' || 'y' => true,
-      'false' ||
-      'falso' ||
-      'no' ||
-      'n' ||
-      '0' ||
-      'incompleto' ||
-      'pendiente' => false,
-      _ => null,
-    };
-  }
-
-  DateTime? _dateMoodle(String value) => importDate(value);
 
   Future<void> _importPayrollFile() async {
     if (!_startImport('nomina')) return;
@@ -622,14 +479,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       _finishImport('horas');
     }
-  }
-
-  int _findColumn(List<String> headers, List<String> possible) {
-    for (final possible in possible) {
-      final index = headers.indexOf(possible);
-      if (index != -1) return index;
-    }
-    return -1;
   }
 }
 
