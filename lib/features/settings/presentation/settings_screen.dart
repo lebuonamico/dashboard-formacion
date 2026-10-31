@@ -4,7 +4,6 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:app_finnegans/features/imports/data/spreadsheet_reader.dart';
 import 'package:app_finnegans/features/imports/domain/import_file.dart';
@@ -16,7 +15,6 @@ import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
@@ -30,8 +28,8 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
-import 'package:app_finnegans/features/courses/domain/course_category_parser.dart';
 import 'package:app_finnegans/features/imports/data/payroll_file_parser.dart';
+import 'package:app_finnegans/features/imports/data/course_catalog_file_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -41,7 +39,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final _categoryParser = CourseCategoryParser();
   final _inProgressImports = <String>{};
 
   bool _startImport(String type) {
@@ -510,136 +507,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final importedCourses = <Course>[];
+      var importedCourses = <Course>[];
       await container
           .read(importAuditServiceProvider)
           .run(
             fileType: 'cursos_lms',
             fileName: result.files.single.name,
             process: () async {
-              final rowsBySheet = const SpreadsheetReader().read(
+              importedCourses = CourseCatalogFileParser().parse(
                 ImportFile(
                   name: result.files.single.name,
                   bytes: result.files.single.bytes!,
                 ),
               );
-              final repository = container.read(coursesRepositoryProvider);
-              final validatedCourses = <String, String>{};
-
-              for (final sheet in rowsBySheet.entries) {
-                final rows = sheet.value;
-                if (!rows.any(_rowWithData)) continue;
-                final headerIndex = _findCoursesRow(rows);
-                if (headerIndex == -1) {
-                  throw FormatException(
-                    'No se encontraron cursos con encabezados válidos en la hoja "${sheet.key}". No se sincronizó el catálogo.',
-                  );
-                }
-                final headers = rows[headerIndex]
-                    .map((header) => normalizeKey(header.toString()))
-                    .toList();
-                _validateMasterHeaders(headers, sheet.key);
-                final idIndex = _findColumn(headers, const [
-                  'id',
-                  'cursoid',
-                  'courseid',
-                  'iddelcurso',
-                  'idcurso',
-                  'shortname',
-                  'courseshortname',
-                  'codigo',
-                ]);
-                final nameIndex = _findColumn(headers, const [
-                  'nombre',
-                  'nombrecurso',
-                  'course',
-                  'coursename',
-                  'fullname',
-                  'coursefullname',
-                  'nombrecompleto',
-                  'titulo',
-                ]);
-                final typeIndex = _findColumn(headers, const ['clasificacion']);
-                final hoursIndex = _findColumn(headers, const [
-                  'cargahorariahs',
-                  'cargahoraria',
-                  'horas',
-                  'hours',
-                ]);
-                if ([
-                  idIndex,
-                  nameIndex,
-                  typeIndex,
-                  hoursIndex,
-                ].any((index) => index == -1)) {
-                  throw FormatException(
-                    'Faltan columnas obligatorias de ID, nombre, clasificación o carga horaria en la hoja "${sheet.key}".',
-                  );
-                }
-
-                for (
-                  var dataRow = headerIndex + 1;
-                  dataRow < rows.length;
-                  dataRow++
-                ) {
-                  final row = rows[dataRow];
-                  if (!_rowWithData(row)) continue;
-                  final location = 'hoja "${sheet.key}", fila ${dataRow + 1}';
-                  _validateRowColumns(row, headers, location);
-                  if ([
-                    idIndex,
-                    nameIndex,
-                    typeIndex,
-                    hoursIndex,
-                  ].any((index) => index >= row.length)) {
-                    throw FormatException(
-                      'Faltan datos obligatorios del curso en $location.',
-                    );
-                  }
-                  final id = row[idIndex].toString().trim();
-                  final name = row[nameIndex].toString().trim();
-                  if (id.isEmpty || name.isEmpty) {
-                    throw FormatException(
-                      'Falta el ID o nombre del curso en $location.',
-                    );
-                  }
-                  final hoursText = row[hoursIndex].toString().trim();
-                  final hours = double.tryParse(hoursText.replaceAll(',', '.'));
-                  if (hours == null || !hours.isFinite || hours < 0) {
-                    throw FormatException(
-                      'Carga horaria inválida en $location: "$hoursText".',
-                    );
-                  }
-                  final course = Course(
-                    id: id,
-                    name: name,
-                    category: _courseCategoryFromText(
-                      row[typeIndex].toString(),
-                      location,
-                    ),
-                    courseArea: '',
-                    instructorEmployeeId: '',
-                    workloadHours: hours,
-                  );
-                  _validateMasterDuplicate(
-                    validatedCourses,
-                    course.id,
-                    course.toJson(),
-                    'ID de curso',
-                    location,
-                  );
-                  importedCourses.add(course);
-                }
-              }
-
-              if (importedCourses.isEmpty) {
-                throw const FormatException(
-                  'No se encontraron cursos. Verificá las columnas de ID y nombre.',
-                );
-              }
               return container
                   .read(snapshotSyncServiceProvider)
-                  .syncCourseCatalog(repository, importedCourses);
+                  .syncCourseCatalog(
+                    container.read(coursesRepositoryProvider),
+                    importedCourses,
+                  );
             },
             refresh: () async {
               container.invalidate(coursesProvider);
@@ -821,40 +707,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  int _findCoursesRow(List<List<dynamic>> rows) {
-    for (var index = 0; index < rows.length && index < 15; index++) {
-      final headers = rows[index]
-          .map((cell) => normalizeKey(cell.toString()))
-          .toSet();
-      final hasId = headers.any(
-        const {
-          'id',
-          'cursoid',
-          'courseid',
-          'iddelcurso',
-          'idcurso',
-          'shortname',
-          'courseshortname',
-          'codigo',
-        }.contains,
-      );
-      final hasName = headers.any(
-        const {
-          'nombre',
-          'nombrecurso',
-          'course',
-          'coursename',
-          'fullname',
-          'coursefullname',
-          'nombrecompleto',
-          'titulo',
-        }.contains,
-      );
-      if (hasId && hasName) return index;
-    }
-    return -1;
-  }
-
   int _findTimeEntryRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
@@ -894,60 +746,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (index != -1) return index;
     }
     return -1;
-  }
-
-  CourseCategory _courseCategoryFromText(String value, String location) {
-    final type = _categoryParser.tryParse(value);
-    if (type == null) {
-      throw FormatException('Clasificación inválida en $location: "$value".');
-    }
-    return type;
-  }
-
-  bool _rowWithData(List<dynamic> row) =>
-      row.any((cell) => cell.toString().trim().isNotEmpty);
-
-  void _validateMasterHeaders(List<String> headers, String sheet) {
-    final seen = <String>{};
-    for (final header in headers.where((header) => header.isNotEmpty)) {
-      if (!seen.add(header)) {
-        throw FormatException(
-          'Encabezado duplicado "$header" en la hoja "$sheet".',
-        );
-      }
-    }
-  }
-
-  void _validateRowColumns(
-    List<dynamic> row,
-    List<String> headers,
-    String location,
-  ) {
-    for (var index = 0; index < row.length; index++) {
-      if (row[index].toString().trim().isEmpty) continue;
-      if (index >= headers.length || headers[index].isEmpty) {
-        throw FormatException(
-          'Hay datos sin encabezado de columna en $location.',
-        );
-      }
-    }
-  }
-
-  void _validateMasterDuplicate(
-    Map<String, String> validated,
-    String id,
-    Map<String, dynamic> data,
-    String field,
-    String location,
-  ) {
-    final content = jsonEncode(data);
-    final previous = validated[id];
-    if (previous != null && previous != content) {
-      throw FormatException(
-        'El $field "$id" tiene datos contradictorios en $location.',
-      );
-    }
-    validated[id] = content;
   }
 }
 
