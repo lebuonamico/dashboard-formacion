@@ -46,6 +46,12 @@ final _now = DateTime.utc(2026, 9, 14, 13);
 String _table(http.Request request) =>
     request.url.path.replaceFirst('/rest/v1/', '');
 
+/// Los emails del filtro `email=in.(...)` de un pedido.
+List<String> _emailsIn(http.Request request) => RegExp(r'"([^"]*)"')
+    .allMatches(request.url.queryParameters['email'] ?? '')
+    .map((match) => match.group(1)!)
+    .toList();
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -162,42 +168,121 @@ void main() {
     expect(fixture.requests, isEmpty);
   });
 
-  test('Asignar líderes aplica solo la diferencia', () async {
+  test('Asignar líderes da de baja, reactiva y agrega sin borrar', () async {
     final fixture = _fixture((request) async {
-      if (request.method == 'GET') {
-        return _json(request, [
-          {'email': 'queda@finnegans.com'},
-          {'email': 'sale@finnegans.com'},
-        ]);
-      }
-      return _json(request, [], request.method == 'POST' ? 201 : 200);
+      return switch (request.method) {
+        'GET' => _json(request, [
+          {'email': 'queda@finnegans.com', 'ff_baja': null},
+          {'email': 'sale@finnegans.com', 'ff_baja': null},
+          {'email': 'vuelve@finnegans.com', 'ff_baja': '2026-08-01T00:00:00Z'},
+          {'email': 'sigue@finnegans.com', 'ff_baja': '2026-08-01T00:00:00Z'},
+        ]),
+        'PATCH' => _json(request, [
+          for (final email in _emailsIn(request)) {'email': email},
+        ]),
+        _ => _json(request, [], 201),
+      };
     });
 
     await fixture.repositorio.assignTeamLeaders('10', {
       ' Queda@Finnegans.com',
+      'vuelve@finnegans.com',
       'entra@finnegans.com',
     }, now: _now);
 
     expect(fixture.requests.map((r) => '${r.method} ${_table(r)}').toList(), [
       'GET equipo_lideres',
-      'DELETE equipo_lideres',
+      'PATCH equipo_lideres',
+      'PATCH equipo_lideres',
       'POST equipo_lideres',
     ]);
-    expect(fixture.requests[0].url.queryParameters['equipo_id'], 'eq.10');
-    expect(fixture.requests[1].url.queryParameters['equipo_id'], 'eq.10');
-    expect(
-      fixture.requests[1].url.queryParameters['email'],
-      'in.("sale@finnegans.com")',
-    );
-    expect(jsonDecode(fixture.requests[2].body), [
-      {'equipo_id': 10, 'email': 'entra@finnegans.com'},
+    final [read, end, reactivate, add] = fixture.requests;
+    expect(read.url.queryParameters, {
+      'select': 'email,ff_baja',
+      'equipo_id': 'eq.10',
+    });
+    expect(end.url.queryParameters, {
+      'equipo_id': 'eq.10',
+      'ff_baja': 'is.null',
+      'email': 'in.("sale@finnegans.com")',
+      'select': 'email',
+    });
+    expect(jsonDecode(end.body), {'ff_baja': '2026-09-14T13:00:00.000Z'});
+    expect(reactivate.url.queryParameters, {
+      'equipo_id': 'eq.10',
+      'email': 'in.("vuelve@finnegans.com")',
+      'select': 'email',
+    });
+    expect(jsonDecode(reactivate.body), {'ff_baja': null});
+    expect(jsonDecode(add.body), [
+      {
+        'equipo_id': 10,
+        'email': 'entra@finnegans.com',
+        'ff_alta': '2026-09-14T13:00:00.000Z',
+      },
     ]);
+  });
+
+  test('La estructura solo trae los líderes vigentes', () async {
+    final fixture = _fixture((request) async => _json(request, []));
+
+    await fixture.repositorio.getStructure();
+
+    for (final table in ['area_lideres', 'equipo_lideres']) {
+      final request = fixture.requests.singleWhere((r) => _table(r) == table);
+      expect(request.url.queryParameters['ff_baja'], 'is.null');
+    }
+    final areas = fixture.requests.singleWhere((r) => _table(r) == 'areas');
+    expect(areas.url.queryParameters.containsKey('ff_baja'), isFalse);
+  });
+
+  test('La baja filtra por el email tal como está guardado', () async {
+    final fixture = _fixture((request) async {
+      return switch (request.method) {
+        'GET' => _json(request, [
+          {'email': 'Sale@Finnegans.com', 'ff_baja': null},
+        ]),
+        _ => _json(request, [
+          {'email': 'Sale@Finnegans.com'},
+        ]),
+      };
+    });
+
+    await fixture.repositorio.assignAreaLeaders('1', const {}, now: _now);
+
+    expect(
+      fixture.requests.last.url.queryParameters['email'],
+      'in.("Sale@Finnegans.com")',
+    );
+  });
+
+  test('Una baja que no actualiza ninguna fila es un error', () async {
+    final fixture = _fixture((request) async {
+      return switch (request.method) {
+        'GET' => _json(request, [
+          {'email': 'ana@finnegans.com', 'ff_baja': null},
+        ]),
+        _ => _json(request, []),
+      };
+    });
+
+    await expectLater(
+      fixture.repositorio.assignAreaLeaders('1', const {}, now: _now),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('Recargá la pantalla'),
+        ),
+      ),
+    );
   });
 
   test('Sin cambios en los líderes solo lee', () async {
     final fixture = _fixture(
       (request) async => _json(request, [
-        {'email': 'ana@finnegans.com'},
+        {'email': 'ana@finnegans.com', 'ff_baja': null},
+        {'email': 'beto@finnegans.com', 'ff_baja': '2026-08-01T00:00:00Z'},
       ]),
     );
     await fixture.repositorio.assignAreaLeaders('1', {
@@ -234,6 +319,20 @@ void main() {
           (error) => error.message,
           'message',
           contains('supabase/areas_equipos_rls.sql'),
+        ),
+      ),
+    );
+
+    final missingColumns = _fixture(
+      (request) async => _error(request, '42703'),
+    );
+    await expectLater(
+      missingColumns.repositorio.getStructure(),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('supabase/lideres_baja_logica.sql'),
         ),
       ),
     );

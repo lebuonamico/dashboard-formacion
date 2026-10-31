@@ -6,8 +6,9 @@ import 'package:app_finnegans/features/org_structure/domain/org_structure_servic
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 
 /// Áreas, equipos y líderes en Supabase. Las tablas, la limpieza de líderes al
-/// cambiar un rol y el RLS están versionados en
-/// `supabase/areas_equipos_rls.sql`.
+/// cambiar un rol y el RLS están en `supabase/areas_equipos_rls.sql`, y la
+/// baja lógica de los líderes (`ff_alta` / `ff_baja`) en
+/// `supabase/lideres_baja_logica.sql`.
 class SupabaseOrgStructureRepository implements OrgStructureRepository {
   static const _areas = 'areas';
   static const _teams = 'equipos';
@@ -30,8 +31,10 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
       results = await Future.wait([
         _table(_areas).select('id,nombre').order('id'),
         _table(_teams).select('id,area_id,nombre').order('id'),
-        _table(_areaLeaders).select('area_id,email'),
-        _table(_teamLeaders).select('equipo_id,email'),
+        _table(_areaLeaders).select('area_id,email').isFilter('ff_baja', null),
+        _table(
+          _teamLeaders,
+        ).select('equipo_id,email').isFilter('ff_baja', null),
       ]);
     } on PostgrestException catch (error) {
       throw FormatException(_errorMessage(error));
@@ -108,43 +111,92 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
     String areaId,
     Set<String> emails, {
     required DateTime now,
-  }) => _assignLeaders(_areaLeaders, 'area_id', areaId, emails);
+  }) => _assignLeaders(_areaLeaders, 'area_id', areaId, emails, now);
 
   @override
   Future<void> assignTeamLeaders(
     String teamId,
     Set<String> emails, {
     required DateTime now,
-  }) => _assignLeaders(_teamLeaders, 'equipo_id', teamId, emails);
+  }) => _assignLeaders(_teamLeaders, 'equipo_id', teamId, emails, now);
 
   /// Aplica solo la diferencia con lo que hay en la base: si algo falla a
-  /// mitad de camino, no deja al equipo sin ninguno de sus líderes.
+  /// mitad de camino, no deja al equipo sin ninguno de sus líderes. Nada se
+  /// borra: la baja y la reactivación son updates de `ff_baja`.
   Future<void> _assignLeaders(
     String table,
     String column,
     String id,
     Set<String> emails,
+    DateTime now,
   ) => _write(() async {
-    final desired = {
-      for (final email in emails)
-        if (email.trim().isNotEmpty) normalizeLoose(email),
-    };
-    final rows = await _table(table).select('email').eq(column, id);
-    final current = {for (final row in rows) row['email'].toString()};
-    final remove = current.difference(desired);
-    final add = desired.difference(current);
-    if (remove.isNotEmpty) {
-      await _table(
-        table,
-      ).delete().eq(column, id).inFilter('email', remove.toList());
+    final rows = await _table(table).select('email,ff_baja').eq(column, id);
+    final active = _storedEmails(rows.where((row) => row['ff_baja'] == null));
+    final ended = _storedEmails(rows.where((row) => row['ff_baja'] != null));
+    final changes = const OrgStructureService().leaderChanges(
+      active: active.keys.toSet(),
+      ended: ended.keys.toSet(),
+      desired: emails,
+    );
+    final stamp = now.toUtc().toIso8601String();
+    if (changes.end.isNotEmpty) {
+      await _requireAll(
+        changes.end,
+        _table(table)
+            .update({'ff_baja': stamp})
+            .eq(column, id)
+            .isFilter('ff_baja', null)
+            .inFilter('email', [
+              for (final email in changes.end) active[email]!,
+            ])
+            .select('email'),
+      );
     }
-    if (add.isNotEmpty) {
+    if (changes.reactivate.isNotEmpty) {
+      await _requireAll(
+        changes.reactivate,
+        _table(table)
+            .update({'ff_baja': null})
+            .eq(column, id)
+            .inFilter('email', [
+              for (final email in changes.reactivate) ended[email]!,
+            ])
+            .select('email'),
+      );
+    }
+    if (changes.add.isNotEmpty) {
       final idValue = int.tryParse(id) ?? id;
       await _table(table).insert([
-        for (final email in add) {column: idValue, 'email': email},
+        for (final email in changes.add)
+          {column: idValue, 'email': email, 'ff_alta': stamp},
       ]);
     }
   });
+
+  /// Email normalizado → email tal como está guardado, para filtrar por el
+  /// valor de la base.
+  static Map<String, String> _storedEmails(
+    Iterable<Map<String, dynamic>> rows,
+  ) => {
+    for (final row in rows)
+      if (normalizeLoose(row['email']?.toString() ?? '').isNotEmpty)
+        normalizeLoose(row['email'].toString()): row['email'].toString(),
+  };
+
+  /// Un PATCH de PostgREST que no matchea ninguna fila (por ejemplo, porque el
+  /// RLS no la deja ver) responde con éxito: sin esto, la UI avisaría que el
+  /// cambio se guardó.
+  static Future<void> _requireAll(
+    Set<String> emails,
+    Future<List<Map<String, dynamic>>> update,
+  ) async {
+    if ((await update).length < emails.length) {
+      throw const FormatException(
+        'No se pudo guardar el cambio. Recargá la pantalla e intentá '
+        'nuevamente.',
+      );
+    }
+  }
 
   Future<void> _write(Future<void> Function() action) async {
     try {
@@ -162,6 +214,9 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
       '42P01' =>
         'Faltan las tablas de áreas y equipos en la base. Corré '
             'supabase/areas_equipos_rls.sql antes de usar esta versión.',
+      '42703' =>
+        'Falta la baja lógica de líderes en la base. Corré '
+            'supabase/lideres_baja_logica.sql antes de usar esta versión.',
       _ =>
         'No se pudo guardar el cambio. Intentá nuevamente y, si sigue '
             'pasando, avisale al equipo técnico.',
