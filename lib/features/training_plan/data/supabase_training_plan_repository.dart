@@ -4,8 +4,7 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
-import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
-import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 
 /// Plan de formación en Supabase: una fila por mes de vigencia y seniority.
 /// La tabla y su RLS están versionados en `supabase/plan_formacion.sql`.
@@ -19,8 +18,12 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
   };
 
   final SupabaseClient _client;
+  final TrainingPlanService _service;
 
-  SupabaseTrainingPlanRepository(this._client);
+  SupabaseTrainingPlanRepository(
+    this._client, [
+    this._service = const TrainingPlanService(),
+  ]);
 
   SupabaseQueryBuilder get _plan => _client.schema('public').from(_table);
 
@@ -48,27 +51,30 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
       };
     }
 
-    // PlanFormacion rechaza una versión a la que le falte una seniority: no se
-    // completa con los valores por defecto.
-    return TrainingPlanHistory([
+    // A version missing a seniority is rejected, not completed with the
+    // default values.
+    return _service.history([
       for (final MapEntry(key: month, value: hours) in byMonth.entries)
         TrainingPlanVersion(
           validFrom: DateTime.parse(month),
-          plan: TrainingPlan(hours),
+          plan: _service.validate(TrainingPlan(hours)),
         ),
     ]);
   }
 
   @override
   Future<void> saveVersion(TrainingPlanVersion version) async {
-    final validFrom = TrainingPlanVersion.dateIso(version.validFrom);
+    final plan = _service.validate(version.plan);
+    final validFrom = _service.dateIso(
+      _service.version(validFrom: version.validFrom, plan: plan).validFrom,
+    );
     final rows = [
       for (final seniority in Seniority.values)
         {
           'vigente_desde': validFrom,
           'seniority': seniority.name,
           for (final MapEntry(key: type, value: column) in _columns.entries)
-            column: version.plan.requiredHours(seniority)[type],
+            column: plan.hours[seniority]![type],
         },
     ];
 
@@ -107,10 +113,7 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
   ) {
     final hours = value is num ? value.toDouble() : double.tryParse('$value');
     if (hours == null) {
-      throw FormatException(
-        'El plan de formación no tiene horas de ${type.label} para '
-        '${seniority.label}.',
-      );
+      throw InvalidTrainingPlanException(seniority, type, null);
     }
     return hours;
   }

@@ -9,6 +9,9 @@ import 'package:app_finnegans/features/employees/presentation/widgets/seniority_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/training_plan/presentation/training_plan_messages.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 
 /// Edita las horas mensuales requeridas por categoría para cada seniority.
 /// Cada guardado es una versión que rige desde el mes elegido: los meses
@@ -39,6 +42,8 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
   TrainingPlan? _base;
   bool _saving = false;
 
+  TrainingPlanService get _service => ref.read(trainingPlanServiceProvider);
+
   @override
   void initState() {
     super.initState();
@@ -50,7 +55,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
     ref.listenManual(trainingPlanHistoryProvider, (_, next) {
       if (next case AsyncData(:final value)) {
         _plans = value;
-        _load(value.currentIn(_year, _month));
+        _load(_service.currentIn(value, _year, _month));
       }
     }, fireImmediately: true);
   }
@@ -68,7 +73,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
     if (asBase) _base = plan;
     for (final MapEntry(key: (seniority, type), value: controller)
         in _controllers.entries) {
-      controller.text = _text(plan.requiredHours(seniority)[type]!);
+      controller.text = _text(plan.hours[seniority]![type]!);
     }
   }
 
@@ -91,7 +96,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
     for (final seniority in Seniority.values) {
       for (final type in CourseCategory.values) {
         final value = _value(seniority, type);
-        if (TrainingPlan.hoursError(value) != null) return null;
+        if (_service.hoursIssue(value) != null) return null;
         (hours[seniority] ??= {})[type] = value!;
       }
     }
@@ -111,7 +116,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
     setState(() {
       _year = year;
       _month = month;
-      _load(_plans!.currentIn(year, month));
+      _load(_service.currentIn(_plans!, year, month));
     });
   }
 
@@ -205,7 +210,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
               onPressed: _saving
                   ? null
                   : () => setState(
-                      () => _load(TrainingPlan.byDefault(), asBase: false),
+                      () => _load(TrainingPlanDefaults.plan, asBase: false),
                     ),
               icon: const Icon(Icons.restart_alt, size: 18),
               label: const Text('Restaurar valores por defecto'),
@@ -245,7 +250,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
       ...plans.versions.map((version) => version.validFrom.year),
     ].reduce((a, b) => a < b ? a : b);
     final years = [for (var a = firstYear; a <= today.year + 1; a++) a];
-    final current = plans.currentVersionIn(_year, _month);
+    final current = _service.currentVersionIn(plans, _year, _month);
     final next = plans.versions
         .where((version) => version.validFrom.isAfter(DateTime(_year, _month)))
         .firstOrNull;
@@ -424,8 +429,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
       for (final type in CourseCategory.values) _value(seniority, type),
     ];
     // Con un campo inválido no hay total que mostrar.
-    final total =
-        values.every((value) => TrainingPlan.hoursError(value) == null)
+    final total = values.every((value) => _service.hoursIssue(value) == null)
         ? values.fold<double>(0, (sum, value) => sum + value!)
         : null;
 
@@ -469,9 +473,8 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
   Widget _field(Seniority seniority, CourseCategory type) {
     final cs = context.colorScheme;
     final value = _value(seniority, type);
-    final error = TrainingPlan.hoursError(value);
-    final modified =
-        error == null && value != _base!.requiredHours(seniority)[type];
+    final error = hoursErrorText(_service, value);
+    final modified = error == null && value != _base!.hours[seniority]![type];
 
     return Padding(
       padding: const EdgeInsets.only(right: 12, top: 4, bottom: 4),

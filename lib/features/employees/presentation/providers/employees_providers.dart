@@ -194,7 +194,7 @@ final employeeDetailProvider =
           employee: compliance.employee,
           creditedHours: compliance.creditedHours,
           declaredHours: compliance.declaredHours,
-          requiredHours: complianceService.plans.requiredForYear(
+          requiredHours: complianceService.requiredForYear(
             employee.seniority,
             year,
           ),

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 
 ({SupabaseTrainingPlanRepository repositorio, List<http.Request> requests})
 _fixture(Future<http.Response> Function(http.Request) respond) {
@@ -87,13 +88,21 @@ void main() {
       DateTime(2026, 7),
       DateTime(2026, 10),
     ]);
-    expect(plans.currentIn(2026, 8), TrainingPlan.byDefault());
-    expect(plans.currentIn(2026, 10).requiredHours(Seniority.junior1), {
-      CourseCategory.businessSkills: 6,
-      CourseCategory.softSkills: 2,
-      CourseCategory.exploration: 0,
-      CourseCategory.teaching: 0,
-    });
+    expect(
+      const TrainingPlanService().currentIn(plans, 2026, 8),
+      TrainingPlanDefaults.plan,
+    );
+    expect(
+      const TrainingPlanService()
+          .currentIn(plans, 2026, 10)
+          .hours[Seniority.junior1]!,
+      {
+        CourseCategory.businessSkills: 6,
+        CourseCategory.softSkills: 2,
+        CourseCategory.exploration: 0,
+        CourseCategory.teaching: 0,
+      },
+    );
   });
 
   test('Una tabla vacía es el plan por defecto', () async {
@@ -102,7 +111,10 @@ void main() {
     final plans = await fixture.repositorio.getPlans();
 
     expect(plans.versions, isEmpty);
-    expect(plans.currentIn(2026, 10), TrainingPlan.byDefault());
+    expect(
+      const TrainingPlanService().currentIn(plans, 2026, 10),
+      TrainingPlanDefaults.plan,
+    );
   });
 
   test('Una versión incompleta no se completa con valores por defecto', () {
@@ -201,7 +213,7 @@ void main() {
       fixture.repositorio.saveVersion(
         TrainingPlanVersion(
           validFrom: DateTime(2026, 11),
-          plan: TrainingPlan.byDefault(),
+          plan: TrainingPlanDefaults.plan,
         ),
       ),
       throwsFormatException,
@@ -222,7 +234,7 @@ void main() {
       fixture.repositorio.saveVersion(
         TrainingPlanVersion(
           validFrom: DateTime(2026, 11),
-          plan: TrainingPlan.byDefault(),
+          plan: TrainingPlanDefaults.plan,
         ),
       ),
       throwsA(

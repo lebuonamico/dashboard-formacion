@@ -1,9 +1,12 @@
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 
 /// Monthly hours per category that applied while the plan was fixed in code.
 /// They rule every month before the first saved plan version.
 abstract final class TrainingPlanDefaults {
+  static const plan = TrainingPlan(hours);
+
   static const hours = <Seniority, Map<CourseCategory, double>>{
     Seniority.trainee: {
       CourseCategory.businessSkills: 4,

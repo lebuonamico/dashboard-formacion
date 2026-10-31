@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 
 class _PlanFake implements TrainingPlanRepository {
   TrainingPlanHistory plans;
@@ -23,7 +24,7 @@ class _PlanFake implements TrainingPlanRepository {
   @override
   Future<void> saveVersion(TrainingPlanVersion version) async {
     saved.add(version);
-    plans = plans.withVersion(version);
+    plans = const TrainingPlanService().withVersion(plans, version);
   }
 }
 
@@ -106,7 +107,7 @@ void main() {
     final today = DateTime.now();
     final saved = repository.saved.single;
     expect(saved.validFrom, DateTime(today.year, today.month));
-    expect(saved.plan.requiredHours(Seniority.junior1), {
+    expect(saved.plan.hours[Seniority.junior1]!, {
       CourseCategory.businessSkills: 6,
       CourseCategory.softSkills: 2,
       CourseCategory.exploration: 0,
@@ -114,7 +115,7 @@ void main() {
     });
     // El resto queda como estaba.
     expect(
-      saved.plan.requiredHours(Seniority.senior2),
+      saved.plan.hours[Seniority.senior2]!,
       TrainingPlanDefaults.hours[Seniority.senior2]!,
     );
     expect(find.textContaining('Plan guardado: rige desde'), findsOneWidget);
@@ -122,7 +123,14 @@ void main() {
     expect(_canSave(tester), isFalse);
     // Y el cálculo de cumplimiento ya lo usa.
     final service = await container.read(complianceServiceProvider.future);
-    expect(service.plans.currentIn(today.year, today.month), saved.plan);
+    expect(
+      const TrainingPlanService().currentIn(
+        service.plans,
+        today.year,
+        today.month,
+      ),
+      saved.plan,
+    );
   });
 
   testWidgets('El total es libre y acepta coma decimal', (tester) async {

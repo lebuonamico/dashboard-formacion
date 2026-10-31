@@ -7,14 +7,18 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/courses/domain/course_classification_service.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
+import 'package:app_finnegans/features/employees/domain/seniority.dart';
 
 class ComplianceService {
   /// Versiones del plan de formación. Sin versiones rige el plan por defecto.
   final TrainingPlanHistory plans;
   final CourseClassificationService classification;
+  final TrainingPlanService planService;
 
   ComplianceService({
     this.plans = const TrainingPlanHistory.empty(),
+    this.planService = const TrainingPlanService(),
     CourseClassificationService? classification,
   }) : classification = classification ?? CourseClassificationService();
 
@@ -30,8 +34,8 @@ class ComplianceService {
   }) {
     assert((year == null) == (month == null), 'anio y mes van juntos');
     final plan = year != null && month != null
-        ? plans.currentIn(year, month)
-        : plans.current;
+        ? planService.currentIn(plans, year, month)
+        : planService.current(plans);
     final coursesMap = {
       for (final course in courses) normalizeCourseName(course.name): course,
     };
@@ -105,7 +109,7 @@ class ComplianceService {
       }
 
       // Requerimientos mensuales según el seniority del empleado.
-      final requiredHours = Map.of(plan.requiredHours(employee.seniority));
+      final requiredHours = Map.of(plan.hours[employee.seniority]!);
 
       // Leandro: llama a CumplimientoEmpleado para entregar las horas validadas, declaradas y requeridas de cada persona.
       return EmployeeCompliance(
@@ -116,6 +120,10 @@ class ComplianceService {
       );
     }).toList();
   }
+
+  /// The year target: the 12 months, each with its plan version.
+  Map<CourseCategory, double> requiredForYear(Seniority seniority, int year) =>
+      planService.requiredForYear(plans, seniority, year);
 
   static Map<CourseCategory, double> _zeroHoursByCategory() => {
     for (final type in CourseCategory.values) type: 0.0,

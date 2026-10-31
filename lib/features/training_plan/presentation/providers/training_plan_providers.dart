@@ -5,6 +5,11 @@ import 'package:app_finnegans/features/training_plan/data/supabase_training_plan
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
+
+final trainingPlanServiceProvider = Provider<TrainingPlanService>(
+  (ref) => const TrainingPlanService(),
+);
 
 final trainingPlanRepositoryProvider = Provider<TrainingPlanRepository>(
   (ref) => SupabaseConfig.enabled
