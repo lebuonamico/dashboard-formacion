@@ -1,5 +1,5 @@
-/// Área de `public.areas`. Sale de la importación de nómina: su nombre es el
-/// Sector tal como vino en el Excel, y no se edita desde la app.
+/// An area of `public.areas`. It comes from the payroll import: its name is
+/// the Sector as it came in the spreadsheet, and the app does not edit it.
 class Area {
   final String id;
   final String name;
@@ -14,8 +14,8 @@ class Area {
   );
 }
 
-/// Equipo de `public.equipos`. Pertenece a un área y, como ella, sale de la
-/// importación de nómina.
+/// A team of `public.equipos`. It belongs to an area and, like it, comes
+/// from the payroll import.
 class Team {
   final String id;
   final String areaId;
@@ -42,7 +42,7 @@ class Team {
   );
 }
 
-/// Áreas y equipos que trae una nómina y todavía no tienen fila.
+/// Areas and teams a payroll brings that do not have a row yet.
 class PayrollGaps {
   final List<String> areas;
   final List<({String area, String team})> teams;
@@ -50,9 +50,9 @@ class PayrollGaps {
   const PayrollGaps({this.areas = const [], this.teams = const []});
 }
 
-/// Escrituras que dejan como líderes vigentes exactamente los pedidos: [end]
-/// da de baja asignaciones vigentes, [reactivate] reactiva asignaciones con
-/// baja y [add] crea las que nunca existieron. Emails normalizados.
+/// Writes that leave exactly the requested leaders active: [end] ends
+/// active assignments, [reactivate] reactivates ended ones and [add] creates
+/// the ones that never existed. Normalized emails.
 class LeaderChanges {
   final Set<String> end;
   final Set<String> reactivate;
@@ -65,7 +65,7 @@ class LeaderChanges {
   });
 }
 
-/// Colaboradores activos por clave de área y por clave de área y equipo.
+/// Active employees by area key and by area and team key.
 class PayrollHeadcount {
   final Map<String, int> byArea;
   final Map<(String, String), int> byTeam;
@@ -73,8 +73,8 @@ class PayrollHeadcount {
   const PayrollHeadcount({this.byArea = const {}, this.byTeam = const {}});
 }
 
-/// Áreas y equipos con sus líderes. Los emails de los líderes llegan
-/// normalizados desde el repositorio.
+/// Areas and teams with their leaders. Leader emails come normalized from
+/// the repository.
 class OrgStructure {
   final List<Area> areas;
   final List<Team> teams;

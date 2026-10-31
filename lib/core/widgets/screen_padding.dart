@@ -1,11 +1,11 @@
 import 'package:flutter/widgets.dart';
 
-/// Franja libre al pie de todas las pantallas: ahí flotan el botón del
-/// asistente IA y, en el deploy, el badge de Netlify, sin tapar contenido.
-/// Las pantallas con tablas paginadas calculan las filas con el alto restante.
+/// Free strip at the bottom of every screen: the AI assistant button and,
+/// in the deploy, the Netlify badge float there without covering content.
+/// Screens with paginated tables size their rows with the remaining height.
 const double bottomFloatingReserve = 48;
 
-/// Margen del contenido de cada pantalla, debajo del top bar.
+/// Content margin of every screen, below the top bar.
 const EdgeInsets screenPadding = EdgeInsets.fromLTRB(
   24,
   24,

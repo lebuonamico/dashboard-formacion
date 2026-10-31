@@ -1,6 +1,6 @@
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 
-/// Fecha de alta de los líderes con los que arranca el repositorio en memoria.
+/// Assignment date of the leaders the in-memory repository starts with.
 final seedLeadersAssignedAt = DateTime.utc(2026);
 
 final areasSeed = [

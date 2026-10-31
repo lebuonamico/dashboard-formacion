@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Hace aparecer [child] con un fundido al montarse. Se usa en el contenido que
-/// reemplaza a un indicador de carga, para que no salte de golpe. Como sólo
-/// anima al montarse, los cambios posteriores (filtros, paginación) no
-/// vuelven a animar.
+/// Fades [child] in when it mounts. Used for content that replaces a
+/// loading indicator, so it does not pop in. It only animates on mount: later
+/// changes (filters, pagination) do not animate again.
 class FadeIn extends StatelessWidget {
   final Widget child;
   final Duration duration;

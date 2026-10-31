@@ -3,8 +3,8 @@ import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
 
-/// Reglas de la allowlist: un usuario está activo si no tiene sello de
-/// eliminación ni de bloqueo, y la eliminación manda sobre el bloqueo.
+/// Allowlist rules: a user is active without a deletion or block stamp,
+/// and deletion takes precedence over blocking.
 class AuthorizedUserService {
   final UserRoleParser roles;
 
@@ -21,7 +21,7 @@ class AuthorizedUserService {
     createdAt: now,
   );
 
-  /// `null` para un rol que la app no conoce (por ejemplo, uno legacy).
+  /// `null` for a role the app does not know (for example, a legacy one).
   UserRole? knownRole(AuthorizedUser user) => roles.tryParse(user.role);
 
   bool isAdmin(AuthorizedUser user) => knownRole(user) == UserRole.admin;

@@ -1,5 +1,5 @@
-/// Qué colaboradores puede ver el usuario de la sesión: todos, o los de las
-/// áreas y los equipos indicados por su clave de nómina.
+/// Which employees the session user can see: all of them, or those of the
+/// areas and teams given by their payroll key.
 class UserScope {
   final bool isTotal;
   final Set<String> areaKeys;

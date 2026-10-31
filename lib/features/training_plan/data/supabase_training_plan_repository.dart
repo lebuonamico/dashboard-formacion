@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -7,8 +6,8 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 
-/// Plan de formación en Supabase: una fila por mes de vigencia y seniority.
-/// La tabla y su RLS están versionados en `supabase/plan_formacion.sql`.
+/// Training plan in Supabase: one row per effective month and seniority. The
+/// table and its RLS are in `supabase/plan_formacion.sql`.
 class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
   static const _table = 'plan_formacion';
   static const _columns = {
@@ -30,7 +29,7 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
 
   @override
   Future<TrainingPlanHistory> getPlans() async {
-    // Tabla chica (11 filas por versión): entra en una sola página.
+    // Small table (11 rows per version): it fits in a single page.
     final List<Map<String, dynamic>> rows;
     try {
       rows = await _plan
@@ -80,8 +79,8 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
     } on PostgrestException catch (error) {
       throw FormatException(_errorMessage(error, read: false));
     }
-    // PostgREST responde éxito aunque no escriba: sin las 11 filas de vuelta,
-    // el plan no quedó guardado entero.
+    // PostgREST succeeds even when it writes nothing: without the 11 rows
+    // back, the plan was not saved whole.
     if (saved.length != rows.length) {
       throw const FormatException(
         'El plan no se guardó completo. Revisá los permisos sobre '
@@ -121,7 +120,6 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
   }
 
   String _errorMessage(PostgrestException error, {required bool read}) {
-    debugPrint('plan_formacion ${error.code}: ${error.message}');
     return switch (error.code) {
       '42P01' || 'PGRST205' =>
         'Falta la tabla del plan de formación en la base. Corré '

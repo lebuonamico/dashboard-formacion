@@ -1,8 +1,8 @@
 const _keep = Object();
 
-/// Fila de `area_lideres` / `equipo_lideres` en el repositorio en memoria.
-/// Una asignación no se borra: termina con [removedAt] y se reactiva
-/// limpiándolo.
+/// A row of `area_lideres` / `equipo_lideres` in the in-memory repository.
+/// An assignment is never deleted: it ends with [removedAt] and is reactivated
+/// by clearing it.
 class LeaderAssignment {
   final String email;
   final DateTime assignedAt;

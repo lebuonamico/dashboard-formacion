@@ -7,7 +7,7 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Filtros independientes del listado. La búsqueda vive dentro de cada menú.
+/// Independent filters for a list. Each menu has its own search.
 class FilterBar extends ConsumerWidget {
   final DataFilterScope scope;
   final AsyncValue<List<FilterRow>> rows;
@@ -178,7 +178,7 @@ class _FilterBarLayoutState extends State<_FilterBarLayout> {
                       controller: _scroll,
                       primary: false,
                       scrollDirection: Axis.horizontal,
-                      // Espacio para la etiqueta flotante y la barra de scroll.
+                      // Room for the floating label and the scrollbar.
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: SizedBox(
                         width: math.max(minWidth, constraints.maxWidth),

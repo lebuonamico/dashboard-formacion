@@ -27,14 +27,13 @@ class KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Leandro: llama a LayoutBuilder para ajustar las columnas de KPIs al ancho disponible.
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final columns = width >= 1300 && items.length >= 5
             ? 5
             : width >= 1050
-            // Con 5 ítems, 3 + 2 queda mejor que 4 + 1.
+            // With 5 items, 3 + 2 looks better than 4 + 1.
             ? (items.length == 5 ? 3 : 4)
             : width >= 580
             ? 2
@@ -49,7 +48,6 @@ class KpiGrid extends StatelessWidget {
                 (item) => SizedBox(
                   width: cardWidth,
                   height: cardHeight,
-                  // Leandro: llama a _KpiCard para mostrar el valor y el detalle de cada indicador.
                   child: _KpiCard(data: item),
                 ),
               )
@@ -103,7 +101,6 @@ class _KpiCard extends StatelessWidget {
                     ),
                     if (data.help != null) ...[
                       const SizedBox(width: 4),
-                      // Leandro: llama a Tooltip para mostrar la ayuda asociada al indicador.
                       Tooltip(
                         message: data.help!,
                         child: Icon(

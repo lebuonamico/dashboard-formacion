@@ -5,15 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Transición al cambiar entre tema claro y oscuro.
+/// Transition between the light and dark themes.
 ///
-/// Interpolar el `ThemeData` (lo que hace `MaterialApp` por defecto)
-/// reconstruye toda la app en cada frame y además reinicia las animaciones de
-/// color de cada widget, así que se ve trabado. En su lugar el tema cambia de
-/// golpe y, encima, se desvanece una captura de cómo se veía la pantalla
-/// antes: animar la opacidad de una imagen no reconstruye nada.
+/// Interpolating the `ThemeData` (MaterialApp's default) rebuilds the whole app
+/// on every frame and restarts every widget's color animations, so it stutters.
+/// Instead the theme switches at once and a snapshot of the previous look fades
+/// out on top: animating an image's opacity rebuilds nothing.
 ///
-/// Va en `MaterialApp.builder`, con `themeAnimationDuration: Duration.zero`.
+/// Goes in `MaterialApp.builder`, with `themeAnimationDuration: Duration.zero`.
 class ThemeTransition extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -36,11 +35,11 @@ class _ThemeTransitionState extends ConsumerState<ThemeTransition>
     CurvedAnimation(parent: _fade, curve: Curves.easeInOut),
   );
 
-  /// Cómo se veía la app con el tema anterior, mientras se desvanece.
+  /// How the app looked with the previous theme, while it fades out.
   ui.Image? _snapshot;
 
-  /// El listener corre apenas cambia la preferencia, antes de que la app se
-  /// reconstruya: la capa todavía tiene pintado el tema anterior.
+  /// The listener runs as soon as the preference changes, before the app
+  /// rebuilds: the layer still has the previous theme painted.
   void _capture() {
     if (MediaQuery.disableAnimationsOf(context)) return;
     final limit = _screen.currentContext?.findRenderObject();
@@ -52,8 +51,8 @@ class _ThemeTransitionState extends ConsumerState<ThemeTransition>
         pixelRatio: MediaQuery.devicePixelRatioOf(context),
       );
     } on Object {
-      // Si la capa no se puede capturar en este frame, el tema cambia sin
-      // fundido: nunca bloquea el cambio.
+      // If the layer cannot be captured in this frame, the theme switches
+      // without the fade: it never blocks the change.
       return;
     }
     _snapshot?.dispose();
@@ -88,7 +87,7 @@ class _ThemeTransitionState extends ConsumerState<ThemeTransition>
         RepaintBoundary(key: _screen, child: widget.child),
         if (_snapshot case final capture?)
           Positioned.fill(
-            // No intercepta toques: la app ya responde con el tema nuevo.
+            // Does not intercept taps: the app already responds with the new theme.
             child: IgnorePointer(
               child: FadeTransition(
                 opacity: _opacity,

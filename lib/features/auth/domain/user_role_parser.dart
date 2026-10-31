@@ -1,8 +1,8 @@
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 
-/// Reconoce un rol por su nombre o por el texto con el que se muestra, sin
-/// importar tildes, espacios ni mayúsculas.
+/// Recognises a role by its name or its display text, ignoring accents,
+/// spaces and case.
 class UserRoleParser {
   static const _aliases = {
     UserRole.admin: 'Administrador',
@@ -13,7 +13,7 @@ class UserRoleParser {
 
   const UserRoleParser();
 
-  /// `null` si el texto está vacío o no es un rol conocido.
+  /// `null` if the text is empty or not a known role.
   UserRole? tryParse(String? raw) {
     if (raw == null) return null;
     final clean = normalizeKey(raw);

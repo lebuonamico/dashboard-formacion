@@ -5,12 +5,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 
-/// Bordes, relleno y colores salen del `inputDecorationTheme` de `AppTheme`.
+/// Borders, fill and colors come from AppTheme's `inputDecorationTheme`.
 InputDecoration filterInputDecoration(String hint, IconData icon) =>
     InputDecoration(hintText: hint, prefixIcon: Icon(icon, size: 19));
 
-/// Selector compartido. La búsqueda es local y nunca modifica la selección.
-/// El constructor habitual conserva la selección única de los períodos.
+/// Shared selector. The search is local and never changes the selection.
+/// The default constructor keeps a single selection, as periods need.
 class FilterDropdown<T> extends StatefulWidget {
   final T? value;
   final List<DropdownMenuItem<T>> items;
@@ -126,7 +126,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
     final matches = options
         .where((item) => normalizeKey(_label(item)).contains(query))
         .toList();
-    // Dos grupos conservando el orden original, incluso al buscar.
+    // Two groups that keep the original order, also while searching.
     final ordered = [
       ...matches.where((item) => selected.contains(item.value)),
       ...matches.where((item) => !selected.contains(item.value)),

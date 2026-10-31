@@ -1,14 +1,13 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 
-/// Áreas, equipos y líderes en Supabase. Las tablas, la limpieza de líderes al
-/// cambiar un rol y el RLS están en `supabase/areas_equipos_rls.sql`, y la
-/// baja lógica de los líderes (`ff_alta` / `ff_baja`) en
+/// Areas, teams and leaders in Supabase. The tables, the leader cleanup on
+/// a role change and the RLS are in `supabase/areas_equipos_rls.sql`; the
+/// leaders' soft delete (`ff_alta` / `ff_baja`) is in
 /// `supabase/lideres_baja_logica.sql`.
 class SupabaseOrgStructureRepository implements OrgStructureRepository {
   static const _areas = 'areas';
@@ -25,8 +24,8 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
 
   @override
   Future<OrgStructure> getStructure() async {
-    // Tablas chicas (decenas de filas): entran en una sola página de
-    // PostgREST, a diferencia de las tablas de datos.
+    // Small tables (tens of rows): they fit in a single PostgREST page, unlike
+    // the data tables.
     final List<List<Map<String, dynamic>>> results;
     try {
       results = await Future.wait([
@@ -120,9 +119,9 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
     required DateTime now,
   }) => _assignLeaders(_teamLeaders, 'equipo_id', teamId, emails, now);
 
-  /// Aplica solo la diferencia con lo que hay en la base: si algo falla a
-  /// mitad de camino, no deja al equipo sin ninguno de sus líderes. Nada se
-  /// borra: la baja y la reactivación son updates de `ff_baja`.
+  /// Applies only the difference with what is stored: if something fails
+  /// halfway, the team never ends up without all of its leaders. Nothing is
+  /// deleted: ending and reactivating are updates of `ff_baja`.
   Future<void> _assignLeaders(
     String table,
     String column,
@@ -173,8 +172,7 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
     }
   });
 
-  /// Email normalizado → email tal como está guardado, para filtrar por el
-  /// valor de la base.
+  /// Normalized email → the email as stored, to filter by the stored value.
   static Map<String, String> _storedEmails(
     Iterable<Map<String, dynamic>> rows,
   ) => {
@@ -183,9 +181,9 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
         normalizeLoose(row['email'].toString()): row['email'].toString(),
   };
 
-  /// Un PATCH de PostgREST que no matchea ninguna fila (por ejemplo, porque el
-  /// RLS no la deja ver) responde con éxito: sin esto, la UI avisaría que el
-  /// cambio se guardó.
+  /// A PostgREST PATCH that matches no rows (for example, because RLS hides
+  /// them) still succeeds: without this, the UI would report the change as
+  /// saved.
   static Future<void> _requireAll(
     Set<String> emails,
     Future<List<Map<String, dynamic>>> update,
@@ -207,7 +205,6 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
   }
 
   String _errorMessage(PostgrestException error) {
-    debugPrint('estructura ${error.code}: ${error.message}');
     return switch (error.code) {
       '23505' => 'Esa persona ya figura como líder.',
       '42501' => 'No tenés permiso para cambiar áreas, equipos o líderes.',

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Color de texto (o ícono) y su fondo, para chips, badges y avisos.
+/// Text (or icon) color and its background, for chips, badges and notices.
 @immutable
 class ColorPair {
   final Color text;
@@ -14,26 +14,25 @@ class ColorPair {
   );
 }
 
-/// Colores propios de la app que el [ColorScheme] de Material no cubre:
-/// estados del semáforo, categorías de curso, seniority, side menu y el
-/// asistente IA. Los colores de superficie, texto, borde y marca salen del
-/// [ColorScheme] (ver `AppTheme`).
+/// App colors that Material's [ColorScheme] does not cover: traffic-light
+/// states, course categories, seniority, side menu and the AI assistant.
+/// Surface, text, border and brand colors come from the [ColorScheme] (see
+/// `AppTheme`).
 ///
-/// Es el único lugar, junto con `app_theme.dart`, donde se escriben colores
-/// literales.
+/// Together with `app_theme.dart`, the only place with literal colors.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  /// Texto entre `onSurface` (títulos) y `onSurfaceVariant` (secundario).
+  /// Text between `onSurface` (titles) and `onSurfaceVariant` (secondary).
   final Color intermediateText;
 
-  /// Texto de menor jerarquía: placeholders, deshabilitados, ejes.
+  /// Lowest-hierarchy text: placeholders, disabled items, axes.
   final Color faintText;
 
   final ColorPair success;
   final ColorPair warning;
   final ColorPair danger;
 
-  /// Chips o fichas sin estado (por ejemplo una categoría no requerida).
+  /// Chips without a status (for example, a category that is not required).
   final ColorPair neutral;
 
   final ColorPair business;
@@ -47,10 +46,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final ColorPair senior;
   final ColorPair manager;
 
-  /// Pista de fondo de donuts y barras de progreso.
+  /// Track of donuts and progress bars.
   final Color chartTrack;
 
-  /// Acentos decorativos para íconos de KPI que no representan un estado.
+  /// Decorative accents for KPI icons that do not represent a status.
   final Color cyanAccent;
   final Color violetAccent;
 
@@ -59,14 +58,14 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color sidebarHover;
   final Color sidebarActive;
 
-  /// Acento violeta del asistente IA (foco, viñetas, código).
+  /// Violet accent of the AI assistant (focus, bullets, code).
   final ColorPair ai;
   final List<Color> aiHeaderGradient;
   final List<Color> aiSymbolGradient;
   final List<Color> aiSendGradient;
   final List<Color> aiUserBubble;
 
-  /// Texto e íconos sobre los gradientes del asistente.
+  /// Text and icons over the assistant gradients.
   final Color overGradient;
 
   const AppColors({
@@ -105,7 +104,7 @@ class AppColors extends ThemeExtension<AppColors> {
     faintText: Color(0xFF94A3B8),
     success: ColorPair(Color(0xFF15803D), Color(0xFFDCFCE7)),
     warning: ColorPair(Color(0xFFB45309), Color(0xFFFEF3C7)),
-    // Rojo 700: el 600 sobre su fondo rosado no llegaba al contraste AA.
+    // Red 700: the 600 on its pink background did not reach AA contrast.
     danger: ColorPair(Color(0xFFB91C1C), Color(0xFFFEE2E2)),
     neutral: ColorPair(Color(0xFF475569), Color(0xFFF1F5F9)),
     business: ColorPair(Color(0xFF1D4ED8), Color(0xFFEFF6FF)),
@@ -132,8 +131,8 @@ class AppColors extends ThemeExtension<AppColors> {
     overGradient: Color(0xFFFFFFFF),
   );
 
-  /// En oscuro los fondos de chips son el color del texto con baja opacidad:
-  /// los pasteles del modo claro brillan demasiado sobre superficies oscuras.
+  /// In dark mode chip backgrounds are the text color at low opacity: the
+  /// light-mode pastels glare on dark surfaces.
   static const dark = AppColors(
     intermediateText: Color(0xFFCBD5E1),
     faintText: Color(0xFF64748B),
@@ -226,8 +225,8 @@ class AppColors extends ThemeExtension<AppColors> {
     overGradient: overGradient ?? this.overGradient,
   );
 
-  /// Interpola todos los colores: el cambio claro/oscuro se anima en lugar
-  /// de saltar.
+  /// Interpolates every color, so switching light/dark animates instead of
+  /// jumping.
   @override
   AppColors lerp(covariant AppColors? other, double t) {
     if (other == null) return this;

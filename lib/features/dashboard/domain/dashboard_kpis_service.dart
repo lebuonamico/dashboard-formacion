@@ -29,8 +29,8 @@ class DashboardKpis {
   final double monthlyPace;
   final double annualProjection;
 
-  /// Objetivo de un año por colaborador, al ritmo de objetivo del período.
-  /// Sale del plan de cada seniority: no es un valor fijo.
+  /// A year's target per employee, at the period's target pace. It comes from
+  /// each seniority's plan: it is not a fixed value.
   final double annualGoalPerPerson;
   const DashboardKpis({
     required this.employees,
@@ -46,7 +46,7 @@ class DashboardKpis {
   });
 }
 
-/// Cálculo extraído sin cambios de DashboardKpiGrid, compartido con el asistente.
+/// Dashboard KPIs, shared with the assistant.
 class DashboardKpisService {
   final CourseClassificationService classification;
 
@@ -60,7 +60,7 @@ class DashboardKpisService {
   DashboardAccumulatedCompliance accumulateCompliance(
     Iterable<TeamsPeriodSummary> months,
   ) {
-    // Las horas de cada mes ya respetan elegibilidad, categorías y topes.
+    // Each month's hours already respect eligibility, categories and caps.
     final evaluated = months
         .where((month) => month.hasData && month.employeeCount > 0)
         .toList();
@@ -103,7 +103,7 @@ class DashboardKpisService {
     final pace = totalEmployees == 0
         ? 0.0
         : completedHours / totalEmployees / months;
-    // Mismo denominador que el ritmo, así la proyección y su meta comparan.
+    // Same denominator as the pace, so the projection and its goal compare.
     final monthlyTarget = totalEmployees == 0
         ? 0.0
         : targetHours / totalEmployees / months;

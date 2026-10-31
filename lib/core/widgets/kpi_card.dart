@@ -1,8 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Fila de cards de indicadores, la misma en Inicio, Áreas, Equipos y sus
-/// detalles: 5 columnas en pantallas anchas, 3 + 2, 2 o 1 en las más chicas.
+/// Row of KPI cards, the same on the home, areas and teams screens and
+/// their details: 5 columns on wide screens, then 3 + 2, 2 or 1.
 class KpiCardRow extends StatelessWidget {
   final List<Widget> cards;
 
@@ -16,7 +16,7 @@ class KpiCardRow extends StatelessWidget {
         final columns = width >= 1300
             ? 5
             : width >= 1050
-            // Con 5 cards, 3 + 2 queda mejor que 4 + 1.
+            // With 5 cards, 3 + 2 looks better than 4 + 1.
             ? (cards.length == 5 ? 3 : 4)
             : width >= 680
             ? 2
@@ -57,7 +57,7 @@ class VariationBadge extends StatelessWidget {
   }
 }
 
-/// Recuadro chico dentro de una card: estado o variación.
+/// Small box inside a card: a status or a variation.
 class DashboardKpiBadge extends StatelessWidget {
   final String text;
   final ColorPair colors;
@@ -98,17 +98,17 @@ class DashboardKpiCard extends StatelessWidget {
   final String footer;
   final String? secondaryText;
 
-  /// Recuadro chico al lado del valor (por ejemplo, la variación del mes).
+  /// Small box next to the value (for example, the month's variation).
   final Widget? badge;
 
-  /// Muestra el texto gris debajo del valor en lugar de al lado, para cuando
-  /// no entra junto al recuadro.
+  /// Shows the grey text below the value instead of beside it, for when it
+  /// does not fit next to the badge.
   final bool suffixBelow;
   final IconData icon;
   final Color color;
 
-  /// Qué muestra la card y cómo se calcula. Aparece al pasar el mouse o
-  /// tocar el ícono de información junto al título.
+  /// What the card shows and how it is calculated. Shown on hover or when
+  /// tapping the info icon next to the title.
   final String? help;
 
   const DashboardKpiCard({
@@ -261,7 +261,7 @@ class _Suffix extends StatelessWidget {
   );
 }
 
-/// Quiénes cuentan en el período, para las cards de colaboradores.
+/// Who counts in the period, for the employee cards.
 const eligiblePayrollHelp =
     'Colaboradores de la nómina elegibles en el período: ya habían ingresado '
     'y estaban activos al cierre del mes (en el anual, en algún mes con '
@@ -279,12 +279,11 @@ const annualCreditedHoursHelp =
     'CRM. Un mes fuerte compensa uno flojo; cada persona suma como máximo su '
     'objetivo anual en cada categoría.';
 
-/// Integrantes de un área o equipo y cuántos cumplieron.
+/// Members of an area or team and how many met the target.
 String membersHelp(String section) =>
     'Colaboradores elegibles $section en el período. Abajo, cuántos '
     'cumplieron el objetivo en todas sus categorías.';
 
-/// Objetivo de horas de un área o equipo.
 String targetHelp(String section) =>
     'Horas que $section debía hacer según el plan de formación para la '
     'seniority de cada integrante. En el anual, la suma de los objetivos de '

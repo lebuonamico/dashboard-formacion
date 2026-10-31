@@ -32,8 +32,8 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
-      // El cambio de tema lo anima TransicionTema con un fundido; interpolar
-      // el ThemeData reconstruiría toda la app en cada frame.
+      // ThemeTransition animates the theme change with a fade; interpolating
+      // the ThemeData would rebuild the whole app on every frame.
       themeAnimationDuration: Duration.zero,
       builder: (context, child) => ThemeTransition(child: child!),
       routerConfig: ref.watch(appRouterProvider),

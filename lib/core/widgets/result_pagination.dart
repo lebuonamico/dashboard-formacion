@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-/// La pantalla calcula las páginas y este widget sólo muestra el estado y botones.
+/// The screen computes the pages; this widget only shows the state and buttons.
 class ResultsPagination extends StatelessWidget {
   final int currentPage;
   final int pageCount;
@@ -57,7 +57,6 @@ class ResultsPagination extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Leandro: llama a IconButton.filledTonal con onPrevious para solicitar la página anterior.
               IconButton.filledTonal(
                 onPressed: onPrevious,
                 icon: const Icon(Icons.chevron_left),
@@ -69,7 +68,6 @@ class ResultsPagination extends StatelessWidget {
                 style: textStyle.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 12),
-              // Leandro: llama a IconButton.filledTonal con onNext para solicitar la página siguiente.
               IconButton.filledTonal(
                 onPressed: onNext,
                 icon: const Icon(Icons.chevron_right),

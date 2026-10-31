@@ -32,7 +32,6 @@ class DonutChart extends StatelessWidget {
     return SizedBox(
       width: 132,
       height: 132,
-      // Leandro: llama a CustomPaint con _DonutPainter para dibujar los segmentos del gráfico.
       child: CustomPaint(
         painter: _DonutPainter(segments, context.colors.chartTrack),
         child: Center(
@@ -96,7 +95,6 @@ class _DonutPainter extends CustomPainter {
         ..strokeCap = StrokeCap.butt
         ..strokeWidth = strokeWidth;
 
-      // Leandro: llama a drawArc para representar la proporción de cada segmento.
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle,

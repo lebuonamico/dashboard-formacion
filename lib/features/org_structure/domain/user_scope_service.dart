@@ -5,16 +5,16 @@ import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/org_structure/domain/user_scope.dart';
 
-/// Mismo criterio que `public.empleado_visible()` en la base, que es la que
-/// manda: acá sirve para que la app no dependa de que el RLS esté encendido y
-/// para poder probarlo sin Supabase.
+/// Same criterion as `public.empleado_visible()` in the database, which is
+/// the one in charge: here it keeps the app from depending on RLS being on,
+/// and lets it be tested without Supabase.
 class UserScopeService {
   final OrgStructureService structures;
 
   const UserScopeService({this.structures = const OrgStructureService()});
 
-  /// Administrador y Academia ven todo. `area` ve las áreas que lidera y
-  /// `lider` los equipos que lidera. Cualquier otro rol, nada.
+  /// Admin and academy see everything. `area` sees the areas they lead and
+  /// `lider` the teams they lead. Any other role, nothing.
   UserScope scopeFor({
     required UserRole? role,
     required String? email,
@@ -44,7 +44,7 @@ class UserScopeService {
     };
   }
 
-  /// Si ve a un empleado con ese Sector y ese Equipo de la nómina.
+  /// Whether it sees an employee with that payroll Sector and Team.
   bool includes(UserScope scope, String sector, String team) {
     if (scope.isTotal) return true;
     final area = normalizeLoose(sector);
@@ -55,7 +55,7 @@ class UserScopeService {
   bool includesEmployee(UserScope scope, Employee employee) =>
       includes(scope, employee.area, employee.team);
 
-  /// Filtro de empleados para el cálculo por período: `null` si ve todo.
+  /// Employee filter for the period calculation: `null` if it sees everything.
   bool Function(Employee employee)? employeeFilter(UserScope scope) =>
       scope.isTotal ? null : (employee) => includesEmployee(scope, employee);
 }

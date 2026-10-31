@@ -3,9 +3,10 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:collection/collection.dart';
 
-/// Cruza la estructura con la nómina. El empleado se une con su área y su
-/// equipo por la clave de nómina (`normalizeLoose`, la misma regla que
-/// `public.clave_nomina()` en la base), así "RRHH" y "rrhh " son la misma área.
+/// Crosses the structure with the payroll. An employee joins their area and
+/// team by the payroll key (`normalizeLoose`, the same rule as
+/// `public.clave_nomina()` in the database), so "RRHH" and "rrhh " are the same
+/// area.
 class OrgStructureService {
   const OrgStructureService();
 
@@ -16,7 +17,6 @@ class OrgStructureService {
       structure.teams.where((team) => team.areaId == areaId).toList()
         ..sort((a, b) => _byName(a.name, b.name));
 
-  /// Área por el Sector de la nómina.
   Area? payrollArea(OrgStructure structure, String sector) {
     final key = normalizeLoose(sector);
     return structure.areas.lastWhereOrNull(
@@ -24,7 +24,6 @@ class OrgStructureService {
     );
   }
 
-  /// Equipo por el Sector y el Equipo de la nómina.
   Team? payrollTeam(OrgStructure structure, String sector, String team) {
     final area = payrollArea(structure, sector);
     if (area == null) return null;
@@ -48,7 +47,7 @@ class OrgStructureService {
     ).where((area) => area.leaders.contains(normalized)).toList();
   }
 
-  /// Equipos que lidera ese email, ordenados por área y por nombre.
+  /// Teams led by that email, sorted by area and name.
   List<({Area area, Team team})> teamsLedBy(
     OrgStructure structure,
     String email,
@@ -61,9 +60,8 @@ class OrgStructureService {
     ];
   }
 
-  /// Lo que la importación de [employees] tiene que crear: las áreas y los
-  /// equipos cuya clave todavía no existe, con el texto del primer empleado
-  /// que los trae.
+  /// What importing [employees] has to create: the areas and teams whose key
+  /// does not exist yet, with the text of the first employee that brings them.
   PayrollGaps missingFromPayroll(
     OrgStructure structure,
     Iterable<Employee> employees,
@@ -102,9 +100,9 @@ class OrgStructureService {
 
   bool isEmpty(PayrollGaps gaps) => gaps.areas.isEmpty && gaps.teams.isEmpty;
 
-  /// Cómo pasar de las asignaciones de un área o un equipo a [desired].
-  /// [active] son los emails con asignación vigente y [ended] los que tienen
-  /// baja, normalizados; [desired] se normaliza y pierde los vacíos.
+  /// How to go from an area's or team's assignments to [desired]. [active]
+  /// are the emails with an active assignment and [ended] the ended ones,
+  /// normalized; [desired] is normalized and loses the blank ones.
   LeaderChanges leaderChanges({
     required Set<String> active,
     required Set<String> ended,
@@ -147,8 +145,8 @@ class OrgStructureService {
       )] ??
       0;
 
-  /// Las áreas cuyo nombre, o el de alguno de sus equipos, contiene [query].
-  /// Sin texto devuelve todas.
+  /// Areas whose name, or one of their teams' names, contains [query]. All of
+  /// them without text.
   List<Area> areasMatching(OrgStructure structure, String query) {
     final searched = normalizeLoose(query);
     if (searched.isEmpty) return sortedAreas(structure);

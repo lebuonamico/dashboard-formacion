@@ -1,10 +1,9 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Flecha para volver atrás. En lugar del ripple de Material (un círculo que
-/// aparece y se borra de golpe), el feedback es continuo: un fondo circular que
-/// se desvanece al pasar el mouse, un leve empuje de la flecha y un pequeño
-/// achique al presionar.
+/// Back arrow. Instead of Material's ripple (a circle that appears and
+/// vanishes at once), the feedback is continuous: a round background that fades
+/// on hover, a slight nudge of the arrow and a small shrink on press.
 class AppBackButton extends StatefulWidget {
   final VoidCallback onPressed;
   final String tooltip;
@@ -45,8 +44,8 @@ class _AppBackButtonState extends State<AppBackButton> {
           curve: Curves.easeOut,
           width: 40,
           height: 40,
-          // Cuadrado redondeado con borde: se lee como botón "Volver" y se
-          // distingue del toggle circular azul del menú.
+          // Rounded square with a border: it reads as a "Volver" button and differs
+          // from the menu's round blue toggle.
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             color: backgroundColor,
@@ -58,8 +57,7 @@ class _AppBackButtonState extends State<AppBackButton> {
               customBorder: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              // Sin ripple ni resaltado propio: el feedback lo da el fondo de
-              // arriba.
+              // No ripple or highlight of its own: the background above is the feedback.
               splashFactory: NoSplash.splashFactory,
               splashColor: Colors.transparent,
               highlightColor: Colors.transparent,

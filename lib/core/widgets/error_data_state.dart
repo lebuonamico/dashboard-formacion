@@ -2,13 +2,13 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Explica en lenguaje simple por qué no se pudieron cargar los datos. El
-/// detalle técnico queda en la consola, no en pantalla.
+/// Explains in plain words why the data could not load. The technical
+/// detail stays out of the screen.
 String loadErrorMessage(Object error) {
   if (error is FormatException) return error.message;
   if (error is PostgrestException) {
     final code = error.code ?? '';
-    // Columna o tabla inexistente: la base y la aplicación no coinciden.
+    // Missing column or table: the database and the app do not match.
     if (const {'42703', '42P01', 'PGRST204', 'PGRST205'}.contains(code)) {
       return 'La base de datos no coincide con esta versión de la aplicación. '
           'Recargá la página y, si sigue igual, avisá al administrador.';
@@ -48,7 +48,6 @@ class ErrorDataState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('$title: $error');
     final cs = context.colorScheme;
     return Center(
       child: Container(

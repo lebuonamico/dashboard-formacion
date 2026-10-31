@@ -1,8 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Etiqueta rectangular chica con texto y fondo de un [ColorPair]: la base
-/// de los chips de seniority, tipo de curso y estados.
+/// Small rectangular label with the text and background of a [ColorPair]:
+/// the base of the seniority, course type and status chips.
 class ColorLabel extends StatelessWidget {
   final String text;
   final ColorPair colors;

@@ -15,7 +15,6 @@ const _months = [
   'Diciembre',
 ];
 
-/// Devuelve el nombre visible del mes para selectores y encabezados.
 String monthName(int month) {
   if (month < 1 || month > _months.length) {
     throw RangeError.range(month, 1, _months.length, 'mes');
@@ -26,8 +25,8 @@ String monthName(int month) {
 String periodLabel(PeriodScope scope, int month, int year) =>
     scope == PeriodScope.annual ? '$year' : '${monthName(month)} $year';
 
-/// Como [periodLabel], pero el anual aclara que solo suma los meses con
-/// datos. Para encabezados de detalle y reportes.
+/// Like [periodLabel], but the annual label says it only adds the months
+/// with data. For detail headers and reports.
 String detailedPeriodLabel(PeriodScope scope, int month, int year) =>
     scope == PeriodScope.annual
     ? 'Año $year · meses con datos'

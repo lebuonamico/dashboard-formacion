@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 
 export 'package:app_finnegans/core/theme/app_colors.dart';
 
-/// Temas claro y oscuro de la app. Las pantallas no escriben colores: leen
-/// `context.colorScheme` (superficies, textos, bordes, marca) y
-/// `context.colores` ([AppColors]: estados, categorías, seniority, side menu,
-/// asistente). Los estilos de componentes compartidos (inputs, menús,
-/// divisores, botones) también salen de acá.
+/// Light and dark themes. Screens do not write colors: they read
+/// `context.colorScheme` (surfaces, text, borders, brand) and `context.colors`
+/// ([AppColors]: states, categories, seniority, side menu, assistant). Shared
+/// component styles (inputs, menus, dividers, buttons) also live here.
 abstract final class AppTheme {
   static const _brand = Color(0xFF0D53C3);
 
@@ -15,8 +14,8 @@ abstract final class AppTheme {
 
   static ThemeData dark() => _build(_darkScheme, AppColors.dark);
 
-  // Slate de Tailwind sobre el azul Finnegans: es la paleta que ya usaba la
-  // app, ahora con nombre según su función.
+  // Tailwind slate over the Finnegans blue: the palette the app already used,
+  // now named by role.
   static final _lightScheme =
       ColorScheme.fromSeed(
         seedColor: _brand,
@@ -44,8 +43,8 @@ abstract final class AppTheme {
         surfaceTint: const Color(0x00000000),
       );
 
-  // Fondos slate profundos (no negro puro) y el azul de marca aclarado para
-  // que textos y links cumplan contraste AA sobre superficies oscuras.
+  // Deep slate backgrounds (not pure black) and a lighter brand blue, so text
+  // and links meet AA contrast on dark surfaces.
   static final _darkScheme =
       ColorScheme.fromSeed(
         seedColor: _brand,
@@ -100,8 +99,8 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: cs.surfaceContainerLow,
       canvasColor: cs.surface,
       dividerTheme: DividerThemeData(color: cs.outlineVariant, thickness: 1),
-      // Tablas paginadas (empleados, cursos, CRM, LMS): encabezados chicos en
-      // gris, sin fondo, y filas a todo el ancho del panel.
+      // Paginated tables (employees, courses, CRM, LMS): small grey headers, no
+      // background, and rows across the whole panel.
       dataTableTheme: DataTableThemeData(
         headingRowColor: const WidgetStatePropertyAll(Color(0x00000000)),
         headingTextStyle: TextStyle(
@@ -163,7 +162,6 @@ abstract final class AppTheme {
   }
 }
 
-/// Acceso corto al tema desde los widgets.
 extension ThemeContext on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
@@ -171,8 +169,8 @@ extension ThemeContext on BuildContext {
 
   AppColors get colors => Theme.of(this).extension<AppColors>()!;
 
-  /// Panel estándar (cards, tablas, barras de filtros): superficie, borde
-  /// suave y radio 8, con sombra opcional.
+  /// Standard panel (cards, tables, filter bars): surface, soft border and
+  /// radius 8, with an optional shadow.
   BoxDecoration panel({bool shadow = false, double radius = 8}) {
     final cs = colorScheme;
     return BoxDecoration(

@@ -1,18 +1,18 @@
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 
-/// Áreas, equipos y sus líderes. Las áreas y los equipos solo los crea la
-/// importación: la app no los renombra ni los borra. Los errores para mostrar
-/// se lanzan como [FormatException].
+/// Areas, teams and their leaders. Only the import creates areas and teams:
+/// the app never renames or deletes them. Errors to show are thrown as
+/// [FormatException].
 abstract class OrgStructureRepository {
   Future<OrgStructure> getStructure();
 
-  /// Crea las áreas y equipos nuevos de una nómina. Va antes de sincronizar
-  /// la nómina, así un fallo acá no deja empleados a medio escribir.
+  /// Creates the new areas and teams of a payroll. Runs before the payroll
+  /// sync, so a failure here leaves no half-written employees.
   Future<void> registerMissing(PayrollGaps missing);
 
-  /// Deja exactamente esos emails como líderes vigentes del área. Las
-  /// asignaciones no se borran: las que salen quedan con baja en [now] y las
-  /// que vuelven se reactivan.
+  /// Leaves exactly these emails as the area's active leaders. Assignments
+  /// are not deleted: the ones that leave end at [now] and the ones that come
+  /// back are reactivated.
   Future<void> assignAreaLeaders(
     String areaId,
     Set<String> emails, {

@@ -4,6 +4,6 @@ enum UserRole {
   areaLead,
   teamLead;
 
-  /// Ve toda la empresa, importa archivos y entra al panel de administración.
+  /// Sees the whole company, imports files and enters the admin panel.
   bool get canManage => this == admin || this == academy;
 }

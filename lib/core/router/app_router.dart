@@ -17,11 +17,10 @@ import 'package:app_finnegans/features/teams/presentation/teams_screen.dart';
 import 'package:app_finnegans/features/admin/presentation/admin_screen.dart';
 import 'package:app_finnegans/core/navigation/app_shell.dart';
 
-/// Duración del fundido al cambiar de pantalla.
 const _fadeDuration = Duration(milliseconds: 200);
 
-/// Página que entra con un fundido. Como la nueva se pinta sobre la anterior
-/// (ambas con fondo opaco), se ve como un fundido cruzado.
+/// A page that fades in. The new page is painted over the previous one
+/// (both opaque), so it reads as a cross-fade.
 CustomTransitionPage<void> _withFade(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
@@ -62,8 +61,8 @@ GoRouter _createRouter(ValueNotifier<AuthState> auth) => GoRouter(
       path: '/login',
       pageBuilder: (context, state) => _withFade(state, const LoginScreen()),
     ),
-    // Todas las pantallas autenticadas comparten el menú lateral: queda fijo y
-    // sólo cambia el contenido.
+    // Every authenticated screen shares the side menu: it stays put and only
+    // the content changes.
     ShellRoute(
       builder: (context, state, child) => AppShell(child: child),
       routes: [
