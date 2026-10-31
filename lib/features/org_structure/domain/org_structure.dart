@@ -50,6 +50,14 @@ class PayrollGaps {
   const PayrollGaps({this.areas = const [], this.teams = const []});
 }
 
+/// Colaboradores activos por clave de área y por clave de área y equipo.
+class PayrollHeadcount {
+  final Map<String, int> byArea;
+  final Map<(String, String), int> byTeam;
+
+  const PayrollHeadcount({this.byArea = const {}, this.byTeam = const {}});
+}
+
 /// Áreas y equipos con sus líderes. Los emails de los líderes llegan
 /// normalizados desde el repositorio.
 class OrgStructure {

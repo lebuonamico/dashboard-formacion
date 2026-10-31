@@ -6,6 +6,7 @@ import 'package:app_finnegans/features/org_structure/domain/user_scope_service.d
 import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -28,12 +29,68 @@ final sessionDataProvider =
       ),
     );
 
-/// Áreas, equipos y líderes.
-final orgStructureProvider = FutureProvider<OrgStructure>((ref) {
-  // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
-  ref.watch(sessionDataProvider);
-  return ref.watch(orgStructureRepositoryProvider).getStructure();
-});
+class OrgStructureState {
+  final OrgStructure structure;
+  final bool isSaving;
+
+  const OrgStructureState({required this.structure, this.isSaving = false});
+
+  OrgStructureState copyWith({OrgStructure? structure, bool? isSaving}) =>
+      OrgStructureState(
+        structure: structure ?? this.structure,
+        isSaving: isSaving ?? this.isSaving,
+      );
+}
+
+final orgStructureStateProvider =
+    AsyncNotifierProvider<OrgStructureNotifier, OrgStructureState>(
+      OrgStructureNotifier.new,
+    );
+
+/// Áreas, equipos y líderes, y la asignación de líderes. Una asignación a la
+/// vez; si falla, se relanza el error y la estructura queda como estaba.
+class OrgStructureNotifier extends AsyncNotifier<OrgStructureState> {
+  @override
+  Future<OrgStructureState> build() async {
+    // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
+    ref.watch(sessionDataProvider);
+    return OrgStructureState(
+      structure: await ref.watch(orgStructureRepositoryProvider).getStructure(),
+    );
+  }
+
+  Future<void> assignAreaLeaders(String areaId, Set<String> emails) =>
+      _run((repository) => repository.assignLeadersArea(areaId, emails));
+
+  Future<void> assignTeamLeaders(String teamId, Set<String> emails) =>
+      _run((repository) => repository.assignTeamLeaders(teamId, emails));
+
+  Future<void> _run(
+    Future<void> Function(OrgStructureRepository repository) write,
+  ) async {
+    final current = state.value;
+    if (current == null || current.isSaving) return;
+    final repository = ref.read(orgStructureRepositoryProvider);
+    state = AsyncData(current.copyWith(isSaving: true));
+    try {
+      await write(repository);
+      final structure = await repository.getStructure();
+      if (!ref.mounted) return;
+      state = AsyncData(state.requireValue.copyWith(structure: structure));
+    } finally {
+      if (ref.mounted) {
+        state = AsyncData(state.requireValue.copyWith(isSaving: false));
+      }
+    }
+  }
+}
+
+/// La estructura sin el estado de la asignación en curso.
+final orgStructureProvider = FutureProvider<OrgStructure>(
+  (ref) => ref.watch(
+    orgStructureStateProvider.selectAsync((state) => state.structure),
+  ),
+);
 
 final orgStructureServiceProvider = Provider<OrgStructureService>(
   (ref) => const OrgStructureService(),
@@ -90,13 +147,28 @@ class LeaderLabels {
       : OrgStructureLabels.leadersLabel(emails, _nameByEmail);
 }
 
-final leaderLabelsProvider = FutureProvider<LeaderLabels>((ref) async {
-  final service = ref.watch(orgStructureServiceProvider);
-  final structure = await ref.watch(orgStructureProvider.future);
+/// Nombre de la nómina por email normalizado, para mostrar a los líderes.
+final employeeNamesByEmailProvider = FutureProvider<Map<String, String>>((
+  ref,
+) async {
   final employees = await ref.watch(employeesProvider.future);
-  return LeaderLabels(structure, service, {
+  return {
     for (final employee in employees)
       if (employee.email.trim().isNotEmpty)
         normalizeLoose(employee.email): employee.fullName,
-  });
+  };
+});
+
+final leaderLabelsProvider = FutureProvider<LeaderLabels>((ref) async {
+  final service = ref.watch(orgStructureServiceProvider);
+  final structure = await ref.watch(orgStructureProvider.future);
+  final names = await ref.watch(employeeNamesByEmailProvider.future);
+  return LeaderLabels(structure, service, names);
+});
+
+final structureHeadcountProvider = FutureProvider<PayrollHeadcount>((
+  ref,
+) async {
+  final employees = await ref.watch(employeesProvider.future);
+  return ref.watch(orgStructureServiceProvider).activeHeadcount(employees);
 });

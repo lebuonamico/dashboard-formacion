@@ -102,6 +102,48 @@ class OrgStructureService {
 
   bool isEmpty(PayrollGaps gaps) => gaps.areas.isEmpty && gaps.teams.isEmpty;
 
+  PayrollHeadcount activeHeadcount(Iterable<Employee> employees) {
+    final active = employees.where((employee) => employee.isActive).toList();
+    return PayrollHeadcount(
+      byArea: groupBy(
+        active,
+        (employee) => normalizeLoose(employee.area),
+      ).map((key, members) => MapEntry(key, members.length)),
+      byTeam: groupBy(
+        active,
+        (employee) =>
+            (normalizeLoose(employee.area), normalizeLoose(employee.team)),
+      ).map((key, members) => MapEntry(key, members.length)),
+    );
+  }
+
+  int areaHeadcount(PayrollHeadcount headcount, Area area) =>
+      headcount.byArea[normalizeLoose(area.name)] ?? 0;
+
+  int teamHeadcount(PayrollHeadcount headcount, Area area, Team team) =>
+      headcount.byTeam[(
+        normalizeLoose(area.name),
+        normalizeLoose(team.name),
+      )] ??
+      0;
+
+  /// Las áreas cuyo nombre, o el de alguno de sus equipos, contiene [query].
+  /// Sin texto devuelve todas.
+  List<Area> areasMatching(OrgStructure structure, String query) {
+    final searched = normalizeLoose(query);
+    if (searched.isEmpty) return sortedAreas(structure);
+    return sortedAreas(structure)
+        .where(
+          (area) =>
+              normalizeLoose(area.name).contains(searched) ||
+              teamsOf(
+                structure,
+                area.id,
+              ).any((team) => normalizeLoose(team.name).contains(searched)),
+        )
+        .toList();
+  }
+
   static int _byName(String a, String b) =>
       normalizeLoose(a).compareTo(normalizeLoose(b));
 }

@@ -1,14 +1,9 @@
-import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
-import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
-import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
-import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_dialogs.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_styles.dart';
@@ -17,25 +12,22 @@ import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Pestaña "Áreas y equipos" del panel. Las áreas y los equipos vienen de la
 /// importación de nómina y acá solo se consultan; lo único que se cambia son
 /// sus líderes.
-class AdminStructure extends ConsumerStatefulWidget {
+class AdminStructure extends ConsumerWidget {
   const AdminStructure({super.key});
 
   @override
-  ConsumerState<AdminStructure> createState() => _AdminStructureState();
-}
-
-class _AdminStructureState extends ConsumerState<AdminStructure> {
-  String? _actionInProgress;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.colorScheme;
-    final structure = ref.watch(orgStructureProvider);
+    final view = ref.watch(adminStructureViewProvider);
+    final isSaving = ref.watch(
+      orgStructureStateProvider.select(
+        (structure) => structure.value?.isSaving ?? false,
+      ),
+    );
 
     return ListView(
       padding: screenPadding,
@@ -66,11 +58,11 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
               Icons.search,
             ),
             onChanged: (value) =>
-                ref.read(adminStructureSearchProvider.notifier).state = value,
+                ref.read(adminStructureSearchProvider.notifier).setQuery(value),
           ),
         ),
         const SizedBox(height: 20),
-        structure.when(
+        view.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 72),
             child: Center(child: CircularProgressIndicator()),
@@ -83,116 +75,121 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
                 : 'Revisá tu conexión e intentá nuevamente.',
             color: cs.error,
           ),
-          data: (data) => FadeIn(child: _list(data)),
+          data: (view) => FadeIn(
+            child: view.areas.isEmpty
+                ? _EmptyAreas(
+                    searching: ref
+                        .watch(adminStructureSearchProvider)
+                        .trim()
+                        .isNotEmpty,
+                  )
+                : Column(
+                    children: [
+                      for (final row in view.areas) ...[
+                        _CardArea(
+                          row: row,
+                          nameByEmail: view.nameByEmail,
+                          enabled: !isSaving,
+                          onLeaders: () => _areaLeaders(
+                            context,
+                            ref,
+                            row.area,
+                            view.nameByEmail,
+                          ),
+                          onTeamLeaders: (team) => _teamLeaders(
+                            context,
+                            ref,
+                            team,
+                            view.nameByEmail,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ],
+                  ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _list(OrgStructure structure) {
-    final query = ref.watch(adminStructureSearchProvider).trim().toLowerCase();
-    final counts = _Counts(ref.watch(employeesProvider).value ?? const []);
-    final names = _nameByEmail();
-    final service = ref.watch(orgStructureServiceProvider);
-    final areas = service.sortedAreas(structure).where((area) {
-      if (query.isEmpty) return true;
-      return area.name.toLowerCase().contains(query) ||
-          service
-              .teamsOf(structure, area.id)
-              .any((team) => team.name.toLowerCase().contains(query));
-    }).toList();
+  OrgStructureNotifier _structure(WidgetRef ref) =>
+      ref.read(orgStructureStateProvider.notifier);
 
-    if (areas.isEmpty) {
-      return _Notice(
-        icon: Icons.account_tree_outlined,
-        title: query.isEmpty
-            ? 'Todavía no hay áreas'
-            : 'Ningún área o equipo coincide con la búsqueda',
-        message: query.isEmpty
-            ? 'Se crean al importar la nómina desde Configuración.'
-            : 'Probá con otro nombre.',
-      );
-    }
-
-    return Column(
-      children: [
-        for (final area in areas) ...[
-          _CardArea(
-            area: area,
-            teams: service.teamsOf(structure, area.id),
-            counts: counts,
-            nameByEmail: names,
-            enabled: _actionInProgress == null,
-            onLeaders: () => _leadersArea(area),
-            onTeamLeaders: (team) => _teamLeaders(team),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
-    );
-  }
-
-  Map<String, String> _nameByEmail() => {
-    for (final employee
-        in ref.watch(employeesProvider).value ?? const <Employee>[])
-      if (employee.email.trim().isNotEmpty)
-        normalizeLoose(employee.email): employee.fullName,
-  };
-
-  Future<void> _leadersArea(Area area) async {
+  Future<void> _areaLeaders(
+    BuildContext context,
+    WidgetRef ref,
+    Area area,
+    Map<String, String> nameByEmail,
+  ) async {
     final chosen = await _chooseLeaders(
+      context,
+      ref,
       title: 'Líderes de ${area.name}',
       subtitle:
           'Ven todos los equipos del área. Solo se pueden elegir usuarios '
           'activos con el rol Área.',
       role: UserRole.areaLead,
       current: area.leaders,
+      nameByEmail: nameByEmail,
     );
-    if (chosen == null) return;
-    await _run(
-      key: 'lideres_area',
+    if (chosen == null || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _structure(ref).assignAreaLeaders(area.id, chosen),
       success: 'Se actualizaron los líderes de ${area.name}.',
-      action: (repository) => repository.assignLeadersArea(area.id, chosen),
     );
   }
 
-  Future<void> _teamLeaders(Team team) async {
+  Future<void> _teamLeaders(
+    BuildContext context,
+    WidgetRef ref,
+    Team team,
+    Map<String, String> nameByEmail,
+  ) async {
     final chosen = await _chooseLeaders(
+      context,
+      ref,
       title: 'Líderes de ${team.name}',
       subtitle:
           'Ven a los integrantes del equipo. Solo se pueden elegir usuarios '
           'activos con el rol Líder de equipo.',
       role: UserRole.teamLead,
       current: team.leaders,
+      nameByEmail: nameByEmail,
     );
-    if (chosen == null) return;
-    await _run(
-      key: 'lideres_equipo',
+    if (chosen == null || !context.mounted) return;
+    await runWithFeedback(
+      context,
+      action: () => _structure(ref).assignTeamLeaders(team.id, chosen),
       success: 'Se actualizaron los líderes de ${team.name}.',
-      action: (repository) => repository.assignTeamLeaders(team.id, chosen),
     );
   }
 
-  Future<Set<String>?> _chooseLeaders({
+  Future<Set<String>?> _chooseLeaders(
+    BuildContext context,
+    WidgetRef ref, {
     required String title,
     required String subtitle,
     required UserRole role,
     required Set<String> current,
+    required Map<String, String> nameByEmail,
   }) async {
     final List<AuthorizedUser> users;
     try {
       users = await ref.read(authorizedUsersProvider.future);
     } on Object catch (error) {
-      if (!mounted) return null;
-      showAppSnackBar(
-        context,
-        error is FormatException
-            ? error.message
-            : 'No se pudo cargar la lista de usuarios.',
-      );
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          error is FormatException
+              ? error.message
+              : 'No se pudo cargar la lista de usuarios.',
+        );
+      }
       return null;
     }
-    if (!mounted) return null;
+    if (!context.mounted) return null;
     return showLeadersDialog(
       context,
       title: title,
@@ -200,79 +197,40 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
       role: role,
       users: users,
       selected: current,
-      nameByEmail: _nameByEmail(),
+      nameByEmail: nameByEmail,
     );
-  }
-
-  Future<void> _run({
-    required String key,
-    required String success,
-    required Future<void> Function(OrgStructureRepository) action,
-  }) async {
-    if (_actionInProgress != null) return;
-    final repository = ref.read(orgStructureRepositoryProvider);
-    setState(() => _actionInProgress = key);
-    try {
-      await action(repository);
-      // Los líderes definen qué ve cada uno y se muestran en Equipos y
-      // Áreas: recargar la estructura actualiza todo.
-      ref.invalidate(orgStructureProvider);
-      await ref.read(orgStructureProvider.future);
-      if (!mounted) return;
-      showAppSnackBar(context, success);
-    } on FormatException catch (error) {
-      if (!mounted) return;
-      showAppSnackBar(context, error.message);
-    } on Object catch (error) {
-      debugPrint('Panel de áreas y equipos: $error');
-      if (!mounted) return;
-      showAppSnackBar(
-        context,
-        'No se pudo completar la acción. Intentá nuevamente.',
-      );
-    } finally {
-      if (mounted) setState(() => _actionInProgress = null);
-    }
   }
 }
 
-/// Colaboradores activos por área y por equipo, por clave de nómina.
-class _Counts {
-  final Map<String, int> _byArea = {};
-  final Map<(String, String), int> _byTeam = {};
+class _EmptyAreas extends StatelessWidget {
+  final bool searching;
 
-  _Counts(Iterable<Employee> employees) {
-    for (final employee in employees) {
-      if (!employee.isActive) continue;
-      final area = normalizeLoose(employee.area);
-      _byArea[area] = (_byArea[area] ?? 0) + 1;
-      final team = (area, normalizeLoose(employee.team));
-      _byTeam[team] = (_byTeam[team] ?? 0) + 1;
-    }
-  }
+  const _EmptyAreas({required this.searching});
 
-  int forArea(Area area) => _byArea[normalizeLoose(area.name)] ?? 0;
-
-  int forTeam(Area area, Team team) =>
-      _byTeam[(normalizeLoose(area.name), normalizeLoose(team.name))] ?? 0;
+  @override
+  Widget build(BuildContext context) => _Notice(
+    icon: Icons.account_tree_outlined,
+    title: searching
+        ? 'Ningún área o equipo coincide con la búsqueda'
+        : 'Todavía no hay áreas',
+    message: searching
+        ? 'Probá con otro nombre.'
+        : 'Se crean al importar la nómina desde Configuración.',
+  );
 }
 
 String _employees(int count) =>
     '$count ${count == 1 ? 'colaborador' : 'colaboradores'}';
 
 class _CardArea extends StatelessWidget {
-  final Area area;
-  final List<Team> teams;
-  final _Counts counts;
+  final StructureAreaRow row;
   final Map<String, String> nameByEmail;
   final bool enabled;
   final VoidCallback onLeaders;
   final ValueChanged<Team> onTeamLeaders;
 
   const _CardArea({
-    required this.area,
-    required this.teams,
-    required this.counts,
+    required this.row,
     required this.nameByEmail,
     required this.enabled,
     required this.onLeaders,
@@ -282,9 +240,11 @@ class _CardArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
+    final area = row.area;
+    final teams = row.teams;
     final detail =
         '${teams.length} ${teams.length == 1 ? 'equipo' : 'equipos'} · '
-        '${_employees(counts.forArea(area))}';
+        '${_employees(row.employees)}';
 
     return Container(
       key: Key('estructura_area_${area.id}'),
@@ -343,13 +303,13 @@ class _CardArea extends StatelessWidget {
                 ),
               ),
             ),
-          for (final team in teams)
+          for (final teamRow in teams)
             _TeamRow(
-              team: team,
-              employees: counts.forTeam(area, team),
+              team: teamRow.team,
+              employees: teamRow.employees,
               nameByEmail: nameByEmail,
               enabled: enabled,
-              onLeaders: () => onTeamLeaders(team),
+              onLeaders: () => onTeamLeaders(teamRow.team),
             ),
         ],
       ),

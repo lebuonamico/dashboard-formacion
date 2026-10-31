@@ -2,11 +2,11 @@ import 'package:app_finnegans/core/clock/clock_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_users_repository.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
 import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
@@ -105,7 +105,7 @@ class AdminUsersNotifier extends AsyncNotifier<AdminUsersState> {
       if (!ref.mounted) return;
       state = AsyncData(state.requireValue.copyWith(users: users));
       // Changing a role deletes the leader assignments that stop applying.
-      ref.invalidate(orgStructureProvider);
+      ref.invalidate(orgStructureStateProvider);
       if (_users.isSameUser(user, ref.read(authProvider).email)) {
         await ref.read(authProvider.notifier).validateAuthorization();
       }
@@ -183,9 +183,62 @@ final selectedAdminUserProvider = Provider.autoDispose<AuthorizedUser?>((ref) {
 });
 
 /// Búsqueda de la pestaña "Áreas y equipos". Se descarta al salir del panel.
-final adminStructureSearchProvider = StateProvider.autoDispose<String>(
-  (ref) => '',
-);
+final adminStructureSearchProvider =
+    NotifierProvider.autoDispose<AdminStructureSearchNotifier, String>(
+      AdminStructureSearchNotifier.new,
+    );
+
+class AdminStructureSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String query) => state = query;
+
+  void clear() => state = '';
+}
+
+typedef StructureTeamRow = ({Team team, int employees});
+
+typedef StructureAreaRow = ({
+  Area area,
+  int employees,
+  List<StructureTeamRow> teams,
+});
+
+typedef AdminStructureView = ({
+  List<StructureAreaRow> areas,
+  Map<String, String> nameByEmail,
+});
+
+/// Las áreas de la pestaña que coinciden con la búsqueda, con sus equipos,
+/// los colaboradores activos de cada uno y los nombres de los líderes.
+final adminStructureViewProvider =
+    FutureProvider.autoDispose<AdminStructureView>((ref) async {
+      final service = ref.watch(orgStructureServiceProvider);
+      final query = ref.watch(adminStructureSearchProvider);
+      final structure = await ref.watch(orgStructureProvider.future);
+      final headcount = await ref.watch(structureHeadcountProvider.future);
+      final nameByEmail = await ref.watch(employeeNamesByEmailProvider.future);
+      final areas = service
+          .areasMatching(structure, query)
+          .map(
+            (area) => (
+              area: area,
+              employees: service.areaHeadcount(headcount, area),
+              teams: service
+                  .teamsOf(structure, area.id)
+                  .map(
+                    (team) => (
+                      team: team,
+                      employees: service.teamHeadcount(headcount, area, team),
+                    ),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList();
+      return (areas: areas, nameByEmail: nameByEmail);
+    });
 
 final adminSelectionOutsideFilterProvider = Provider.autoDispose<bool>((ref) {
   final selected = ref.watch(selectedAdminUserProvider);

@@ -63,6 +63,50 @@ OrgStructure _structure() => const OrgStructure(
 );
 
 void main() {
+  group('Colaboradores por área y equipo', () {
+    test('Cuenta solo los activos y une los textos por clave de nómina', () {
+      final headcount = _service.activeHeadcount([
+        _employee('1', 'PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'),
+        _employee('2', ' productos tecnológicos', 'plataforma core '),
+        _employee('3', 'PRODUCTOS TECNOLÓGICOS', 'BACKEND', active: false),
+        _employee('4', 'SERVICIOS', ''),
+      ]);
+      final structure = _structure();
+      final tec = structure.areas.first;
+      final services = structure.areas.last;
+
+      expect(_service.areaHeadcount(headcount, tec), 2);
+      expect(_service.areaHeadcount(headcount, services), 1);
+      expect(_service.teamHeadcount(headcount, tec, structure.teams[0]), 2);
+      expect(_service.teamHeadcount(headcount, tec, structure.teams[1]), 0);
+      expect(
+        _service.teamHeadcount(headcount, services, structure.teams[2]),
+        0,
+      );
+    });
+  });
+
+  group('Búsqueda de áreas', () {
+    test('Sin texto devuelve todas, ordenadas', () {
+      expect(
+        _service.areasMatching(_structure(), '  ').map((area) => area.id),
+        ['1', '2'],
+      );
+    });
+
+    test('Coincide por el nombre del área o de uno de sus equipos', () {
+      expect(
+        _service.areasMatching(_structure(), 'servi').map((area) => area.id),
+        ['2'],
+      );
+      expect(
+        _service.areasMatching(_structure(), 'Backend').map((area) => area.id),
+        ['1'],
+      );
+      expect(_service.areasMatching(_structure(), 'ventas'), isEmpty);
+    });
+  });
+
   group('Clave de nómina', () {
     test('Recorta y pasa a minúsculas, igual que la base', () {
       const structure = OrgStructure(

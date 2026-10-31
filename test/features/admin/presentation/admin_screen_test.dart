@@ -76,6 +76,7 @@ AuthorizedUser _user({
 class _FakeStructure implements OrgStructureRepository {
   OrgStructure structure;
   final calls = <String>[];
+  Completer<void>? gate;
 
   _FakeStructure(this.structure);
 
@@ -91,8 +92,10 @@ class _FakeStructure implements OrgStructureRepository {
       calls.add('lideresArea $areaId ${(emails.toList()..sort()).join(',')}');
 
   @override
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails) async =>
-      calls.add('lideresEquipo $teamId ${(emails.toList()..sort()).join(',')}');
+  Future<void> assignTeamLeaders(String teamId, Set<String> emails) async {
+    await gate?.future;
+    calls.add('lideresEquipo $teamId ${(emails.toList()..sort()).join(',')}');
+  }
 }
 
 /// PRODUCTOS TECNOLÓGICOS con PLATAFORMA CORE y un equipo que la nómina ya
@@ -713,6 +716,35 @@ void main() {
       expect(structure.calls, [
         'lideresEquipo 10 lider@finnegans.com,otro.lider@finnegans.com',
       ]);
+    });
+
+    testWidgets('Mientras guarda los líderes no deja editar otros', (
+      tester,
+    ) async {
+      final structure = await openTab(tester);
+      final gate = structure.gate = Completer<void>();
+      bool enabled(String key) =>
+          tester.widget<TextButton>(find.byKey(Key(key))).onPressed != null;
+
+      await tester.tap(find.byKey(const Key('estructura_lideres_equipo_10')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('admin_lider_otro.lider@finnegans.com')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_lideres_confirmar')));
+      await tester.pump();
+
+      expect(enabled('estructura_lideres_area_1'), isFalse);
+      expect(enabled('estructura_lideres_equipo_11'), isFalse);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(enabled('estructura_lideres_area_1'), isTrue);
+      expect(
+        find.text('Se actualizaron los líderes de PLATAFORMA CORE.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Los líderes de área se eligen entre los usuarios de área', (
