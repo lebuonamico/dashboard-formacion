@@ -41,6 +41,8 @@ http.Response _error(http.Request request, String code) => _json(request, {
   'hint': null,
 }, code == '23505' ? 409 : 403);
 
+final _now = DateTime.utc(2026, 9, 14, 13);
+
 String _table(http.Request request) =>
     request.url.path.replaceFirst('/rest/v1/', '');
 
@@ -174,7 +176,7 @@ void main() {
     await fixture.repositorio.assignTeamLeaders('10', {
       ' Queda@Finnegans.com',
       'entra@finnegans.com',
-    });
+    }, now: _now);
 
     expect(fixture.requests.map((r) => '${r.method} ${_table(r)}').toList(), [
       'GET equipo_lideres',
@@ -198,7 +200,9 @@ void main() {
         {'email': 'ana@finnegans.com'},
       ]),
     );
-    await fixture.repositorio.assignLeadersArea('1', {'ana@finnegans.com'});
+    await fixture.repositorio.assignAreaLeaders('1', {
+      'ana@finnegans.com',
+    }, now: _now);
     expect(fixture.requests.single.method, 'GET');
     expect(_table(fixture.requests.single), 'area_lideres');
   });
@@ -206,7 +210,9 @@ void main() {
   test('Los errores de PostgREST llegan como mensajes para mostrar', () async {
     final noPermission = _fixture((request) async => _error(request, '42501'));
     await expectLater(
-      noPermission.repositorio.assignLeadersArea('1', {'ana@finnegans.com'}),
+      noPermission.repositorio.assignAreaLeaders('1', {
+        'ana@finnegans.com',
+      }, now: _now),
       throwsA(
         isA<FormatException>().having(
           (error) => error.message,

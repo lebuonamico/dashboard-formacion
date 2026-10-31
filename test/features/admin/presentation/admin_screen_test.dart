@@ -88,11 +88,19 @@ class _FakeStructure implements OrgStructureRepository {
       calls.add('faltantes');
 
   @override
-  Future<void> assignLeadersArea(String areaId, Set<String> emails) async =>
+  Future<void> assignAreaLeaders(
+    String areaId,
+    Set<String> emails, {
+    required DateTime now,
+  }) async =>
       calls.add('lideresArea $areaId ${(emails.toList()..sort()).join(',')}');
 
   @override
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails) async {
+  Future<void> assignTeamLeaders(
+    String teamId,
+    Set<String> emails, {
+    required DateTime now,
+  }) async {
     await gate?.future;
     calls.add('lideresEquipo $teamId ${(emails.toList()..sort()).join(',')}');
   }

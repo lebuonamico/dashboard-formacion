@@ -104,12 +104,18 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
   }
 
   @override
-  Future<void> assignLeadersArea(String areaId, Set<String> emails) =>
-      _assignLeaders(_areaLeaders, 'area_id', areaId, emails);
+  Future<void> assignAreaLeaders(
+    String areaId,
+    Set<String> emails, {
+    required DateTime now,
+  }) => _assignLeaders(_areaLeaders, 'area_id', areaId, emails);
 
   @override
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails) =>
-      _assignLeaders(_teamLeaders, 'equipo_id', teamId, emails);
+  Future<void> assignTeamLeaders(
+    String teamId,
+    Set<String> emails, {
+    required DateTime now,
+  }) => _assignLeaders(_teamLeaders, 'equipo_id', teamId, emails);
 
   /// Aplica solo la diferencia con lo que hay en la base: si algo falla a
   /// mitad de camino, no deja al equipo sin ninguno de sus líderes.

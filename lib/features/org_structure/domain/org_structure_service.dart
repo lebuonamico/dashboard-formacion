@@ -102,6 +102,26 @@ class OrgStructureService {
 
   bool isEmpty(PayrollGaps gaps) => gaps.areas.isEmpty && gaps.teams.isEmpty;
 
+  /// Cómo pasar de las asignaciones de un área o un equipo a [desired].
+  /// [active] son los emails con asignación vigente y [ended] los que tienen
+  /// baja, normalizados; [desired] se normaliza y pierde los vacíos.
+  LeaderChanges leaderChanges({
+    required Set<String> active,
+    required Set<String> ended,
+    required Set<String> desired,
+  }) {
+    final wanted = desired
+        .where((email) => email.trim().isNotEmpty)
+        .map(normalizeLoose)
+        .toSet();
+    final missing = wanted.difference(active);
+    return LeaderChanges(
+      end: active.difference(wanted),
+      reactivate: missing.intersection(ended),
+      add: missing.difference(ended),
+    );
+  }
+
   PayrollHeadcount activeHeadcount(Iterable<Employee> employees) {
     final active = employees.where((employee) => employee.isActive).toList();
     return PayrollHeadcount(

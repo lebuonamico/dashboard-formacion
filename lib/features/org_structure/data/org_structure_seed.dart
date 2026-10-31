@@ -1,5 +1,8 @@
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 
+/// Fecha de alta de los líderes con los que arranca el repositorio en memoria.
+final seedLeadersAssignedAt = DateTime.utc(2026);
+
 final areasSeed = [
   const Area(
     id: '1',

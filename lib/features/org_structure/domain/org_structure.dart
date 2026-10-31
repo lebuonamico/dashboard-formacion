@@ -50,6 +50,21 @@ class PayrollGaps {
   const PayrollGaps({this.areas = const [], this.teams = const []});
 }
 
+/// Escrituras que dejan como líderes vigentes exactamente los pedidos: [end]
+/// da de baja asignaciones vigentes, [reactivate] reactiva asignaciones con
+/// baja y [add] crea las que nunca existieron. Emails normalizados.
+class LeaderChanges {
+  final Set<String> end;
+  final Set<String> reactivate;
+  final Set<String> add;
+
+  const LeaderChanges({
+    this.end = const {},
+    this.reactivate = const {},
+    this.add = const {},
+  });
+}
+
 /// Colaboradores activos por clave de área y por clave de área y equipo.
 class PayrollHeadcount {
   final Map<String, int> byArea;

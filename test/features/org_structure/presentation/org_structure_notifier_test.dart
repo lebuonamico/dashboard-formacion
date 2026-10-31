@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:app_finnegans/core/clock/clock_provider.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+final _now = DateTime(2026, 9, 15, 10, 30);
 
 class _FakeStructure implements OrgStructureRepository {
   OrgStructure structure = const OrgStructure(
@@ -14,6 +17,7 @@ class _FakeStructure implements OrgStructureRepository {
   );
   Object? error;
   Completer<void>? gate;
+  final dates = <DateTime>[];
 
   @override
   Future<OrgStructure> getStructure() async => structure;
@@ -22,10 +26,15 @@ class _FakeStructure implements OrgStructureRepository {
   Future<void> registerMissing(PayrollGaps missing) async {}
 
   @override
-  Future<void> assignLeadersArea(String areaId, Set<String> emails) async {
+  Future<void> assignAreaLeaders(
+    String areaId,
+    Set<String> emails, {
+    required DateTime now,
+  }) async {
     await gate?.future;
     final failure = error;
     if (failure != null) throw failure;
+    dates.add(now);
     structure = OrgStructure(
       areas: [
         for (final area in structure.areas)
@@ -38,8 +47,13 @@ class _FakeStructure implements OrgStructureRepository {
   }
 
   @override
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails) async {
+  Future<void> assignTeamLeaders(
+    String teamId,
+    Set<String> emails, {
+    required DateTime now,
+  }) async {
     await gate?.future;
+    dates.add(now);
     structure = OrgStructure(
       areas: structure.areas,
       teams: [
@@ -53,7 +67,10 @@ class _FakeStructure implements OrgStructureRepository {
 Future<(ProviderContainer, _FakeStructure)> _setUp() async {
   final repository = _FakeStructure();
   final container = ProviderContainer(
-    overrides: [orgStructureRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      orgStructureRepositoryProvider.overrideWithValue(repository),
+      clockProvider.overrideWithValue(() => _now),
+    ],
     retry: (_, _) => null,
   );
   addTearDown(container.dispose);
@@ -81,6 +98,17 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     final structure = await container.read(orgStructureProvider.future);
     expect(structure.teams.single.leaders, {'lider@finnegans.com'});
+  });
+
+  test('La fecha de la baja o el alta sale del reloj, en UTC', () async {
+    final (container, repository) = await _setUp();
+    final notifier = container.read(orgStructureNotifierProvider.notifier);
+
+    await notifier.assignAreaLeaders('1', {'area@finnegans.com'});
+    await notifier.assignTeamLeaders('10', const {});
+
+    expect(repository.dates, [_now.toUtc(), _now.toUtc()]);
+    expect(repository.dates.every((date) => date.isUtc), isTrue);
   });
 
   test('Un error se relanza y la estructura queda como estaba', () async {

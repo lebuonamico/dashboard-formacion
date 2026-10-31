@@ -10,8 +10,18 @@ abstract class OrgStructureRepository {
   /// la nómina, así un fallo acá no deja empleados a medio escribir.
   Future<void> registerMissing(PayrollGaps missing);
 
-  /// Deja exactamente esos emails como líderes del área.
-  Future<void> assignLeadersArea(String areaId, Set<String> emails);
+  /// Deja exactamente esos emails como líderes vigentes del área. Las
+  /// asignaciones no se borran: las que salen quedan con baja en [now] y las
+  /// que vuelven se reactivan.
+  Future<void> assignAreaLeaders(
+    String areaId,
+    Set<String> emails, {
+    required DateTime now,
+  });
 
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails);
+  Future<void> assignTeamLeaders(
+    String teamId,
+    Set<String> emails, {
+    required DateTime now,
+  });
 }

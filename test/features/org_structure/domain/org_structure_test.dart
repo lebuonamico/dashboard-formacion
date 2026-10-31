@@ -245,6 +245,60 @@ void main() {
     });
   });
 
+  group('Cambios de líderes', () {
+    test('Da de baja, reactiva y agrega según lo pedido', () {
+      final changes = _service.leaderChanges(
+        active: {'queda@finnegans.com', 'sale@finnegans.com'},
+        ended: {'vuelve@finnegans.com', 'sigue.baja@finnegans.com'},
+        desired: {
+          'queda@finnegans.com',
+          'vuelve@finnegans.com',
+          'entra@finnegans.com',
+        },
+      );
+
+      expect(changes.end, {'sale@finnegans.com'});
+      expect(changes.reactivate, {'vuelve@finnegans.com'});
+      expect(changes.add, {'entra@finnegans.com'});
+    });
+
+    test('Sin diferencias no hay nada que escribir', () {
+      final changes = _service.leaderChanges(
+        active: {'ana@finnegans.com'},
+        ended: {'beto@finnegans.com'},
+        desired: {'ana@finnegans.com'},
+      );
+
+      expect(changes.end, isEmpty);
+      expect(changes.reactivate, isEmpty);
+      expect(changes.add, isEmpty);
+    });
+
+    test('Lo pedido se normaliza y pierde los vacíos', () {
+      final changes = _service.leaderChanges(
+        active: {'ana@finnegans.com'},
+        ended: {'beto@finnegans.com'},
+        desired: {' Ana@Finnegans.com ', 'BETO@finnegans.com', '  ', ''},
+      );
+
+      expect(changes.end, isEmpty);
+      expect(changes.reactivate, {'beto@finnegans.com'});
+      expect(changes.add, isEmpty);
+    });
+
+    test('Dejar sin líderes da de baja a todos los vigentes', () {
+      final changes = _service.leaderChanges(
+        active: {'ana@finnegans.com', 'beto@finnegans.com'},
+        ended: const {},
+        desired: const {},
+      );
+
+      expect(changes.end, {'ana@finnegans.com', 'beto@finnegans.com'});
+      expect(changes.reactivate, isEmpty);
+      expect(changes.add, isEmpty);
+    });
+  });
+
   group('Pertenencia en la nómina', () {
     test('Empleado.porMail compara normalizado y prefiere la fila activa', () {
       final removal = _employee(

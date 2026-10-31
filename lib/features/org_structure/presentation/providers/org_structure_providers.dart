@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/core/clock/clock_provider.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/org_structure/domain/user_scope.dart';
@@ -59,11 +60,15 @@ class OrgStructureNotifier extends AsyncNotifier<OrgStructureState> {
     );
   }
 
-  Future<void> assignAreaLeaders(String areaId, Set<String> emails) =>
-      _run((repository) => repository.assignLeadersArea(areaId, emails));
+  Future<void> assignAreaLeaders(String areaId, Set<String> emails) => _run(
+    (repository) => repository.assignAreaLeaders(areaId, emails, now: _now()),
+  );
 
-  Future<void> assignTeamLeaders(String teamId, Set<String> emails) =>
-      _run((repository) => repository.assignTeamLeaders(teamId, emails));
+  Future<void> assignTeamLeaders(String teamId, Set<String> emails) => _run(
+    (repository) => repository.assignTeamLeaders(teamId, emails, now: _now()),
+  );
+
+  DateTime _now() => ref.read(clockProvider)().toUtc();
 
   Future<void> _run(
     Future<void> Function(OrgStructureRepository repository) write,
