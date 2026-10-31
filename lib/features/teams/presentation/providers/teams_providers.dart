@@ -1,26 +1,19 @@
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
-import 'package:app_finnegans/features/teams/domain/team_status.dart';
 import 'package:app_finnegans/features/teams/domain/teams_service.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 export 'package:app_finnegans/features/teams/domain/team_overview.dart';
 export 'package:app_finnegans/features/teams/domain/team_status.dart';
 export 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
-
-const teamFilterScope = 'equipos';
-
-final teamSearchQueryProvider = StateProvider<String>((ref) => '');
-final teamStatusFilterProvider = StateProvider<TeamStatus?>((ref) => null);
 
 final teamsServiceProvider = Provider<TeamsService>(
   (ref) => const TeamsService(),
@@ -128,28 +121,29 @@ final teamOverviewsProvider = FutureProvider<List<TeamOverview>>((ref) async {
   return summary.teams;
 });
 
-final filteredTeamOverviewsProvider = Provider<AsyncValue<List<TeamOverview>>>((
-  ref,
-) {
-  final selectedStatus = ref.watch(teamStatusFilterProvider);
-  final selection = ref.watch(dataFilterSelectionProvider(teamFilterScope));
-  final summaryAsync = ref.watch(teamsPeriodSummaryProvider);
-  final query = ref.watch(teamSearchQueryProvider).trim().toLowerCase();
+FilterRow teamFilterRow(TeamOverview team) => FilterRow({
+  'Equipo': team.name,
+  'Área': team.area,
+  'Líder': team.leader,
+  'Estado': team.status.label,
+});
 
-  return summaryAsync.whenData((summary) {
-    return summary.teams.where((team) {
-      final matchesQuery =
-          query.isEmpty ||
-          team.name.toLowerCase().contains(query) ||
-          team.area.toLowerCase().contains(query) ||
-          team.leader.toLowerCase().contains(query);
-      final matchesStatus =
-          selectedStatus == null || team.status == selectedStatus;
-      return matchesQuery &&
-          matchesStatus &&
-          matchesDataFilters(selection, teamFilterRow(team));
-    }).toList();
-  });
+final teamFilterRowsProvider = FutureProvider<List<FilterRow>>((ref) async {
+  final summary = await ref.watch(teamsPeriodSummaryProvider.future);
+  return summary.teams.map(teamFilterRow).toList();
+});
+
+final filteredTeamOverviewsProvider = FutureProvider<List<TeamOverview>>((
+  ref,
+) async {
+  final selection = ref
+      .watch(dataFilterSelectionProvider(DataFilterScope.teams))
+      .values;
+  final filters = ref.watch(dataFilterServiceProvider);
+  final summary = await ref.watch(teamsPeriodSummaryProvider.future);
+  return summary.teams
+      .where((team) => filters.matches(selection, teamFilterRow(team)))
+      .toList();
 });
 
 final teamDetailProvider =

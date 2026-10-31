@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
@@ -99,10 +99,6 @@ class AreasPeriodSummary {
       targetHours == 0 ? 0 : completedHours / targetHours * 100;
 }
 
-// Filtros propios de Áreas: buscar acá no filtra la pantalla de Equipos.
-final searchAreaProvider = StateProvider<String>((ref) => '');
-final areaStatusFilterProvider = StateProvider<ComplianceLevel?>((ref) => null);
-
 final areasPeriodSummaryProvider = FutureProvider<AreasPeriodSummary>((
   ref,
 ) async {
@@ -162,33 +158,30 @@ final areasPeriodSummaryProvider = FutureProvider<AreasPeriodSummary>((
   );
 });
 
-final filteredAreasProvider = Provider<AsyncValue<List<AreaGlobalViewModel>>>((
+List<FilterRow> areaFilterRows(AreaGlobalViewModel area) => [
+  for (final team in area.generalTeams.isEmpty ? [''] : area.generalTeams)
+    FilterRow({'Área': area.name, 'Equipo': team, 'Estado': area.level.label}),
+];
+
+final areaFilterRowsProvider = FutureProvider<List<FilterRow>>((ref) async {
+  final summary = await ref.watch(areasPeriodSummaryProvider.future);
+  return summary.areas.expand(areaFilterRows).toList();
+});
+
+final filteredAreasProvider = FutureProvider<List<AreaGlobalViewModel>>((
   ref,
-) {
-  final summaryAsync = ref.watch(areasPeriodSummaryProvider);
-  final query = ref.watch(searchAreaProvider).trim().toLowerCase();
-  final status = ref.watch(areaStatusFilterProvider);
-  final selection = ref.watch(dataFilterSelectionProvider('areas'));
-
-  return summaryAsync.whenData((summary) {
-    return summary.areas.where((area) {
-      final matchesSearch =
-          query.isEmpty ||
-          area.name.toLowerCase().contains(query) ||
-          area.generalTeams.any((team) => team.toLowerCase().contains(query));
-      final matchesStatus = status == null || area.level == status;
-
-      return matchesSearch &&
-          matchesStatus &&
-          (area.generalTeams.isEmpty ? [''] : area.generalTeams).any(
-            (team) => matchesDataFilters(selection, {
-              'Área': area.name,
-              'Equipo': team,
-              'Estado': area.level.label,
-            }),
-          );
-    }).toList();
-  });
+) async {
+  final selection = ref
+      .watch(dataFilterSelectionProvider(DataFilterScope.areas))
+      .values;
+  final filters = ref.watch(dataFilterServiceProvider);
+  final summary = await ref.watch(areasPeriodSummaryProvider.future);
+  return summary.areas
+      .where(
+        (area) =>
+            areaFilterRows(area).any((row) => filters.matches(selection, row)),
+      )
+      .toList();
 });
 
 /// Área seleccionada junto con sus equipos y los integrantes evaluados en el

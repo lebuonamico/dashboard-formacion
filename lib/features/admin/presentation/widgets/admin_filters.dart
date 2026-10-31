@@ -1,20 +1,15 @@
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AdminFilters extends StatelessWidget {
-  final bool hasActiveFilters;
-  final VoidCallback onClear;
-
-  const AdminFilters({
-    super.key,
-    required this.hasActiveFilters,
-    required this.onClear,
-  });
+class AdminFilters extends ConsumerWidget {
+  const AdminFilters({super.key});
 
   @override
-  Widget build(BuildContext context) => FilterBar(
-    scope: 'admin',
-    hasActiveFilters: hasActiveFilters,
-    onClear: onClear,
+  Widget build(BuildContext context, WidgetRef ref) => FilterBar(
+    scope: DataFilterScope.adminUsers,
+    rows: ref.watch(adminUserFilterRowsProvider),
   );
 }

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_users_repository.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -116,10 +116,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 20),
-        AdminFilters(
-          hasActiveFilters: ref.watch(activeAdminFiltersProvider),
-          onClear: _clearFilters,
-        ),
+        const AdminFilters(),
         const SizedBox(height: 16),
         AdminActionsBar(
           selected: selected,
@@ -169,13 +166,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
   }
 
-  void _clearFilters() {
-    ref.read(dataFilterSelectionProvider('admin').notifier).clear();
-    ref.read(searchUserAdminProvider.notifier).state = '';
-    ref.read(adminRoleFilterProvider.notifier).state = null;
-    ref.read(adminStatusFilterProvider.notifier).state = null;
-  }
-
   AuthorizedUsersRepository _repository() {
     final repository = ref.read(authorizedUsersRepositoryProvider);
     if (repository == null) {
@@ -201,7 +191,11 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
       ),
       onFinish: () {
-        ref.read(adminStatusFilterProvider.notifier).state = null;
+        ref
+            .read(
+              dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier,
+            )
+            .clear();
         ref.read(selectedAdminEmailProvider.notifier).state = data.email;
       },
     );

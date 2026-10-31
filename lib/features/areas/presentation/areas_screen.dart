@@ -17,7 +17,8 @@ import 'package:app_finnegans/features/areas/presentation/widgets/area_status_su
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 
 class AreasScreen extends ConsumerWidget {
   const AreasScreen({super.key});
@@ -80,13 +81,10 @@ class _AreasContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final areas = summary.areas;
-    final search = ref.watch(searchAreaProvider);
-    final selectedStatus = ref.watch(areaStatusFilterProvider);
     final selectedScope = ref.watch(periodFilterProvider).scope;
     final selectedMonth = ref.watch(periodFilterProvider).month;
     final selectedYear = ref.watch(periodFilterProvider).year;
     final isAnnual = selectedScope == PeriodScope.annual;
-    final hasActiveFilters = search.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(
       padding: screenPadding,
@@ -167,13 +165,8 @@ class _AreasContent extends ConsumerWidget {
           ],
           const SizedBox(height: 24),
           FilterBar(
-            scope: 'areas',
-            hasActiveFilters: hasActiveFilters,
-
-            onClear: () {
-              ref.read(searchAreaProvider.notifier).state = '';
-              ref.read(areaStatusFilterProvider.notifier).state = null;
-            },
+            scope: DataFilterScope.areas,
+            rows: ref.watch(areaFilterRowsProvider),
           ),
           const SizedBox(height: 24),
           filteredAreasAsync.when(
@@ -189,7 +182,7 @@ class _AreasContent extends ConsumerWidget {
             data: (filteredAreas) => AreasResults(
               key: ValueKey(
                 '$selectedScope-$selectedYear-$selectedMonth-'
-                '$search-$selectedStatus',
+                '${ref.watch(dataFilterSelectionProvider(DataFilterScope.areas)).values}',
               ),
               areas: filteredAreas,
               totalAreas: summary.totalAreas,

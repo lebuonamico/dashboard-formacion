@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 
 final _creation = DateTime.utc(2026, 1, 15, 10);
 final _stamp = DateTime.utc(2026, 10, 3, 14, 30);
@@ -459,17 +460,24 @@ void main() {
       repository: repository,
     );
 
-    expect(container.read(adminStatusFilterProvider), isNull);
+    expect(
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.adminUsers))
+          .values,
+      isEmpty,
+    );
     expect(find.text('ambas@finnegans.com'), findsOneWidget);
 
-    container.read(adminStatusFilterProvider.notifier).state =
-        UserStatus.blocked;
+    container
+        .read(dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier)
+        .select('Estado', {'Bloqueado'});
     await tester.pumpAndSettle();
     expect(find.text('bloqueada@finnegans.com'), findsOneWidget);
     expect(find.text('ambas@finnegans.com'), findsNothing);
 
-    container.read(adminStatusFilterProvider.notifier).state =
-        UserStatus.deleted;
+    container
+        .read(dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier)
+        .select('Estado', {'Eliminado'});
     await tester.pumpAndSettle();
     expect(find.text('ambas@finnegans.com'), findsOneWidget);
     expect(find.text('bloqueada@finnegans.com'), findsNothing);
@@ -489,8 +497,9 @@ void main() {
     );
     container.read(selectedAdminEmailProvider.notifier).state =
         'ana@finnegans.com';
-    container.read(adminStatusFilterProvider.notifier).state =
-        UserStatus.blocked;
+    container
+        .read(dataFilterSelectionProvider(DataFilterScope.adminUsers).notifier)
+        .select('Estado', {'Bloqueado'});
     await tester.pumpAndSettle();
 
     expect(find.text('ana@finnegans.com'), findsNothing);

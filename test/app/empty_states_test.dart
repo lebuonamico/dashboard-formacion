@@ -13,14 +13,12 @@ import 'package:app_finnegans/features/time_entries/presentation/time_entries_sc
 import 'package:app_finnegans/features/courses/presentation/courses_screen.dart';
 import 'package:app_finnegans/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:app_finnegans/features/employees/presentation/employees_screen.dart';
-import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/team_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 
 const _year = 2026;
 const _month = 6;
@@ -263,7 +262,9 @@ void main() {
         );
         expect(find.text('Tecnología'), findsOneWidget);
 
-        container.read(searchAreaProvider.notifier).state = 'inexistente';
+        container
+            .read(dataFilterSelectionProvider(DataFilterScope.areas).notifier)
+            .select('Área', {'Inexistente'});
         await tester.pumpAndSettle();
 
         expect(
@@ -302,8 +303,9 @@ void main() {
       );
 
       // Sin certificación LMS las horas no cuentan: el área queda crítica.
-      container.read(areaStatusFilterProvider.notifier).state =
-          ComplianceLevel.onTarget;
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.areas).notifier)
+          .select('Estado', {'En objetivo'});
       await tester.pumpAndSettle();
 
       expect(find.text('Ver área'), findsNothing);
@@ -403,7 +405,7 @@ void main() {
       expect(find.text('No hay empleados cargados.'), findsOneWidget);
     });
 
-    testWidgets('con nómina y búsqueda sin coincidencias lo distingue', (
+    testWidgets('con nómina y un filtro sin coincidencias lo distingue', (
       tester,
     ) async {
       final container = await _show(
@@ -412,7 +414,9 @@ void main() {
         screen: (_) => const EmployeesScreen(),
       );
 
-      container.read(employeeSearchProvider.notifier).state = 'inexistente';
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.employees).notifier)
+          .select('Área', {'Inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -474,7 +478,9 @@ void main() {
         screen: (_) => const CoursesScreen(),
       );
 
-      container.read(courseSearchProvider.notifier).state = 'inexistente';
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.courses).notifier)
+          .select('Área', {'Inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -506,7 +512,11 @@ void main() {
         timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(timeEntrySearchProvider.notifier).state = 'inexistente';
+      container
+          .read(
+            dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
+          )
+          .select('Persona / Legajo', {'inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -526,7 +536,11 @@ void main() {
         timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(timeEntrySearchProvider.notifier).state = 'Inexistente';
+      container
+          .read(
+            dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
+          )
+          .select('Área', {'Inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -535,7 +549,7 @@ void main() {
       );
     });
 
-    testWidgets('buscar por el área del colaborador encuentra la carga', (
+    testWidgets('filtrar por el área del colaborador encuentra la carga', (
       tester,
     ) async {
       final container = await _show(
@@ -545,7 +559,11 @@ void main() {
         timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
       );
 
-      container.read(timeEntrySearchProvider.notifier).state = 'tecnología';
+      container
+          .read(
+            dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
+          )
+          .select('Área', {'Tecnología'});
       await tester.pumpAndSettle();
 
       expect(
@@ -612,8 +630,13 @@ void main() {
           ],
         );
 
-        container.read(lmsCertificationSearchProvider.notifier).state =
-            'inexistente';
+        container
+            .read(
+              dataFilterSelectionProvider(
+                DataFilterScope.certifications,
+              ).notifier,
+            )
+            .select('Área', {'Inexistente'});
         await tester.pumpAndSettle();
 
         expect(
@@ -643,7 +666,13 @@ void main() {
       expect(find.text('Ana Pérez'), findsOneWidget);
       expect(find.text('20/06/2026'), findsOneWidget);
 
-      container.read(certificationStatusFilterProvider.notifier).state = false;
+      container
+          .read(
+            dataFilterSelectionProvider(
+              DataFilterScope.certifications,
+            ).notifier,
+          )
+          .select('Estado', {'Pendiente'});
       await tester.pumpAndSettle();
 
       expect(

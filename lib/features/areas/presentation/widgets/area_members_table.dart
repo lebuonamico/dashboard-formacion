@@ -1,7 +1,8 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/domain/data_filter.dart';
+import 'package:app_finnegans/core/data_filters/domain/data_filter_service.dart';
 import 'package:app_finnegans/features/compliance/presentation/member_sort.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
@@ -73,9 +74,10 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
 
   @override
   Widget build(BuildContext context) {
-    final statusOptions = cascadeFilterOptions(
+    final statusOptions = const DataFilterService().cascade(
       [
-        for (final member in widget.members) {'Estado': _memberStatus(member)},
+        for (final member in widget.members)
+          FilterRow({'Estado': _memberStatus(member)}),
       ],
       {'Estado': widget.filter},
     )['Estado'];

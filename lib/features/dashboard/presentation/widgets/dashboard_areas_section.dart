@@ -3,8 +3,8 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +18,10 @@ class DashboardAreasSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Conservar filtros aunque el cambio de período desmonte esta sección.
-    final selection = ref.watch(dataFilterSelectionProvider('dashboard_areas'));
+    final selection = ref
+        .watch(dataFilterSelectionProvider(DataFilterScope.dashboardAreas))
+        .values;
+    final filters = ref.watch(dataFilterServiceProvider);
     final teamsAsync = ref.watch(teamOverviewsProvider);
 
     return Column(
@@ -60,7 +63,7 @@ class DashboardAreasSection extends ConsumerWidget {
             if (areas.isEmpty) {
               return Column(
                 children: [
-                  _buildFilterBar(areas, ref, selection),
+                  _AreasFilterBar(rows: areas.map(_filterRow).toList()),
                   const SizedBox(height: 16),
                   const _EmptyAreasState(),
                 ],
@@ -68,9 +71,7 @@ class DashboardAreasSection extends ConsumerWidget {
             }
 
             final filteredAreas = areas
-                .where(
-                  (area) => matchesDataFilters(selection, _filterRow(area)),
-                )
+                .where((area) => filters.matches(selection, _filterRow(area)))
                 .toList();
 
             return teamsAsync.when(
@@ -92,7 +93,7 @@ class DashboardAreasSection extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    _buildFilterBar(areas, ref, selection),
+                    _AreasFilterBar(rows: areas.map(_filterRow).toList()),
                     const SizedBox(height: 16),
                     if (filteredAreas.isEmpty)
                       const _EmptyFilteredAreasState()
@@ -136,25 +137,19 @@ class DashboardAreasSection extends ConsumerWidget {
     );
   }
 
-  FilterRow _filterRow(AreaComplianceViewModel area) => {
-    'Área': area.area,
-    'Estado': area.level.label,
-  };
+  FilterRow _filterRow(AreaComplianceViewModel area) =>
+      FilterRow({'Área': area.area, 'Estado': area.level.label});
+}
 
-  Widget _buildFilterBar(
-    List<AreaComplianceViewModel> areas,
-    WidgetRef ref,
-    DataFilterValues selection,
-  ) => FilterBar(
-    rows: areas.map(_filterRow).toList(),
-    selection: selection,
-    hasActiveFilters: selection.isNotEmpty,
-    onSelectionChanged: (dimension, values) => ref
-        .read(dataFilterSelectionProvider('dashboard_areas').notifier)
-        .select(dimension, values),
-    onClear: () => ref
-        .read(dataFilterSelectionProvider('dashboard_areas').notifier)
-        .clear(),
+class _AreasFilterBar extends StatelessWidget {
+  final List<FilterRow> rows;
+
+  const _AreasFilterBar({required this.rows});
+
+  @override
+  Widget build(BuildContext context) => FilterBar(
+    scope: DataFilterScope.dashboardAreas,
+    rows: AsyncValue.data(rows),
   );
 }
 

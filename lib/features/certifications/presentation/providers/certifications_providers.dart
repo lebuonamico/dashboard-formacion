@@ -1,4 +1,5 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
@@ -7,7 +8,6 @@ import 'package:app_finnegans/features/compliance/domain/compliance_service.dart
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
   ref,
@@ -21,11 +21,6 @@ final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
       .where((certification) => employeeIds.contains(certification.employeeId))
       .toList();
 });
-
-final lmsCertificationSearchProvider = StateProvider<String>((ref) => '');
-
-/// `null` muestra todas, `true` solo las finalizadas y `false` las pendientes.
-final certificationStatusFilterProvider = StateProvider<bool?>((ref) => null);
 
 /// Certificación del LMS cruzada con la nómina y el catálogo.
 class CertificationViewModel {
@@ -52,48 +47,21 @@ class CertificationViewModel {
 /// Todas las certificaciones importadas, sin filtrar y ordenadas: las más
 /// recientes primero y las que no tienen fecha (pendientes) al final.
 final joinedCertificationsProvider =
-    Provider<AsyncValue<List<CertificationViewModel>>>((ref) {
-      final certificationsAsync = ref.watch(lmsCertificationsProvider);
-      final employeesAsync = ref.watch(employeesProvider);
-      final coursesAsync = ref.watch(coursesProvider);
+    FutureProvider<List<CertificationViewModel>>((ref) async {
+      final certifications = await ref.watch(lmsCertificationsProvider.future);
+      final employees = await ref.watch(employeesProvider.future);
+      final courses = await ref.watch(coursesProvider.future);
 
-      if (certificationsAsync.isLoading ||
-          employeesAsync.isLoading ||
-          coursesAsync.isLoading) {
-        return const AsyncValue.loading();
-      }
-
-      if (certificationsAsync.hasError) {
-        return AsyncValue.error(
-          certificationsAsync.error!,
-          certificationsAsync.stackTrace!,
-        );
-      }
-
-      if (employeesAsync.hasError) {
-        return AsyncValue.error(
-          employeesAsync.error!,
-          employeesAsync.stackTrace!,
-        );
-      }
-
-      if (coursesAsync.hasError) {
-        return AsyncValue.error(coursesAsync.error!, coursesAsync.stackTrace!);
-      }
-
-      final employeeMap = {
-        for (final e in employeesAsync.value ?? <Employee>[]) e.employeeId: e,
-      };
+      final employeeMap = {for (final e in employees) e.employeeId: e};
       // Mismo normalizador que el cálculo de cumplimiento: así el aviso de
       // "fuera de catálogo" coincide con lo que realmente no acredita.
       final courseMap = {
-        for (final course in coursesAsync.value ?? <Course>[])
+        for (final course in courses)
           ComplianceService.normalizeCourseName(course.name): course,
       };
 
       final viewModels = [
-        for (final certification
-            in certificationsAsync.value ?? <LmsCertification>[])
+        for (final certification in certifications)
           CertificationViewModel(
             certification: certification,
             employee: employeeMap[certification.employeeId],
@@ -120,44 +88,62 @@ final joinedCertificationsProvider =
         );
       });
 
-      return AsyncValue.data(viewModels);
+      return viewModels;
     });
 
+FilterRow certificationFilterRow(
+  CertificationViewModel item,
+  Map<String, String> courseIdsByName,
+) {
+  final courseId = courseIdFor(
+    item.certification.courseId,
+    item.certification.courseName,
+    courseIdsByName,
+  );
+  return FilterRow(
+    {
+      personFilterDimension: item.certification.employeeId.trim(),
+      courseFilterDimension: courseId,
+      'Área': item.employee?.area ?? '',
+      'Equipo': item.employee?.team ?? '',
+      'Tipo': item.course?.classificationLms?.label ?? '',
+      'Estado': item.certification.isCompleted ? 'Finalizado' : 'Pendiente',
+    },
+    labels: {
+      personFilterDimension: personFilterLabel(
+        item.employee?.fullName ?? '',
+        item.certification.employeeId,
+      ),
+      courseFilterDimension: courseFilterLabel(
+        item.certification.courseName,
+        courseId,
+      ),
+    },
+  );
+}
+
+final certificationFilterRowsProvider = FutureProvider<List<FilterRow>>((
+  ref,
+) async {
+  final courseIds = await ref.watch(courseIdsByNameProvider.future);
+  final items = await ref.watch(joinedCertificationsProvider.future);
+  return items.map((item) => certificationFilterRow(item, courseIds)).toList();
+});
+
 final filteredCertificationsProvider =
-    Provider<AsyncValue<List<CertificationViewModel>>>((ref) {
-      final completeAsync = ref.watch(joinedCertificationsProvider);
-      final query = ref
-          .watch(lmsCertificationSearchProvider)
-          .trim()
-          .toLowerCase();
-      final statusFilter = ref.watch(certificationStatusFilterProvider);
-      final selection = ref.watch(dataFilterSelectionProvider('lms'));
-      final courseIds = ref.watch(courseFilterIdentifiersProvider);
-
-      return completeAsync.whenData((items) {
-        return items.where((vm) {
-          final emp = vm.employee;
-          final matchesQuery =
-              query.isEmpty ||
-              vm.certification.employeeId.toLowerCase().contains(query) ||
-              vm.certification.courseName.toLowerCase().contains(query) ||
-              (emp != null &&
-                  ('${emp.firstName} ${emp.lastName}'.toLowerCase().contains(
-                        query,
-                      ) ||
-                      emp.area.toLowerCase().contains(query) ||
-                      emp.team.toLowerCase().contains(query)));
-
-          final matchesStatus =
-              statusFilter == null ||
-              vm.certification.isCompleted == statusFilter;
-
-          return matchesQuery &&
-              matchesStatus &&
-              matchesDataFilters(
-                selection,
-                certificationFilterRow(vm, courseIdsByName: courseIds),
-              );
-        }).toList();
-      });
+    FutureProvider<List<CertificationViewModel>>((ref) async {
+      final selection = ref
+          .watch(dataFilterSelectionProvider(DataFilterScope.certifications))
+          .values;
+      final filters = ref.watch(dataFilterServiceProvider);
+      final courseIds = await ref.watch(courseIdsByNameProvider.future);
+      final items = await ref.watch(joinedCertificationsProvider.future);
+      return items
+          .where(
+            (item) => filters.matches(
+              selection,
+              certificationFilterRow(item, courseIds),
+            ),
+          )
+          .toList();
     });

@@ -1,4 +1,6 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
+import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
@@ -7,7 +9,6 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
   final repo = ref.watch(crmTimeEntriesRepositoryProvider);
@@ -32,104 +33,100 @@ class CrmTimeEntryViewModel {
   });
 }
 
-final timeEntrySearchProvider = StateProvider<String>((ref) => '');
+final timeEntriesPeriodProvider = OptionalPeriodProvider(
+  OptionalPeriodNotifier.new,
+);
 
-// Filtros propios del listado del CRM (null = todos). No son el período
-// global: filtrar acá no cambia lo que muestran Dashboard o Equipos.
-final timeEntryYearFilterProvider = StateProvider<int?>((ref) => null);
-final timeEntryMonthFilterProvider = StateProvider<int?>((ref) => null);
-
-/// Años con cargas de horas, del más reciente al más viejo.
-final availableTimeEntryYearsProvider = Provider<AsyncValue<List<int>>>((ref) {
-  return ref.watch(crmTimeEntriesProvider).whenData((timeEntries) {
-    return ({for (final timeEntry in timeEntries) timeEntry.date.year}.toList()
-      ..sort((a, b) => b.compareTo(a)));
-  });
+final availableTimeEntryYearsProvider = FutureProvider<List<int>>((ref) async {
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  return timeEntries.map((timeEntry) => timeEntry.date.year).toSet().toList()
+    ..sort((a, b) => b.compareTo(a));
 });
 
-final joinedTimeEntriesProvider =
-    Provider<AsyncValue<List<CrmTimeEntryViewModel>>>((ref) {
-      final timeEntriesAsync = ref.watch(crmTimeEntriesProvider);
-      final employeesAsync = ref.watch(employeesProvider);
-      final coursesAsync = ref.watch(coursesProvider);
-      final query = ref.watch(timeEntrySearchProvider).toLowerCase();
-      final yearFilter = ref.watch(timeEntryYearFilterProvider);
-      final filterMonth = ref.watch(timeEntryMonthFilterProvider);
-      final selection = ref.watch(dataFilterSelectionProvider('crm'));
-      final courseIds = ref.watch(courseFilterIdentifiersProvider);
+FilterRow crmFilterRow(
+  CrmTimeEntryViewModel item,
+  Map<String, String> courseIdsByName,
+) {
+  final courseId = courseIdFor(
+    item.timeEntry.courseId,
+    item.timeEntry.courseName,
+    courseIdsByName,
+  );
+  return FilterRow(
+    {
+      personFilterDimension: item.timeEntry.employeeId.trim(),
+      courseFilterDimension: courseId,
+      'Área': item.employee?.area ?? '',
+    },
+    labels: {
+      personFilterDimension: personFilterLabel(
+        item.employee?.fullName ?? '',
+        item.timeEntry.employeeId,
+      ),
+      courseFilterDimension: courseFilterLabel(
+        item.timeEntry.courseName,
+        courseId,
+      ),
+    },
+  );
+}
 
-      if (timeEntriesAsync.isLoading ||
-          employeesAsync.isLoading ||
-          coursesAsync.isLoading) {
-        return const AsyncValue.loading();
-      }
+/// CRM time entries of the list's own period, joined with the payroll and
+/// the catalog, most recent first.
+final _periodTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
+  ref,
+) async {
+  final period = ref.watch(timeEntriesPeriodProvider);
+  final periodService = ref.watch(periodServiceProvider);
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  final employees = await ref.watch(employeesProvider.future);
+  final courses = await ref.watch(coursesProvider.future);
 
-      if (timeEntriesAsync.hasError) {
-        return AsyncValue.error(
-          timeEntriesAsync.error!,
-          timeEntriesAsync.stackTrace!,
-        );
-      }
+  final employeesById = {
+    for (final employee in employees) employee.employeeId: employee,
+  };
+  final coursesByName = {
+    for (final course in courses) course.name.trim().toLowerCase(): course,
+  };
+  return timeEntries
+      .where(
+        (timeEntry) => periodService.contains(
+          timeEntry.date,
+          year: period.year,
+          month: period.month,
+        ),
+      )
+      .map(
+        (timeEntry) => CrmTimeEntryViewModel(
+          timeEntry: timeEntry,
+          employee: employeesById[timeEntry.employeeId],
+          course: coursesByName[timeEntry.courseName.trim().toLowerCase()],
+        ),
+      )
+      .toList()
+    ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
+});
 
-      if (employeesAsync.hasError) {
-        return AsyncValue.error(
-          employeesAsync.error!,
-          employeesAsync.stackTrace!,
-        );
-      }
+final timeEntryFilterRowsProvider = FutureProvider<List<FilterRow>>((
+  ref,
+) async {
+  final courseIds = await ref.watch(courseIdsByNameProvider.future);
+  final items = await ref.watch(_periodTimeEntriesProvider.future);
+  return items.map((item) => crmFilterRow(item, courseIds)).toList();
+});
 
-      if (coursesAsync.hasError) {
-        return AsyncValue.error(coursesAsync.error!, coursesAsync.stackTrace!);
-      }
-
-      final timeEntries = timeEntriesAsync.value ?? [];
-      final employeeMap = {
-        for (final e in employeesAsync.value ?? <Employee>[]) e.employeeId: e,
-      };
-      final courseMap = {
-        for (final course in coursesAsync.value ?? <Course>[])
-          course.name.trim().toLowerCase(): course,
-      };
-
-      final viewModels =
-          timeEntries
-              .map((timeEntry) {
-                return CrmTimeEntryViewModel(
-                  timeEntry: timeEntry,
-                  employee: employeeMap[timeEntry.employeeId],
-                  course: courseMap[timeEntry.courseName.trim().toLowerCase()],
-                );
-              })
-              .where((vm) {
-                final employeeName = vm.employee != null
-                    ? '${vm.employee!.firstName} ${vm.employee!.lastName}'
-                    : '';
-                // Si el curso no está en el catálogo se busca por el nombre del CRM.
-                final courseName = vm.course?.name ?? vm.timeEntry.courseName;
-                final employeeId = vm.timeEntry.employeeId;
-                final area = vm.employee?.area ?? '';
-                final date = vm.timeEntry.date;
-
-                final matchesQuery =
-                    employeeName.toLowerCase().contains(query) ||
-                    courseName.toLowerCase().contains(query) ||
-                    employeeId.toLowerCase().contains(query) ||
-                    area.toLowerCase().contains(query);
-
-                final periodMatch = ref
-                    .watch(periodServiceProvider)
-                    .contains(date, year: yearFilter, month: filterMonth);
-
-                return matchesQuery &&
-                    periodMatch &&
-                    matchesDataFilters(
-                      selection,
-                      crmFilterRow(vm, courseIdsByName: courseIds),
-                    );
-              })
-              .toList()
-            // Lo más reciente primero.
-            ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
-
-      return AsyncValue.data(viewModels);
-    });
+final joinedTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
+  ref,
+) async {
+  final selection = ref
+      .watch(dataFilterSelectionProvider(DataFilterScope.timeEntries))
+      .values;
+  final filters = ref.watch(dataFilterServiceProvider);
+  final courseIds = await ref.watch(courseIdsByNameProvider.future);
+  final items = await ref.watch(_periodTimeEntriesProvider.future);
+  return items
+      .where(
+        (item) => filters.matches(selection, crmFilterRow(item, courseIds)),
+      )
+      .toList();
+});

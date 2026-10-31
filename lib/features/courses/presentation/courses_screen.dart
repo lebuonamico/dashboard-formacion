@@ -3,11 +3,11 @@ import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
@@ -32,7 +32,7 @@ class CoursesScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFilterBar(ref),
+                  const _CoursesFilterBar(),
                   const SizedBox(height: 20),
                   Expanded(
                     child: coursesAsync.when(
@@ -78,64 +78,31 @@ class CoursesScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildFilterBar(WidgetRef ref) {
-    final search = ref.watch(courseSearchProvider);
-    final selectedType = ref.watch(courseCategoryFilterProvider);
-    final year = ref.watch(courseYearFilterProvider);
-    final month = ref.watch(courseMonthFilterProvider);
-    final years = ref.watch(availableCourseYearsProvider).value ?? <int>[];
+class _CoursesFilterBar extends ConsumerWidget {
+  const _CoursesFilterBar();
 
-    final sortedYears = <int>{...years, ?year}.toList()
-      ..sort((a, b) => b.compareTo(a));
-
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(courseStatsPeriodProvider);
     return FilterBar(
-      scope: 'cursos',
-      hasActiveFilters:
-          search.isNotEmpty ||
-          selectedType != null ||
-          year != null ||
-          month != null,
-      filters: [
-        FilterDropdown<int?>(
-          value: year,
+      scope: DataFilterScope.courses,
+      rows: ref.watch(courseFilterRowsProvider),
+      extraFilters: [
+        OptionalYearFilter(
+          provider: courseStatsPeriodProvider,
+          availableYears:
+              ref.watch(availableCourseYearsProvider).value ?? const [],
           hint: 'Año (métricas)',
-          icon: Icons.event_outlined,
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('Todos los años'),
-            ),
-            for (final a in sortedYears)
-              DropdownMenuItem<int?>(value: a, child: Text('$a')),
-          ],
-          onChanged: (value) {
-            ref.read(courseYearFilterProvider.notifier).state = value;
-          },
         ),
-        FilterDropdown<int?>(
-          value: month,
+        OptionalMonthFilter(
+          provider: courseStatsPeriodProvider,
           hint: 'Mes (métricas)',
-          icon: Icons.calendar_month_outlined,
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('Todos los meses'),
-            ),
-            for (var m = 1; m <= 12; m++)
-              DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
-          ],
-          onChanged: (value) {
-            ref.read(courseMonthFilterProvider.notifier).state = value;
-          },
         ),
       ],
-      onClear: () {
-        ref.read(courseSearchProvider.notifier).state = '';
-        ref.read(courseCategoryFilterProvider.notifier).state = null;
-        ref.read(courseYearFilterProvider.notifier).state = null;
-        ref.read(courseMonthFilterProvider.notifier).state = null;
-      },
+      hasActiveExtraFilters: period.year != null || period.month != null,
+      onClearExtraFilters: ref.read(courseStatsPeriodProvider.notifier).clear,
     );
   }
 }

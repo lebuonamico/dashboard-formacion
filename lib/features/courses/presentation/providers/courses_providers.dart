@@ -1,16 +1,17 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
+import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 final coursesProvider = FutureProvider<List<Course>>((ref) async {
   final repo = ref.watch(coursesRepositoryProvider);
@@ -43,119 +44,128 @@ class CourseViewModel {
   double? get averageHoursPerPerson => people == 0 ? null : crmHours / people;
 }
 
-final courseSearchProvider = StateProvider<String>((ref) => '');
-final courseCategoryFilterProvider = StateProvider<CourseCategory?>(
-  (ref) => null,
+final courseStatsPeriodProvider = OptionalPeriodProvider(
+  OptionalPeriodNotifier.new,
 );
 
-// Período de las métricas del catálogo (null = todos). No es el período
-// global: filtrar acá no cambia lo que muestran Dashboard o Equipos.
-final courseYearFilterProvider = StateProvider<int?>((ref) => null);
-final courseMonthFilterProvider = StateProvider<int?>((ref) => null);
+final availableCourseYearsProvider = FutureProvider<List<int>>((ref) async {
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  final certifications = await ref.watch(lmsCertificationsProvider.future);
+  return {
+    ...timeEntries.map((timeEntry) => timeEntry.date.year),
+    ...certifications
+        .map((certification) => certification.completedAt?.year)
+        .whereType<int>(),
+  }.toList()..sort((a, b) => b.compareTo(a));
+});
 
-/// Años con cargas CRM o finalizaciones LMS, del más reciente al más viejo.
-final availableCourseYearsProvider = Provider<AsyncValue<List<int>>>((ref) {
-  final timeEntriesAsync = ref.watch(crmTimeEntriesProvider);
-  final certificationsAsync = ref.watch(lmsCertificationsProvider);
-  return timeEntriesAsync.whenData((timeEntries) {
-    final years = <int>{
-      for (final timeEntry in timeEntries) timeEntry.date.year,
-      for (final certification
-          in certificationsAsync.value ?? const <LmsCertification>[])
-        ?certification.completedAt?.year,
-    };
-    return years.toList()..sort((a, b) => b.compareTo(a));
+/// Course id for each normalized course name. Ambiguous names map to an
+/// empty id, so a filter never picks one of two homonyms at random.
+final courseIdsByNameProvider = FutureProvider<Map<String, String>>((
+  ref,
+) async {
+  final courses = await ref.watch(coursesProvider.future);
+  final idsByName = <String, Set<String>>{};
+  for (final course in courses) {
+    final name = ComplianceService.normalizeCourseName(course.name);
+    final id = course.id.trim();
+    if (name.isNotEmpty && id.isNotEmpty) {
+      idsByName.putIfAbsent(name, () => {}).add(id);
+    }
+  }
+  return Map.unmodifiable({
+    for (final MapEntry(key: name, value: ids) in idsByName.entries)
+      name: ids.length == 1 ? ids.single : '',
   });
 });
 
-final courseStatsProvider = Provider<AsyncValue<List<CourseViewModel>>>((ref) {
-  final coursesAsync = ref.watch(coursesProvider);
-  final employeesAsync = ref.watch(employeesProvider);
-  final timeEntriesAsync = ref.watch(crmTimeEntriesProvider);
-  final certificationsAsync = ref.watch(lmsCertificationsProvider);
-  final query = ref.watch(courseSearchProvider).toLowerCase();
-  final typeFilter = ref.watch(courseCategoryFilterProvider);
-  final yearFilter = ref.watch(courseYearFilterProvider);
-  final filterMonth = ref.watch(courseMonthFilterProvider);
-  final selection = ref.watch(dataFilterSelectionProvider('cursos'));
+String courseIdFor(String? id, String name, Map<String, String> idsByName) =>
+    (id?.trim().isNotEmpty ?? false)
+    ? id!.trim()
+    : idsByName[ComplianceService.normalizeCourseName(name)] ?? '';
 
-  final asyncValues = [
-    coursesAsync,
-    employeesAsync,
-    timeEntriesAsync,
-    certificationsAsync,
-  ];
-  if (asyncValues.any((value) => value.isLoading)) {
-    return const AsyncValue.loading();
-  }
-  final error = asyncValues.where((value) => value.hasError).firstOrNull;
-  if (error != null) return AsyncValue.error(error.error!, error.stackTrace!);
+FilterRow courseFilterRow(Course course, String instructor) => FilterRow(
+  {
+    courseFilterDimension: course.id.trim(),
+    'Área': course.courseArea,
+    'Instructor': instructor,
+    'Tipo': course.classificationLms?.label ?? '',
+  },
+  labels: {courseFilterDimension: courseFilterLabel(course.name, course.id)},
+);
 
-  final courses = coursesAsync.value ?? [];
-  final employees = employeesAsync.value ?? [];
-  final employeeMap = {
-    for (var e in employees) e.employeeId: '${e.firstName} ${e.lastName}',
-  };
-
-  bool inPeriod(DateTime date) => ref
-      .watch(periodServiceProvider)
-      .contains(date, year: yearFilter, month: filterMonth);
-
-  // Mismo cruce por nombre normalizado que el cálculo de cumplimiento.
-  final crmEmployeeIds = <String, Set<String>>{};
-  final crmHours = <String, double>{};
-  // Todas las cargas cuentan, también las de dictado: en un curso de tipo
-  // Dictado, quienes cargan horas son quienes lo dictan.
-  for (final timeEntry in timeEntriesAsync.value ?? const <CrmTimeEntry>[]) {
-    if (!inPeriod(timeEntry.date)) continue;
-    final key = ComplianceService.normalizeCourseName(timeEntry.courseName);
-    crmEmployeeIds.putIfAbsent(key, () => {}).add(timeEntry.employeeId);
-    crmHours[key] = (crmHours[key] ?? 0) + timeEntry.hours;
-  }
-  final completedEmployeeIds = <String, Set<String>>{};
-  for (final certification
-      in certificationsAsync.value ?? const <LmsCertification>[]) {
-    final date = certification.completedAt;
-    if (!certification.isCompleted || date == null || !inPeriod(date)) {
-      continue;
-    }
-    completedEmployeeIds
-        .putIfAbsent(
-          ComplianceService.normalizeCourseName(certification.courseName),
-          () => {},
-        )
-        .add(certification.employeeId);
-  }
-
-  final viewModels = courses
-      .map((c) {
-        final key = ComplianceService.normalizeCourseName(c.name);
-        return CourseViewModel(
-          course: c,
-          instructorName:
-              employeeMap[c.instructorEmployeeId] ?? c.instructorEmployeeId,
-          people: crmEmployeeIds[key]?.length ?? 0,
-          crmHours: crmHours[key] ?? 0,
-          completed: completedEmployeeIds[key]?.length ?? 0,
-        );
-      })
-      .where((vm) {
-        final matchesQuery =
-            vm.course.name.toLowerCase().contains(query) ||
-            vm.course.courseArea.toLowerCase().contains(query) ||
-            vm.instructorName.toLowerCase().contains(query);
-
-        final matchesType =
-            typeFilter == null || vm.course.category == typeFilter;
-
-        return matchesQuery &&
-            matchesType &&
-            matchesDataFilters(
-              selection,
-              courseFilterRow(vm.course, vm.instructorName),
-            );
-      })
+final courseFilterRowsProvider = FutureProvider<List<FilterRow>>((ref) async {
+  final stats = await ref.watch(_allCourseStatsProvider.future);
+  return stats
+      .map((item) => courseFilterRow(item.course, item.instructorName))
       .toList();
+});
 
-  return AsyncValue.data(viewModels);
+final _allCourseStatsProvider = FutureProvider<List<CourseViewModel>>((
+  ref,
+) async {
+  final period = ref.watch(courseStatsPeriodProvider);
+  final periodService = ref.watch(periodServiceProvider);
+  final courses = await ref.watch(coursesProvider.future);
+  final employees = await ref.watch(employeesProvider.future);
+  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
+  final certifications = await ref.watch(lmsCertificationsProvider.future);
+
+  bool inPeriod(DateTime date) =>
+      periodService.contains(date, year: period.year, month: period.month);
+  String key(String courseName) =>
+      ComplianceService.normalizeCourseName(courseName);
+
+  final employeeNames = {
+    for (final employee in employees) employee.employeeId: employee.fullName,
+  };
+  // Every time entry counts, also teaching ones: in a teaching course the
+  // people who load hours are the ones who teach it.
+  final periodEntries = timeEntries.where((entry) => inPeriod(entry.date));
+  final entriesByCourse = groupBy(
+    periodEntries,
+    (CrmTimeEntry entry) => key(entry.courseName),
+  );
+  final completionsByCourse = groupBy(
+    certifications.where(
+      (certification) =>
+          certification.isCompleted &&
+          certification.completedAt != null &&
+          inPeriod(certification.completedAt!),
+    ),
+    (LmsCertification certification) => key(certification.courseName),
+  );
+
+  return courses.map((course) {
+    final entries = entriesByCourse[key(course.name)] ?? const [];
+    final completions = completionsByCourse[key(course.name)] ?? const [];
+    return CourseViewModel(
+      course: course,
+      instructorName:
+          employeeNames[course.instructorEmployeeId] ??
+          course.instructorEmployeeId,
+      people: entries.map((entry) => entry.employeeId).toSet().length,
+      crmHours: entries.fold(0.0, (total, entry) => total + entry.hours),
+      completed: completions
+          .map((certification) => certification.employeeId)
+          .toSet()
+          .length,
+    );
+  }).toList();
+});
+
+final courseStatsProvider = FutureProvider<List<CourseViewModel>>((ref) async {
+  final selection = ref
+      .watch(dataFilterSelectionProvider(DataFilterScope.courses))
+      .values;
+  final filters = ref.watch(dataFilterServiceProvider);
+  final stats = await ref.watch(_allCourseStatsProvider.future);
+  return stats
+      .where(
+        (item) => filters.matches(
+          selection,
+          courseFilterRow(item.course, item.instructorName),
+        ),
+      )
+      .toList();
 });

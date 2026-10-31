@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 
 class PeriodSegmentedControl<T> extends StatelessWidget {

@@ -10,7 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -110,20 +111,10 @@ class _EmployeesFiltersBar extends ConsumerWidget {
   const _EmployeesFiltersBar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final search = ref.watch(employeeSearchProvider);
-    final seniority = ref.watch(seniorityFilterProvider);
-
-    return FilterBar(
-      scope: 'personas',
-      hasActiveFilters: search.isNotEmpty || seniority != null,
-
-      onClear: () {
-        ref.read(employeeSearchProvider.notifier).state = '';
-        ref.read(seniorityFilterProvider.notifier).state = null;
-      },
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) => FilterBar(
+    scope: DataFilterScope.employees,
+    rows: ref.watch(employeeFilterRowsProvider),
+  );
 }
 
 /// Tabla del directorio, de a una página por vez y a todo el ancho.

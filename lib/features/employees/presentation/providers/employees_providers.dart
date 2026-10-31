@@ -1,10 +1,10 @@
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_entry.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_repository.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
@@ -14,7 +14,6 @@ import 'package:app_finnegans/features/time_entries/presentation/providers/time_
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
 /// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
@@ -54,34 +53,39 @@ final employeeHistoryProvider = FutureProvider<List<EmployeeHistoryEntry>?>((
   return (repo as EmployeeHistoryRepository).getEmployeeHistory();
 });
 
-final employeeSearchProvider = StateProvider<String>((ref) => '');
-final seniorityFilterProvider = StateProvider<Seniority?>((ref) => null);
+FilterRow employeeFilterRow(Employee employee) => FilterRow(
+  {
+    personFilterDimension: employee.employeeId.trim(),
+    'Área': employee.area,
+    'Equipo': employee.team,
+    'Líder': employee.manager,
+    'Email': employee.email,
+    'Seniority': employee.seniority.label,
+  },
+  labels: {
+    personFilterDimension: personFilterLabel(
+      employee.fullName,
+      employee.employeeId,
+    ),
+  },
+);
 
-final filteredEmployeesProvider = Provider<AsyncValue<List<Employee>>>((ref) {
-  final employeesAsync = ref.watch(employeesProvider);
-  final query = ref.watch(employeeSearchProvider).toLowerCase();
-  final seniorityFilter = ref.watch(seniorityFilterProvider);
-  final selection = ref.watch(dataFilterSelectionProvider('personas'));
+final employeeFilterRowsProvider = FutureProvider<List<FilterRow>>((ref) async {
+  final employees = await ref.watch(employeesProvider.future);
+  return employees.map(employeeFilterRow).toList();
+});
 
-  return employeesAsync.whenData((employees) {
-    return employees.where((emp) {
-      final matchesQuery =
-          emp.firstName.toLowerCase().contains(query) ||
-          emp.lastName.toLowerCase().contains(query) ||
-          emp.employeeId.toLowerCase().contains(query) ||
-          emp.area.toLowerCase().contains(query) ||
-          emp.team.toLowerCase().contains(query) ||
-          emp.manager.toLowerCase().contains(query) ||
-          emp.email.toLowerCase().contains(query);
-
-      final matchesSeniority =
-          seniorityFilter == null || emp.seniority == seniorityFilter;
-
-      return matchesQuery &&
-          matchesSeniority &&
-          matchesDataFilters(selection, employeeFilterRow(emp));
-    }).toList();
-  });
+final filteredEmployeesProvider = FutureProvider<List<Employee>>((ref) async {
+  final selection = ref
+      .watch(dataFilterSelectionProvider(DataFilterScope.employees))
+      .values;
+  final filters = ref.watch(dataFilterServiceProvider);
+  final employees = await ref.watch(employeesProvider.future);
+  return employees
+      .where(
+        (employee) => filters.matches(selection, employeeFilterRow(employee)),
+      )
+      .toList();
 });
 
 /// Curso que el empleado cargó en el CRM como dictado, con las horas del período.

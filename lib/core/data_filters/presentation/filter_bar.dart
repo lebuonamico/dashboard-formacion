@@ -1,123 +1,72 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/core/data_filters/data_filters_provider.dart';
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-String? _entitySubtitle(String dimension, String value) =>
-    dimension == personFilterDimension
-    ? 'Legajo $value'
-    : dimension == courseFilterDimension
-    ? 'ID $value'
-    : null;
-
-String _entityTitle(String dimension, String value, DataFilterOptions options) {
-  final label = options.labelFor(value);
-  final suffix = ' — ${_entitySubtitle(dimension, value)}';
-  return label.endsWith(suffix)
-      ? label.substring(0, label.length - suffix.length)
-      : label;
-}
-
 /// Filtros independientes del listado. La búsqueda vive dentro de cada menú.
 class FilterBar extends ConsumerWidget {
-  final String? scope;
-  final List<FilterRow>? rows;
-  final DataFilterValues selection;
-  final void Function(String dimension, Set<String> values)? onSelectionChanged;
-  final List<FilterDropdown<Object?>> filters;
-  final bool hasActiveFilters;
-  final VoidCallback onClear;
+  final DataFilterScope scope;
+  final AsyncValue<List<FilterRow>> rows;
+  final List<Widget> extraFilters;
+  final bool hasActiveExtraFilters;
+  final VoidCallback? onClearExtraFilters;
 
   const FilterBar({
     super.key,
-    this.scope,
-    this.rows,
-    this.selection = const {},
-    this.onSelectionChanged,
-    required this.hasActiveFilters,
-    required this.onClear,
-    this.filters = const [],
-  }) : assert(scope == null || rows == null);
+    required this.scope,
+    required this.rows,
+    this.extraFilters = const [],
+    this.hasActiveExtraFilters = false,
+    this.onClearExtraFilters,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeSelection = scope == null
-        ? selection
-        : ref.watch(dataFilterSelectionProvider(scope!));
-    final optionsAsync = scope == null
-        ? AsyncValue.data(
-            cascadeFilterOptions(rows ?? const [], activeSelection),
-          )
-        : ref.watch(dataFilterOptionsProvider(scope!));
-    final options =
-        optionsAsync.value ??
-        cascadeFilterOptions(
-          const [],
-          activeSelection,
-          selectedLabels: scope == null
-              ? const {}
-              : ref
-                    .read(dataFilterSelectionProvider(scope!).notifier)
-                    .selectedLabels,
-        );
-    final fields = <FilterDropdown<Object?>>[
-      for (final entry in options.entries)
-        FilterDropdown<String>.multiple(
-          key: ValueKey('$scope:${entry.key}'),
-          selectedValues: activeSelection[entry.key] ?? const {},
-          incompatibleValues: optionsAsync.isLoading || optionsAsync.hasError
-              ? const {}
-              : entry.value.incompatibleValues,
-          itemTitleBuilder: (value) =>
-              _entityTitle(entry.key, value, entry.value),
-          itemSubtitleBuilder:
-              entry.key == personFilterDimension ||
-                  entry.key == courseFilterDimension
-              ? (value) => _entitySubtitle(entry.key, value)
-              : null,
-          hint: entry.key,
-          icon: Icons.filter_alt_outlined,
-          items: [
-            for (final value in entry.value.values)
-              DropdownMenuItem(
-                value: value,
-                child: Text(entry.value.labelFor(value)),
-              ),
-          ],
-          onSelectionChanged: optionsAsync.isLoading || optionsAsync.hasError
-              ? null
-              : (values) {
-                  if (scope == null) {
-                    onSelectionChanged?.call(entry.key, values);
-                  } else {
-                    ref
-                        .read(dataFilterSelectionProvider(scope!).notifier)
-                        .select(entry.key, values, labels: entry.value.labels);
-                  }
-                },
-        ),
-      ...filters,
-    ];
-    final active =
-        hasActiveFilters ||
-        activeSelection.values.any((values) => values.isNotEmpty);
+    final selection = ref.watch(dataFilterSelectionProvider(scope));
+    final selectionNotifier = ref.read(
+      dataFilterSelectionProvider(scope).notifier,
+    );
+    final service = ref.watch(dataFilterServiceProvider);
+    final rowsReady = rows.hasValue && !rows.hasError;
+    final options = service.cascade(
+      rows.value ?? const [],
+      selection.values,
+      selectedLabels: selection.labels,
+    );
+    final isActive =
+        hasActiveExtraFilters ||
+        selection.values.values.any((values) => values.isNotEmpty);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: context.panel(),
       child: _FilterBarLayout(
-        fields: fields,
-        onClear: active
+        fields: [
+          for (final MapEntry(key: dimension, value: dimensionOptions)
+              in options.entries)
+            _DimensionFilter(
+              key: ValueKey('${scope.name}:$dimension'),
+              dimension: dimension,
+              options: dimensionOptions,
+              selected: selection.values[dimension] ?? const {},
+              enabled: rowsReady,
+              onSelectionChanged: (values) => selectionNotifier.select(
+                dimension,
+                values,
+                labels: dimensionOptions.labels,
+              ),
+            ),
+          ...extraFilters,
+        ],
+        onClear: isActive
             ? () {
-                if (scope != null) {
-                  ref
-                      .read(dataFilterSelectionProvider(scope!).notifier)
-                      .clear();
-                }
-                onClear();
+                selectionNotifier.clear();
+                onClearExtraFilters?.call();
               }
             : null,
       ),
@@ -125,8 +74,56 @@ class FilterBar extends ConsumerWidget {
   }
 }
 
+class _DimensionFilter extends StatelessWidget {
+  final String dimension;
+  final DataFilterOptions options;
+  final Set<String> selected;
+  final bool enabled;
+  final ValueChanged<Set<String>> onSelectionChanged;
+
+  const _DimensionFilter({
+    super.key,
+    required this.dimension,
+    required this.options,
+    required this.selected,
+    required this.enabled,
+    required this.onSelectionChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasEntity = filterEntitySubtitle(dimension, '') != null;
+    return FilterDropdown<String>.multiple(
+      selectedValues: selected,
+      incompatibleValues: enabled ? options.incompatibleValues : const {},
+      itemTitleBuilder: _entityTitle,
+      itemSubtitleBuilder: hasEntity
+          ? (value) => filterEntitySubtitle(dimension, value)
+          : null,
+      hint: dimension,
+      icon: Icons.filter_alt_outlined,
+      items: [
+        for (final value in options.values)
+          DropdownMenuItem(
+            value: value,
+            child: Text(options.labels[value] ?? value),
+          ),
+      ],
+      onSelectionChanged: enabled ? onSelectionChanged : null,
+    );
+  }
+
+  String _entityTitle(String value) {
+    final label = options.labels[value] ?? value;
+    final suffix = ' — ${filterEntitySubtitle(dimension, value)}';
+    return label.endsWith(suffix)
+        ? label.substring(0, label.length - suffix.length)
+        : label;
+  }
+}
+
 class _FilterBarLayout extends StatefulWidget {
-  final List<FilterDropdown<Object?>> fields;
+  final List<Widget> fields;
   final VoidCallback? onClear;
 
   const _FilterBarLayout({required this.fields, required this.onClear});

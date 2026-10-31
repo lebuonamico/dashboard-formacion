@@ -8,7 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/widgets/kpi_grid.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
@@ -66,7 +67,7 @@ class CertificationsScreen extends ConsumerWidget {
                       children: [
                         KpiGrid(items: _kpis(context, all, totalPayroll)),
                         const SizedBox(height: 20),
-                        _buildFilterBar(ref),
+                        const _CertificationsFilterBar(),
                         const SizedBox(height: 20),
                         Expanded(
                           child: filtered.isEmpty
@@ -154,21 +155,16 @@ class CertificationsScreen extends ConsumerWidget {
       ),
     ];
   }
+}
 
-  Widget _buildFilterBar(WidgetRef ref) {
-    final search = ref.watch(lmsCertificationSearchProvider);
-    final selectedStatus = ref.watch(certificationStatusFilterProvider);
+class _CertificationsFilterBar extends ConsumerWidget {
+  const _CertificationsFilterBar();
 
-    return FilterBar(
-      scope: 'lms',
-      hasActiveFilters: search.isNotEmpty || selectedStatus != null,
-
-      onClear: () {
-        ref.read(lmsCertificationSearchProvider.notifier).state = '';
-        ref.read(certificationStatusFilterProvider.notifier).state = null;
-      },
-    );
-  }
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => FilterBar(
+    scope: DataFilterScope.certifications,
+    rows: ref.watch(certificationFilterRowsProvider),
+  );
 }
 
 /// Tabla de certificaciones, de a una página por vez y a todo el ancho.

@@ -3,11 +3,11 @@ import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
@@ -83,63 +83,26 @@ class TimeEntriesScreen extends ConsumerWidget {
   }
 }
 
-/// Buscador por texto (colaborador, legajo, curso o área) y desplegables de
-/// año y mes.
 class _BarFiltersCrm extends ConsumerWidget {
   const _BarFiltersCrm();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final search = ref.watch(timeEntrySearchProvider);
-    final year = ref.watch(timeEntryYearFilterProvider);
-    final month = ref.watch(timeEntryMonthFilterProvider);
-    final years = ref.watch(availableTimeEntryYearsProvider).value ?? const [];
-
+    final period = ref.watch(timeEntriesPeriodProvider);
     return FilterBar(
-      scope: 'crm',
-      hasActiveFilters: search.isNotEmpty || year != null || month != null,
-      filters: [
-        FilterDropdown<int?>(
-          value: year,
-          hint: 'Todos los años',
-          icon: Icons.event_outlined,
+      scope: DataFilterScope.timeEntries,
+      rows: ref.watch(timeEntryFilterRowsProvider),
+      extraFilters: [
+        OptionalYearFilter(
+          provider: timeEntriesPeriodProvider,
+          availableYears:
+              ref.watch(availableTimeEntryYearsProvider).value ?? const [],
           width: 220,
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('Todos los años'),
-            ),
-            // Si el año elegido ya no tiene cargas, se mantiene visible para
-            // que el desplegable no quede con un valor inexistente.
-            for (final a in {...years, ?year})
-              DropdownMenuItem<int?>(value: a, child: Text('$a')),
-          ],
-          onChanged: (value) {
-            ref.read(timeEntryYearFilterProvider.notifier).state = value;
-          },
         ),
-        FilterDropdown<int?>(
-          value: month,
-          hint: 'Todos los meses',
-          icon: Icons.calendar_month_outlined,
-          width: 240,
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('Todos los meses'),
-            ),
-            for (var m = 1; m <= 12; m++)
-              DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
-          ],
-          onChanged: (value) =>
-              ref.read(timeEntryMonthFilterProvider.notifier).state = value,
-        ),
+        OptionalMonthFilter(provider: timeEntriesPeriodProvider, width: 240),
       ],
-      onClear: () {
-        ref.read(timeEntrySearchProvider.notifier).state = '';
-        ref.read(timeEntryYearFilterProvider.notifier).state = null;
-        ref.read(timeEntryMonthFilterProvider.notifier).state = null;
-      },
+      hasActiveExtraFilters: period.year != null || period.month != null,
+      onClearExtraFilters: ref.read(timeEntriesPeriodProvider.notifier).clear,
     );
   }
 }

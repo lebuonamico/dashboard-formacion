@@ -140,7 +140,7 @@ Future<Map<String, CourseViewModel>> _metrics(
   await container.read(employeesProvider.future);
   await container.read(crmTimeEntriesProvider.future);
   await container.read(lmsCertificationsProvider.future);
-  final courses = container.read(courseStatsProvider).requireValue;
+  final courses = await container.read(courseStatsProvider.future);
   return {for (final vm in courses) vm.course.name: vm};
 }
 
@@ -181,8 +181,9 @@ void main() {
 
   test('El año y el mes acotan las métricas, no el catálogo', () async {
     final container = _container();
-    container.read(courseYearFilterProvider.notifier).state = 2026;
-    container.read(courseMonthFilterProvider.notifier).state = 7;
+    container.read(courseStatsPeriodProvider.notifier)
+      ..setYear(2026)
+      ..setMonth(7);
 
     final metrics = await _metrics(container);
 
@@ -195,8 +196,8 @@ void main() {
     expect(metrics['Oratoria']!.people, 0);
 
     // Sin mes, todo el año.
-    container.read(courseMonthFilterProvider.notifier).state = null;
-    final annual = container.read(courseStatsProvider).requireValue;
+    container.read(courseStatsPeriodProvider.notifier).setMonth(null);
+    final annual = await container.read(courseStatsProvider.future);
     final annualFinance = annual.firstWhere(
       (vm) => vm.course.name == 'Finanzas para no financieros',
     );
@@ -208,10 +209,8 @@ void main() {
     'Los años del filtro salen de las cargas y las finalizaciones',
     () async {
       final container = _container();
-      await container.read(crmTimeEntriesProvider.future);
-      await container.read(lmsCertificationsProvider.future);
 
-      expect(container.read(availableCourseYearsProvider).requireValue, [
+      expect(await container.read(availableCourseYearsProvider.future), [
         2026,
         2025,
       ]);

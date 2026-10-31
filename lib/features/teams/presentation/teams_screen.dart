@@ -7,7 +7,8 @@ import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_cr
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/data_filters/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_category_distribution.dart';
@@ -68,12 +69,9 @@ class _TeamsOverviewContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final teams = summary.teams;
-    final query = ref.watch(teamSearchQueryProvider);
-    final selectedStatus = ref.watch(teamStatusFilterProvider);
     final selectedScope = ref.watch(periodFilterProvider).scope;
     final selectedMonth = ref.watch(periodFilterProvider).month;
     final selectedYear = ref.watch(periodFilterProvider).year;
-    final hasActiveFilters = query.trim().isNotEmpty || selectedStatus != null;
 
     return ListView(
       padding: screenPadding,
@@ -153,12 +151,8 @@ class _TeamsOverviewContent extends ConsumerWidget {
           ],
           const SizedBox(height: 24),
           FilterBar(
-            scope: teamFilterScope,
-            hasActiveFilters: hasActiveFilters,
-            onClear: () {
-              ref.read(teamSearchQueryProvider.notifier).state = '';
-              ref.read(teamStatusFilterProvider.notifier).state = null;
-            },
+            scope: DataFilterScope.teams,
+            rows: ref.watch(teamFilterRowsProvider),
           ),
           const SizedBox(height: 24),
           filteredTeamsAsync.when(
@@ -174,7 +168,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
             data: (filteredTeams) => TeamResults(
               key: ValueKey(
                 '$selectedScope-$selectedYear-$selectedMonth-'
-                '$query-$selectedStatus',
+                '${ref.watch(dataFilterSelectionProvider(DataFilterScope.teams)).values}',
               ),
               teams: filteredTeams,
               teamCount: summary.teamCount,

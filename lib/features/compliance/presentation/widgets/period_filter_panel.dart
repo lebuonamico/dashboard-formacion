@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
-import 'package:app_finnegans/core/data_filters/filter_dropdown.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
 import 'package:app_finnegans/core/period/presentation/period_segmented_control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
