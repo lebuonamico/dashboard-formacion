@@ -235,36 +235,9 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                     ),
                   ),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final style = DefaultTextStyle.of(context).style;
-              final painter = TextPainter(
-                text: TextSpan(text: fullSummary, style: style),
-                textDirection: Directionality.of(context),
-                textScaler: MediaQuery.textScalerOf(context),
-                maxLines: 1,
-              )..layout(maxWidth: constraints.maxWidth);
-              var summary = selected.length > 1 && painter.didExceedMaxLines
-                  ? '${selected.length} seleccionados'
-                  : fullSummary;
-              if (selected.length > 1 && painter.didExceedMaxLines) {
-                painter.text = TextSpan(text: summary, style: style);
-                painter.layout(maxWidth: constraints.maxWidth);
-                if (painter.didExceedMaxLines) {
-                  summary = '${selected.length} selec.';
-                }
-              }
-              painter.dispose();
-              return Tooltip(
-                message: fullSummary,
-                child: Text(
-                  summary,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            },
+          child: _SelectionSummary(
+            fullSummary: fullSummary,
+            selectedCount: selected.length,
           ),
         ),
       ),
@@ -456,4 +429,49 @@ class _OptionLabel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The selected labels, or "N seleccionados" / "N selec." when they do not
+/// fit in one line.
+class _SelectionSummary extends StatelessWidget {
+  final String fullSummary;
+  final int selectedCount;
+
+  const _SelectionSummary({
+    required this.fullSummary,
+    required this.selectedCount,
+  });
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(context).style;
+      final painter = TextPainter(
+        text: TextSpan(text: fullSummary, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout(maxWidth: constraints.maxWidth);
+      var summary = selectedCount > 1 && painter.didExceedMaxLines
+          ? '$selectedCount seleccionados'
+          : fullSummary;
+      if (selectedCount > 1 && painter.didExceedMaxLines) {
+        painter.text = TextSpan(text: summary, style: style);
+        painter.layout(maxWidth: constraints.maxWidth);
+        if (painter.didExceedMaxLines) {
+          summary = '$selectedCount selec.';
+        }
+      }
+      painter.dispose();
+      return Tooltip(
+        message: fullSummary,
+        child: Text(
+          summary,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    },
+  );
 }

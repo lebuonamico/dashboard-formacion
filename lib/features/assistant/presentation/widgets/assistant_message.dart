@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
-/// La clave estable del mensaje conserva esta transición entre reconstrucciones.
+/// The message's stable key keeps this transition across rebuilds.
 class AssistantMessage extends StatelessWidget {
   final ChatMessage message;
 
@@ -15,13 +15,10 @@ class AssistantMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
     final colors = context.colors;
-    final text = context.textTheme.bodyMedium!.copyWith(
-      height: 1.65,
-      color: colors.intermediateText,
-    );
     final reduceMotion =
         MediaQuery.disableAnimationsOf(context) ||
         MediaQuery.accessibleNavigationOf(context);
+    final isUser = message.isUser;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: reduceMotion
@@ -37,28 +34,26 @@ class AssistantMessage extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) => Align(
-          alignment: message.isUser
-              ? Alignment.centerRight
-              : Alignment.centerLeft,
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: message.isUser ? null : double.infinity,
+            width: isUser ? null : double.infinity,
             constraints: BoxConstraints(
-              maxWidth: constraints.maxWidth * (message.isUser ? .88 : 1),
+              maxWidth: constraints.maxWidth * (isUser ? .88 : 1),
             ),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: message.isUser
+              gradient: isUser
                   ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: colors.aiUserBubble,
                     )
                   : null,
-              color: message.isUser ? null : cs.surface,
+              color: isUser ? null : cs.surface,
               border: Border.all(color: cs.outlineVariant),
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(message.isUser ? 20 : 6),
-                topRight: Radius.circular(message.isUser ? 6 : 20),
+                topLeft: Radius.circular(isUser ? 20 : 6),
+                topRight: Radius.circular(isUser ? 6 : 20),
                 bottomLeft: const Radius.circular(20),
                 bottomRight: const Radius.circular(20),
               ),
@@ -67,123 +62,9 @@ class AssistantMessage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (message.isUser)
-                      Icon(
-                        Icons.person_outline_rounded,
-                        size: 17,
-                        color: cs.onSurfaceVariant,
-                      )
-                    else
-                      const AssistantSymbol(size: 23),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        // La pantalla visible no prueba la fuente de la respuesta.
-                        message.isUser ? 'Vos' : 'Asistente IA',
-                        style: context.textTheme.labelMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          height: 1.4,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                _MessageAuthor(isUser: isUser),
                 const SizedBox(height: 11),
-                if (message.isUser)
-                  SelectableText(message.text, style: text)
-                else
-                  MarkdownBody(
-                    data: message.text,
-                    selectable: true,
-                    fitContent: false,
-                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
-                        .copyWith(
-                          p: text,
-                          strong: const TextStyle(fontWeight: FontWeight.w700),
-                          h1: context.textTheme.titleLarge!.copyWith(
-                            color: text.color,
-                            height: 1.3,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.4,
-                          ),
-                          h2: context.textTheme.titleMedium!.copyWith(
-                            color: text.color,
-                            height: 1.35,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.3,
-                          ),
-                          h3: context.textTheme.bodyLarge!.copyWith(
-                            color: text.color,
-                            height: 1.4,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          h4: context.textTheme.bodyLarge!.copyWith(
-                            color: text.color,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          h5: text.copyWith(fontWeight: FontWeight.w700),
-                          h6: text.copyWith(fontWeight: FontWeight.w700),
-                          blockSpacing: 12,
-                          listIndent: 20,
-                          listBullet: text.copyWith(color: colors.ai.text),
-                          a: TextStyle(
-                            color: cs.primary,
-                            decoration: TextDecoration.underline,
-                          ),
-                          code: context.textTheme.bodySmall?.copyWith(
-                            height: 1.5,
-                            fontFamily: 'monospace',
-                            color: colors.ai.text,
-                          ),
-                          codeblockDecoration: BoxDecoration(
-                            color: colors.ai.background,
-                            border: Border.all(color: cs.outlineVariant),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          codeblockPadding: const EdgeInsets.all(12),
-                          blockquote: text.copyWith(color: cs.onSurfaceVariant),
-                          blockquoteDecoration: BoxDecoration(
-                            color: colors.ai.background,
-                            border: Border(
-                              left: BorderSide(color: colors.ai.text, width: 3),
-                            ),
-                          ),
-                          blockquotePadding: const EdgeInsets.all(12),
-                          tableBody: context.textTheme.bodySmall!.copyWith(
-                            color: text.color,
-                            height: 1.55,
-                          ),
-                          tableHead: context.textTheme.bodySmall!.copyWith(
-                            color: text.color,
-                            height: 1.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          // El renderer incorpora scroll horizontal con columnas fijas.
-                          tableColumnWidth: FixedColumnWidth(
-                            158 *
-                                (MediaQuery.textScalerOf(context).scale(14) /
-                                        14)
-                                    .clamp(1, 1.8),
-                          ),
-                          tableScrollbarThumbVisibility: true,
-                          tablePadding: const EdgeInsets.only(bottom: 12),
-                          tableCellsPadding: const EdgeInsets.all(10),
-                          tableHeadCellsDecoration: BoxDecoration(
-                            color: colors.ai.background,
-                          ),
-                          tableBorder: TableBorder.all(
-                            color: cs.outlineVariant,
-                            width: .7,
-                          ),
-                        ),
-                    // No descargar imágenes que pueda producir el modelo.
-                    imageBuilder: (uri, title, alt) =>
-                        Text(alt ?? 'Imagen', style: text),
-                  ),
+                _MessageBody(message),
               ],
             ),
           ),
@@ -193,7 +74,137 @@ class AssistantMessage extends StatelessWidget {
   }
 }
 
-/// Marca propia dibujada con Flutter: núcleo, destello y órbita.
+class _MessageAuthor extends StatelessWidget {
+  final bool isUser;
+
+  const _MessageAuthor({required this.isUser});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isUser)
+          Icon(
+            Icons.person_outline_rounded,
+            size: 17,
+            color: cs.onSurfaceVariant,
+          )
+        else
+          const AssistantSymbol(size: 23),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            // What is on screen does not prove where the answer came from.
+            isUser ? 'Vos' : 'Asistente IA',
+            style: context.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MessageBody extends StatelessWidget {
+  final ChatMessage message;
+
+  const _MessageBody(this.message);
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.textTheme.bodyMedium!.copyWith(
+      height: 1.65,
+      color: context.colors.intermediateText,
+    );
+    if (message.isUser) return SelectableText(message.text, style: text);
+    return MarkdownBody(
+      data: message.text,
+      selectable: true,
+      fitContent: false,
+      styleSheet: _markdownStyle(context, text),
+      // Images the model may produce are never downloaded.
+      imageBuilder: (uri, title, alt) => Text(alt ?? 'Imagen', style: text),
+    );
+  }
+}
+
+MarkdownStyleSheet _markdownStyle(BuildContext context, TextStyle text) {
+  final cs = context.colorScheme;
+  final colors = context.colors;
+  return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+    p: text,
+    strong: const TextStyle(fontWeight: FontWeight.w700),
+    h1: context.textTheme.titleLarge!.copyWith(
+      color: text.color,
+      height: 1.3,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -.4,
+    ),
+    h2: context.textTheme.titleMedium!.copyWith(
+      color: text.color,
+      height: 1.35,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -.3,
+    ),
+    h3: context.textTheme.bodyLarge!.copyWith(
+      color: text.color,
+      height: 1.4,
+      fontWeight: FontWeight.w700,
+    ),
+    h4: context.textTheme.bodyLarge!.copyWith(
+      color: text.color,
+      fontWeight: FontWeight.w700,
+    ),
+    h5: text.copyWith(fontWeight: FontWeight.w700),
+    h6: text.copyWith(fontWeight: FontWeight.w700),
+    blockSpacing: 12,
+    listIndent: 20,
+    listBullet: text.copyWith(color: colors.ai.text),
+    a: TextStyle(color: cs.primary, decoration: TextDecoration.underline),
+    code: context.textTheme.bodySmall?.copyWith(
+      height: 1.5,
+      fontFamily: 'monospace',
+      color: colors.ai.text,
+    ),
+    codeblockDecoration: BoxDecoration(
+      color: colors.ai.background,
+      border: Border.all(color: cs.outlineVariant),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    codeblockPadding: const EdgeInsets.all(12),
+    blockquote: text.copyWith(color: cs.onSurfaceVariant),
+    blockquoteDecoration: BoxDecoration(
+      color: colors.ai.background,
+      border: Border(left: BorderSide(color: colors.ai.text, width: 3)),
+    ),
+    blockquotePadding: const EdgeInsets.all(12),
+    tableBody: context.textTheme.bodySmall!.copyWith(
+      color: text.color,
+      height: 1.55,
+    ),
+    tableHead: context.textTheme.bodySmall!.copyWith(
+      color: text.color,
+      height: 1.5,
+      fontWeight: FontWeight.w700,
+    ),
+    // The renderer adds horizontal scrolling with fixed-width columns.
+    tableColumnWidth: FixedColumnWidth(
+      158 * (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1, 1.8),
+    ),
+    tableScrollbarThumbVisibility: true,
+    tablePadding: const EdgeInsets.only(bottom: 12),
+    tableCellsPadding: const EdgeInsets.all(10),
+    tableHeadCellsDecoration: BoxDecoration(color: colors.ai.background),
+    tableBorder: TableBorder.all(color: cs.outlineVariant, width: .7),
+  );
+}
+
+/// The assistant mark, drawn in Flutter: core, sparkle and orbit.
 class AssistantSymbol extends StatelessWidget {
   final double size;
   final bool halo;
@@ -238,7 +249,7 @@ class AssistantSymbol extends StatelessWidget {
 }
 
 class _AiCorePainter extends CustomPainter {
-  /// Color de la órbita y los destellos, que se dibujan sobre el gradiente.
+  /// Color of the orbit and sparkles, drawn over the gradient.
   final Color light;
 
   const _AiCorePainter(this.light);
