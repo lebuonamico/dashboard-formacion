@@ -6,8 +6,8 @@ import 'package:app_finnegans/features/dashboard/presentation/providers/dashboar
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:csv/csv.dart';
-import 'package:excel/excel.dart' as excel;
+import 'package:app_finnegans/features/imports/data/spreadsheet_reader.dart';
+import 'package:app_finnegans/features/imports/domain/import_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
@@ -248,7 +248,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fileType: 'finalizaciones',
             fileName: result.files.single.name,
             process: () async {
-              final rowsBySheet = _readExcel(result.files.single.bytes!);
+              final rowsBySheet = const SpreadsheetReader().readExcel(
+                result.files.single.bytes!,
+              );
               for (final rows in rowsBySheet.values) {
                 if (rows.length < 2) continue;
                 final headerIndex = _findLmsCertificationsRow(rows);
@@ -441,17 +443,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fileType: 'nomina',
             fileName: result.files.single.name,
             process: () async {
-              final extension = result.files.single.extension?.toLowerCase();
-              final rowsBySheet = extension == 'xlsx'
-                  ? _readExcel(result.files.single.bytes!)
-                  : {
-                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                          .convert(
-                            utf8
-                                .decode(result.files.single.bytes!)
-                                .replaceFirst('\ufeff', ''),
-                          ),
-                    };
+              final rowsBySheet = const SpreadsheetReader().read(
+                ImportFile(
+                  name: result.files.single.name,
+                  bytes: result.files.single.bytes!,
+                ),
+              );
               final employeesRepository = container.read(
                 employeesRepositoryProvider,
               );
@@ -723,17 +720,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fileType: 'cursos_lms',
             fileName: result.files.single.name,
             process: () async {
-              final extension = result.files.single.extension?.toLowerCase();
-              final rowsBySheet = extension == 'xlsx'
-                  ? _readExcel(result.files.single.bytes!)
-                  : {
-                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                          .convert(
-                            utf8
-                                .decode(result.files.single.bytes!)
-                                .replaceFirst('\ufeff', ''),
-                          ),
-                    };
+              final rowsBySheet = const SpreadsheetReader().read(
+                ImportFile(
+                  name: result.files.single.name,
+                  bytes: result.files.single.bytes!,
+                ),
+              );
               final repository = container.read(coursesRepositoryProvider);
               final validatedCourses = <String, String>{};
 
@@ -900,17 +892,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fileType: 'horas_crm',
             fileName: result.files.single.name,
             process: () async {
-              final extension = result.files.single.extension?.toLowerCase();
-              final rowsBySheet = extension == 'xlsx'
-                  ? _readExcel(result.files.single.bytes!)
-                  : {
-                      'CSV': const CsvToListConverter(shouldParseNumbers: false)
-                          .convert(
-                            utf8
-                                .decode(result.files.single.bytes!)
-                                .replaceFirst('\ufeff', ''),
-                          ),
-                    };
+              final rowsBySheet = const SpreadsheetReader().read(
+                ImportFile(
+                  name: result.files.single.name,
+                  bytes: result.files.single.bytes!,
+                ),
+              );
               final repository = container.read(
                 crmTimeEntriesRepositoryProvider,
               );
@@ -1035,30 +1022,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       _finishImport('horas');
     }
-  }
-
-  Map<String, List<List<dynamic>>> _readExcel(List<int> bytes) {
-    final workbook = excel.Excel.decodeBytes(bytes);
-    return {
-      for (final entry in workbook.tables.entries)
-        entry.key: entry.value.rows
-            .map((row) => row.map((cell) => _cellValue(cell?.value)).toList())
-            .toList(),
-    };
-  }
-
-  String _cellValue(excel.CellValue? value) {
-    if (value == null) return '';
-    if (value is excel.TextCellValue) return _textSpan(value.value);
-    if (value is excel.IntCellValue) return value.value.toString();
-    if (value is excel.DoubleCellValue) return value.value.toString();
-    if (value is excel.BoolCellValue) return value.value.toString();
-    return value.toString();
-  }
-
-  String _textSpan(excel.TextSpan span) {
-    return (span.text ?? '') +
-        (span.children ?? const <excel.TextSpan>[]).map(_textSpan).join();
   }
 
   List<T> _replaceById<T>(List<T> current, T newValue, String Function(T) id) {
