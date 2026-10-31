@@ -1,18 +1,20 @@
-import 'package:app_finnegans/core/widgets/error_data_state.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
-import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
-import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
-import 'package:app_finnegans/core/widgets/result_pagination.dart';
-import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
+import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/paginated_table.dart';
+import 'package:app_finnegans/core/widgets/screen_padding.dart';
+import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TimeEntriesScreen extends ConsumerWidget {
   const TimeEntriesScreen({super.key});
@@ -25,8 +27,6 @@ class TimeEntriesScreen extends ConsumerWidget {
       body: Column(
         children: [
           const AppTopBar(title: 'Carga de horas CRM'),
-
-          // Contenido
           Expanded(
             child: Padding(
               padding: screenPadding,
@@ -46,33 +46,17 @@ class TimeEntriesScreen extends ConsumerWidget {
                             ref.invalidate(joinedTimeEntriesProvider),
                       ),
                       data: (items) => FadeIn(
-                        child: (() {
-                          if (items.isEmpty) {
-                            final hasTimeEntries =
-                                ref
-                                    .watch(crmTimeEntriesProvider)
-                                    .value
-                                    ?.isNotEmpty ??
-                                false;
-                            return SingleChildScrollView(
-                              child: hasTimeEntries
-                                  ? const EmptyDataState(
-                                      icon: Icons.search_off_outlined,
-                                      title:
-                                          'Ninguna carga de horas coincide con los filtros.',
-                                      message:
-                                          'Probá con otra búsqueda, período o área.',
-                                    )
-                                  : const EmptyDataState(
-                                      icon: Icons.schedule_outlined,
-                                      title: 'No hay horas CRM cargadas.',
-                                      message:
-                                          'Importá el reporte de horas del CRM.',
-                                    ),
-                            );
-                          }
-                          return _PaginatedTimeEntriesTable(timeEntries: items);
-                        })(),
+                        child: items.isEmpty
+                            ? const _NoTimeEntries()
+                            : PaginatedTable(
+                                items: items,
+                                rowHeight: _TimeEntriesTable.rowHeight,
+                                headerHeight: _TimeEntriesTable.headerHeight,
+                                minimumWidth: 1000,
+                                resultsLabel: 'registros',
+                                icon: Icons.schedule_outlined,
+                                tableBuilder: _TimeEntriesTable.new,
+                              ),
                       ),
                     ),
                   ),
@@ -82,6 +66,30 @@ class TimeEntriesScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tells "nothing imported" apart from "nothing matches the filters".
+class _NoTimeEntries extends ConsumerWidget {
+  const _NoTimeEntries();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasTimeEntries =
+        ref.watch(crmTimeEntriesProvider).value?.isNotEmpty ?? false;
+    return SingleChildScrollView(
+      child: hasTimeEntries
+          ? const EmptyDataState(
+              icon: Icons.search_off_outlined,
+              title: 'Ninguna carga de horas coincide con los filtros.',
+              message: 'Probá con otra búsqueda, período o área.',
+            )
+          : const EmptyDataState(
+              icon: Icons.schedule_outlined,
+              title: 'No hay horas CRM cargadas.',
+              message: 'Importá el reporte de horas del CRM.',
+            ),
     );
   }
 }
@@ -110,123 +118,26 @@ class _BarFiltersCrm extends ConsumerWidget {
   }
 }
 
-/// Tabla de cargas de horas, de a una página por vez y a todo el ancho.
-class _PaginatedTimeEntriesTable extends StatefulWidget {
+class _TimeEntriesTable extends StatelessWidget {
+  /// Two-line rows: employee and ID, area and team.
+  static const rowHeight = 56.0;
+  static const headerHeight = 44.0;
+
   final List<CrmTimeEntryRecord> timeEntries;
 
-  const _PaginatedTimeEntriesTable({required this.timeEntries});
-
-  @override
-  State<_PaginatedTimeEntriesTable> createState() =>
-      _PaginatedTimeEntriesTableState();
-}
-
-class _PaginatedTimeEntriesTableState
-    extends State<_PaginatedTimeEntriesTable> {
-  // Filas de dos líneas: colaborador + legajo y área + equipo.
-  static const _rowHeight = 56.0;
-  static const _headerHeight = 44.0;
-  static const _paginatorHeight = 60.0;
-  static const _spacing = 12.0;
-
-  /// Debajo de este ancho las columnas se aprietan demasiado: aparece el
-  /// scroll horizontal en lugar de cortar todos los textos.
-  static const _minimumWidth = 1000.0;
-
-  /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimumPerPage = 5;
-
-  int _currentPage = 0;
-
-  @override
-  void didUpdateWidget(covariant _PaginatedTimeEntriesTable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Al cambiar un filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.timeEntries != widget.timeEntries) {
-      _currentPage = 0;
-    }
-  }
+  const _TimeEntriesTable(this.timeEntries);
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final total = widget.timeEntries.length;
-
-        // Cuántas filas entran en el alto disponible, para que la tabla llene
-        // la página sin dejar un hueco antes del paginador.
-        final heightForTable =
-            constraints.maxHeight - _paginatorHeight - _spacing;
-        final perPage = ((heightForTable - _headerHeight) / _rowHeight)
-            .floor()
-            .clamp(
-              _minimumPerPage,
-              total < _minimumPerPage ? _minimumPerPage : total,
-            );
-
-        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
-        final safePage = _currentPage.clamp(0, totalPages - 1);
-        final start = safePage * perPage;
-        final calculatedEnd = start + perPage;
-        final end = calculatedEnd > total ? total : calculatedEnd;
-        final visible = widget.timeEntries.sublist(start, end);
-
-        // Ancho fijo (no un mínimo): las columnas flex necesitan un ancho
-        // acotado para repartirse, si no colapsan dentro del scroll.
-        final width = constraints.maxWidth < _minimumWidth
-            ? _minimumWidth
-            : constraints.maxWidth;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: width,
-                  // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _table(visible)),
-                ),
-              ),
-            ),
-            if (totalPages > 1) ...[
-              const SizedBox(height: _spacing),
-              ResultsPagination(
-                currentPage: safePage,
-                pageCount: totalPages,
-                from: start + 1,
-                until: end,
-                totalResults: total,
-                resultsLabel: 'registros',
-                icon: Icons.schedule_outlined,
-                onPrevious: safePage > 0
-                    ? () => setState(() => _currentPage = safePage - 1)
-                    : null,
-                onNext: safePage < totalPages - 1
-                    ? () => setState(() => _currentPage = safePage + 1)
-                    : null,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _table(List<CrmTimeEntryRecord> visible) {
     final cs = context.colorScheme;
     final secondary = context.textTheme.labelMedium!.copyWith(
       color: cs.onSurfaceVariant,
     );
-    // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       columnSpacing: 24,
-      headingRowHeight: _headerHeight,
-      dataRowMinHeight: _rowHeight,
-      dataRowMaxHeight: _rowHeight,
-      // Proporciones del ancho: el curso y el colaborador son lo que más se
-      // lee, la fecha y el ID son datos cortos.
+      headingRowHeight: headerHeight,
+      dataRowMinHeight: rowHeight,
+      dataRowMaxHeight: rowHeight,
       columns: const [
         DataColumn(columnWidth: FlexColumnWidth(1.2), label: Text('Fecha')),
         DataColumn(columnWidth: FlexColumnWidth(3), label: Text('Colaborador')),
@@ -243,29 +154,29 @@ class _PaginatedTimeEntriesTableState
         ),
       ],
       rows: [
-        for (final vm in visible)
+        for (final record in timeEntries)
           DataRow(
             cells: [
               DataCell(
                 Text(
-                  _formatDate(vm.timeEntry.date),
+                  formatDate(record.timeEntry.date),
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.colors.intermediateText,
                   ),
                 ),
               ),
-              DataCell(_employeeCell(vm)),
-              DataCell(_areaTeamCell(vm)),
+              DataCell(_EmployeeCell(record)),
+              DataCell(_AreaTeamCell(record)),
               DataCell(
-                vm.employee == null
+                record.employee == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : SeniorityChip(seniority: vm.employee!.seniority),
+                    : SeniorityChip(seniority: record.employee!.seniority),
               ),
-              DataCell(_courseCell(vm)),
-              DataCell(_hoursCell(vm)),
+              DataCell(_CourseCell(record)),
+              DataCell(_HoursCell(record)),
               DataCell(
                 Text(
-                  vm.timeEntry.id,
+                  record.timeEntry.id,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: secondary,
@@ -276,11 +187,18 @@ class _PaginatedTimeEntriesTableState
       ],
     );
   }
+}
 
-  Widget _employeeCell(CrmTimeEntryRecord vm) {
+class _EmployeeCell extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _EmployeeCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final emp = vm.employee;
-    final employeeId = vm.timeEntry.employeeId;
+    final employee = record.employee;
+    final employeeId = record.timeEntry.employeeId;
 
     return Row(
       children: [
@@ -288,9 +206,9 @@ class _PaginatedTimeEntriesTableState
           radius: 14,
           backgroundColor: cs.outlineVariant,
           child: Text(
-            emp == null || emp.firstName.isEmpty
+            employee == null || employee.firstName.isEmpty
                 ? '?'
-                : emp.firstName.substring(0, 1),
+                : employee.firstName.substring(0, 1),
             style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
@@ -304,9 +222,9 @@ class _PaginatedTimeEntriesTableState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                emp == null
+                employee == null
                     ? 'Legajo $employeeId'
-                    : '${emp.firstName} ${emp.lastName}',
+                    : '${employee.firstName} ${employee.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textTheme.bodyMedium?.copyWith(
@@ -315,11 +233,11 @@ class _PaginatedTimeEntriesTableState
                 ),
               ),
               Text(
-                emp == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
+                employee == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textTheme.labelMedium?.copyWith(
-                  color: emp == null
+                  color: employee == null
                       ? context.colors.warning.text
                       : cs.onSurfaceVariant,
                 ),
@@ -330,20 +248,26 @@ class _PaginatedTimeEntriesTableState
       ],
     );
   }
+}
 
-  Widget _areaTeamCell(CrmTimeEntryRecord vm) {
+class _AreaTeamCell extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _AreaTeamCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final emp = vm.employee;
-    if (emp == null) {
+    final employee = record.employee;
+    if (employee == null) {
       return Text('-', style: TextStyle(color: cs.onSurfaceVariant));
     }
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _showData(emp.area),
+          orDash(employee.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.textTheme.bodySmall?.copyWith(
@@ -351,7 +275,7 @@ class _PaginatedTimeEntriesTableState
           ),
         ),
         Text(
-          _showData(emp.team),
+          orDash(employee.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.textTheme.labelMedium?.copyWith(
@@ -361,12 +285,16 @@ class _PaginatedTimeEntriesTableState
       ],
     );
   }
+}
 
-  Widget _courseCell(CrmTimeEntryRecord vm) {
-    final name = vm.course?.name ?? vm.timeEntry.courseName;
+class _CourseCell extends StatelessWidget {
+  final CrmTimeEntryRecord record;
 
-    // El nombre se corta con puntos suspensivos; el tooltip muestra el nombre
-    // completo.
+  const _CourseCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final name = record.course?.name ?? record.timeEntry.courseName;
     return Tooltip(
       message: name,
       child: Text(
@@ -380,11 +308,16 @@ class _PaginatedTimeEntriesTableState
       ),
     );
   }
+}
 
-  Widget _hoursCell(CrmTimeEntryRecord vm) {
-    final timeEntry = vm.timeEntry;
+class _HoursCell extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _HoursCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
     final success = context.colors.success;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -392,7 +325,8 @@ class _PaginatedTimeEntriesTableState
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        '${timeEntry.hours.toStringAsFixed(2)} hs${vm.isTaught ? ' (dictadas)' : ' (tomadas)'}',
+        '${record.timeEntry.hours.toStringAsFixed(2)} hs'
+        '${record.isTaught ? ' (dictadas)' : ' (tomadas)'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: context.textTheme.labelMedium?.copyWith(
@@ -402,12 +336,4 @@ class _PaginatedTimeEntriesTableState
       ),
     );
   }
-
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
-  String _showData(String value) => value.trim().isEmpty ? '-' : value;
 }

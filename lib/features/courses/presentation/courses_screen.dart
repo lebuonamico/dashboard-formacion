@@ -1,18 +1,19 @@
-import 'package:app_finnegans/core/widgets/error_data_state.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
-import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
-import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
-import 'package:app_finnegans/core/widgets/result_pagination.dart';
-import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
+import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/paginated_table.dart';
+import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/courses/domain/course_stats.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CoursesScreen extends ConsumerWidget {
   const CoursesScreen({super.key});
@@ -25,8 +26,6 @@ class CoursesScreen extends ConsumerWidget {
       body: Column(
         children: [
           const AppTopBar(title: 'Catálogo de cursos y formaciones'),
-
-          // Contenido
           Expanded(
             child: Padding(
               padding: screenPadding,
@@ -44,31 +43,17 @@ class CoursesScreen extends ConsumerWidget {
                         error: err,
                         onRetry: () => ref.invalidate(courseStatsProvider),
                       ),
-                      data: (coursesList) => FadeIn(
-                        child: (() {
-                          if (coursesList.isEmpty) {
-                            final hasCourses =
-                                ref.watch(coursesProvider).value?.isNotEmpty ??
-                                false;
-                            return SingleChildScrollView(
-                              child: hasCourses
-                                  ? const EmptyDataState(
-                                      icon: Icons.search_off_outlined,
-                                      title:
-                                          'No se encontraron cursos con los filtros aplicados.',
-                                      message:
-                                          'Probá con otra búsqueda o tipo de curso.',
-                                    )
-                                  : const EmptyDataState(
-                                      icon: Icons.menu_book_outlined,
-                                      title: 'No hay cursos cargados.',
-                                      message:
-                                          'Importá el catálogo de cursos o sincronizalo desde Moodle.',
-                                    ),
-                            );
-                          }
-                          return _PaginatedCoursesTable(courses: coursesList);
-                        })(),
+                      data: (courses) => FadeIn(
+                        child: courses.isEmpty
+                            ? const _NoCourses()
+                            : PaginatedTable(
+                                items: courses,
+                                rowHeight: _CoursesTable.rowHeight,
+                                headerHeight: _CoursesTable.headerHeight,
+                                resultsLabel: 'cursos',
+                                icon: Icons.school_outlined,
+                                tableBuilder: _CoursesTable.new,
+                              ),
                       ),
                     ),
                   ),
@@ -78,6 +63,30 @@ class CoursesScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tells "nothing imported" apart from "nothing matches the filters".
+class _NoCourses extends ConsumerWidget {
+  const _NoCourses();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasCourses = ref.watch(coursesProvider).value?.isNotEmpty ?? false;
+    return SingleChildScrollView(
+      child: hasCourses
+          ? const EmptyDataState(
+              icon: Icons.search_off_outlined,
+              title: 'No se encontraron cursos con los filtros aplicados.',
+              message: 'Probá con otra búsqueda o tipo de curso.',
+            )
+          : const EmptyDataState(
+              icon: Icons.menu_book_outlined,
+              title: 'No hay cursos cargados.',
+              message:
+                  'Importá el catálogo de cursos o sincronizalo desde Moodle.',
+            ),
     );
   }
 }
@@ -109,111 +118,22 @@ class _CoursesFilterBar extends ConsumerWidget {
   }
 }
 
-/// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
-class _PaginatedCoursesTable extends StatefulWidget {
+class _CoursesTable extends StatelessWidget {
+  static const rowHeight = 44.0;
+  static const headerHeight = 44.0;
+
   final List<CourseStats> courses;
 
-  const _PaginatedCoursesTable({required this.courses});
-
-  @override
-  State<_PaginatedCoursesTable> createState() => _PaginatedCoursesTableState();
-}
-
-class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
-  static const _rowHeight = 44.0;
-  static const _headerHeight = 44.0;
-  static const _paginatorHeight = 60.0;
-  static const _spacing = 12.0;
-
-  /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimumPerPage = 5;
-
-  int _currentPage = 0;
-
-  @override
-  void didUpdateWidget(covariant _PaginatedCoursesTable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Al cambiar el filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.courses != widget.courses) {
-      _currentPage = 0;
-    }
-  }
+  const _CoursesTable(this.courses);
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final total = widget.courses.length;
-
-        // Cuántas filas entran en el alto que nos dieron. Así la tabla llena la
-        // página y no queda un hueco entre la última fila y el paginador.
-        final heightForTable =
-            constraints.maxHeight - _paginatorHeight - _spacing;
-        final coursesPerPage = ((heightForTable - _headerHeight) / _rowHeight)
-            .floor()
-            .clamp(
-              _minimumPerPage,
-              // Nunca más filas que cursos hay.
-              total < _minimumPerPage ? _minimumPerPage : total,
-            );
-
-        final totalPages = total == 0
-            ? 1
-            : (total + coursesPerPage - 1) ~/ coursesPerPage;
-        final safePage = _currentPage.clamp(0, totalPages - 1);
-        final start = safePage * coursesPerPage;
-        final calculatedEnd = start + coursesPerPage;
-        final end = calculatedEnd > total ? total : calculatedEnd;
-        final visible = widget.courses.sublist(start, end);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sin recuadro: la tabla se dibuja directo sobre la página y ocupa
-            // todo el ancho disponible.
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _table(visible)),
-                ),
-              ),
-            ),
-            if (totalPages > 1) ...[
-              const SizedBox(height: _spacing),
-              ResultsPagination(
-                currentPage: safePage,
-                pageCount: totalPages,
-                from: start + 1,
-                until: end,
-                totalResults: total,
-                resultsLabel: 'cursos',
-                icon: Icons.school_outlined,
-                onPrevious: safePage > 0
-                    ? () => setState(() => _currentPage = safePage - 1)
-                    : null,
-                onNext: safePage < totalPages - 1
-                    ? () => setState(() => _currentPage = safePage + 1)
-                    : null,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _table(List<CourseStats> visible) {
     final cs = context.colorScheme;
-    // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       columnSpacing: 24,
-      // Filas más compactas: entran más cursos sin que se vea apretado.
-      headingRowHeight: _headerHeight,
-      dataRowMinHeight: _rowHeight,
-      dataRowMaxHeight: _rowHeight,
+      headingRowHeight: headerHeight,
+      dataRowMinHeight: rowHeight,
+      dataRowMaxHeight: rowHeight,
       columns: const [
         DataColumn(label: Text('ID')),
         DataColumn(label: Text('Nombre del curso')),
@@ -243,14 +163,12 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
         ),
       ],
       rows: [
-        for (final vm in visible)
+        for (final stats in courses)
           DataRow(
             cells: [
-              // El ID es dato secundario: va en gris para que no le compita al
-              // nombre del curso.
               DataCell(
                 Text(
-                  vm.course.id,
+                  stats.course.id,
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: cs.onSurfaceVariant,
@@ -259,7 +177,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
               ),
               DataCell(
                 Text(
-                  vm.course.name,
+                  stats.course.name,
                   style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
@@ -267,40 +185,51 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
                 ),
               ),
               DataCell(
-                vm.lmsCategory == null
+                stats.lmsCategory == null
                     ? const Text('-')
-                    : CourseCategoryChip(type: vm.lmsCategory!),
+                    : CourseCategoryChip(type: stats.lmsCategory!),
               ),
               DataCell(
                 Text(
-                  '${vm.course.workloadHours.toStringAsFixed(0)} hs',
+                  '${stats.course.workloadHours.toStringAsFixed(0)} hs',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
                 ),
               ),
-              DataCell(_metricCell('${vm.people}', vm.people == 0)),
+              DataCell(_MetricCell('${stats.people}', stats.people == 0)),
               DataCell(
-                _metricCell('${_hoursFormat(vm.crmHours)} hs', vm.people == 0),
-              ),
-              DataCell(
-                _metricCell(
-                  vm.averageHoursPerPerson == null
-                      ? '—'
-                      : '${_hoursFormat(vm.averageHoursPerPerson!)} hs',
-                  vm.averageHoursPerPerson == null,
+                _MetricCell(
+                  '${formatHours(stats.crmHours)} hs',
+                  stats.people == 0,
                 ),
               ),
-              DataCell(_metricCell('${vm.completed}', vm.completed == 0)),
+              DataCell(
+                _MetricCell(
+                  stats.averageHoursPerPerson == null
+                      ? '—'
+                      : '${formatHours(stats.averageHoursPerPerson!)} hs',
+                  stats.averageHoursPerPerson == null,
+                ),
+              ),
+              DataCell(_MetricCell('${stats.completed}', stats.completed == 0)),
             ],
           ),
       ],
     );
   }
+}
 
-  /// Los ceros van en gris: así se ve de un vistazo qué cursos no tomó nadie.
-  Widget _metricCell(String text, bool empty) {
+/// Zeros go in grey, so courses nobody took stand out.
+class _MetricCell extends StatelessWidget {
+  final String text;
+  final bool empty;
+
+  const _MetricCell(this.text, this.empty);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
     return Text(
       text,
@@ -310,9 +239,4 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
       ),
     );
   }
-
-  /// Sin decimales si son horas enteras, con uno si no.
-  static String _hoursFormat(double hours) => hours == hours.roundToDouble()
-      ? hours.toStringAsFixed(0)
-      : hours.toStringAsFixed(1);
 }

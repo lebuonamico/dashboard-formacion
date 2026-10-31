@@ -1,21 +1,23 @@
-import 'package:app_finnegans/core/widgets/error_data_state.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
-import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
-import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
-import 'package:app_finnegans/core/widgets/kpi_grid.dart';
-import 'package:app_finnegans/core/widgets/result_pagination.dart';
-import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
+import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
+import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
+import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/kpi_grid.dart';
+import 'package:app_finnegans/core/widgets/paginated_table.dart';
+import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 const _courseOutsideCatalogNotice =
     'El curso no está en el catálogo: esta finalización no acredita horas.';
@@ -33,8 +35,6 @@ class CertificationsScreen extends ConsumerWidget {
       body: Column(
         children: [
           const AppTopBar(title: 'Certificaciones LMS'),
-
-          // Contenido
           Expanded(
             child: Padding(
               padding: screenPadding,
@@ -46,52 +46,16 @@ class CertificationsScreen extends ConsumerWidget {
                   onRetry: () => ref.invalidate(joinedCertificationsProvider),
                 ),
                 data: (all) => FadeIn(
-                  child: (() {
-                    if (all.isEmpty) {
-                      return const SingleChildScrollView(
-                        child: EmptyDataState(
-                          icon: Icons.menu_book_outlined,
-                          title: 'No hay certificaciones LMS cargadas.',
-                          message:
-                              'Importá el Excel de finalizaciones del LMS.',
-                        ),
-                      );
-                    }
-
-                    final filtered =
-                        ref.watch(filteredCertificationsProvider).value ??
-                        const <CertificationRecord>[];
-                    final kpis = ref.watch(certificationKpisProvider).value;
-                    final totalPayroll =
-                        ref.watch(employeesProvider).value?.length ?? 0;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (kpis != null) ...[
-                          KpiGrid(items: _kpis(context, kpis, totalPayroll)),
-                          const SizedBox(height: 20),
-                        ],
-                        const _CertificationsFilterBar(),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: filtered.isEmpty
-                              ? const SingleChildScrollView(
-                                  child: EmptyDataState(
-                                    icon: Icons.search_off_outlined,
-                                    title:
-                                        'Ninguna certificación coincide con los filtros.',
-                                    message:
-                                        'Probá con otra búsqueda o estado.',
-                                  ),
-                                )
-                              : _PaginatedCertificationsTable(
-                                  certifications: filtered,
-                                ),
-                        ),
-                      ],
-                    );
-                  })(),
+                  child: all.isEmpty
+                      ? const SingleChildScrollView(
+                          child: EmptyDataState(
+                            icon: Icons.menu_book_outlined,
+                            title: 'No hay certificaciones LMS cargadas.',
+                            message:
+                                'Importá el Excel de finalizaciones del LMS.',
+                          ),
+                        )
+                      : const _CertificationsContent(),
                 ),
               ),
             ),
@@ -100,8 +64,61 @@ class CertificationsScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  /// Los KPIs resumen todo lo importado, no lo que dejan ver los filtros.
+class _CertificationsContent extends ConsumerWidget {
+  const _CertificationsContent();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kpis = ref.watch(certificationKpisProvider).value;
+    final totalPayroll = ref.watch(employeesProvider).value?.length ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (kpis != null) ...[
+          KpiGrid(items: _kpis(context, kpis, totalPayroll)),
+          const SizedBox(height: 20),
+        ],
+        const _CertificationsFilterBar(),
+        const SizedBox(height: 20),
+        Expanded(
+          child: ref
+              .watch(filteredCertificationsProvider)
+              .when(
+                skipLoadingOnReload: true,
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => ErrorDataState(
+                  title: 'No pudimos filtrar las certificaciones LMS',
+                  error: error,
+                  onRetry: () => ref.invalidate(filteredCertificationsProvider),
+                ),
+                data: (filtered) => filtered.isEmpty
+                    ? const SingleChildScrollView(
+                        child: EmptyDataState(
+                          icon: Icons.search_off_outlined,
+                          title:
+                              'Ninguna certificación coincide con los filtros.',
+                          message: 'Probá con otra búsqueda o estado.',
+                        ),
+                      )
+                    : PaginatedTable(
+                        items: filtered,
+                        rowHeight: _CertificationsTable.rowHeight,
+                        headerHeight: _CertificationsTable.headerHeight,
+                        minimumWidth: 1000,
+                        resultsLabel: 'certificaciones',
+                        icon: Icons.workspace_premium_outlined,
+                        tableBuilder: _CertificationsTable.new,
+                      ),
+              ),
+        ),
+      ],
+    );
+  }
+
+  /// The KPIs summarize everything imported, not what the filters show.
   List<KpiData> _kpis(
     BuildContext context,
     CertificationKpis kpis,
@@ -170,121 +187,24 @@ class _CertificationsFilterBar extends ConsumerWidget {
   );
 }
 
-/// Tabla de certificaciones, de a una página por vez y a todo el ancho.
-class _PaginatedCertificationsTable extends StatefulWidget {
+class _CertificationsTable extends StatelessWidget {
+  /// Two-line rows: employee and ID, area and team.
+  static const rowHeight = 56.0;
+  static const headerHeight = 44.0;
+
   final List<CertificationRecord> certifications;
 
-  const _PaginatedCertificationsTable({required this.certifications});
-
-  @override
-  State<_PaginatedCertificationsTable> createState() =>
-      _PaginatedCertificationsTableState();
-}
-
-class _PaginatedCertificationsTableState
-    extends State<_PaginatedCertificationsTable> {
-  // Filas de dos líneas: colaborador + legajo y área + equipo.
-  static const _rowHeight = 56.0;
-  static const _headerHeight = 44.0;
-  static const _paginatorHeight = 60.0;
-  static const _spacing = 12.0;
-
-  /// Debajo de este ancho las columnas se aprietan demasiado: aparece el
-  /// scroll horizontal en lugar de cortar todos los textos.
-  static const _minimumWidth = 1000.0;
-
-  /// Mínimo razonable si la ventana queda muy baja.
-  static const _minimumPerPage = 5;
-
-  int _currentPage = 0;
-
-  @override
-  void didUpdateWidget(covariant _PaginatedCertificationsTable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Al cambiar el filtro o la búsqueda, volver a la primera página.
-    if (oldWidget.certifications != widget.certifications) {
-      _currentPage = 0;
-    }
-  }
+  const _CertificationsTable(this.certifications);
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final total = widget.certifications.length;
-
-        // Cuántas filas entran en el alto disponible, para que la tabla llene
-        // la página sin dejar un hueco antes del paginador.
-        final heightForTable =
-            constraints.maxHeight - _paginatorHeight - _spacing;
-        final perPage = ((heightForTable - _headerHeight) / _rowHeight)
-            .floor()
-            .clamp(
-              _minimumPerPage,
-              total < _minimumPerPage ? _minimumPerPage : total,
-            );
-
-        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
-        final safePage = _currentPage.clamp(0, totalPages - 1);
-        final start = safePage * perPage;
-        final calculatedEnd = start + perPage;
-        final end = calculatedEnd > total ? total : calculatedEnd;
-        final visible = widget.certifications.sublist(start, end);
-
-        // Ancho fijo (no un mínimo): las columnas flex necesitan un ancho
-        // acotado para repartirse, si no colapsan dentro del scroll.
-        final width = constraints.maxWidth < _minimumWidth
-            ? _minimumWidth
-            : constraints.maxWidth;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: width,
-                  // Red de seguridad por si algo no entra.
-                  child: SingleChildScrollView(child: _table(visible)),
-                ),
-              ),
-            ),
-            if (totalPages > 1) ...[
-              const SizedBox(height: _spacing),
-              ResultsPagination(
-                currentPage: safePage,
-                pageCount: totalPages,
-                from: start + 1,
-                until: end,
-                totalResults: total,
-                resultsLabel: 'certificaciones',
-                icon: Icons.workspace_premium_outlined,
-                onPrevious: safePage > 0
-                    ? () => setState(() => _currentPage = safePage - 1)
-                    : null,
-                onNext: safePage < totalPages - 1
-                    ? () => setState(() => _currentPage = safePage + 1)
-                    : null,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _table(List<CertificationRecord> visible) {
     final cs = context.colorScheme;
-    // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       showCheckboxColumn: false,
       columnSpacing: 24,
-      headingRowHeight: _headerHeight,
-      dataRowMinHeight: _rowHeight,
-      dataRowMaxHeight: _rowHeight,
-      // Proporciones del ancho: el curso y el colaborador son lo que más se
-      // lee, la carga horaria y la fecha son datos cortos.
+      headingRowHeight: headerHeight,
+      dataRowMinHeight: rowHeight,
+      dataRowMaxHeight: rowHeight,
       columns: const [
         DataColumn(columnWidth: FlexColumnWidth(3), label: Text('Colaborador')),
         DataColumn(
@@ -304,56 +224,65 @@ class _PaginatedCertificationsTableState
         DataColumn(columnWidth: FlexColumnWidth(1.5), label: Text('Estado')),
       ],
       rows: [
-        for (final vm in visible)
+        for (final record in certifications)
           DataRow(
-            // Abre el perfil del colaborador. Un legajo fuera de la nómina no
-            // tiene perfil: la fila no responde al click.
-            onSelectChanged: vm.employeeIdOutsidePayroll
+            // An employee ID outside the payroll has no profile to open.
+            onSelectChanged: record.employeeIdOutsidePayroll
                 ? null
                 : (_) => context.push(
-                    '/empleados/${Uri.encodeComponent(vm.certification.employeeId)}'
+                    '/empleados/${Uri.encodeComponent(record.certification.employeeId)}'
                     '?origen=certificaciones',
                   ),
             cells: [
-              DataCell(_employeeCell(vm)),
-              DataCell(_areaTeamCell(vm)),
-              DataCell(_courseCell(vm)),
+              DataCell(_EmployeeCell(record)),
+              DataCell(_AreaTeamCell(record)),
+              DataCell(_CourseCell(record)),
               DataCell(
-                vm.lmsCategory == null
+                record.lmsCategory == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : CourseCategoryChip(type: vm.lmsCategory!),
+                    : CourseCategoryChip(type: record.lmsCategory!),
               ),
               DataCell(
                 Text(
-                  vm.course == null
+                  record.course == null
                       ? '-'
-                      : '${vm.course!.workloadHours.toStringAsFixed(0)} hs',
+                      : '${record.course!.workloadHours.toStringAsFixed(0)} hs',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: vm.course == null
+                    color: record.course == null
                         ? cs.onSurfaceVariant
                         : cs.onSurface,
                   ),
                 ),
               ),
-              DataCell(_dateCell(vm.certification.completedAt)),
-              DataCell(_status(vm.certification.isCompleted)),
+              DataCell(_DateCell(record.certification.completedAt)),
+              DataCell(
+                ColorLabel(
+                  text: record.certification.isCompleted
+                      ? 'Finalizado'
+                      : 'Pendiente',
+                  colors: record.certification.isCompleted
+                      ? context.colors.success
+                      : context.colors.warning,
+                ),
+              ),
             ],
           ),
       ],
     );
   }
+}
 
-  /// Estado con los colores del semáforo: verde finalizado, ámbar pendiente.
-  Widget _status(bool completed) => ColorLabel(
-    text: completed ? 'Finalizado' : 'Pendiente',
-    colors: completed ? context.colors.success : context.colors.warning,
-  );
+class _EmployeeCell extends StatelessWidget {
+  final CertificationRecord record;
 
-  Widget _employeeCell(CertificationRecord vm) {
+  const _EmployeeCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final emp = vm.employee;
-    final employeeId = vm.certification.employeeId;
+    final employee = record.employee;
+    final employeeId = record.certification.employeeId;
 
     return Row(
       children: [
@@ -361,9 +290,9 @@ class _PaginatedCertificationsTableState
           radius: 14,
           backgroundColor: cs.outlineVariant,
           child: Text(
-            emp == null || emp.firstName.isEmpty
+            employee == null || employee.firstName.isEmpty
                 ? '?'
-                : emp.firstName.substring(0, 1),
+                : employee.firstName.substring(0, 1),
             style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
@@ -371,17 +300,17 @@ class _PaginatedCertificationsTableState
           ),
         ),
         const SizedBox(width: 10),
-        // Flexible y no Expanded: el aviso queda pegado al texto, igual que en
-        // la columna Curso, en lugar de irse al borde de la columna.
+        // Flexible, not Expanded: keeps the notice next to the text, as in the
+        // course column, instead of at the edge of the column.
         Flexible(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                emp == null
+                employee == null
                     ? 'Legajo $employeeId'
-                    : '${emp.firstName} ${emp.lastName}',
+                    : '${employee.firstName} ${employee.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textTheme.bodyMedium?.copyWith(
@@ -390,11 +319,11 @@ class _PaginatedCertificationsTableState
                 ),
               ),
               Text(
-                emp == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
+                employee == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textTheme.labelMedium?.copyWith(
-                  color: emp == null
+                  color: employee == null
                       ? context.colors.warning.text
                       : cs.onSurfaceVariant,
                 ),
@@ -402,25 +331,31 @@ class _PaginatedCertificationsTableState
             ],
           ),
         ),
-        if (vm.employeeIdOutsidePayroll)
+        if (record.employeeIdOutsidePayroll)
           const _Notice(_employeeOutsidePayrollNotice),
       ],
     );
   }
+}
 
-  Widget _areaTeamCell(CertificationRecord vm) {
+class _AreaTeamCell extends StatelessWidget {
+  final CertificationRecord record;
+
+  const _AreaTeamCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final emp = vm.employee;
-    if (emp == null) {
+    final employee = record.employee;
+    if (employee == null) {
       return Text('-', style: TextStyle(color: cs.onSurfaceVariant));
     }
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _showData(emp.area),
+          orDash(employee.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.textTheme.bodySmall?.copyWith(
@@ -428,7 +363,7 @@ class _PaginatedCertificationsTableState
           ),
         ),
         Text(
-          _showData(emp.team),
+          orDash(employee.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.textTheme.labelMedium?.copyWith(
@@ -438,15 +373,19 @@ class _PaginatedCertificationsTableState
       ],
     );
   }
+}
 
-  Widget _courseCell(CertificationRecord vm) {
-    final name = vm.course?.name ?? vm.certification.courseName;
+class _CourseCell extends StatelessWidget {
+  final CertificationRecord record;
 
+  const _CourseCell(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final name = record.course?.name ?? record.certification.courseName;
     return Row(
       children: [
         Flexible(
-          // El nombre se corta con puntos suspensivos; el tooltip muestra el
-          // nombre completo.
           child: Tooltip(
             message: name,
             child: Text(
@@ -460,14 +399,23 @@ class _PaginatedCertificationsTableState
             ),
           ),
         ),
-        if (vm.courseOutsideCatalog) const _Notice(_courseOutsideCatalogNotice),
+        if (record.courseOutsideCatalog)
+          const _Notice(_courseOutsideCatalogNotice),
       ],
     );
   }
+}
 
-  Widget _dateCell(DateTime? date) {
+class _DateCell extends StatelessWidget {
+  final DateTime? date;
+
+  const _DateCell(this.date);
+
+  @override
+  Widget build(BuildContext context) {
+    final date = this.date;
     return Text(
-      date == null ? '—' : _formatDate(date),
+      date == null ? '—' : formatDate(date),
       style: context.textTheme.bodySmall?.copyWith(
         color: date == null
             ? context.colors.faintText
@@ -475,17 +423,9 @@ class _PaginatedCertificationsTableState
       ),
     );
   }
-
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
-  String _showData(String value) => value.trim().isEmpty ? '-' : value;
 }
 
-/// Ícono ámbar que avisa por qué una certificación no entra al cumplimiento.
+/// Amber icon that explains why a certification does not count.
 class _Notice extends StatelessWidget {
   final String message;
 

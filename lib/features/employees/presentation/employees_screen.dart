@@ -6,7 +6,7 @@ import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/widgets/result_pagination.dart';
+import 'package:app_finnegans/core/widgets/paginated_table.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
@@ -113,7 +113,12 @@ class _EmployeesResults extends ConsumerWidget {
   }
 }
 
-class _PaginatedEmployeesTable extends StatefulWidget {
+class _PaginatedEmployeesTable extends StatelessWidget {
+  /// Below this width the table scrolls horizontally instead of truncating
+  /// every text. Wider than the CRM table because the progress column has a
+  /// fixed width.
+  static const _minimumWidth = 1100.0;
+
   final List<Employee> employees;
   final Map<String, EmployeeCompliance> complianceByEmployeeId;
 
@@ -123,102 +128,18 @@ class _PaginatedEmployeesTable extends StatefulWidget {
   });
 
   @override
-  State<_PaginatedEmployeesTable> createState() =>
-      _PaginatedEmployeesTableState();
-}
-
-class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
-  static const _paginatorHeight = 60.0;
-  static const _spacing = 12.0;
-
-  /// Below this width the columns get too tight: the table scrolls
-  /// horizontally instead of truncating every text. It is wider than the CRM
-  /// table because the progress column has a fixed width.
-  static const _minimumWidth = 1100.0;
-
-  static const _minimumPerPage = 5;
-
-  int _currentPage = 0;
-
-  @override
-  void didUpdateWidget(covariant _PaginatedEmployeesTable oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.employees != widget.employees) {
-      _currentPage = 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final total = widget.employees.length;
-
-        // As many rows as fit, so the table fills the page without a gap
-        // above the paginator.
-        final heightForTable =
-            constraints.maxHeight - _paginatorHeight - _spacing;
-        final perPage =
-            ((heightForTable - _EmployeesTable.headerHeight) /
-                    _EmployeesTable.rowHeight)
-                .floor()
-                .clamp(
-                  _minimumPerPage,
-                  total < _minimumPerPage ? _minimumPerPage : total,
-                );
-
-        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
-        final safePage = _currentPage.clamp(0, totalPages - 1);
-        final start = safePage * perPage;
-        final calculatedEnd = start + perPage;
-        final end = calculatedEnd > total ? total : calculatedEnd;
-
-        // A fixed width, not a minimum: flex columns need a bounded width to
-        // share, otherwise they collapse inside the scroll view.
-        final width = constraints.maxWidth < _minimumWidth
-            ? _minimumWidth
-            : constraints.maxWidth;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: width,
-                  child: SingleChildScrollView(
-                    child: _EmployeesTable(
-                      employees: widget.employees.sublist(start, end),
-                      complianceByEmployeeId: widget.complianceByEmployeeId,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (totalPages > 1) ...[
-              const SizedBox(height: _spacing),
-              ResultsPagination(
-                currentPage: safePage,
-                pageCount: totalPages,
-                from: start + 1,
-                until: end,
-                totalResults: total,
-                resultsLabel: 'empleados',
-                icon: Icons.people_outline,
-                onPrevious: safePage > 0
-                    ? () => setState(() => _currentPage = safePage - 1)
-                    : null,
-                onNext: safePage < totalPages - 1
-                    ? () => setState(() => _currentPage = safePage + 1)
-                    : null,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => PaginatedTable(
+    items: employees,
+    rowHeight: _EmployeesTable.rowHeight,
+    headerHeight: _EmployeesTable.headerHeight,
+    minimumWidth: _minimumWidth,
+    resultsLabel: 'empleados',
+    icon: Icons.people_outline,
+    tableBuilder: (visible) => _EmployeesTable(
+      employees: visible,
+      complianceByEmployeeId: complianceByEmployeeId,
+    ),
+  );
 }
 
 class _EmployeesTable extends StatelessWidget {
