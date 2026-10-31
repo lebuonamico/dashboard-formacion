@@ -42,9 +42,12 @@ class TeamOverview {
 class TeamsPeriodSummary {
   final bool hasData;
   final List<TeamOverview> teams;
+  final int teamCount;
   final int employeeCount;
   final double completedHours;
   final double targetHours;
+  final double hoursDeviation;
+  final double overallCompletion;
   final double businessHours;
   final double softSkillsHours;
   final double explorationHours;
@@ -56,9 +59,12 @@ class TeamsPeriodSummary {
   const TeamsPeriodSummary({
     this.hasData = true,
     required this.teams,
+    required this.teamCount,
     required this.employeeCount,
     required this.completedHours,
     required this.targetHours,
+    required this.hoursDeviation,
+    required this.overallCompletion,
     required this.businessHours,
     required this.softSkillsHours,
     required this.explorationHours,
@@ -72,9 +78,12 @@ class TeamsPeriodSummary {
     : this(
         hasData: false,
         teams: const [],
+        teamCount: 0,
         employeeCount: 0,
         completedHours: 0,
         targetHours: 0,
+        hoursDeviation: 0,
+        overallCompletion: 0,
         businessHours: 0,
         softSkillsHours: 0,
         explorationHours: 0,
@@ -83,11 +92,6 @@ class TeamsPeriodSummary {
         atRisk: 0,
         critical: 0,
       );
-
-  int get teamCount => teams.length;
-  double get hoursDeviation => completedHours - targetHours;
-  double get overallCompletion =>
-      targetHours == 0 ? 0 : completedHours / targetHours * 100;
 }
 
 class TeamDetail {

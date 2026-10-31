@@ -12,6 +12,7 @@ import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
 // Arman el reporte de cada pantalla con los mismos cálculos que sus cards.
 // `null` cuando el período no tiene nada para reportar.

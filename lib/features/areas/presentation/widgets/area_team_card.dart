@@ -5,6 +5,7 @@ import 'package:app_finnegans/features/teams/domain/team_status.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
 /// Grilla de los equipos generales de un área, con título y conteo.
 class AreaTeamsGrid extends StatelessWidget {

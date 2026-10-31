@@ -10,6 +10,7 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
 export 'package:app_finnegans/features/teams/domain/team_overview.dart';
 export 'package:app_finnegans/features/teams/domain/team_status.dart';

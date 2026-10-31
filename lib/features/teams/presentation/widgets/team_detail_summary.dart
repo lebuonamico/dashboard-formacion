@@ -4,6 +4,7 @@ import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_category_distribution.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
 class TeamDetailHeader extends StatelessWidget {
   final TeamOverview team;

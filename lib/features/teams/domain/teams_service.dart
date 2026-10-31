@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/teams/domain/team_identity.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
@@ -23,23 +24,15 @@ class TeamsService {
     List<EmployeeCompliance> compliance, {
     TeamLeaderResolver? resolveLeader,
   }) {
-    final membersByTeam = <String, List<EmployeeCompliance>>{};
-
-    for (final item in compliance) {
-      final employee = item.employee;
-      final teamName = normalizeTeamName(employee.team);
-      final key = '${employee.area}::$teamName';
-
-      membersByTeam.putIfAbsent(key, () => []).add(item);
-    }
-
-    final teams = <TeamOverview>[];
-    for (final members in membersByTeam.values) {
-      teams.add(_buildTeamOverview(members, resolveLeader));
-    }
-
-    teams.sort(_compareTeamsByPriority);
-    return teams;
+    final membersByTeam = groupBy(
+      compliance,
+      (EmployeeCompliance item) =>
+          '${item.employee.area}::${normalizeTeamName(item.employee.team)}',
+    );
+    return membersByTeam.values
+        .map((members) => _buildTeamOverview(members, resolveLeader))
+        .toList()
+      ..sort(_compareTeamsByPriority);
   }
 
   TeamDetail? getTeamDetail({
@@ -73,50 +66,33 @@ class TeamsService {
     TeamLeaderResolver? resolveLeader,
   }) {
     final teams = buildTeamOverviews(compliance, resolveLeader: resolveLeader);
-    var employeeCount = 0;
-    var completedHours = 0.0;
-    var targetHours = 0.0;
-    var businessHours = 0.0;
-    var softSkillsHours = 0.0;
-    var explorationHours = 0.0;
-    var teachingHours = 0.0;
-    var onTarget = 0;
-    var atRisk = 0;
-    var critical = 0;
+    double sum(double Function(TeamOverview team) hours) =>
+        teams.fold(0.0, (total, team) => total + hours(team));
+    int count(TeamStatus status) =>
+        teams.where((team) => team.status == status).length;
 
-    for (final team in teams) {
-      employeeCount += team.memberCount;
-      completedHours += team.completedHours;
-      targetHours += team.targetHours;
-      businessHours += team.businessHours;
-      softSkillsHours += team.softSkillsHours;
-      explorationHours += team.explorationHours;
-      teachingHours += team.teachingHours;
-      switch (team.status) {
-        case TeamStatus.onTarget:
-          onTarget++;
-          break;
-        case TeamStatus.atRisk:
-          atRisk++;
-          break;
-        case TeamStatus.critical:
-          critical++;
-          break;
-      }
-    }
+    final completedHours = sum((team) => team.completedHours);
+    final targetHours = sum((team) => team.targetHours);
 
     return TeamsPeriodSummary(
       teams: teams,
-      employeeCount: uniqueEmployeeCount ?? employeeCount,
+      teamCount: teams.length,
+      employeeCount:
+          uniqueEmployeeCount ??
+          teams.fold(0, (total, team) => total + team.memberCount),
       completedHours: completedHours,
       targetHours: targetHours,
-      businessHours: businessHours,
-      softSkillsHours: softSkillsHours,
-      explorationHours: explorationHours,
-      teachingHours: teachingHours,
-      onTarget: onTarget,
-      atRisk: atRisk,
-      critical: critical,
+      hoursDeviation: completedHours - targetHours,
+      overallCompletion: targetHours == 0
+          ? 0
+          : completedHours / targetHours * 100,
+      businessHours: sum((team) => team.businessHours),
+      softSkillsHours: sum((team) => team.softSkillsHours),
+      explorationHours: sum((team) => team.explorationHours),
+      teachingHours: sum((team) => team.teachingHours),
+      onTarget: count(TeamStatus.onTarget),
+      atRisk: count(TeamStatus.atRisk),
+      critical: count(TeamStatus.critical),
     );
   }
 
