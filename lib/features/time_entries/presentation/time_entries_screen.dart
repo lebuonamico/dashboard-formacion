@@ -12,6 +12,7 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 
 class TimeEntriesScreen extends ConsumerWidget {
   const TimeEntriesScreen({super.key});
@@ -111,7 +112,7 @@ class _BarFiltersCrm extends ConsumerWidget {
 
 /// Tabla de cargas de horas, de a una página por vez y a todo el ancho.
 class _PaginatedTimeEntriesTable extends StatefulWidget {
-  final List<CrmTimeEntryViewModel> timeEntries;
+  final List<CrmTimeEntryRecord> timeEntries;
 
   const _PaginatedTimeEntriesTable({required this.timeEntries});
 
@@ -213,7 +214,7 @@ class _PaginatedTimeEntriesTableState
     );
   }
 
-  Widget _table(List<CrmTimeEntryViewModel> visible) {
+  Widget _table(List<CrmTimeEntryRecord> visible) {
     final cs = context.colorScheme;
     final secondary = context.textTheme.labelMedium!.copyWith(
       color: cs.onSurfaceVariant,
@@ -276,7 +277,7 @@ class _PaginatedTimeEntriesTableState
     );
   }
 
-  Widget _employeeCell(CrmTimeEntryViewModel vm) {
+  Widget _employeeCell(CrmTimeEntryRecord vm) {
     final cs = context.colorScheme;
     final emp = vm.employee;
     final employeeId = vm.timeEntry.employeeId;
@@ -330,7 +331,7 @@ class _PaginatedTimeEntriesTableState
     );
   }
 
-  Widget _areaTeamCell(CrmTimeEntryViewModel vm) {
+  Widget _areaTeamCell(CrmTimeEntryRecord vm) {
     final cs = context.colorScheme;
     final emp = vm.employee;
     if (emp == null) {
@@ -361,7 +362,7 @@ class _PaginatedTimeEntriesTableState
     );
   }
 
-  Widget _courseCell(CrmTimeEntryViewModel vm) {
+  Widget _courseCell(CrmTimeEntryRecord vm) {
     final name = vm.course?.name ?? vm.timeEntry.courseName;
 
     // El nombre se corta con puntos suspensivos; el tooltip muestra el nombre
@@ -380,7 +381,7 @@ class _PaginatedTimeEntriesTableState
     );
   }
 
-  Widget _hoursCell(CrmTimeEntryViewModel vm) {
+  Widget _hoursCell(CrmTimeEntryRecord vm) {
     final timeEntry = vm.timeEntry;
     final success = context.colors.success;
 

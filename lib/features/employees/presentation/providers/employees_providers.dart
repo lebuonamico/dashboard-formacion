@@ -15,7 +15,7 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
-import 'package:app_finnegans/features/courses/presentation/providers/course_services_providers.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
 /// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
@@ -105,7 +105,7 @@ class TaughtCourseStats {
 class EmployeeDetailViewModel {
   final Employee employee;
   final EmployeeCompliance compliance;
-  final List<CrmTimeEntryViewModel> timeEntriesCrm;
+  final List<CrmTimeEntryRecord> timeEntriesCrm;
   final List<LmsCertification> lmsCertifications;
   final Map<String, Course> coursesByName;
   final List<TaughtCourseStats> taughtCourses;
@@ -142,7 +142,7 @@ final employeeDetailProvider =
         complianceServiceProvider.future,
       );
       final teamsService = ref.read(teamsServiceProvider);
-      final classification = ref.watch(courseClassificationServiceProvider);
+      final records = ref.watch(timeEntryRecordsServiceProvider);
       final isAnnual = scope == PeriodScope.annual;
 
       final employee = employees
@@ -206,17 +206,16 @@ final employeeDetailProvider =
       };
       final timeEntriesCrm = periodTimeEntries
           .map(
-            (timeEntry) => CrmTimeEntryViewModel(
-              timeEntry: timeEntry,
+            (timeEntry) => records.record(
+              timeEntry,
               employee: employee,
               course: coursesByName[normalizeKey(timeEntry.courseName)],
-              isTaught: classification.isTaught(timeEntry),
             ),
           )
           .toList();
 
       // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
-      final taughtByCourse = <String, List<CrmTimeEntryViewModel>>{};
+      final taughtByCourse = <String, List<CrmTimeEntryRecord>>{};
       for (final item in timeEntriesCrm.where((item) => item.isTaught)) {
         final courseId =
             item.course?.id.trim() ?? item.timeEntry.courseId?.trim();

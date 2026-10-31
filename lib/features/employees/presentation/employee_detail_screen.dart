@@ -1,7 +1,6 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
@@ -21,6 +20,7 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
   final String employeeId;
@@ -487,7 +487,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
 
   Widget _buildTimeEntriesTable(
     BuildContext context,
-    List<CrmTimeEntryViewModel> timeEntries,
+    List<CrmTimeEntryRecord> timeEntries,
     Set<String> completedCourses,
   ) {
     if (timeEntries.isEmpty) {
@@ -496,7 +496,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
     final cs = context.colorScheme;
     final colors = context.colors;
 
-    final groups = <String, List<CrmTimeEntryViewModel>>{};
+    final groups = <String, List<CrmTimeEntryRecord>>{};
     for (final timeEntry in timeEntries) {
       final courseId = timeEntry.course?.id.trim() ?? '';
       final courseName =
@@ -614,7 +614,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
     );
   }
 
-  String _courseName(List<CrmTimeEntryViewModel> timeEntries) {
+  String _courseName(List<CrmTimeEntryRecord> timeEntries) {
     final first = timeEntries.first;
     return first.course?.name ?? first.timeEntry.courseName;
   }

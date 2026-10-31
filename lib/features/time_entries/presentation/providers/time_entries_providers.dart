@@ -4,8 +4,8 @@ import 'package:app_finnegans/core/period/presentation/optional_period_filter.da
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
-import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/employees/domain/employee.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
+import 'package:app_finnegans/features/time_entries/domain/time_entry_records_service.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
@@ -24,19 +24,11 @@ final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
       .toList();
 });
 
-class CrmTimeEntryViewModel {
-  final CrmTimeEntry timeEntry;
-  final Employee? employee;
-  final Course? course;
-  final bool isTaught;
-
-  CrmTimeEntryViewModel({
-    required this.timeEntry,
-    required this.employee,
-    required this.course,
-    required this.isTaught,
-  });
-}
+final timeEntryRecordsServiceProvider = Provider<TimeEntryRecordsService>(
+  (ref) => TimeEntryRecordsService(
+    classification: ref.watch(courseClassificationServiceProvider),
+  ),
+);
 
 final timeEntriesPeriodProvider = OptionalPeriodProvider(
   OptionalPeriodNotifier.new,
@@ -49,7 +41,7 @@ final availableTimeEntryYearsProvider = FutureProvider<List<int>>((ref) async {
 });
 
 FilterRow crmFilterRow(
-  CrmTimeEntryViewModel item,
+  CrmTimeEntryRecord item,
   Map<String, String> courseIdsByName,
 ) {
   final courseId = const CourseCatalogService().courseIdFor(
@@ -76,42 +68,23 @@ FilterRow crmFilterRow(
   );
 }
 
-/// CRM time entries of the list's own period, joined with the payroll and
-/// the catalog, most recent first.
-final _periodTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
+final _periodTimeEntriesProvider = FutureProvider<List<CrmTimeEntryRecord>>((
   ref,
 ) async {
   final period = ref.watch(timeEntriesPeriodProvider);
   final periodService = ref.watch(periodServiceProvider);
+  final service = ref.watch(timeEntryRecordsServiceProvider);
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final employees = await ref.watch(employeesProvider.future);
   final courses = await ref.watch(coursesProvider.future);
-  final classification = ref.watch(courseClassificationServiceProvider);
 
-  final employeesById = {
-    for (final employee in employees) employee.employeeId: employee,
-  };
-  final coursesByName = {
-    for (final course in courses) course.name.trim().toLowerCase(): course,
-  };
-  return timeEntries
-      .where(
-        (timeEntry) => periodService.contains(
-          timeEntry.date,
-          year: period.year,
-          month: period.month,
-        ),
-      )
-      .map(
-        (timeEntry) => CrmTimeEntryViewModel(
-          timeEntry: timeEntry,
-          employee: employeesById[timeEntry.employeeId],
-          course: coursesByName[timeEntry.courseName.trim().toLowerCase()],
-          isTaught: classification.isTaught(timeEntry),
-        ),
-      )
-      .toList()
-    ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
+  return service.join(
+    timeEntries: timeEntries,
+    employees: employees,
+    courses: courses,
+    inPeriod: (date) =>
+        periodService.contains(date, year: period.year, month: period.month),
+  );
 });
 
 final timeEntryFilterRowsProvider = FutureProvider<List<FilterRow>>((
@@ -122,7 +95,7 @@ final timeEntryFilterRowsProvider = FutureProvider<List<FilterRow>>((
   return items.map((item) => crmFilterRow(item, courseIds)).toList();
 });
 
-final joinedTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
+final joinedTimeEntriesProvider = FutureProvider<List<CrmTimeEntryRecord>>((
   ref,
 ) async {
   final selection = ref
