@@ -1,4 +1,6 @@
+import 'package:app_finnegans/core/clock/clock_provider.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/features/training_plan/presentation/providers/training_plan_editor_provider.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
@@ -30,15 +32,19 @@ class _PlanFake implements TrainingPlanRepository {
 
 Future<ProviderContainer> _showEditor(
   WidgetTester tester,
-  _PlanFake repository,
-) async {
+  _PlanFake repository, {
+  DateTime? today,
+}) async {
   tester.view.physicalSize = const Size(1400, 1400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
   final container = ProviderContainer(
-    overrides: [trainingPlanRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      trainingPlanRepositoryProvider.overrideWithValue(repository),
+      if (today != null) clockProvider.overrideWithValue(() => today),
+    ],
   );
   addTearDown(container.dispose);
 
@@ -69,6 +75,11 @@ Finder _field(Seniority seniority, CourseCategory type) =>
 
 String _total(WidgetTester tester, Seniority seniority) =>
     tester.widget<Text>(find.byKey(Key('plan_total_${seniority.name}'))).data!;
+
+Finder _dialogText(String text, {bool partial = false}) => find.descendant(
+  of: find.byType(AlertDialog),
+  matching: partial ? find.textContaining(text) : find.text(text),
+);
 
 bool _canSave(WidgetTester tester) =>
     tester
@@ -103,6 +114,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('plan_guardar')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('plan_confirmar')));
+    await tester.pumpAndSettle();
 
     final today = DateTime.now();
     final saved = repository.saved.single;
@@ -130,6 +143,68 @@ void main() {
         today.month,
       ),
       saved.plan,
+    );
+  });
+
+  testWidgets('Guardar pide confirmación y cancelar no guarda', (tester) async {
+    final repository = _PlanFake();
+    await _showEditor(tester, repository, today: DateTime(2026, 10, 15));
+
+    await tester.enterText(
+      _field(Seniority.junior1, CourseCategory.businessSkills),
+      '6',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('plan_guardar')));
+    await tester.pumpAndSettle();
+
+    expect(_dialogText('Guardar plan'), findsOneWidget);
+    expect(
+      _dialogText('El plan rige desde Octubre 2026', partial: true),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    expect(repository.saved, isEmpty);
+    expect(_canSave(tester), isTrue);
+  });
+
+  testWidgets('En un mes pasado la confirmación lo advierte', (tester) async {
+    final repository = _PlanFake();
+    final container = await _showEditor(
+      tester,
+      repository,
+      today: DateTime(2026, 10, 15),
+    );
+
+    container.read(trainingPlanEditorMonthProvider.notifier).select(2026, 9);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Es un mes pasado'), findsOneWidget);
+
+    await tester.enterText(
+      _field(Seniority.trainee, CourseCategory.softSkills),
+      '5',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('plan_guardar')));
+    await tester.pumpAndSettle();
+
+    expect(_dialogText('Guardar plan de un mes pasado'), findsOneWidget);
+    expect(
+      _dialogText('Septiembre 2026 ya fue evaluado', partial: true),
+      findsOneWidget,
+    );
+    expect(find.text('Guardar igual'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('plan_confirmar')));
+    await tester.pumpAndSettle();
+
+    expect(repository.saved.single.validFrom, DateTime(2026, 9));
+    expect(
+      find.text('Plan guardado: rige desde Septiembre 2026.'),
+      findsOneWidget,
     );
   });
 
