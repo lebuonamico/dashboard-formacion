@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'dart:typed_data';
 
 import 'package:app_finnegans/core/theme/pdf_report_colors.dart';

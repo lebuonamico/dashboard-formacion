@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
@@ -113,10 +114,10 @@ void main() {
 
     expect(report!.type, ReportType.team);
     expect(report.title, 'Core');
-    expect(report.details, ['Área: Desarrollo', 'Líder: María López']);
+    expect(reportDetails(report), ['Área: Desarrollo', 'Líder: María López']);
     expect(report.period, 'Octubre 2026');
     expect(report.percentage, 50);
-    expect(report.status, 'Crítico');
+    expect(report.level.label, 'Crítico');
     expect(report.level, ReportLevel.critical);
     expect(report.breakdown, isEmpty);
   });
@@ -138,7 +139,7 @@ void main() {
     );
 
     expect(report!.type, ReportType.area);
-    expect(report.details, ['Líder: Ana Pérez', '2 equipos']);
+    expect(reportDetails(report), ['Líder: Ana Pérez', '2 equipos']);
     expect(report.level, ReportLevel.critical);
     expect(report.breakdown.map((f) => (f.name, f.level)), [
       ('Core', ReportLevel.critical),

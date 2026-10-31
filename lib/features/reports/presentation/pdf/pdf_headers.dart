@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
@@ -69,7 +70,7 @@ class PdfCover extends pw.StatelessWidget {
             ),
           ),
           pw.SizedBox(width: 12),
-          PdfStatusChip(report.status, report.level, large: true),
+          PdfStatusChip(report.level.label, report.level, large: true),
         ],
       ),
       pw.SizedBox(height: 6),
@@ -78,7 +79,7 @@ class PdfCover extends pw.StatelessWidget {
         runSpacing: 2,
         children: [
           _data('Período', report.period),
-          for (final detail in report.details)
+          for (final detail in reportDetails(report))
             pw.Text(
               detail,
               style: const pw.TextStyle(

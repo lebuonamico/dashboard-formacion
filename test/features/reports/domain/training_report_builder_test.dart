@@ -1,3 +1,9 @@
+import 'package:app_finnegans/features/areas/domain/area_summary.dart';
+import 'package:app_finnegans/features/areas/domain/areas_service.dart';
+import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
+import 'package:app_finnegans/features/teams/domain/team_overview.dart';
+import 'package:app_finnegans/features/teams/domain/team_status.dart';
+import 'package:app_finnegans/features/reports/domain/training_report_builder.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
@@ -43,22 +49,21 @@ EmployeeCompliance _member(
   );
 }
 
+const _builder = TrainingReportBuilder();
+
 TrainingReport _report(
   List<EmployeeCompliance> members, {
   ReportType type = ReportType.area,
   List<ReportBreakdownRow> breakdown = const [],
-  String title = 'Desarrollo',
-  String period = 'Octubre 2026',
-}) => TrainingReport(
+}) => _builder.build(
   type: type,
-  title: title,
-  period: period,
+  title: 'Desarrollo',
+  period: 'Octubre 2026',
   memberCount: members.length,
   onTarget: 0,
   hours: 0,
   target: 0,
   percentage: 0,
-  status: 'Crítico',
   level: ReportLevel.critical,
   members: members,
   breakdown: breakdown,
@@ -70,16 +75,15 @@ ReportBreakdownRow _row(String name, double percentage) => ReportBreakdownRow(
   hours: 0,
   target: 0,
   percentage: percentage,
-  status: '',
-  level: reportLevelFor(percentage),
+  level: _builder.levelFor(percentage),
 );
 
 void main() {
   test('El semáforo corta en 100 y 70', () {
-    expect(reportLevelFor(100), ReportLevel.ok);
-    expect(reportLevelFor(99.9), ReportLevel.attention);
-    expect(reportLevelFor(70), ReportLevel.attention);
-    expect(reportLevelFor(69.9), ReportLevel.critical);
+    expect(_builder.levelFor(100), ReportLevel.ok);
+    expect(_builder.levelFor(99.9), ReportLevel.attention);
+    expect(_builder.levelFor(70), ReportLevel.attention);
+    expect(_builder.levelFor(69.9), ReportLevel.critical);
   });
 
   test('Cuenta a cada persona en su nivel, con los tres niveles siempre', () {
@@ -103,13 +107,16 @@ void main() {
       _member('Ana Pérez', business: 6, exploration: 3),
       _member('Bruno Gómez', business: 1),
     ]);
-    final byType = {for (final c in report.hoursByCategory) c.tipo: c};
+    final byType = {for (final c in report.hoursByCategory) c.category: c};
 
-    expect(report.hoursByCategory.map((c) => c.tipo), CourseCategory.values);
-    expect(byType[_business]!.validas, 5);
-    expect(byType[_business]!.objetivo, 8);
-    expect(byType[_exploration]!.validas, 0);
-    expect(byType[_exploration]!.objetivo, 0);
+    expect(
+      report.hoursByCategory.map((c) => c.category),
+      CourseCategory.values,
+    );
+    expect(byType[_business]!.credited, 5);
+    expect(byType[_business]!.target, 8);
+    expect(byType[_exploration]!.credited, 0);
+    expect(byType[_exploration]!.target, 0);
   });
 
   test('Lista de menor a mayor cumplimiento y por nombre si empatan', () {
@@ -141,11 +148,7 @@ void main() {
     expect(_report(members).listedMembers, hasLength(3));
   });
 
-  test('El tipo decide el desglose y la ubicación de cada integrante', () {
-    expect(ReportType.general.breakdownTitle, 'Cumplimiento por área');
-    expect(ReportType.area.breakdownTitle, 'Cumplimiento por equipo');
-    expect(ReportType.team.breakdownTitle, isNull);
-
+  test('El tipo decide la ubicación de cada integrante', () {
     expect(
       _report(const [], type: ReportType.general).memberLocation,
       MemberLocation.teamAreaY,
@@ -163,24 +166,100 @@ void main() {
       breakdown: [_row('Core', 80), _row('Mobile', 40), _row('Web', 100)],
     );
 
-    expect(report.sortedBreakdown.map((f) => f.name), [
-      'Mobile',
-      'Core',
-      'Web',
-    ]);
-    expect(report.breakdown.first.name, 'Core');
+    expect(report.breakdown.map((f) => f.name), ['Mobile', 'Core', 'Web']);
   });
 
-  test('El nombre del archivo no lleva tildes, eñes ni símbolos', () {
-    final report = _report(
-      const [],
-      title: 'Diseño & Núñez',
-      period: 'Año 2026 · meses con datos',
+  group('Por tipo de reporte', () {
+    TeamOverview overview({
+      String name = 'Core',
+      double percentage = 50,
+      TeamStatus status = TeamStatus.atRisk,
+    }) => TeamOverview(
+      id: 'desarrollo-$name',
+      name: name,
+      area: 'Desarrollo',
+      leader: 'María López',
+      memberCount: 2,
+      membersOnTarget: 1,
+      completedHours: 8,
+      targetHours: 16,
+      hoursDeviation: -8,
+      businessHours: 4,
+      softSkillsHours: 4,
+      explorationHours: 0,
+      teachingHours: 0,
+      averageHoursPerMember: 4,
+      completionPercentage: percentage,
+      status: status,
     );
 
-    expect(
-      report.fileName,
-      'reporte_de_area_diseno_nunez_ano_2026_meses_con_datos.pdf',
-    );
+    test('El de equipo usa el estado del equipo, no solo el porcentaje', () {
+      final report = _builder.team(
+        period: 'Octubre 2026',
+        detail: TeamDetail(overview: overview(), members: const []),
+      );
+
+      expect(report.type, ReportType.team);
+      expect(report.title, 'Core');
+      expect(report.area, 'Desarrollo');
+      expect(report.leaders, 'María López');
+      expect(report.percentage, 50);
+      expect(report.level, ReportLevel.attention);
+      expect(report.breakdown, isEmpty);
+    });
+
+    test('El de área desglosa sus equipos de menor a mayor', () {
+      final members = [_member('Ana Pérez', business: 4, softSkills: 4)];
+      final report = _builder.area(
+        period: 'Octubre 2026',
+        detail: AreaDetail(
+          area: const AreasService().summarize(
+            'Desarrollo',
+            members,
+            leaders: 'Ana Pérez',
+          ),
+          teams: [
+            overview(name: 'Web', percentage: 100, status: TeamStatus.onTarget),
+            overview(percentage: 40, status: TeamStatus.critical),
+          ],
+          members: members,
+        ),
+      );
+
+      expect(report.title, 'Desarrollo');
+      expect(report.leaders, 'Ana Pérez');
+      expect(report.teamCount, 2);
+      expect(report.onTarget, 1);
+      expect(report.level, ReportLevel.ok);
+      expect(report.breakdown.map((row) => (row.name, row.level)), [
+        ('Core', ReportLevel.critical),
+        ('Web', ReportLevel.ok),
+      ]);
+    });
+
+    test('El general cuenta una vez a quien cumple en varias etapas', () {
+      final ana = _member('Ana Pérez', business: 4, softSkills: 4);
+      final report = _builder.general(
+        title: 'Plan de formación interna',
+        period: 'Año 2026',
+        kpis: DashboardKpisService().calculate(
+          complianceList: [ana, ana],
+          timeEntries: const [],
+          evaluatedMonths: 1,
+        ),
+        areaCount: 1,
+        teamCount: 2,
+        areas: const [],
+        members: [ana, ana],
+      );
+
+      expect(report.type, ReportType.general);
+      expect(report.memberCount, 1);
+      expect(report.onTarget, 1);
+      expect(report.areaCount, 1);
+      expect(report.teamCount, 2);
+      expect(report.trainingCount, 0);
+      expect(report.level, ReportLevel.ok);
+    });
   });
 }

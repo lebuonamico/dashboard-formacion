@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
@@ -42,7 +43,7 @@ class KpisPdf extends pw.StatelessWidget {
       _CardKpiPdf(
         title: 'CUMPLIMIENTO',
         value: formatPercentage(r.percentage),
-        detail: r.status,
+        detail: r.level.label,
         progress: r.percentage / 100,
         color: r.level.color,
         valueColor: r.level.color,
@@ -221,8 +222,8 @@ class PdfCategories extends pw.StatelessWidget {
   @override
   pw.Widget build(pw.Context context) {
     final categories = report.hoursByCategory;
-    final totalCredited = categories.fold<double>(0, (t, c) => t + c.validas);
-    final totalTarget = categories.fold<double>(0, (t, c) => t + c.objetivo);
+    final totalCredited = categories.fold<double>(0, (t, c) => t + c.credited);
+    final totalTarget = categories.fold<double>(0, (t, c) => t + c.target);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -254,14 +255,17 @@ class PdfCategories extends pw.StatelessWidget {
           _row(
             name: pw.Row(
               children: [
-                PdfColorDot(PdfReportColors.category[c.tipo]!),
+                PdfColorDot(PdfReportColors.category[c.category]!),
                 pw.SizedBox(width: 6),
-                pw.Text(c.tipo.label, style: const pw.TextStyle(fontSize: 8.5)),
+                pw.Text(
+                  c.category.label,
+                  style: const pw.TextStyle(fontSize: 8.5),
+                ),
               ],
             ),
-            valid: c.validas,
-            target: c.objetivo,
-            color: PdfReportColors.category[c.tipo]!,
+            valid: c.credited,
+            target: c.target,
+            color: PdfReportColors.category[c.category]!,
           ),
         _row(
           name: pw.Text(

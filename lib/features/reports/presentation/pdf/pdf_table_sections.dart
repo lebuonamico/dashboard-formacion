@@ -1,3 +1,5 @@
+import 'package:app_finnegans/features/reports/domain/training_report_builder.dart';
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -32,7 +34,7 @@ List<pw.Widget> breakdownPdf(TrainingReport report, PdfReportStyle style) {
         'ESTADO',
       ],
       rows: [
-        for (final f in report.sortedBreakdown)
+        for (final f in report.breakdown)
           [
             pw.Text(f.name, style: style.mediumText(8)),
             pw.Text('${f.memberCount}', style: cellStyle),
@@ -48,7 +50,7 @@ List<pw.Widget> breakdownPdf(TrainingReport report, PdfReportStyle style) {
                 color: f.level.color,
               ),
             ),
-            PdfStatusChip(f.status, f.level),
+            PdfStatusChip(f.level.label, f.level),
           ],
       ],
     ),
@@ -148,7 +150,9 @@ List<pw.Widget> pdfMembers(TrainingReport report, PdfReportStyle style) {
               style: pw.TextStyle(
                 fontWeight: bold,
                 fontSize: 7.5,
-                color: reportLevelFor(m.totalPercentage).color,
+                color: const TrainingReportBuilder()
+                    .levelFor(m.totalPercentage)
+                    .color,
               ),
             ),
           ],

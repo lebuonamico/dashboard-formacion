@@ -1,54 +1,31 @@
-import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
-import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
-import 'package:app_finnegans/features/projection/domain/projection.dart';
 import 'package:app_finnegans/features/dashboard/domain/monthly_hours.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
-/// Qué sección de la app resume el reporte.
-enum ReportType {
-  general('Reporte general', breakdownTitle: 'Cumplimiento por área'),
-  area('Reporte de área', breakdownTitle: 'Cumplimiento por equipo'),
-  team('Reporte de equipo');
+/// Which section of the app the report summarizes.
+enum ReportType { general, area, team }
 
-  final String label;
-
-  /// Título de la tabla de desglose; `null` si el reporte no tiene desglose.
-  final String? breakdownTitle;
-
-  const ReportType(this.label, {this.breakdownTitle});
-}
-
-/// Semáforo de una fila del reporte, ya resuelto por quien lo arma.
+/// Traffic light of a report row, already resolved by the builder.
 enum ReportLevel { ok, attention, critical }
 
-/// Mismos cortes que el semáforo de la app.
-ReportLevel reportLevelFor(double percentage) =>
-    switch (const ComplianceLevelService().fromPercentage(percentage)) {
-      ComplianceLevel.onTarget => ReportLevel.ok,
-      ComplianceLevel.atRisk => ReportLevel.attention,
-      ComplianceLevel.critical => ReportLevel.critical,
-    };
-
-/// Qué dato de ubicación acompaña a cada integrante en la tabla.
+/// What location data goes with each member in the table.
 enum MemberLocation { none, team, teamAreaY }
 
 typedef ReportCategoryHours = ({
-  CourseCategory tipo,
-  double validas,
-  double objetivo,
+  CourseCategory category,
+  double credited,
+  double target,
 });
 
-/// Una fila del desglose: áreas en el general, equipos en el de área.
+/// A breakdown row: areas in the general report, teams in the area one.
 class ReportBreakdownRow {
   final String name;
   final int memberCount;
   final double hours;
   final double target;
   final double percentage;
-  final String status;
   final ReportLevel level;
 
   const ReportBreakdownRow({
@@ -57,18 +34,14 @@ class ReportBreakdownRow {
     required this.hours,
     required this.target,
     required this.percentage,
-    required this.status,
     required this.level,
   });
 }
 
-/// Todo lo que muestra el reporte, con los mismos números que la pantalla.
+/// Everything the report shows, with the same numbers as the screen.
 class TrainingReport {
   final ReportType type;
   final String title;
-
-  /// Líneas cortas bajo el título: área, líder, etc.
-  final List<String> details;
   final String period;
 
   final int memberCount;
@@ -76,106 +49,58 @@ class TrainingReport {
   final double hours;
   final double target;
   final double percentage;
-  final String status;
   final ReportLevel level;
+
+  /// Data for the lines under the title; each type uses its own.
+  final String? area;
+  final String? leaders;
+  final int? areaCount;
+  final int? teamCount;
+  final int? trainingCount;
 
   final AnnualProjection? projection;
   final List<EmployeeCompliance> members;
+
+  /// Lowest compliance first.
   final List<ReportBreakdownRow> breakdown;
 
-  /// Horas válidas por persona de los últimos meses (solo el general).
+  /// Credited hours per person in the last months (general report only).
   final List<MonthlyHours> evolution;
+
+  /// The general report has a long payroll: it only lists the critical ones.
+  final bool criticalOnly;
+  final MemberLocation memberLocation;
+  final Map<ReportLevel, int> countByLevel;
+  final List<ReportCategoryHours> hoursByCategory;
+  final MoodleCrmComparison sourceComparison;
+
+  /// Lowest compliance first, by name on a tie.
+  final List<EmployeeCompliance> listedMembers;
 
   const TrainingReport({
     required this.type,
     required this.title,
-    this.details = const [],
     required this.period,
     required this.memberCount,
     required this.onTarget,
     required this.hours,
     required this.target,
     required this.percentage,
-    required this.status,
     required this.level,
+    this.area,
+    this.leaders,
+    this.areaCount,
+    this.teamCount,
+    this.trainingCount,
     this.projection,
     required this.members,
-    this.breakdown = const [],
-    this.evolution = const [],
+    required this.breakdown,
+    required this.evolution,
+    required this.criticalOnly,
+    required this.memberLocation,
+    required this.countByLevel,
+    required this.hoursByCategory,
+    required this.sourceComparison,
+    required this.listedMembers,
   });
-
-  /// En el general la nómina es larga: se listan solo los críticos.
-  bool get criticalOnly => type == ReportType.general;
-
-  MemberLocation get memberLocation => switch (type) {
-    ReportType.general => MemberLocation.teamAreaY,
-    ReportType.area => MemberLocation.team,
-    ReportType.team => MemberLocation.none,
-  };
-
-  String get fileName {
-    final base = '${type.label} $title $period'
-        .toLowerCase()
-        .replaceAll(RegExp(r'[áà]'), 'a')
-        .replaceAll(RegExp(r'[éè]'), 'e')
-        .replaceAll(RegExp(r'[íì]'), 'i')
-        .replaceAll(RegExp(r'[óò]'), 'o')
-        .replaceAll(RegExp(r'[úù]'), 'u')
-        .replaceAll('ñ', 'n')
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-    return '$base.pdf';
-  }
-
-  /// Cuántas personas evaluadas caen en cada nivel del semáforo.
-  Map<ReportLevel, int> get countByLevel {
-    final count = {for (final level in ReportLevel.values) level: 0};
-    for (final member in members) {
-      final level = reportLevelFor(member.totalPercentage);
-      count[level] = count[level]! + 1;
-    }
-    return count;
-  }
-
-  /// Cada persona suma hasta su objetivo en cada categoría, y nada en las que
-  /// su seniority no pide: son las horas que cuentan para la meta.
-  List<ReportCategoryHours> get hoursByCategory {
-    double sum(double Function(EmployeeCompliance) value) =>
-        members.fold(0, (t, m) => t + value(m));
-    return [
-      for (final type in CourseCategory.values)
-        (
-          tipo: type,
-          validas: sum((m) => m.applicableHours[type]!),
-          objetivo: sum((m) => m.requiredHours[type] ?? 0),
-        ),
-    ];
-  }
-
-  MoodleCrmComparison get sourceComparison =>
-      const MoodleCrmComparisonService().compare(members);
-
-  /// De menor a mayor cumplimiento, y por nombre a igual porcentaje.
-  List<EmployeeCompliance> get listedMembers {
-    final sorted = [...members]
-      ..sort((a, b) {
-        final percentage = a.totalPercentage.compareTo(b.totalPercentage);
-        return percentage != 0
-            ? percentage
-            : const EmployeeLookupService()
-                  .fullName(a.employee)
-                  .compareTo(
-                    const EmployeeLookupService().fullName(b.employee),
-                  );
-      });
-    if (!criticalOnly) return sorted;
-    return [
-      for (final m in sorted)
-        if (reportLevelFor(m.totalPercentage) == ReportLevel.critical) m,
-    ];
-  }
-
-  /// De menor a mayor cumplimiento: lo que peor está, primero.
-  List<ReportBreakdownRow> get sortedBreakdown =>
-      [...breakdown]..sort((a, b) => a.percentage.compareTo(b.percentage));
 }

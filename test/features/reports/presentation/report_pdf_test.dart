@@ -1,3 +1,5 @@
+import 'package:app_finnegans/features/reports/domain/training_report_builder.dart';
+import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
 import 'package:app_finnegans/features/dashboard/domain/monthly_hours.dart';
 import 'dart:io';
 
@@ -88,46 +90,45 @@ void main() {
     ),
   ];
 
-  TrainingReport report({ReportType type = ReportType.area}) => TrainingReport(
-    type: type,
-    title: 'Desarrollo',
-    details: const ['Líder: María López', '2 equipos'],
-    period: 'Octubre 2026',
-    memberCount: 4,
-    onTarget: 2,
-    hours: 21,
-    target: 34,
-    percentage: 61.8,
-    status: 'Crítico',
-    level: ReportLevel.critical,
-    members: members,
-    breakdown: const [
-      ReportBreakdownRow(
-        name: 'Core',
-        memberCount: 2,
-        hours: 11,
-        target: 16,
-        percentage: 68.8,
-        status: 'Crítico',
+  TrainingReport report({ReportType type = ReportType.area}) =>
+      const TrainingReportBuilder().build(
+        type: type,
+        title: 'Desarrollo',
+        leaders: 'María López',
+        teamCount: 2,
+        period: 'Octubre 2026',
+        memberCount: 4,
+        onTarget: 2,
+        hours: 21,
+        target: 34,
+        percentage: 61.8,
         level: ReportLevel.critical,
-      ),
-      ReportBreakdownRow(
-        name: 'Mobile',
-        memberCount: 2,
-        hours: 10,
-        target: 18,
-        percentage: 55.6,
-        status: 'En riesgo',
-        level: ReportLevel.attention,
-      ),
-    ],
-    evolution: [
-      MonthlyHours(month: DateTime(2026, 7), hours: 3.2, target: 8),
-      MonthlyHours(month: DateTime(2026, 8), hours: 4.1, target: 8),
-      MonthlyHours(month: DateTime(2026, 9), hours: 2.7, target: 8),
-      MonthlyHours(month: DateTime(2026, 10), hours: 5.3, target: 8),
-    ],
-  );
+        members: members,
+        breakdown: const [
+          ReportBreakdownRow(
+            name: 'Core',
+            memberCount: 2,
+            hours: 11,
+            target: 16,
+            percentage: 68.8,
+            level: ReportLevel.critical,
+          ),
+          ReportBreakdownRow(
+            name: 'Mobile',
+            memberCount: 2,
+            hours: 10,
+            target: 18,
+            percentage: 55.6,
+            level: ReportLevel.attention,
+          ),
+        ],
+        evolution: [
+          MonthlyHours(month: DateTime(2026, 7), hours: 3.2, target: 8),
+          MonthlyHours(month: DateTime(2026, 8), hours: 4.1, target: 8),
+          MonthlyHours(month: DateTime(2026, 9), hours: 2.7, target: 8),
+          MonthlyHours(month: DateTime(2026, 10), hours: 5.3, target: 8),
+        ],
+      );
 
   test('genera el PDF del reporte con tildes y varias secciones', () async {
     final bytes = await generateReportPdf(report());
@@ -144,6 +145,9 @@ void main() {
   });
 
   test('el nombre del archivo no lleva tildes ni espacios', () {
-    expect(report().fileName, 'reporte_de_area_desarrollo_octubre_2026.pdf');
+    expect(
+      reportFileName(report()),
+      'reporte_de_area_desarrollo_octubre_2026.pdf',
+    );
   });
 }

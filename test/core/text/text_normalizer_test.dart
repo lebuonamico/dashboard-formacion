@@ -31,6 +31,10 @@ void main() {
       expect(normalizeKey(''), '');
       expect(normalizeKey(' -/- ', separator: ' '), '');
     });
+
+    test('el separador nunca queda en los extremos', () {
+      expect(normalizeKey('¡Ventas (2026)!', separator: '_'), 'ventas_2026');
+    });
   });
 
   group('normalizeLoose', () {

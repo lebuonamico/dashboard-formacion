@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/domain/training_report_builder.dart';
 import 'dart:async';
 
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -8,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _report = TrainingReport(
+final _report = const TrainingReportBuilder().build(
   type: ReportType.team,
   title: 'Core',
   period: 'Octubre 2026',
@@ -17,9 +18,8 @@ const _report = TrainingReport(
   hours: 0,
   target: 0,
   percentage: 0,
-  status: 'Crítico',
   level: ReportLevel.critical,
-  members: [],
+  members: const [],
 );
 
 Future<void> _mount(
