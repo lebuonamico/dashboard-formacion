@@ -359,18 +359,19 @@ void main() {
   );
 
   test(
-    'Audit hooks record success/failure without inventing insert/update counts',
+    'Audit hooks record success with its counts and failure with its errors',
     () async {
       final audit = Audit();
       final service = ImportAuditService(audit: audit);
       await service.run(
         fileType: 'horas_crm',
         fileName: 'file.xlsx',
-        process: () async => const UpsertResult(processedRecords: 1),
+        process: () async =>
+            const UpsertResult(processedRecords: 1, inserted: 1, updated: 0),
       );
       expect(audit.records.single.status, ImportStatus.completed);
-      expect(audit.records.single.inserted, isNull);
-      expect(audit.records.single.updated, isNull);
+      expect(audit.records.single.inserted, 1);
+      expect(audit.records.single.updated, 0);
       await expectLater(
         service.run(
           fileType: 'horas_crm',

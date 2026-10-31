@@ -146,15 +146,11 @@ void _expectCounts(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('Result sums known counts and preserves unknown counts', () {
+  test('Result sums its counts', () {
     final result =
         const UpsertResult(processedRecords: 3, inserted: 1, updated: 2) +
         const UpsertResult(processedRecords: 2, inserted: 1, updated: 1);
     _expectCounts(result, 5, 2, 3);
-    final unknown = result + const UpsertResult(processedRecords: 4);
-    expect(unknown.processedRecords, 9);
-    expect(unknown.inserted, isNull);
-    expect(unknown.updated, isNull);
     _expectCounts(UpsertResult.empty, 0, 0, 0);
   });
 
