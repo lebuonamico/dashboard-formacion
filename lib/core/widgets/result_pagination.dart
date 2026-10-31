@@ -29,8 +29,7 @@ class ResultsPagination extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final textStyle = TextStyle(
-      fontSize: 13,
+    final textStyle = context.textTheme.bodySmall!.copyWith(
       fontWeight: FontWeight.w600,
       color: cs.onSurface,
     );

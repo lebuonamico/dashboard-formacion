@@ -78,8 +78,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
       children: [
         Text(
           'Vista general',
-          style: TextStyle(
-            fontSize: 22,
+          style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
           ),
@@ -89,8 +88,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
           summary.hasData
               ? 'Seguimiento del avance de ${teams.length} equipos de formación.'
               : 'Seleccioná un período con datos cargados.',
-          style: TextStyle(
-            fontSize: 14,
+          style: context.textTheme.bodyMedium?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
           ),
         ),

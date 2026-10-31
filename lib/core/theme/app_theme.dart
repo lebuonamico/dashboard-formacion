@@ -73,6 +73,13 @@ abstract final class AppTheme {
         surfaceTint: const Color(0x00000000),
       );
 
+  static const _textTheme = TextTheme(
+    displaySmall: TextStyle(fontSize: 28),
+    titleMedium: TextStyle(fontSize: 18),
+    bodySmall: TextStyle(fontSize: 13),
+    labelSmall: TextStyle(fontSize: 10),
+  );
+
   static ThemeData _build(ColorScheme cs, AppColors colors) {
     final borderInput = OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
@@ -81,6 +88,13 @@ abstract final class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      textTheme: _textTheme.apply(
+        bodyColor: cs.onSurface,
+        displayColor: cs.onSurface,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
       colorScheme: cs,
       extensions: [colors],
       scaffoldBackgroundColor: cs.surfaceContainerLow,
@@ -152,6 +166,8 @@ abstract final class AppTheme {
 /// Acceso corto al tema desde los widgets.
 extension ThemeContext on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
+
+  TextTheme get textTheme => Theme.of(this).textTheme;
 
   AppColors get colors => Theme.of(this).extension<AppColors>()!;
 

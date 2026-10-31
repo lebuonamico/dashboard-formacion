@@ -325,8 +325,7 @@ class _PaginatedCertificationsTableState
                   vm.course == null
                       ? '-'
                       : '${vm.course!.workloadHours.toStringAsFixed(0)} hs',
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: vm.course == null
                         ? cs.onSurfaceVariant
@@ -362,8 +361,7 @@ class _PaginatedCertificationsTableState
             emp == null || emp.firstName.isEmpty
                 ? '?'
                 : emp.firstName.substring(0, 1),
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
             ),
@@ -383,8 +381,7 @@ class _PaginatedCertificationsTableState
                     : '${emp.firstName} ${emp.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
@@ -393,8 +390,7 @@ class _PaginatedCertificationsTableState
                 emp == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.textTheme.labelMedium?.copyWith(
                   color: emp == null
                       ? context.colors.warning.text
                       : cs.onSurfaceVariant,
@@ -424,8 +420,7 @@ class _PaginatedCertificationsTableState
           _showData(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: context.colors.intermediateText,
           ),
         ),
@@ -433,7 +428,9 @@ class _PaginatedCertificationsTableState
           _showData(emp.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -453,8 +450,7 @@ class _PaginatedCertificationsTableState
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colorScheme.onSurface,
               ),
@@ -469,8 +465,7 @@ class _PaginatedCertificationsTableState
   Widget _dateCell(DateTime? date) {
     return Text(
       date == null ? '—' : _formatDate(date),
-      style: TextStyle(
-        fontSize: 13,
+      style: context.textTheme.bodySmall?.copyWith(
         color: date == null
             ? context.colors.faintText
             : context.colors.intermediateText,

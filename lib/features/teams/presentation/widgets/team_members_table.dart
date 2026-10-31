@@ -67,8 +67,7 @@ class _TeamMembersTableState extends State<TeamMembersTable> {
       children: [
         Text(
           'Integrantes ($memberCount)',
-          style: TextStyle(
-            fontSize: 18,
+          style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
           ),

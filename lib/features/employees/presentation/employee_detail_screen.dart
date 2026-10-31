@@ -38,8 +38,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
         : '${monthName(month)} $year';
     final hasPeriodData = ref.watch(hasTeamPeriodDataProvider).value ?? true;
 
-    final sectionStyle = TextStyle(
-      fontSize: 16,
+    final sectionStyle = context.textTheme.bodyLarge!.copyWith(
       fontWeight: FontWeight.w700,
       color: context.colorScheme.onSurface,
     );
@@ -172,8 +171,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
               emp.firstName.trim().isEmpty
                   ? '?'
                   : emp.firstName.trim().substring(0, 1).toUpperCase(),
-              style: TextStyle(
-                fontSize: 28,
+              style: context.textTheme.displaySmall?.copyWith(
                 color: cs.onPrimary,
                 fontWeight: FontWeight.bold,
               ),
@@ -188,8 +186,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   children: [
                     Text(
                       '${emp.firstName} ${emp.lastName}',
-                      style: TextStyle(
-                        fontSize: 22,
+                      style: context.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
                       ),
@@ -201,12 +198,16 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Área de ${emp.area} · Legajo: ${emp.employeeId}',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   emp.email,
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -235,8 +236,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 children: [
                   Text(
                     '${currentCompliance.totalCreditedHours.toStringAsFixed(0)} / ${currentCompliance.totalRequiredHours.toStringAsFixed(0)} hs LMS',
-                    style: TextStyle(
-                      fontSize: 18,
+                    style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: complianceStatus.text,
                     ),
@@ -246,8 +246,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                     currentCompliance.meetsTarget
                         ? 'Objetivo cumplido'
                         : 'En progreso',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: context.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: complianceStatus.text,
                     ),
@@ -255,7 +254,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     'CRM declaró ${currentCompliance.totalDeclaredHours.toStringAsFixed(0)} hs',
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                    style: context.textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -295,8 +296,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
               children: [
                 Text(
                   type.label,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textTheme.labelMedium?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
@@ -308,8 +308,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   isRequired
                       ? '${completed.toStringAsFixed(0)} / ${required.toStringAsFixed(0)} hs $source'
                       : 'No requerida',
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: context.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: !isRequired
                         ? context.colorScheme.onSurfaceVariant
@@ -321,8 +320,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   'CRM declaró ${declared.toStringAsFixed(0)} hs',
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: context.textTheme.labelMedium?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -433,8 +431,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
         Expanded(
           child: Text(
             title,
-            style: TextStyle(
-              fontSize: 14,
+            style: context.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: cs.onSurface,
             ),
@@ -442,7 +439,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
         ),
         Text(
           detail,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -544,8 +543,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                       courseName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: context.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
                       ),
@@ -561,7 +559,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 '${firstTimeEntry.course?.category.label ?? 'Tipo sin especificar'} · '
                 '${records.length} ${records.length == 1 ? 'registro' : 'registros'} · '
                 '${_formatHours(declaredHours)} hs declaradas',
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                style: context.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
               ),
               children: [
                 const Divider(height: 1),
@@ -584,8 +584,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             dateText,
-                            style: TextStyle(
-                              fontSize: 13,
+                            style: context.textTheme.bodySmall?.copyWith(
                               color: colors.intermediateText,
                             ),
                           ),
@@ -596,8 +595,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                         ],
                         Text(
                           '${_formatHours(record.timeEntry.hours)} hs',
-                          style: TextStyle(
-                            fontSize: 13,
+                          style: context.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: cs.onSurface,
                           ),
@@ -726,15 +724,16 @@ class _EmployeeData extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
+            style: context.textTheme.labelMedium?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            style: context.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -783,8 +782,7 @@ class _LmsCertificationCard extends StatelessWidget {
                         courseName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: context.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
                         ),
@@ -802,7 +800,9 @@ class _LmsCertificationCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$courseInfo · ${completed ? 'Finalizó' : 'Fecha'} $dateText',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

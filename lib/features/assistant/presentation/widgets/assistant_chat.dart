@@ -466,9 +466,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                       'Asistente IA de Formación',
                       maxLines: compact ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: context.textTheme.bodyLarge?.copyWith(
                         color: colors.overGradient,
-                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.25,
                         height: 1.3,
@@ -478,9 +477,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                       const SizedBox(height: 4),
                       Text(
                         'Tu copiloto de capacitación',
-                        style: TextStyle(
+                        style: context.textTheme.labelMedium?.copyWith(
                           color: colors.overGradient.withValues(alpha: .8),
-                          fontSize: 11.5,
                           height: 1.4,
                         ),
                       ),
@@ -550,9 +548,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                       real
                           ? 'Contexto dinámico · Datos disponibles en la aplicación'
                           : 'Ayuda conceptual · Indicadores deshabilitados',
-                      style: TextStyle(
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
-                        fontSize: 11.5,
                         height: 1.5,
                       ),
                     ),
@@ -604,18 +601,16 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                 children: [
                   Text(
                     'Tu consulta sigue disponible',
-                    style: TextStyle(
+                    style: context.textTheme.bodySmall?.copyWith(
                       color: warning.text,
-                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     status.error!,
-                    style: TextStyle(
+                    style: context.textTheme.bodySmall?.copyWith(
                       color: context.colors.intermediateText,
-                      fontSize: 12.5,
                       height: 1.5,
                     ),
                   ),
@@ -634,9 +629,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                     const SizedBox(height: 6),
                     Text(
                       'Se conserva la misma pregunta. Tu borrador actual no se modifica.',
-                      style: TextStyle(
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
-                        fontSize: 11.5,
                         height: 1.4,
                       ),
                     ),
@@ -665,9 +659,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
       final cs = context.colorScheme;
       final colors = context.colors;
       final accent = colors.ai.text;
-      final noteStyle = TextStyle(
+      final noteStyle = context.textTheme.labelSmall!.copyWith(
         color: cs.onSurfaceVariant,
-        fontSize: 10.5,
         height: 1.4,
       );
       return Container(
@@ -720,9 +713,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                         keyboardType: TextInputType.multiline,
                         textInputAction: TextInputAction.newline,
                         cursorColor: accent,
-                        style: TextStyle(
+                        style: context.textTheme.bodyMedium?.copyWith(
                           color: cs.onSurface,
-                          fontSize: 14,
                           height: 1.5,
                         ),
                         // El recuadro lo dibuja el contenedor: el campo va
@@ -822,9 +814,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
           Text(
             '¡Hola! ¿En qué puedo ayudarte?',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: context.textTheme.headlineSmall?.copyWith(
               color: cs.onSurface,
-              fontSize: 23,
               height: 1.25,
               letterSpacing: -.6,
               fontWeight: FontWeight.w700,
@@ -834,9 +825,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
           Text(
             'Analizá indicadores, explorá capacitaciones y encontrá respuestas sobre tu organización.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: context.textTheme.bodySmall?.copyWith(
               color: cs.onSurfaceVariant,
-              fontSize: 13,
               height: 1.6,
             ),
           ),
@@ -895,8 +885,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                             const SizedBox(height: 9),
                             Text(
                               question,
-                              style: const TextStyle(
-                                fontSize: 12.5,
+                              style: context.textTheme.bodySmall?.copyWith(
                                 height: 1.45,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1050,9 +1039,8 @@ class _AnalyzingQueryState extends State<_AnalyzingQuery>
             Expanded(
               child: Text(
                 'Analizando tu consulta...',
-                style: TextStyle(
+                style: context.textTheme.bodySmall?.copyWith(
                   color: context.colorScheme.onSurfaceVariant,
-                  fontSize: 12.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),

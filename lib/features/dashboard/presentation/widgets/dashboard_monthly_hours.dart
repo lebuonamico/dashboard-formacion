@@ -80,8 +80,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                   children: [
                     Text(
                       'Evolución de horas mensuales',
-                      style: TextStyle(
-                        fontSize: 15,
+                      style: context.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.colorScheme.onSurface,
                       ),
@@ -89,8 +88,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Horas válidas promedio por colaborador vs meta (8,0 h)',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -105,8 +103,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                 ),
                 child: Text(
                   'Meta: ${summary.target.toStringAsFixed(1)} h',
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.primary,
                   ),
@@ -126,15 +123,13 @@ class _MonthlyHoursCard extends StatelessWidget {
             children: [
               Text(
                 'Último mes: ',
-                style: TextStyle(
-                  fontSize: 11,
+                style: context.textTheme.labelMedium?.copyWith(
                   color: context.colorScheme.onSurfaceVariant,
                 ),
               ),
               Text(
                 '${current.toStringAsFixed(1)} h promedio',
-                style: TextStyle(
-                  fontSize: 11,
+                style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.primary,
                 ),
@@ -161,6 +156,7 @@ class _MonthlyHoursChart extends StatelessWidget {
         target: target,
         cs: context.colorScheme,
         colors: context.colors,
+        textTheme: context.textTheme,
       ),
       child: const SizedBox.expand(),
     );
@@ -171,15 +167,17 @@ class _MonthlyHoursPainter extends CustomPainter {
   final List<_MonthlyHoursPoint> points;
   final double target;
 
-  /// El painter no tiene BuildContext: recibe los colores del tema activo.
+  /// El painter no tiene BuildContext: recibe colores y tipografía del tema.
   final ColorScheme cs;
   final AppColors colors;
+  final TextTheme textTheme;
 
   const _MonthlyHoursPainter({
     required this.points,
     required this.target,
     required this.cs,
     required this.colors,
+    required this.textTheme,
   });
 
   @override
@@ -222,7 +220,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       canvas,
       'Meta ${target.toStringAsFixed(1)} h',
       Offset(size.width - 66, targetY - 14),
-      TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
+      textTheme.labelSmall!.copyWith(color: cs.onSurfaceVariant),
     );
 
     final barWidth = chartWidth / (points.length * 2.2);
@@ -241,8 +239,7 @@ class _MonthlyHoursPainter extends CustomPainter {
         canvas,
         '${point.hours.toStringAsFixed(1)} h',
         Offset(centerX, barTop - 14),
-        TextStyle(
-          fontSize: 10,
+        textTheme.labelSmall!.copyWith(
           fontWeight: FontWeight.w600,
           color: colors.intermediateText,
         ),
@@ -251,8 +248,7 @@ class _MonthlyHoursPainter extends CustomPainter {
         canvas,
         point.label,
         Offset(centerX, size.height - 10),
-        TextStyle(
-          fontSize: 10,
+        textTheme.labelSmall!.copyWith(
           fontWeight: index == points.length - 1
               ? FontWeight.w700
               : FontWeight.w400,

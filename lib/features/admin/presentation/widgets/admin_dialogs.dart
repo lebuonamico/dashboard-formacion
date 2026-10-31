@@ -39,8 +39,7 @@ Future<bool> confirmAction(
       children: [
         Text(
           message,
-          style: TextStyle(
-            fontSize: 14,
+          style: context.textTheme.bodyMedium?.copyWith(
             color: context.colors.intermediateText,
             height: 1.4,
           ),
@@ -140,7 +139,9 @@ class _LeadersDialogState extends State<_LeadersDialog> {
           Text(
             'No hay usuarios activos con el rol ${widget.role.label}. Dalos de '
             'alta o cambiales el rol desde la pestaña Usuarios.',
-            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            style: context.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           )
         else
           ConstrainedBox(
@@ -164,7 +165,9 @@ class _LeadersDialogState extends State<_LeadersDialog> {
                       }),
                       title: Text(
                         email,
-                        style: TextStyle(fontSize: 14, color: cs.onSurface),
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface,
+                        ),
                       ),
                       subtitle: _subtitle(email, noAccess.contains(email)),
                     ),
@@ -203,8 +206,7 @@ class _LeadersDialogState extends State<_LeadersDialog> {
     if (parts.isEmpty) return null;
     return Text(
       parts.join(' · '),
-      style: TextStyle(
-        fontSize: 12,
+      style: context.textTheme.labelMedium?.copyWith(
         color: noAccess
             ? context.colors.warning.text
             : context.colorScheme.onSurfaceVariant,
@@ -348,8 +350,7 @@ class _RoleChangeDialogState extends State<_RoleChangeDialog> {
             child: Text(
               'Este usuario tiene un rol que ya no se usa. Elegí uno de la '
               'lista para reemplazarlo.',
-              style: TextStyle(
-                fontSize: 13,
+              style: context.textTheme.bodySmall?.copyWith(
                 color: context.colors.warning.text,
               ),
             ),
@@ -368,16 +369,14 @@ class _RoleChangeDialogState extends State<_RoleChangeDialog> {
                     activeColor: cs.primary,
                     title: Text(
                       role.label,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: context.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
                       ),
                     ),
                     subtitle: Text(
                       role.description,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -443,8 +442,7 @@ class _DialogFrame extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: TextStyle(
-                            fontSize: 18,
+                          style: context.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: context.colorScheme.onSurface,
                           ),
@@ -453,8 +451,7 @@ class _DialogFrame extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             subtitle!,
-                            style: TextStyle(
-                              fontSize: 13,
+                            style: context.textTheme.bodySmall?.copyWith(
                               color: context.colorScheme.onSurfaceVariant,
                             ),
                           ),

@@ -78,8 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Títulos de marca
                     Text(
                       'Finnegans',
-                      style: TextStyle(
-                        fontSize: 18,
+                      style: context.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.primary,
                         letterSpacing: -0.2,
@@ -88,8 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Plataforma de control de formación interna',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: context.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: cs.onPrimaryContainer,
                         letterSpacing: 1.5,
@@ -100,8 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Bienvenida y descripción
                     Text(
                       'Bienvenido de nuevo',
-                      style: TextStyle(
-                        fontSize: 24,
+                      style: context.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: cs.onSurface,
                       ),
@@ -110,8 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       'Inicia sesión con tu cuenta corporativa\npara acceder al sistema.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: context.textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                         height: 1.4,
                       ),
@@ -152,8 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             auth.isValidatingAuthorization
                                 ? 'Validando autorización...'
                                 : 'Iniciar sesión con Google',
-                            style: TextStyle(
-                              fontSize: 14,
+                            style: context.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: cs.onSurface,
                             ),
@@ -179,8 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'ENTERPRISE ACCESS',
-                            style: TextStyle(
-                              fontSize: 10,
+                            style: context.textTheme.labelSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: colors.faintText,
                               letterSpacing: 1.2,
@@ -204,8 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(width: 6),
                         Text(
                           'Conexión segura cifrada',
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: context.textTheme.labelMedium?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
                         ),
@@ -239,8 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onTap: onTap,
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 12,
+        style: context.textTheme.labelMedium?.copyWith(
           color: context.colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w400,
         ),
@@ -253,7 +245,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Text(
         '•',
-        style: TextStyle(fontSize: 10, color: context.colors.faintText),
+        style: context.textTheme.labelSmall?.copyWith(
+          color: context.colors.faintText,
+        ),
       ),
     );
   }

@@ -114,8 +114,7 @@ class _StatusHeading extends StatelessWidget {
           needAttention == 0
               ? 'No hay áreas que requieran atención.'
               : '$needAttention ${needAttention == 1 ? 'área requiere' : 'áreas requieren'} atención.',
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
           ),
         ),

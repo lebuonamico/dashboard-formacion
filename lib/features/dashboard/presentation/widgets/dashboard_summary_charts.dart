@@ -311,8 +311,7 @@ class _NoCategoryData extends StatelessWidget {
           Text(
             'No hay horas válidas en ninguna categoría para este período.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -357,8 +356,7 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        fontSize: 15,
+                      style: context.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.colorScheme.onSurface,
                       ),
@@ -368,8 +366,7 @@ class _SummaryCard extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -384,8 +381,7 @@ class _SummaryCard extends StatelessWidget {
                 ),
                 child: Text(
                   trailing,
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.primary,
                   ),
@@ -403,8 +399,7 @@ class _SummaryCard extends StatelessWidget {
                   footer,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: context.textTheme.labelSmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -422,8 +417,7 @@ class _SummaryCard extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  textStyle: const TextStyle(
-                    fontSize: 11,
+                  textStyle: context.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -490,8 +484,7 @@ class _LegendList extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.label,
-                    style: TextStyle(
-                      fontSize: 10,
+                    style: context.textTheme.labelSmall?.copyWith(
                       color: context.colors.intermediateText,
                     ),
                   ),
@@ -500,8 +493,7 @@ class _LegendList extends StatelessWidget {
                   showPercentages
                       ? '${item.value!.toStringAsFixed(1)} h (${((item.value! / total) * 100).toStringAsFixed(0)}%)'
                       : '${item.count} (${((item.count! / total) * 100).toStringAsFixed(0)}%)',
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colors.intermediateText,
                   ),

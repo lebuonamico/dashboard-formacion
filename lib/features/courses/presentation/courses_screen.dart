@@ -249,8 +249,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
               DataCell(
                 Text(
                   vm.course.id,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: cs.onSurfaceVariant,
                   ),
@@ -259,8 +258,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
               DataCell(
                 Text(
                   vm.course.name,
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -274,8 +272,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
               DataCell(
                 Text(
                   '${vm.course.workloadHours.toStringAsFixed(0)} hs',
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -305,8 +302,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
     final cs = context.colorScheme;
     return Text(
       text,
-      style: TextStyle(
-        fontSize: 13,
+      style: context.textTheme.bodySmall?.copyWith(
         fontWeight: empty ? FontWeight.w400 : FontWeight.w600,
         color: empty ? cs.onSurfaceVariant : cs.onSurface,
       ),

@@ -111,8 +111,7 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
           children: [
             Text(
               'Integrantes ($totalMembers)',
-              style: TextStyle(
-                fontSize: 18,
+              style: context.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: context.colorScheme.onSurface,
               ),

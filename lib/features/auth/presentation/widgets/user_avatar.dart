@@ -71,8 +71,7 @@ class UserAvatar extends ConsumerWidget {
                     data.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: context.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                     ),
@@ -82,8 +81,7 @@ class UserAvatar extends ConsumerWidget {
                       data.subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -190,8 +188,7 @@ class _DarkModeEntryState extends State<_DarkModeEntry> {
                           Expanded(
                             child: Text(
                               'Tema oscuro',
-                              style: TextStyle(
-                                fontSize: 13,
+                              style: context.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w500,
                                 color: cs.onSurface,
                               ),
@@ -321,8 +318,7 @@ class _UserCard extends StatelessWidget {
                             (data.localMode ? 'Modo local' : 'Usuario'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
+                        style: context.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: cs.onSurface,
                         ),
@@ -332,8 +328,7 @@ class _UserCard extends StatelessWidget {
                         data.email ?? 'Sin sesión iniciada',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: context.textTheme.labelMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
@@ -347,8 +342,7 @@ class _UserCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Rol',
-              style: TextStyle(
-                fontSize: 11,
+              style: context.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
                 letterSpacing: 0.5,
@@ -410,8 +404,7 @@ class _AccountData extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(
-            fontSize: 11,
+          style: context.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: cs.onSurfaceVariant,
             letterSpacing: 0.5,
@@ -421,8 +414,7 @@ class _AccountData extends StatelessWidget {
         Text(
           text,
           key: Key(itemKey),
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: warning ? colors.warning.text : colors.intermediateText,
           ),
         ),
@@ -468,8 +460,7 @@ class _RoleBadge extends StatelessWidget {
           ),
           child: Text(
             text,
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -478,8 +469,7 @@ class _RoleBadge extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           description,
-          style: TextStyle(
-            fontSize: 12,
+          style: context.textTheme.labelMedium?.copyWith(
             color: context.colors.intermediateText,
           ),
         ),

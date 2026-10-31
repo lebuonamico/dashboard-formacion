@@ -28,8 +28,7 @@ class TeamDetailHeader extends StatelessWidget {
           children: [
             Text(
               team.name,
-              style: TextStyle(
-                fontSize: 24,
+              style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: context.colorScheme.onSurface,
               ),
@@ -37,8 +36,7 @@ class TeamDetailHeader extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               '${team.area} · Líder: ${team.leader}',
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -64,8 +62,7 @@ class TeamDetailHeader extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     periodLabel,
-                    style: TextStyle(
-                      fontSize: 13,
+                    style: context.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: context.colorScheme.onSurface,
                     ),
@@ -82,8 +79,7 @@ class TeamDetailHeader extends StatelessWidget {
               ),
               child: Text(
                 team.status.label,
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: team.status.colors(context).text,
                 ),
@@ -174,16 +170,14 @@ class _TeamProgressPanel extends StatelessWidget {
             children: [
               Text(
                 formatPercentage(team.completionPercentage),
-                style: TextStyle(
-                  fontSize: 28,
+                style: context.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: team.status.colors(context).text,
                 ),
               ),
               Text(
                 '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} h',
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.onSurfaceVariant,
                 ),
@@ -246,16 +240,14 @@ class _MetricRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
           ),

@@ -99,8 +99,7 @@ class _CardHeader extends StatelessWidget {
                 area.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
+                style: context.textTheme.bodyLarge?.copyWith(
                   height: 1.25,
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.onSurface,
@@ -111,8 +110,7 @@ class _CardHeader extends StatelessWidget {
                 '$employees ${employees == 1 ? 'colaborador' : 'colaboradores'}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.primary,
                 ),
@@ -154,8 +152,7 @@ class _TeamsRow extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
+              style: context.textTheme.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -191,8 +188,7 @@ class _LeadersRow extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
+              style: context.textTheme.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -229,8 +225,7 @@ class _ProgressSection extends StatelessWidget {
                       '${area.membersOnTarget} de ${area.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -254,8 +249,7 @@ class _ProgressSection extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               formatPercentage(area.compliancePercentage),
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: area.level.colors(context).text,
               ),
@@ -293,8 +287,7 @@ class _CardFooter extends StatelessWidget {
                 child: Text(
                   '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.onSurface,
                   ),
@@ -303,8 +296,7 @@ class _CardFooter extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 _formatDeviation(area.hoursDeviation),
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: area.hoursDeviation >= 0
                       ? context.colors.success.text
@@ -317,8 +309,7 @@ class _CardFooter extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           'Ver área',
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: context.colorScheme.primary,
           ),
@@ -369,9 +360,8 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             trafficLight.label,
-            style: TextStyle(
+            style: context.textTheme.labelMedium?.copyWith(
               color: trafficLight.colors(context).text,
-              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

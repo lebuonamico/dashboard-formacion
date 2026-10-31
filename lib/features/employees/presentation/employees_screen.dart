@@ -264,8 +264,7 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
                   emp.employeeId,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colors.intermediateText,
                   ),
@@ -294,8 +293,7 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
           backgroundColor: cs.outlineVariant,
           child: Text(
             emp.firstName.isEmpty ? '?' : emp.firstName.substring(0, 1),
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
             ),
@@ -311,8 +309,7 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
                 '${emp.firstName} ${emp.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
@@ -321,7 +318,9 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
                 _showData(emp.email),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                style: context.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -339,8 +338,7 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
           _showData(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: context.colors.intermediateText,
           ),
         ),
@@ -348,8 +346,7 @@ class _PaginatedEmployeesTableState extends State<_PaginatedEmployeesTable> {
           _showData(emp.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
+          style: context.textTheme.labelMedium?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
           ),
         ),

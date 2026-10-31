@@ -48,8 +48,7 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
       children: [
         Text(
           'Áreas y equipos',
-          style: TextStyle(
-            fontSize: 22,
+          style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: cs.onSurface,
           ),
@@ -59,7 +58,9 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
           'Las áreas y los equipos se crean al importar la nómina, con el '
           'Sector y el Equipo de cada colaborador. Desde acá se asignan sus '
           'líderes.',
-          style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          style: context.textTheme.bodySmall?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 20),
         SizedBox(
@@ -318,8 +319,7 @@ class _CardArea extends StatelessWidget {
                   children: [
                     Text(
                       area.name,
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: context.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
                       ),
@@ -327,8 +327,7 @@ class _CardArea extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       detail,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -353,7 +352,9 @@ class _CardArea extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 'La nómina no trae equipos para esta área.',
-                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
               ),
             ),
           for (final team in teams)
@@ -411,8 +412,7 @@ class _TeamRow extends StatelessWidget {
               children: [
                 Text(
                   team.name,
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -422,7 +422,9 @@ class _TeamRow extends StatelessWidget {
                   employees == 0
                       ? 'Sin colaboradores activos en la nómina'
                       : _employees(employees),
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -474,8 +476,7 @@ class _Leaders extends StatelessWidget {
       children: [
         Text(
           '$label:',
-          style: TextStyle(
-            fontSize: 12,
+          style: context.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: cs.onSurfaceVariant,
           ),
@@ -483,7 +484,9 @@ class _Leaders extends StatelessWidget {
         if (sorted.isEmpty)
           Text(
             'Sin líderes asignados',
-            style: TextStyle(fontSize: 12, color: colors.faintText),
+            style: context.textTheme.labelMedium?.copyWith(
+              color: colors.faintText,
+            ),
           ),
         for (final email in sorted)
           Tooltip(
@@ -538,8 +541,7 @@ class _Notice extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
+              style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color ?? cs.onSurface,
               ),
@@ -548,7 +550,9 @@ class _Notice extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ],
         ),

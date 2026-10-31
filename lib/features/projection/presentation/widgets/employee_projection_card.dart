@@ -36,8 +36,7 @@ class EmployeeProjectionCard extends StatelessWidget {
             children: [
               Text(
                 formatPercentage(projection.percentage),
-                style: TextStyle(
-                  fontSize: 22,
+                style: context.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
                 ),
@@ -56,8 +55,7 @@ class EmployeeProjectionCard extends StatelessWidget {
                 ),
                 child: Text(
                   projection.status.label,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: colors.text,
                   ),
@@ -69,13 +67,17 @@ class EmployeeProjectionCard extends StatelessWidget {
           Text(
             '${projection.projection.toStringAsFixed(0)} / '
             '${projection.goal.toStringAsFixed(0)} h proyectadas a diciembre',
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            style: context.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Corte: ${monthName(projection.cutoffMonth)} $year · tendencia de sus '
             'horas en los meses con datos',
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            style: context.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           if (missing.isEmpty)
@@ -92,7 +94,9 @@ class EmployeeProjectionCard extends StatelessWidget {
                     closed
                         ? 'Cumplió todas las habilidades de su plan.'
                         : 'Con su tendencia cumple todas las habilidades de su plan.',
-                    style: TextStyle(fontSize: 14, color: cs.onSurface),
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -102,8 +106,7 @@ class EmployeeProjectionCard extends StatelessWidget {
               closed
                   ? 'No llegó a cumplir:'
                   : 'Para llegar a diciembre tiene que reforzar:',
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: cs.onSurface,
               ),
@@ -127,7 +130,9 @@ class EmployeeProjectionCard extends StatelessWidget {
                         '${category.missing.toStringAsFixed(1)} h'
                         '${closed ? '' : ' (+${(category.missing / projection.remainingMonths).toStringAsFixed(1)} h/mes)'}',
                         key: Key('proyeccion_falta_${category.type.name}'),
-                        style: TextStyle(fontSize: 14, color: cs.onSurface),
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface,
+                        ),
                       ),
                     ),
                   ],
@@ -148,8 +153,7 @@ class EmployeeProjectionCard extends StatelessWidget {
                   '${category.goal.toStringAsFixed(0)} h · proyecta '
                   '${category.projected.toStringAsFixed(1)} h '
                   '${category.arrives ? '✓' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textTheme.labelMedium?.copyWith(
                     color: category.arrives
                         ? context.colors.success.text
                         : cs.onSurfaceVariant,

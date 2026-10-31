@@ -203,8 +203,7 @@ class DashboardKpiBadge extends StatelessWidget {
         text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 10,
+        style: context.textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w700,
           color: colors.text,
         ),
@@ -255,7 +254,9 @@ class DashboardKpiCard extends StatelessWidget {
     suffix,
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
-    style: TextStyle(fontSize: 10, color: context.colorScheme.onSurfaceVariant),
+    style: context.textTheme.labelSmall?.copyWith(
+      color: context.colorScheme.onSurfaceVariant,
+    ),
   );
 
   @override
@@ -273,8 +274,7 @@ class DashboardKpiCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: context.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.3,
                     color: context.colorScheme.onSurfaceVariant,
@@ -304,8 +304,7 @@ class DashboardKpiCard extends StatelessWidget {
               secondaryText!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10,
+              style: context.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colors.success.text,
               ),
@@ -318,8 +317,7 @@ class DashboardKpiCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 28,
+                style: context.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.onSurface,
                 ),
@@ -354,8 +352,7 @@ class DashboardKpiCard extends StatelessWidget {
                   progressLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
+                  style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
@@ -367,8 +364,7 @@ class DashboardKpiCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 9,
+                  style: context.textTheme.labelSmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),

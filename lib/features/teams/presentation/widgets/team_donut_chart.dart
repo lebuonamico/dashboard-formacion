@@ -110,8 +110,7 @@ class _DonutLegendItem extends StatelessWidget {
               slice.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
+              style: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.colors.intermediateText,
               ),
@@ -130,8 +129,7 @@ class _DonutLegendItem extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '${_formatValue(slice.value)}$valueSuffix ($percentage%)',
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: context.colors.intermediateText,
             ),

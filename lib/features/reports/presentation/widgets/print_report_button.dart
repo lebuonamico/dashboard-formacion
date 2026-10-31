@@ -75,7 +75,9 @@ class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
           minimumSize: const Size(0, 30),
           foregroundColor: cs.primary,
           side: BorderSide(color: cs.outlineVariant),
-          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          textStyle: context.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         icon: _generating
             ? const SizedBox(

@@ -248,7 +248,9 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
     final next = plans.versions
         .where((version) => version.validFrom.isAfter(DateTime(_year, _month)))
         .firstOrNull;
-    final noteStyle = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
+    final noteStyle = context.textTheme.bodySmall!.copyWith(
+      color: cs.onSurfaceVariant,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +324,9 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
                   child: Text(
                     'Es un mes pasado: guardar recalcula los meses ya '
                     'evaluados desde ${monthName(_month)} $_year.',
-                    style: TextStyle(fontSize: 13, color: colors.warning.text),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: colors.warning.text,
+                    ),
                   ),
                 ),
               ],
@@ -357,8 +361,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
   Widget _buildTable() {
     final cs = context.colorScheme;
     final colors = context.colors;
-    final headerStyle = TextStyle(
-      fontSize: 12,
+    final headerStyle = context.textTheme.labelMedium!.copyWith(
       fontWeight: FontWeight.w600,
       color: cs.onSurfaceVariant,
     );
@@ -451,8 +454,7 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
             Text(
               total == null ? '—' : '${_text(total)} h',
               key: Key('plan_total_${seniority.name}'),
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: cs.onSurface,
               ),

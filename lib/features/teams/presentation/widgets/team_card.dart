@@ -86,8 +86,7 @@ class _CardHeader extends StatelessWidget {
                 team.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
+                style: context.textTheme.bodyLarge?.copyWith(
                   height: 1.25,
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.onSurface,
@@ -98,8 +97,7 @@ class _CardHeader extends StatelessWidget {
                 team.area,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.primary,
                 ),
@@ -134,8 +132,7 @@ class _LeaderRow extends StatelessWidget {
             'Líder: $leader',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -171,8 +168,7 @@ class _ProgressSection extends StatelessWidget {
                       '${team.membersOnTarget} de ${team.memberCount} en objetivo',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -196,8 +192,7 @@ class _ProgressSection extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               formatPercentage(team.completionPercentage),
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: team.status.colors(context).text,
               ),
@@ -235,8 +230,7 @@ class _CardFooter extends StatelessWidget {
                 child: Text(
                   '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} hs',
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.onSurface,
                   ),
@@ -245,8 +239,7 @@ class _CardFooter extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 _formatHoursDeviation(team.hoursDeviation),
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: team.hoursDeviation >= 0
                       ? context.colors.success.text
@@ -259,8 +252,7 @@ class _CardFooter extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           'Ver detalle',
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: context.colorScheme.primary,
           ),
@@ -311,9 +303,8 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             status.label,
-            style: TextStyle(
+            style: context.textTheme.labelMedium?.copyWith(
               color: status.colors(context).text,
-              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

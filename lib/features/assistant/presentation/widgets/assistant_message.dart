@@ -15,8 +15,7 @@ class AssistantMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
     final colors = context.colors;
-    final text = TextStyle(
-      fontSize: 14,
+    final text = context.textTheme.bodyMedium!.copyWith(
       height: 1.65,
       color: colors.intermediateText,
     );
@@ -84,9 +83,8 @@ class AssistantMessage extends StatelessWidget {
                       child: Text(
                         // La pantalla visible no prueba la fuente de la respuesta.
                         message.isUser ? 'Vos' : 'Asistente IA',
-                        style: TextStyle(
+                        style: context.textTheme.labelMedium?.copyWith(
                           color: cs.onSurfaceVariant,
-                          fontSize: 11.5,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
                         ),
@@ -106,25 +104,25 @@ class AssistantMessage extends StatelessWidget {
                         .copyWith(
                           p: text,
                           strong: const TextStyle(fontWeight: FontWeight.w700),
-                          h1: text.copyWith(
-                            fontSize: 20,
+                          h1: context.textTheme.titleLarge!.copyWith(
+                            color: text.color,
                             height: 1.3,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -.4,
                           ),
-                          h2: text.copyWith(
-                            fontSize: 18,
+                          h2: context.textTheme.titleMedium!.copyWith(
+                            color: text.color,
                             height: 1.35,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -.3,
                           ),
-                          h3: text.copyWith(
-                            fontSize: 16,
+                          h3: context.textTheme.bodyLarge!.copyWith(
+                            color: text.color,
                             height: 1.4,
                             fontWeight: FontWeight.w700,
                           ),
-                          h4: text.copyWith(
-                            fontSize: 15,
+                          h4: context.textTheme.bodyLarge!.copyWith(
+                            color: text.color,
                             fontWeight: FontWeight.w700,
                           ),
                           h5: text.copyWith(fontWeight: FontWeight.w700),
@@ -136,8 +134,7 @@ class AssistantMessage extends StatelessWidget {
                             color: cs.primary,
                             decoration: TextDecoration.underline,
                           ),
-                          code: TextStyle(
-                            fontSize: 12.5,
+                          code: context.textTheme.bodySmall?.copyWith(
                             height: 1.5,
                             fontFamily: 'monospace',
                             color: colors.ai.text,
@@ -156,12 +153,12 @@ class AssistantMessage extends StatelessWidget {
                             ),
                           ),
                           blockquotePadding: const EdgeInsets.all(12),
-                          tableBody: text.copyWith(
-                            fontSize: 12.5,
+                          tableBody: context.textTheme.bodySmall!.copyWith(
+                            color: text.color,
                             height: 1.55,
                           ),
-                          tableHead: text.copyWith(
-                            fontSize: 12.5,
+                          tableHead: context.textTheme.bodySmall!.copyWith(
+                            color: text.color,
                             height: 1.5,
                             fontWeight: FontWeight.w700,
                           ),

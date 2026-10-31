@@ -180,19 +180,17 @@ class _SideMenuState extends ConsumerState<SideMenu>
                     children: [
                       Text(
                         'Finnegans',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: context.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: cs.primary,
                         ),
                       ),
                       Text(
                         'Portal de formación interna',
-                        style: TextStyle(
-                          fontSize: 9,
+                        style: context.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: cs.onSurfaceVariant,
-                          letterSpacing: 1.1,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
@@ -534,8 +532,7 @@ class _MenuItemState extends State<_MenuItem> {
                         ),
                         title: Text(
                           widget.label,
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: context.textTheme.bodyMedium?.copyWith(
                             fontWeight: selected
                                 ? FontWeight.w600
                                 : FontWeight.w500,

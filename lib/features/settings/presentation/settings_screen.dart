@@ -1357,8 +1357,7 @@ class _ConfigCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 16,
+            style: context.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: context.colorScheme.onSurface,
             ),
@@ -1366,8 +1365,7 @@ class _ConfigCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),

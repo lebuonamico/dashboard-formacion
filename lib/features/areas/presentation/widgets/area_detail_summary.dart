@@ -27,8 +27,7 @@ class AreaDetailHeader extends StatelessWidget {
           children: [
             Text(
               area.name,
-              style: TextStyle(
-                fontSize: 24,
+              style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: context.colorScheme.onSurface,
               ),
@@ -38,8 +37,7 @@ class AreaDetailHeader extends StatelessWidget {
               '$employees ${employees == 1 ? 'colaborador' : 'colaboradores'}'
               ' · $teams ${teams == 1 ? 'equipo general' : 'equipos generales'}'
               '${area.leaders == null ? '' : ' · Líder de área: ${area.leaders}'}',
-              style: TextStyle(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
               ),
             ),
@@ -65,8 +63,7 @@ class AreaDetailHeader extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     period,
-                    style: TextStyle(
-                      fontSize: 13,
+                    style: context.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: context.colorScheme.onSurface,
                     ),
@@ -83,8 +80,7 @@ class AreaDetailHeader extends StatelessWidget {
               ),
               child: Text(
                 area.level.label,
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: area.level.colors(context).text,
                 ),
@@ -177,16 +173,14 @@ class _AreaProgressPanel extends StatelessWidget {
             children: [
               Text(
                 formatPercentage(area.compliancePercentage),
-                style: TextStyle(
-                  fontSize: 28,
+                style: context.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: area.level.colors(context).text,
                 ),
               ),
               Text(
                 '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} h',
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.onSurfaceVariant,
                 ),
@@ -243,16 +237,14 @@ class _MetricRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
           ),

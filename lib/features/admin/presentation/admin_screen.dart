@@ -103,8 +103,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       children: [
         Text(
           'Usuarios del sistema',
-          style: TextStyle(
-            fontSize: 22,
+          style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: cs.onSurface,
           ),
@@ -113,7 +112,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         Text(
           'Quién puede iniciar sesión en la aplicación y con qué rol. '
           'Bloquear y eliminar se pueden deshacer más adelante.',
-          style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          style: context.textTheme.bodySmall?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 20),
         const AdminFilters(),
@@ -368,8 +369,7 @@ class _CenteredState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
+              style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color ?? cs.onSurface,
               ),
@@ -378,7 +378,9 @@ class _CenteredState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ],
         ),

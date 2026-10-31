@@ -213,7 +213,9 @@ class _PaginatedTimeEntriesTableState
 
   Widget _table(List<CrmTimeEntryViewModel> visible) {
     final cs = context.colorScheme;
-    final secondary = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
+    final secondary = context.textTheme.labelMedium!.copyWith(
+      color: cs.onSurfaceVariant,
+    );
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
       columnSpacing: 24,
@@ -244,8 +246,7 @@ class _PaginatedTimeEntriesTableState
               DataCell(
                 Text(
                   _formatDate(vm.timeEntry.date),
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     color: context.colors.intermediateText,
                   ),
                 ),
@@ -287,8 +288,7 @@ class _PaginatedTimeEntriesTableState
             emp == null || emp.firstName.isEmpty
                 ? '?'
                 : emp.firstName.substring(0, 1),
-            style: TextStyle(
-              fontSize: 12,
+            style: context.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
             ),
@@ -306,8 +306,7 @@ class _PaginatedTimeEntriesTableState
                     : '${emp.firstName} ${emp.lastName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
@@ -316,8 +315,7 @@ class _PaginatedTimeEntriesTableState
                 emp == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.textTheme.labelMedium?.copyWith(
                   color: emp == null
                       ? context.colors.warning.text
                       : cs.onSurfaceVariant,
@@ -345,8 +343,7 @@ class _PaginatedTimeEntriesTableState
           _showData(emp.area),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: context.colors.intermediateText,
           ),
         ),
@@ -354,7 +351,9 @@ class _PaginatedTimeEntriesTableState
           _showData(emp.team),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -371,8 +370,7 @@ class _PaginatedTimeEntriesTableState
         name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 14,
+        style: context.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: context.colorScheme.onSurface,
         ),
@@ -394,10 +392,9 @@ class _PaginatedTimeEntriesTableState
         '${timeEntry.hours.toStringAsFixed(2)} hs${timeEntry.isTaught ? ' (dictadas)' : ' (tomadas)'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
+        style: context.textTheme.labelMedium?.copyWith(
           color: success.text,
           fontWeight: FontWeight.bold,
-          fontSize: 12,
         ),
       ),
     );

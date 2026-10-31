@@ -74,14 +74,15 @@ class CategoryHoursProgress extends StatelessWidget {
                 type.shortLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: colors.intermediateText),
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: colors.intermediateText,
+                ),
               ),
             ),
             const SizedBox(width: 6),
             Text(
               '${_formatHours(completedHours)}/${_formatHours(requiredHours)} h',
-              style: TextStyle(
-                fontSize: 10,
+              style: context.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
               ),

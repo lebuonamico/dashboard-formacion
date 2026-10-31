@@ -80,8 +80,7 @@ class _TeamResultsState extends State<TeamResults> {
               children: [
                 Text(
                   'Equipos',
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: context.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: context.colorScheme.onSurface,
                   ),
@@ -93,8 +92,7 @@ class _TeamResultsState extends State<TeamResults> {
                   widget.teams.length == widget.teamCount
                       ? '${widget.teamCount} equipos en el período'
                       : '${widget.teams.length} de ${widget.teamCount} equipos',
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -147,8 +145,7 @@ class _CountBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: TextStyle(
-          fontSize: 12,
+        style: context.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w700,
           color: context.colorScheme.primary,
         ),
@@ -209,8 +206,7 @@ class _EmptySearch extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda, área o estado.',
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),

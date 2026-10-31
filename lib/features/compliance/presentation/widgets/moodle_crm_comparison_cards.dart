@@ -81,8 +81,7 @@ class _ComparisonCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'vs',
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurfaceVariant,
                 ),
@@ -101,7 +100,9 @@ class _ComparisonCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           _differenceText(),
-          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 12),
         Divider(height: 1, color: cs.outlineVariant),
@@ -150,8 +151,7 @@ class _Total extends StatelessWidget {
       children: [
         Text(
           source,
-          style: TextStyle(
-            fontSize: 10,
+          style: context.textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
             color: color,
@@ -160,8 +160,7 @@ class _Total extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           '${hours.toStringAsFixed(1)} h',
-          style: TextStyle(
-            fontSize: 26,
+          style: context.textTheme.displaySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
           ),
@@ -194,8 +193,7 @@ class _Panel extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 15,
+            style: context.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: cs.onSurface,
             ),
@@ -205,7 +203,9 @@ class _Panel extends StatelessWidget {
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            style: context.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 14),
           ...children,
@@ -237,7 +237,9 @@ class _CardTotalCrm extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Repartidas entre las 4 categorías del plan',
-          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 12),
         Divider(height: 1, color: cs.outlineVariant),
@@ -356,8 +358,7 @@ class _ColumnsChart extends StatelessWidget {
                   type.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -423,8 +424,7 @@ class _Column extends StatelessWidget {
             children: [
               Text(
                 '${hours.toStringAsFixed(0)} h',
-                style: TextStyle(
-                  fontSize: 11,
+                style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
                 ),
@@ -445,8 +445,7 @@ class _Column extends StatelessWidget {
         Text(
           source,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 10,
+          style: context.textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: color,
           ),

@@ -259,8 +259,7 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
         text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 13,
+        style: context.textTheme.bodySmall?.copyWith(
           color: warning
               ? context.colors.warning.text
               : context.colors.intermediateText,
@@ -271,8 +270,7 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
 
   Widget _stamp(DateTime? date) => Text(
     formatStamp(date),
-    style: TextStyle(
-      fontSize: 13,
+    style: context.textTheme.bodySmall?.copyWith(
       color: date == null
           ? context.colors.faintText
           : context.colors.intermediateText,

@@ -78,8 +78,7 @@ class _AreasResultsState extends State<AreasResults> {
               children: [
                 Text(
                   'Áreas',
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: context.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: context.colorScheme.onSurface,
                   ),
@@ -91,8 +90,7 @@ class _AreasResultsState extends State<AreasResults> {
                   widget.areas.length == widget.totalAreas
                       ? '${widget.totalAreas} áreas en el período'
                       : '${widget.areas.length} de ${widget.totalAreas} áreas',
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -148,8 +146,7 @@ class _CountBadge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: TextStyle(
-          fontSize: 12,
+        style: context.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w700,
           color: context.colorScheme.primary,
         ),
@@ -214,8 +211,7 @@ class _EmptySearch extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Probá con otra búsqueda o estado.',
-            style: TextStyle(
-              fontSize: 13,
+            style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),

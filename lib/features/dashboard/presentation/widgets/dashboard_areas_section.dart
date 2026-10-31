@@ -33,8 +33,7 @@ class DashboardAreasSection extends ConsumerWidget {
             Expanded(
               child: Text(
                 'Estado de cumplimiento por áreas',
-                style: TextStyle(
-                  fontSize: 16,
+                style: context.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.onSurface,
                 ),
@@ -205,8 +204,7 @@ class DashboardAreaCard extends StatelessWidget {
                                   area.area,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 16,
+                                  style: context.textTheme.bodyLarge?.copyWith(
                                     height: 1.25,
                                     fontWeight: FontWeight.w700,
                                     color: context.colorScheme.onSurface,
@@ -217,8 +215,7 @@ class DashboardAreaCard extends StatelessWidget {
                                   '${area.employeeCount} colaboradores',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
+                                  style: context.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: context.colorScheme.primary,
                                   ),
@@ -244,8 +241,7 @@ class DashboardAreaCard extends StatelessWidget {
                               '${area.employeeCount} colaboradores · $teamCount equipos',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
+                              style: context.textTheme.bodySmall?.copyWith(
                                 color: context.colorScheme.onSurfaceVariant,
                               ),
                             ),
@@ -258,15 +254,13 @@ class DashboardAreaCard extends StatelessWidget {
                         children: [
                           Text(
                             'Cumplimiento del área',
-                            style: TextStyle(
-                              fontSize: 12,
+                            style: context.textTheme.labelMedium?.copyWith(
                               color: context.colorScheme.onSurfaceVariant,
                             ),
                           ),
                           Text(
                             formatPercentage(area.compliancePercentage),
-                            style: TextStyle(
-                              fontSize: 14,
+                            style: context.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: area.level.colors(context).text,
                             ),
@@ -288,8 +282,7 @@ class DashboardAreaCard extends StatelessWidget {
                         children: [
                           Text(
                             '${area.completedHours.toStringAsFixed(1)} de ${area.requiredHours.toStringAsFixed(1)} hs',
-                            style: TextStyle(
-                              fontSize: 13,
+                            style: context.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: context.colorScheme.onSurface,
                             ),
@@ -297,8 +290,7 @@ class DashboardAreaCard extends StatelessWidget {
                           const Spacer(),
                           Text(
                             'Ver detalle',
-                            style: TextStyle(
-                              fontSize: 13,
+                            style: context.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: context.colorScheme.primary,
                             ),
@@ -350,9 +342,8 @@ class _AreaStatusBadge extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             status.label,
-            style: TextStyle(
+            style: context.textTheme.labelMedium?.copyWith(
               color: status.colors(context).text,
-              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -31,8 +31,7 @@ class AppTopBar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 20,
+              style: context.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: cs.onSurface,
               ),

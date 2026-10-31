@@ -35,9 +35,8 @@ class ColorLabel extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: context.textTheme.labelMedium?.copyWith(
                 color: colors.text,
-                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),

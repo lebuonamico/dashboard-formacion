@@ -95,8 +95,7 @@ class _KpiCard extends StatelessWidget {
                         data.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: cs.onSurfaceVariant,
                         ),
@@ -121,8 +120,7 @@ class _KpiCard extends StatelessWidget {
                   data.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 25,
+                  style: context.textTheme.displaySmall?.copyWith(
                     height: 1,
                     fontWeight: FontWeight.w700,
                     color: cs.onSurface,
@@ -133,7 +131,9 @@ class _KpiCard extends StatelessWidget {
                   data.detail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

@@ -124,7 +124,9 @@ class AdminActionsBar extends StatelessWidget {
           Expanded(
             child: Text(
               'Seleccioná un usuario de la lista para habilitar las acciones.',
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -142,8 +144,7 @@ class AdminActionsBar extends StatelessWidget {
             children: [
               Text(
                 'Seleccionado: ${user.email}',
-                style: TextStyle(
-                  fontSize: 13,
+                style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
                 ),
@@ -151,15 +152,16 @@ class AdminActionsBar extends StatelessWidget {
               if (outsideFilter)
                 Text(
                   '(no aparece con los filtros actuales)',
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textTheme.labelMedium?.copyWith(
                     color: context.colors.warning.text,
                   ),
                 ),
               if (isOwn)
                 Text(
                   'Es tu propio usuario: no podés modificarlo desde acá.',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
             ],
           ),

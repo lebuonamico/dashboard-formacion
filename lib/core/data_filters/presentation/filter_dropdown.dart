@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'dart:math' as math;
 
@@ -170,8 +171,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                                 subtitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
+                                style: context.textTheme.labelMedium?.copyWith(
                                   height: 1.4,
                                 ),
                               ),
@@ -180,8 +180,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                               const SizedBox(height: 2),
                               Text(
                                 'Sin coincidencias',
-                                style: TextStyle(
-                                  fontSize: 11,
+                                style: context.textTheme.labelMedium?.copyWith(
                                   height: 1.4,
                                   color: Theme.of(context).colorScheme.error,
                                 ),

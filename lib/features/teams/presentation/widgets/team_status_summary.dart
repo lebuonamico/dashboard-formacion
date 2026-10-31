@@ -115,8 +115,7 @@ class _StatusHeading extends StatelessWidget {
           teamsRequiringAttention == 0
               ? 'No hay equipos que requieran atención.'
               : '$teamsRequiringAttention ${teamsRequiringAttention == 1 ? 'equipo requiere' : 'equipos requieren'} atención.',
-          style: TextStyle(
-            fontSize: 13,
+          style: context.textTheme.bodySmall?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
           ),
         ),
