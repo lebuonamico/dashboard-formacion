@@ -7,6 +7,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 export 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 

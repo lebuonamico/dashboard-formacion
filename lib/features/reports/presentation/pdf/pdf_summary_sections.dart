@@ -9,6 +9,7 @@ import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 /// Las mismas tarjetas que la pantalla: integrantes, horas, cumplimiento y,
 /// si hay, la proyección a diciembre.

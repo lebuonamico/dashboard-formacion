@@ -20,6 +20,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
   final String employeeId;
@@ -590,7 +591,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (record.timeEntry.isTaught) ...[
+                        if (record.isTaught) ...[
                           ColorLabel(text: 'Dictada', colors: colors.teaching),
                           const SizedBox(width: 8),
                         ],
@@ -629,7 +630,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
 
   Widget _buildTaughtTable(
     BuildContext context,
-    List<TaughtCourseViewModel> taught,
+    List<TaughtCourseStats> taught,
   ) {
     if (taught.isEmpty) {
       return Container(

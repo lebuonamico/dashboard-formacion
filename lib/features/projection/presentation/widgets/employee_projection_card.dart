@@ -5,6 +5,7 @@ import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 /// Proyección a fin de año de un colaborador: si llega con su tendencia y,
 /// si no, cuántas horas le faltan en cada habilidad de su plan.

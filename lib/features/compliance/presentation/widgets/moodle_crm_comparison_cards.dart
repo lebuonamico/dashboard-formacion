@@ -3,6 +3,7 @@ import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.d
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 /// Dos cards lado a lado: Moodle vs CRM en las categorías comparables
 /// (Negocio y Blandas) y el total de cada fuente, con el desglose por

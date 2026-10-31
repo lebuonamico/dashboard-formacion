@@ -1,6 +1,7 @@
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
+import 'package:app_finnegans/features/courses/domain/course_classification_service.dart';
 
 class DashboardAccumulatedCompliance {
   final double creditedHours;
@@ -44,7 +45,10 @@ class DashboardKpis {
 
 /// Cálculo extraído sin cambios de DashboardKpiGrid, compartido con el asistente.
 class DashboardKpisService {
-  const DashboardKpisService();
+  final CourseClassificationService classification;
+
+  DashboardKpisService({CourseClassificationService? classification})
+    : classification = classification ?? CourseClassificationService();
 
   DashboardAccumulatedCompliance accumulateCompliance(
     Iterable<TeamsPeriodSummary> months,
@@ -98,7 +102,7 @@ class DashboardKpisService {
     return DashboardKpis(
       employees: totalEmployees,
       training: payrollTimeEntries
-          .where((c) => !c.isTaught)
+          .where((c) => !classification.isTaught(c))
           .map((c) => c.employeeId)
           .toSet()
           .length,

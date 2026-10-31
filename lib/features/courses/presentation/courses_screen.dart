@@ -12,6 +12,7 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/courses/domain/course_stats.dart';
 
 class CoursesScreen extends ConsumerWidget {
   const CoursesScreen({super.key});
@@ -110,7 +111,7 @@ class _CoursesFilterBar extends ConsumerWidget {
 
 /// Tabla del catálogo, de a una página por vez, para no tener que scrollear.
 class _PaginatedCoursesTable extends StatefulWidget {
-  final List<CourseViewModel> courses;
+  final List<CourseStats> courses;
 
   const _PaginatedCoursesTable({required this.courses});
 
@@ -204,7 +205,7 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
     );
   }
 
-  Widget _table(List<CourseViewModel> visible) {
+  Widget _table(List<CourseStats> visible) {
     final cs = context.colorScheme;
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
@@ -266,9 +267,9 @@ class _PaginatedCoursesTableState extends State<_PaginatedCoursesTable> {
                 ),
               ),
               DataCell(
-                vm.course.classificationLms == null
+                vm.lmsCategory == null
                     ? const Text('-')
-                    : CourseCategoryChip(type: vm.course.classificationLms!),
+                    : CourseCategoryChip(type: vm.lmsCategory!),
               ),
               DataCell(
                 Text(

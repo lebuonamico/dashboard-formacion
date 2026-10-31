@@ -391,7 +391,7 @@ class _PaginatedTimeEntriesTableState
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        '${timeEntry.hours.toStringAsFixed(2)} hs${timeEntry.isTaught ? ' (dictadas)' : ' (tomadas)'}',
+        '${timeEntry.hours.toStringAsFixed(2)} hs${vm.isTaught ? ' (dictadas)' : ' (tomadas)'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: context.textTheme.labelMedium?.copyWith(

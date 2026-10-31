@@ -75,7 +75,7 @@ class DashboardKpiGrid extends StatelessWidget {
     final teams = teamsAsync.value ?? [];
     if (complianceList.isEmpty) return const SizedBox.shrink();
 
-    final kpis = const DashboardKpisService().calculate(
+    final kpis = DashboardKpisService().calculate(
       complianceList: complianceList,
       timeEntries: timeEntries,
       evaluatedMonths: evaluatedMonths,

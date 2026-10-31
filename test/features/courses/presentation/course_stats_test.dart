@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/courses/presentation/providers/courses_pr
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/courses/domain/course_stats.dart';
 
 Course _course(
   String name, {
@@ -132,9 +133,7 @@ ProviderContainer _container() {
   return container;
 }
 
-Future<Map<String, CourseViewModel>> _metrics(
-  ProviderContainer container,
-) async {
+Future<Map<String, CourseStats>> _metrics(ProviderContainer container) async {
   // Los providers base son futuros: se espera a que estén listos.
   await container.read(coursesProvider.future);
   await container.read(employeesProvider.future);

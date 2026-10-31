@@ -8,6 +8,7 @@ import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 /// Edita las horas mensuales requeridas por categoría para cada seniority.
 /// Cada guardado es una versión que rige desde el mes elegido: los meses

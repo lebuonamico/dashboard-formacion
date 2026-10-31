@@ -29,7 +29,7 @@ final dashboardReportProvider = FutureProvider<TrainingReport?>((ref) async {
   final evolution = await ref.watch(dashboardMonthlyEvolutionProvider.future);
   final projection = await _optionalProjection(ref, (area: null, team: null));
 
-  final kpis = const DashboardKpisService().calculate(
+  final kpis = DashboardKpisService().calculate(
     complianceList: complianceList,
     timeEntries: timeEntries,
     evaluatedMonths: evaluatedMonths,

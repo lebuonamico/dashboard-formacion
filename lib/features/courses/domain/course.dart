@@ -5,7 +5,7 @@ class Course {
   final String name;
   final CourseCategory category;
   final String courseArea;
-  final String instructorEmployeeId; // Empleado que dicta
+  final String instructorEmployeeId;
   final double workloadHours;
   final bool isActive;
 
@@ -19,20 +19,22 @@ class Course {
     this.isActive = true,
   });
 
-  // La clasificación histórica se conserva para CRM y cumplimiento.
-  CourseCategory? get classificationLms => switch (category) {
-    CourseCategory.businessSkills || CourseCategory.softSkills => category,
-    _ => null,
-  };
-
-  Course copyWith({String? id, bool? active}) => Course(
+  Course copyWith({
+    String? id,
+    String? name,
+    CourseCategory? category,
+    String? courseArea,
+    String? instructorEmployeeId,
+    double? workloadHours,
+    bool? isActive,
+  }) => Course(
     id: id ?? this.id,
-    name: name,
-    category: category,
-    courseArea: courseArea,
-    instructorEmployeeId: instructorEmployeeId,
-    workloadHours: workloadHours,
-    isActive: active ?? isActive,
+    name: name ?? this.name,
+    category: category ?? this.category,
+    courseArea: courseArea ?? this.courseArea,
+    instructorEmployeeId: instructorEmployeeId ?? this.instructorEmployeeId,
+    workloadHours: workloadHours ?? this.workloadHours,
+    isActive: isActive ?? this.isActive,
   );
 
   Map<String, dynamic> toJson() => {

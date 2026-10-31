@@ -2,6 +2,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_donut_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 class AreasCategoryDistribution extends StatelessWidget {
   final double businessHours;

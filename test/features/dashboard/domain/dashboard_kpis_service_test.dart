@@ -24,7 +24,7 @@ EmployeeCompliance _compliance(
 );
 
 void main() {
-  const service = DashboardKpisService();
+  final service = DashboardKpisService();
 
   test('La meta anual sale del objetivo del plan, no de 96 h fijas', () {
     // Un plan de 8 h y otro de 10 h: 9 h por persona y mes.

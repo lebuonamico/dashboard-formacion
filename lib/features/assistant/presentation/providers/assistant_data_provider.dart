@@ -156,7 +156,7 @@ Future<AssistantContext> _prepare(
           final months = await scope.read(
             dashboardEvaluatedMonthsProvider.future,
           );
-          final kpis = const DashboardKpisService().calculate(
+          final kpis = DashboardKpisService().calculate(
             complianceList: complianceList,
             timeEntries: timeEntries,
             evaluatedMonths: months,
@@ -414,7 +414,7 @@ Future<void> _addAccumulated(
     }
   }
   final total = !incomplete && evaluated.isNotEmpty
-      ? const DashboardKpisService().accumulateCompliance(evaluated)
+      ? DashboardKpisService().accumulateCompliance(evaluated)
       : null;
   data['acumulado_solicitado'] = {
     'alcance': 'global_organizacion',

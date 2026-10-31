@@ -15,6 +15,7 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/course_services_providers.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
 /// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
@@ -87,13 +88,13 @@ final filteredEmployeesProvider = FutureProvider<List<Employee>>((ref) async {
 });
 
 /// Curso que el empleado cargó en el CRM como dictado, con las horas del período.
-class TaughtCourseViewModel {
+class TaughtCourseStats {
   final String code;
   final String name;
   final String area;
   final double hours;
 
-  const TaughtCourseViewModel({
+  const TaughtCourseStats({
     required this.code,
     required this.name,
     required this.area,
@@ -107,7 +108,7 @@ class EmployeeDetailViewModel {
   final List<CrmTimeEntryViewModel> timeEntriesCrm;
   final List<LmsCertification> lmsCertifications;
   final Map<String, Course> coursesByName;
-  final List<TaughtCourseViewModel> taughtCourses;
+  final List<TaughtCourseStats> taughtCourses;
   final Set<String> completedCourses;
 
   EmployeeDetailViewModel({
@@ -141,6 +142,7 @@ final employeeDetailProvider =
         complianceServiceProvider.future,
       );
       final teamsService = ref.read(teamsServiceProvider);
+      final classification = ref.watch(courseClassificationServiceProvider);
       final isAnnual = scope == PeriodScope.annual;
 
       final employee = employees
@@ -208,15 +210,14 @@ final employeeDetailProvider =
               timeEntry: timeEntry,
               employee: employee,
               course: coursesByName[normalizeKey(timeEntry.courseName)],
+              isTaught: classification.isTaught(timeEntry),
             ),
           )
           .toList();
 
       // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
       final taughtByCourse = <String, List<CrmTimeEntryViewModel>>{};
-      for (final item in timeEntriesCrm.where(
-        (item) => item.timeEntry.isTaught,
-      )) {
+      for (final item in timeEntriesCrm.where((item) => item.isTaught)) {
         final courseId =
             item.course?.id.trim() ?? item.timeEntry.courseId?.trim();
         final key = courseId != null && courseId.isNotEmpty
@@ -227,7 +228,7 @@ final employeeDetailProvider =
       final taught = taughtByCourse.values.map((items) {
         final first = items.first;
         final course = first.course;
-        return TaughtCourseViewModel(
+        return TaughtCourseStats(
           code: course?.id ?? first.timeEntry.courseId ?? '',
           name: course?.name ?? first.timeEntry.courseName,
           area: course?.courseArea ?? first.timeEntry.courseDescription ?? '',

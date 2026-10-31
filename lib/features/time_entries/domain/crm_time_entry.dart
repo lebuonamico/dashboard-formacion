@@ -1,5 +1,4 @@
 import 'package:app_finnegans/features/imports/domain/import_values.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
 
 enum TimeEntryKind { taken, taught }
 
@@ -34,22 +33,35 @@ class CrmTimeEntry {
     required this.kind,
   });
 
-  /// Categoría indicada en la columna Clasificación del CRM, si se reconoce.
-  CourseCategory? get classificationCategory =>
-      CourseCategory.fromText(classification);
-
-  bool get isTaught =>
-      kind == TimeEntryKind.taught ||
-      classificationCategory == CourseCategory.teaching;
-
-  /// Libres y Dictado nunca llegan por el LMS: se acreditan solo con el CRM.
-  CourseCategory? get categoryOnlyCrm {
-    if (isTaught) return CourseCategory.teaching;
-    if (classificationCategory == CourseCategory.exploration) {
-      return CourseCategory.exploration;
-    }
-    return null;
-  }
+  CrmTimeEntry copyWith({
+    String? courseId,
+    String? caseRef,
+    String? courseDescription,
+    String? classification,
+    String? project,
+    String? projectItem,
+    String? description,
+    String? id,
+    String? courseName,
+    String? employeeId,
+    DateTime? date,
+    double? hours,
+    TimeEntryKind? kind,
+  }) => CrmTimeEntry(
+    courseId: courseId ?? this.courseId,
+    caseRef: caseRef ?? this.caseRef,
+    courseDescription: courseDescription ?? this.courseDescription,
+    classification: classification ?? this.classification,
+    project: project ?? this.project,
+    projectItem: projectItem ?? this.projectItem,
+    description: description ?? this.description,
+    id: id ?? this.id,
+    courseName: courseName ?? this.courseName,
+    employeeId: employeeId ?? this.employeeId,
+    date: date ?? this.date,
+    hours: hours ?? this.hours,
+    kind: kind ?? this.kind,
+  );
 
   Map<String, dynamic> toJson() => {
     'courseId': courseId,

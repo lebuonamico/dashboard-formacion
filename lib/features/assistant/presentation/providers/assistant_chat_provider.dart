@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/auth/presentation/providers/auth_provider
 import 'package:app_finnegans/core/config/supabase_client_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
+
 export 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 
 final assistantApiProvider = Provider<AssistantApi>(

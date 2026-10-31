@@ -2,6 +2,7 @@ import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 /// Horas mensuales requeridas por categoría para cada seniority. Siempre
 /// está completo y es válido: el constructor rechaza lo que no lo es.

@@ -317,9 +317,9 @@ class _PaginatedCertificationsTableState
               DataCell(_areaTeamCell(vm)),
               DataCell(_courseCell(vm)),
               DataCell(
-                vm.course?.classificationLms == null
+                vm.lmsCategory == null
                     ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
-                    : CourseCategoryChip(type: vm.course!.classificationLms!),
+                    : CourseCategoryChip(type: vm.lmsCategory!),
               ),
               DataCell(
                 Text(

@@ -33,6 +33,7 @@ import 'package:app_finnegans/features/org_structure/presentation/providers/org_
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/domain/seniority_parser.dart';
+import 'package:app_finnegans/features/courses/domain/course_category_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -42,6 +43,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _categoryParser = CourseCategoryParser();
   final _inProgressImports = <String>{};
 
   bool _startImport(String type) {
@@ -1154,9 +1156,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return -1;
   }
 
-  // Misma regla que la Clasificación del CRM.
   CourseCategory _courseCategoryFromText(String value, String location) {
-    final type = CourseCategory.fromText(value);
+    final type = _categoryParser.tryParse(value);
     if (type == null) {
       throw FormatException('Clasificación inválida en $location: "$value".');
     }

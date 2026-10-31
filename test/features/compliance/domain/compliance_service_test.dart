@@ -10,6 +10,8 @@ import 'package:app_finnegans/features/compliance/domain/compliance_service.dart
 import 'package:app_finnegans/features/teams/domain/teams_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/courses/domain/course_classification_service.dart';
+import 'package:app_finnegans/features/courses/domain/course_category_parser.dart';
 
 void main() {
   final employee = Employee(
@@ -56,7 +58,7 @@ void main() {
     List<Course> courses = const [],
     required List<CrmTimeEntry> timeEntries,
     List<LmsCertification> certifications = const [],
-  }) => const ComplianceService()
+  }) => ComplianceService()
       .calculateComplianceGlobal(
         employees: [employee],
         courses: courses,
@@ -84,7 +86,7 @@ void main() {
     );
     final result = calculate(timeEntries: [teaching]);
 
-    expect(teaching.isTaught, isTrue);
+    expect(CourseClassificationService().isTaught(teaching), isTrue);
     expect(result.creditedHours[CourseCategory.teaching], 3);
     expect(result.declaredHours[CourseCategory.teaching], 3);
   });
@@ -103,22 +105,22 @@ void main() {
 
   test('reconoce las Clasificaciones tal como vienen del CRM', () {
     expect(
-      CourseCategory.fromText('Habilidades de Negocio y Herramientas'),
+      CourseCategoryParser().tryParse('Habilidades de Negocio y Herramientas'),
       CourseCategory.businessSkills,
     );
     expect(
-      CourseCategory.fromText('Habilidades Blandas'),
+      CourseCategoryParser().tryParse('Habilidades Blandas'),
       CourseCategory.softSkills,
     );
     expect(
-      CourseCategory.fromText('Exploracion / Profundizacion'),
+      CourseCategoryParser().tryParse('Exploracion / Profundizacion'),
       CourseCategory.exploration,
     );
     expect(
-      CourseCategory.fromText('Horas de Dictado'),
+      CourseCategoryParser().tryParse('Horas de Dictado'),
       CourseCategory.teaching,
     );
-    expect(CourseCategory.fromText('Otra cosa'), isNull);
+    expect(CourseCategoryParser().tryParse('Otra cosa'), isNull);
 
     final result = calculate(
       timeEntries: [
@@ -176,7 +178,7 @@ void main() {
           certifications: [completed('Arquitectura Cloud')],
           year: 2026,
           month: number,
-          complianceService: const ComplianceService(),
+          complianceService: ComplianceService(),
         );
 
     // Cargas del 10/05 y finalización del 20/05.

@@ -47,7 +47,7 @@ class SnapshotSyncService {
           .toList(),
       keyOf: (course) => course.id,
       isActive: (course) => course.isActive,
-      withActive: (course, active) => course.copyWith(active: active),
+      withActive: (course, active) => course.copyWith(isActive: active),
     );
     return _result(courses.length, await repository.upsert(changes));
   }

@@ -9,6 +9,10 @@ import 'package:app_finnegans/features/courses/presentation/providers/courses_pr
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/course_services_providers.dart';
+import 'package:app_finnegans/features/courses/domain/course_catalog_service.dart';
+import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
   ref,
@@ -28,11 +32,13 @@ class CertificationViewModel {
   final LmsCertification certification;
   final Employee? employee;
   final Course? course;
+  final CourseCategory? lmsCategory;
 
   const CertificationViewModel({
     required this.certification,
     required this.employee,
     required this.course,
+    required this.lmsCategory,
   });
 
   /// Sin curso en el catálogo la finalización no acredita horas (regla
@@ -52,6 +58,7 @@ final joinedCertificationsProvider =
       final certifications = await ref.watch(lmsCertificationsProvider.future);
       final employees = await ref.watch(employeesProvider.future);
       final courses = await ref.watch(coursesProvider.future);
+      final classification = ref.watch(courseClassificationServiceProvider);
 
       final employeeMap = {for (final e in employees) e.employeeId: e};
       // Mismo normalizador que el cálculo de cumplimiento: así el aviso de
@@ -60,14 +67,17 @@ final joinedCertificationsProvider =
         for (final course in courses) normalizeKey(course.name): course,
       };
 
-      final viewModels = [
-        for (final certification in certifications)
-          CertificationViewModel(
-            certification: certification,
-            employee: employeeMap[certification.employeeId],
-            course: courseMap[normalizeKey(certification.courseName)],
-          ),
-      ];
+      final viewModels = certifications.map((certification) {
+        final course = courseMap[normalizeKey(certification.courseName)];
+        return CertificationViewModel(
+          certification: certification,
+          employee: employeeMap[certification.employeeId],
+          course: course,
+          lmsCategory: course == null
+              ? null
+              : classification.lmsCategory(course),
+        );
+      }).toList();
 
       viewModels.sort((a, b) {
         final dateA = a.certification.completedAt;
@@ -92,7 +102,7 @@ FilterRow certificationFilterRow(
   CertificationViewModel item,
   Map<String, String> courseIdsByName,
 ) {
-  final courseId = courseIdFor(
+  final courseId = const CourseCatalogService().courseIdFor(
     item.certification.courseId,
     item.certification.courseName,
     courseIdsByName,
@@ -103,7 +113,7 @@ FilterRow certificationFilterRow(
       courseFilterDimension: courseId,
       'Área': item.employee?.area ?? '',
       'Equipo': item.employee?.team ?? '',
-      'Tipo': item.course?.classificationLms?.label ?? '',
+      'Tipo': item.lmsCategory?.label ?? '',
       'Estado': item.certification.isCompleted ? 'Finalizado' : 'Pendiente',
     },
     labels: {

@@ -10,6 +10,8 @@ import 'package:app_finnegans/features/time_entries/presentation/providers/crm_t
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/course_services_providers.dart';
+import 'package:app_finnegans/features/courses/domain/course_catalog_service.dart';
 
 final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
   final repo = ref.watch(crmTimeEntriesRepositoryProvider);
@@ -26,11 +28,13 @@ class CrmTimeEntryViewModel {
   final CrmTimeEntry timeEntry;
   final Employee? employee;
   final Course? course;
+  final bool isTaught;
 
   CrmTimeEntryViewModel({
     required this.timeEntry,
     required this.employee,
     required this.course,
+    required this.isTaught,
   });
 }
 
@@ -48,7 +52,7 @@ FilterRow crmFilterRow(
   CrmTimeEntryViewModel item,
   Map<String, String> courseIdsByName,
 ) {
-  final courseId = courseIdFor(
+  final courseId = const CourseCatalogService().courseIdFor(
     item.timeEntry.courseId,
     item.timeEntry.courseName,
     courseIdsByName,
@@ -82,6 +86,7 @@ final _periodTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final employees = await ref.watch(employeesProvider.future);
   final courses = await ref.watch(coursesProvider.future);
+  final classification = ref.watch(courseClassificationServiceProvider);
 
   final employeesById = {
     for (final employee in employees) employee.employeeId: employee,
@@ -102,6 +107,7 @@ final _periodTimeEntriesProvider = FutureProvider<List<CrmTimeEntryViewModel>>((
           timeEntry: timeEntry,
           employee: employeesById[timeEntry.employeeId],
           course: coursesByName[timeEntry.courseName.trim().toLowerCase()],
+          isTaught: classification.isTaught(timeEntry),
         ),
       )
       .toList()

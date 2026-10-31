@@ -6,12 +6,17 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/courses/domain/course_classification_service.dart';
 
 class ComplianceService {
   /// Versiones del plan de formación. Sin versiones rige el plan por defecto.
   final TrainingPlanHistory plans;
+  final CourseClassificationService classification;
 
-  const ComplianceService({this.plans = const TrainingPlanHistory.empty()});
+  ComplianceService({
+    this.plans = const TrainingPlanHistory.empty(),
+    CourseClassificationService? classification,
+  }) : classification = classification ?? CourseClassificationService();
 
   /// [year] y [month] eligen la versión del plan que fija el objetivo. Sin
   /// período se usa la vigente hoy.
@@ -53,7 +58,7 @@ class ComplianceService {
           const <CrmTimeEntry>[];
       for (final timeEntry in employeeTimeEntries) {
         // Libres y Dictado no pasan por el LMS: la Clasificación CRM las acredita.
-        final categoryOnlyCrm = timeEntry.categoryOnlyCrm;
+        final categoryOnlyCrm = classification.crmOnlyCategory(timeEntry);
         if (categoryOnlyCrm != null) {
           declaredHours[categoryOnlyCrm] =
               (declaredHours[categoryOnlyCrm] ?? 0) + timeEntry.hours;
