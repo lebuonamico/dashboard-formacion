@@ -320,6 +320,15 @@ Future<ProviderContainer> _showSettings(
 OutlinedButton _button(WidgetTester tester, String type) =>
     tester.widget<OutlinedButton>(find.byKey(Key('importar_$type')));
 
+/// Taps the import button and confirms once the file has been picked.
+Future<void> _importConfirming(WidgetTester tester, String type) async {
+  await tester.tap(find.byKey(Key('importar_$type')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.byKey(const Key('importar_confirmar')));
+  await tester.pump();
+}
+
 void _verifyLoading(WidgetTester tester, String type, bool active) {
   expect(
     find.byKey(Key('loading_$type')),
@@ -604,8 +613,7 @@ void main() {
       await container.read(coursesProvider.future);
       courses.pendingQuery = refresh;
 
-      await tester.tap(find.byKey(const Key('importar_cursos')));
-      await tester.pump();
+      await _importConfirming(tester, 'cursos');
       _verifyLoading(tester, 'cursos', true);
       expect(courses.upserts, 1);
       expect(auditLog.records, isEmpty);
@@ -659,8 +667,7 @@ void main() {
       addTearDown(listens.close);
       await container.read(coursesProvider.future);
 
-      await tester.tap(find.byKey(const Key('importar_cursos')));
-      await tester.pump();
+      await _importConfirming(tester, 'cursos');
       _verifyLoading(tester, 'cursos', true);
       persistence.completeError(StateError('Supabase rechazó el UPSERT'));
       await tester.pump();
@@ -690,7 +697,7 @@ void main() {
       final auditLog = _Audit();
       await _showSettings(tester, courses: courses, auditLog: auditLog);
 
-      await tester.tap(find.byKey(const Key('importar_cursos')));
+      await _importConfirming(tester, 'cursos');
       await tester.pumpAndSettle();
 
       _verifyLoading(tester, 'cursos', false);
@@ -766,7 +773,7 @@ void main() {
       expect(hours.queries, 1);
       expect(certifications.queries, 1);
 
-      await tester.tap(find.byKey(const Key('importar_cursos')));
+      await _importConfirming(tester, 'cursos');
       await tester.pumpAndSettle();
 
       _verifyLoading(tester, 'cursos', false);
@@ -822,8 +829,7 @@ void main() {
         container.read(lmsCertificationsProvider.future),
       ]);
       final router = GoRouter.of(tester.element(find.byType(SettingsScreen)));
-      await tester.tap(find.byKey(const Key('importar_cursos')));
-      await tester.pump();
+      await _importConfirming(tester, 'cursos');
       _verifyLoading(tester, 'cursos', true);
       expect(courses.upserts, 1);
 
@@ -871,8 +877,7 @@ void main() {
         final refresh = Completer<List<Course>>();
         courses.pendingQuery = refresh;
 
-        await tester.tap(find.byKey(const Key('importar_cursos')));
-        await tester.pump();
+        await _importConfirming(tester, 'cursos');
         _verifyLoading(tester, 'cursos', true);
         expect(courses.saved.single.id, '107');
         expect(auditLog.records.single.status, ImportStatus.completed);
@@ -909,7 +914,7 @@ void main() {
         employees: employees,
       );
 
-      await tester.tap(find.byKey(const Key('importar_nomina')));
+      await _importConfirming(tester, 'nomina');
       await tester.pumpAndSettle();
 
       _verifyLoading(tester, 'nomina', false);
@@ -956,7 +961,7 @@ void main() {
           structure: structure,
         );
 
-        await tester.tap(find.byKey(const Key('importar_nomina')));
+        await _importConfirming(tester, 'nomina');
         await tester.pumpAndSettle();
 
         final missing = structure.missing.single;
@@ -997,7 +1002,7 @@ void main() {
       addTearDown(listens.close);
       await container.read(employeesProvider.future);
 
-      await tester.tap(find.byKey(const Key('importar_nomina')));
+      await _importConfirming(tester, 'nomina');
       await tester.pumpAndSettle();
 
       _verifyLoading(tester, 'nomina', false);
@@ -1011,5 +1016,104 @@ void main() {
       expect(find.textContaining('Se importaron'), findsNothing);
       expect(tester.takeException(), isNull);
     });
+  });
+
+  group('Confirmación antes de importar', () {
+    Future<void> openConfirmation(WidgetTester tester, String type) async {
+      await tester.tap(find.byKey(Key('importar_$type')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('Cancelar no importa, no audita y libera el botón', (
+      tester,
+    ) async {
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
+      );
+      final courses = _Courses();
+      final auditLog = _Audit();
+      await _showSettings(tester, courses: courses, auditLog: auditLog);
+
+      await openConfirmation(tester, 'cursos');
+      _verifyLoading(tester, 'cursos', true);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      _verifyLoading(tester, 'cursos', false);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(courses.queries, 0);
+      expect(courses.upserts, 0);
+      expect(auditLog.records, isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final (type, file, title) in [
+      ('nomina', 'nomina.csv', 'Importar nómina'),
+      ('cursos', 'cursos.csv', 'Importar catálogo de cursos'),
+    ]) {
+      testWidgets('$title avisa que los ausentes quedan inactivos', (
+        tester,
+      ) async {
+        FilePicker.platform = _FileSelector(() async => _csv(file, _catalog));
+        await _showSettings(tester, courses: _Courses(), auditLog: _Audit());
+
+        await openConfirmation(tester, type);
+
+        final dialog = find.byType(AlertDialog);
+        expect(
+          find.descendant(of: dialog, matching: find.text(title)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: dialog, matching: find.textContaining('"$file"')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.textContaining('quedan inactivos'),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+      });
+    }
+
+    for (final (type, file, title) in [
+      ('horas', 'horas.csv', 'Importar horas CRM'),
+      ('finalizaciones', 'lms.xlsx', 'Importar certificaciones LMS'),
+    ]) {
+      testWidgets('$title avisa que no se borra nada', (tester) async {
+        FilePicker.platform = _FileSelector(() async => _csv(file, _catalog));
+        await _showSettings(tester, courses: _Courses(), auditLog: _Audit());
+
+        await openConfirmation(tester, type);
+
+        final dialog = find.byType(AlertDialog);
+        expect(
+          find.descendant(of: dialog, matching: find.text(title)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.textContaining('No se borra ninguna.'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.textContaining('inactivos'),
+          ),
+          findsNothing,
+        );
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+      });
+    }
   });
 }

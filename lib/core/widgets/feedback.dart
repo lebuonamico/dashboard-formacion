@@ -30,6 +30,27 @@ Future<bool> runWithFeedback(
   return true;
 }
 
+/// [runWithFeedback] for an action with a result. A null result means the
+/// action was cancelled and shows no SnackBar.
+Future<T?> runWithResultFeedback<T extends Object>(
+  BuildContext context, {
+  required Future<T?> Function() action,
+  required String Function(T result) success,
+  String Function(Object error) failure = actionErrorMessage,
+}) async {
+  final T? result;
+  try {
+    result = await action();
+  } on Object catch (error) {
+    if (context.mounted) showAppSnackBar(context, failure(error));
+    return null;
+  }
+  if (result != null && context.mounted) {
+    showAppSnackBar(context, success(result));
+  }
+  return result;
+}
+
 Future<bool> showConfirmationDialog(
   BuildContext context, {
   required String title,
