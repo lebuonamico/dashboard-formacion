@@ -6,7 +6,6 @@ import 'package:app_finnegans/features/employees/domain/employee_history_entry.d
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/compliance_service_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
@@ -14,6 +13,7 @@ import 'package:app_finnegans/features/time_entries/presentation/providers/time_
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
 /// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
@@ -120,8 +120,7 @@ class EmployeeDetailViewModel {
   });
 
   /// Busca el curso del catálogo por nombre normalizado.
-  Course? courseByName(String name) =>
-      coursesByName[ComplianceService.normalizeCourseName(name)];
+  Course? courseByName(String name) => coursesByName[normalizeKey(name)];
 }
 
 /// Detalle del empleado recalculado para el período global seleccionado.
@@ -200,18 +199,14 @@ final employeeDetailProvider =
       }
 
       final coursesByName = {
-        for (final course in courses)
-          ComplianceService.normalizeCourseName(course.name): course,
+        for (final course in courses) normalizeKey(course.name): course,
       };
       final timeEntriesCrm = periodTimeEntries
           .map(
             (timeEntry) => CrmTimeEntryViewModel(
               timeEntry: timeEntry,
               employee: employee,
-              course:
-                  coursesByName[ComplianceService.normalizeCourseName(
-                    timeEntry.courseName,
-                  )],
+              course: coursesByName[normalizeKey(timeEntry.courseName)],
             ),
           )
           .toList();
@@ -225,7 +220,7 @@ final employeeDetailProvider =
             item.course?.id.trim() ?? item.timeEntry.courseId?.trim();
         final key = courseId != null && courseId.isNotEmpty
             ? 'id:$courseId'
-            : 'nombre:${ComplianceService.normalizeCourseName(item.timeEntry.courseName)}';
+            : 'nombre:${normalizeKey(item.timeEntry.courseName)}';
         taughtByCourse.putIfAbsent(key, () => []).add(item);
       }
       final taught = taughtByCourse.values.map((items) {
@@ -243,7 +238,7 @@ final employeeDetailProvider =
       }).toList()..sort((a, b) => a.name.compareTo(b.name));
       final completedCourses = employeeCertifications
           .where((item) => item.isCompleted)
-          .map((item) => ComplianceService.normalizeCourseName(item.courseName))
+          .map((item) => normalizeKey(item.courseName))
           .toSet();
 
       return EmployeeDetailViewModel(

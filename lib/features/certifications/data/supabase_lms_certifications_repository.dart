@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/courses/domain/courses_repository.dart';
 import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class SupabaseLmsCertificationsRepository
     implements LmsCertificationsRepository {
@@ -46,7 +47,7 @@ class SupabaseLmsCertificationsRepository
     final resolved = <String, Course>{};
     final written = await _table.upsert(
       certifications.map((item) {
-        final course = resolved[normalizeCourseName(item.courseName)] ??=
+        final course = resolved[normalizeLoose(item.courseName)] ??=
             courseResolver(item.courseName, catalog);
         return {...item.toJson(), 'courseId': course.id};
       }).toList(),

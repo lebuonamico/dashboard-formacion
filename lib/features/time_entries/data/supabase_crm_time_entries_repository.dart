@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entries_repository.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class SupabaseCrmTimeEntriesRepository implements CrmTimeEntriesRepository {
   static final mapping = SupabaseTableMapping(
@@ -47,7 +48,7 @@ class SupabaseCrmTimeEntriesRepository implements CrmTimeEntriesRepository {
     final resolved = <String, Course>{};
     final written = await _table.upsert(
       timeEntries.map((entry) {
-        final course = resolved[normalizeCourseName(entry.courseName)] ??=
+        final course = resolved[normalizeLoose(entry.courseName)] ??=
             courseResolver(entry.courseName, catalog);
         return {...entry.toJson(), 'courseId': course.id};
       }).toList(),

@@ -1,10 +1,9 @@
 import 'package:app_finnegans/features/courses/domain/course.dart';
-
-String normalizeCourseName(String value) => value.trim().toLowerCase();
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 Course courseResolver(String name, List<Course> courses) {
   final matches = courses
-      .where((c) => normalizeCourseName(c.name) == normalizeCourseName(name))
+      .where((c) => normalizeLoose(c.name) == normalizeLoose(name))
       .toList();
   if (name.trim().isEmpty || matches.length != 1) {
     throw FormatException('Curso inexistente o ambiguo: "$name".');

@@ -5,6 +5,7 @@ import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class ComplianceService {
   /// Versiones del plan de formación. Sin versiones rige el plan por defecto.
@@ -118,18 +119,7 @@ class ComplianceService {
   /// Se llama por cada carga y certificación, con pocos nombres distintos:
   /// cada uno se normaliza una sola vez.
   static String normalizeCourseName(String name) =>
-      _normalizedNames[name] ??= _normalizeName(name);
+      _normalizedNames[name] ??= normalizeKey(name);
 
   static final _normalizedNames = <String, String>{};
-
-  static String _normalizeName(String name) => name
-      .trim()
-      .toLowerCase()
-      .replaceAll('á', 'a')
-      .replaceAll('é', 'e')
-      .replaceAll('í', 'i')
-      .replaceAll('ó', 'o')
-      .replaceAll('ú', 'u')
-      .replaceAll('ñ', 'n')
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '');
 }

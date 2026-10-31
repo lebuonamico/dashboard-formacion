@@ -1,4 +1,5 @@
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// Las horas de cada nivel son los valores por defecto del plan de formación.
 /// El objetivo que se evalúa sale de `PlanesFormacion`, que se edita en
@@ -111,19 +112,7 @@ enum Seniority {
     return Seniority.junior1;
   }
 
-  static String _normalize(String raw) {
-    return raw
-        .trim()
-        .toLowerCase()
-        .replaceAll('á', 'a')
-        .replaceAll('é', 'e')
-        .replaceAll('í', 'i')
-        .replaceAll('ó', 'o')
-        .replaceAll('ú', 'u')
-        .replaceAll('ñ', 'n')
-        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
-        .trim();
-  }
+  static String _normalize(String raw) => normalizeKey(raw, separator: ' ');
 
   static Seniority? _matchConfiguredValue(String compact) {
     for (final seniority in Seniority.values) {

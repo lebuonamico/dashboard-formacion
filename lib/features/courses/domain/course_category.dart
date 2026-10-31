@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/text/text_normalizer.dart';
+
 enum CourseCategory {
   businessSkills('Habilidades de negocio', 'Negocio'),
   softSkills('Habilidades blandas', 'Blandas'),
@@ -26,10 +28,10 @@ enum CourseCategory {
   static final _recognized = <String, CourseCategory?>{};
 
   static CourseCategory? _recognize(String text) {
-    final searched = _normalize(text);
+    final searched = normalizeKey(text);
     if (searched.isEmpty) return null;
     for (final type in CourseCategory.values) {
-      if (_normalize(type.label) == searched) return type;
+      if (normalizeKey(type.label) == searched) return type;
     }
     if (searched.contains('negocio') || searched.contains('business')) {
       return CourseCategory.businessSkills;
@@ -47,15 +49,4 @@ enum CourseCategory {
     }
     return null;
   }
-
-  static String _normalize(String text) => text
-      .trim()
-      .toLowerCase()
-      .replaceAll('á', 'a')
-      .replaceAll('é', 'e')
-      .replaceAll('í', 'i')
-      .replaceAll('ó', 'o')
-      .replaceAll('ú', 'u')
-      .replaceAll('ñ', 'n')
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '');
 }

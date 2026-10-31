@@ -2,8 +2,8 @@ import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/courses/domain/courses_repository.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/employees_repository.dart';
-import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// The payroll and the course catalog are imported as the complete current
 /// snapshot: whoever is missing is deactivated, never deleted, and whoever
@@ -35,15 +35,14 @@ class SnapshotSyncService {
     _requireKeys(courses.map((course) => course.id), 'Cursos');
     final previous = await repository.getCourses();
     final idByName = {
-      for (final course in previous)
-        normalizeCourseName(course.name): course.id,
+      for (final course in previous) normalizeLoose(course.name): course.id,
     };
     final changes = _changes(
       previous: previous,
       incoming: courses
           .map(
             (course) =>
-                course.copyWith(id: idByName[normalizeCourseName(course.name)]),
+                course.copyWith(id: idByName[normalizeLoose(course.name)]),
           )
           .toList(),
       keyOf: (course) => course.id,

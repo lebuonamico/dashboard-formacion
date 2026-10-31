@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:app_finnegans/features/certifications/data/lms_certifications_seed.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certifications_repository.dart';
-import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// Without a database there may be no course ID: the course is identified by
 /// its ID when known, and otherwise by the ID another certification of the
@@ -42,14 +42,14 @@ class InMemoryLmsCertificationsRepository
       for (final item in records)
         if (item.courseId?.trim().isNotEmpty == true &&
             item.courseName.trim().isNotEmpty)
-          normalizeCourseName(item.courseName): item.courseId!,
+          normalizeLoose(item.courseName): item.courseId!,
     };
     String keyOf(LmsCertification item) => jsonEncode([
       item.employeeId,
       item.courseId?.trim().isNotEmpty == true
           ? item.courseId
-          : idsByName[normalizeCourseName(item.courseName)] ??
-                normalizeCourseName(item.courseName),
+          : idsByName[normalizeLoose(item.courseName)] ??
+                normalizeLoose(item.courseName),
     ]);
 
     final merged = {for (final item in records) keyOf(item): item};

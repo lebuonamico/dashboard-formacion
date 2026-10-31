@@ -1,9 +1,9 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// Bordes, relleno y colores salen del `inputDecorationTheme` de `AppTheme`.
 InputDecoration filterInputDecoration(String hint, IconData icon) =>
@@ -237,14 +237,10 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
   Widget build(BuildContext context) {
     final selected = _selected;
     final incompatible = widget.incompatibleValues.intersection(selected);
-    final query = ComplianceService.normalizeCourseName(_search.text);
+    final query = normalizeKey(_search.text);
     final options = widget.items.where((item) => item.value != null).toList();
     final matches = options
-        .where(
-          (item) => ComplianceService.normalizeCourseName(
-            _label(item),
-          ).contains(query),
-        )
+        .where((item) => normalizeKey(_label(item)).contains(query))
         .toList();
     // Dos grupos conservando el orden original, incluso al buscar.
     final ordered = [

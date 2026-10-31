@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/features/teams/domain/team_status.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_period_service.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 typedef TeamLeaderResolver = String? Function(String area, String team);
 
@@ -44,13 +45,12 @@ class TeamsService {
     required String team,
     TeamLeaderResolver? resolveLeader,
   }) {
-    final requestedArea = normalizeTeamComparison(area);
-    final requestedTeam = normalizeTeamComparison(normalizeTeamName(team));
+    final requestedArea = normalizeLoose(area);
+    final requestedTeam = normalizeLoose(normalizeTeamName(team));
     final members = compliance.where((item) {
       final employee = item.employee;
-      return normalizeTeamComparison(employee.area) == requestedArea &&
-          normalizeTeamComparison(normalizeTeamName(employee.team)) ==
-              requestedTeam;
+      return normalizeLoose(employee.area) == requestedArea &&
+          normalizeLoose(normalizeTeamName(employee.team)) == requestedTeam;
     }).toList();
 
     if (members.isEmpty) return null;

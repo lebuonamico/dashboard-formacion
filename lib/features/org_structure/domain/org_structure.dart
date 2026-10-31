@@ -1,5 +1,6 @@
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 /// Área de `public.areas`. Sale de la importación de nómina: su nombre es el
 /// Sector tal como vino en el Excel, y no se edita desde la app.
@@ -65,9 +66,9 @@ class OrgStructure {
       };
 
   /// Misma regla que `public.clave_nomina()` en la base.
-  static String payrollKey(String text) => text.trim().toLowerCase();
+  static String payrollKey(String text) => normalizeLoose(text);
 
-  static String normalizeEmail(String email) => email.trim().toLowerCase();
+  static String normalizeEmail(String email) => normalizeLoose(email);
 
   static int _byName(String a, String b) =>
       payrollKey(a).compareTo(payrollKey(b));

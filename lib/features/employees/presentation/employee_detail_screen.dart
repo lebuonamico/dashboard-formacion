@@ -19,7 +19,7 @@ import 'package:app_finnegans/features/certifications/domain/lms_certification.d
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
   final String employeeId;
@@ -516,7 +516,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
         final firstTimeEntry = records.first;
         final courseName = _courseName(records);
         final completedCourse = completedCourses.contains(
-          ComplianceService.normalizeCourseName(courseName),
+          normalizeKey(courseName),
         );
         final declaredHours = records.fold<double>(
           0,

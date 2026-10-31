@@ -7,6 +7,7 @@ import 'package:app_finnegans/features/employees/domain/employee_history_entry.d
 import 'package:app_finnegans/features/teams/domain/team_identity.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class TeamPeriodService {
   const TeamPeriodService();
@@ -297,13 +298,11 @@ class TeamPeriodService {
   }
 
   bool belongsToTeam(Employee employee, {String? area, String? team}) {
-    if (area != null &&
-        normalizeTeamComparison(employee.area) !=
-            normalizeTeamComparison(area)) {
+    if (area != null && normalizeLoose(employee.area) != normalizeLoose(area)) {
       return false;
     }
     return team == null ||
-        normalizeTeamComparison(normalizeTeamName(employee.team)) ==
-            normalizeTeamComparison(normalizeTeamName(team));
+        normalizeLoose(normalizeTeamName(employee.team)) ==
+            normalizeLoose(normalizeTeamName(team));
   }
 }

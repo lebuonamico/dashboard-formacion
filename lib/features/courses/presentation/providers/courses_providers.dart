@@ -7,11 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 final coursesProvider = FutureProvider<List<Course>>((ref) async {
   final repo = ref.watch(coursesRepositoryProvider);
@@ -67,7 +67,7 @@ final courseIdsByNameProvider = FutureProvider<Map<String, String>>((
   final courses = await ref.watch(coursesProvider.future);
   final idsByName = <String, Set<String>>{};
   for (final course in courses) {
-    final name = ComplianceService.normalizeCourseName(course.name);
+    final name = normalizeKey(course.name);
     final id = course.id.trim();
     if (name.isNotEmpty && id.isNotEmpty) {
       idsByName.putIfAbsent(name, () => {}).add(id);
@@ -82,7 +82,7 @@ final courseIdsByNameProvider = FutureProvider<Map<String, String>>((
 String courseIdFor(String? id, String name, Map<String, String> idsByName) =>
     (id?.trim().isNotEmpty ?? false)
     ? id!.trim()
-    : idsByName[ComplianceService.normalizeCourseName(name)] ?? '';
+    : idsByName[normalizeKey(name)] ?? '';
 
 FilterRow courseFilterRow(Course course, String instructor) => FilterRow(
   {
@@ -113,8 +113,7 @@ final _allCourseStatsProvider = FutureProvider<List<CourseViewModel>>((
 
   bool inPeriod(DateTime date) =>
       periodService.contains(date, year: period.year, month: period.month);
-  String key(String courseName) =>
-      ComplianceService.normalizeCourseName(courseName);
+  String key(String courseName) => normalizeKey(courseName);
 
   final employeeNames = {
     for (final employee in employees) employee.employeeId: employee.fullName,

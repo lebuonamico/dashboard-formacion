@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
   ref,
@@ -56,8 +56,7 @@ final joinedCertificationsProvider =
       // Mismo normalizador que el cálculo de cumplimiento: así el aviso de
       // "fuera de catálogo" coincide con lo que realmente no acredita.
       final courseMap = {
-        for (final course in courses)
-          ComplianceService.normalizeCourseName(course.name): course,
+        for (final course in courses) normalizeKey(course.name): course,
       };
 
       final viewModels = [
@@ -65,10 +64,7 @@ final joinedCertificationsProvider =
           CertificationViewModel(
             certification: certification,
             employee: employeeMap[certification.employeeId],
-            course:
-                courseMap[ComplianceService.normalizeCourseName(
-                  certification.courseName,
-                )],
+            course: courseMap[normalizeKey(certification.courseName)],
           ),
       ];
 

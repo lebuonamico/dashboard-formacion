@@ -4,7 +4,7 @@ import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 export 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 
@@ -40,15 +40,7 @@ class AssistantContextService {
     'diciembre',
   ];
 
-  String normalize(String text) {
-    var value = text.toLowerCase();
-    const origin = 'áéíóúüñ';
-    const destination = 'aeiouun';
-    for (var i = 0; i < origin.length; i++) {
-      value = value.replaceAll(origin[i], destination[i]);
-    }
-    return value.replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
-  }
+  String normalize(String text) => normalizeKey(text, separator: ' ');
 
   bool totalsOnly(String question) =>
       RegExp(
@@ -395,13 +387,7 @@ class AssistantContextService {
     };
     final active = courses.where((c) => c.isActive).toList();
     var candidates = active
-        .where(
-          (c) =>
-              !(completed?.contains(
-                    ComplianceService.normalizeCourseName(c.name),
-                  ) ??
-                  false),
-        )
+        .where((c) => !(completed?.contains(normalizeKey(c.name)) ?? false))
         .toList();
     final category = CourseCategory.values
         .where(

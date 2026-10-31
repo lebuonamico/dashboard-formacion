@@ -31,6 +31,7 @@ import 'package:app_finnegans/features/courses/presentation/providers/courses_pr
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -250,7 +251,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final headerIndex = _findLmsCertificationsRow(rows);
                 if (headerIndex == -1) continue;
                 final headers = rows[headerIndex]
-                    .map((header) => _normalize(header.toString()))
+                    .map((header) => normalizeKey(header.toString()))
                     .toList();
                 final employeeIdIndex = _findColumn(headers, const [
                   'idempleadolegajo',
@@ -363,7 +364,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _findLmsCertificationsRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
-          .map((cell) => _normalize(cell.toString()))
+          .map((cell) => normalizeKey(cell.toString()))
           .toList();
       if (_findColumn(headers, const [
                 'idempleadolegajo',
@@ -403,7 +404,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   bool? _booleanMoodle(String value) {
-    return switch (_normalize(value)) {
+    return switch (normalizeKey(value)) {
       'true' || 'verdadero' || 'si' || 's' || '1' || 'yes' || 'y' => true,
       'false' ||
       'falso' ||
@@ -473,7 +474,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 }
                 final headers = rows[headerIndex]
-                    .map((header) => _normalize(header.toString()))
+                    .map((header) => normalizeKey(header.toString()))
                     .toList();
                 _validateMasterHeaders(headers, sheet.key);
                 final seniorityIndex = _findColumnSeniority(
@@ -741,7 +742,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 }
                 final headers = rows[headerIndex]
-                    .map((header) => _normalize(header.toString()))
+                    .map((header) => normalizeKey(header.toString()))
                     .toList();
                 _validateMasterHeaders(headers, sheet.key);
                 final idIndex = _findColumn(headers, const [
@@ -921,7 +922,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (headerIndex == -1) continue;
                 recognizedHeader = true;
                 final headers = rows[headerIndex]
-                    .map((header) => _normalize(header.toString()))
+                    .map((header) => normalizeKey(header.toString()))
                     .toList();
                 final idIndex = _findColumnCrm(headers, 'id');
                 final employeeIdIndex = _findColumnCrm(headers, 'legajo');
@@ -954,9 +955,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   }
                   final courseName = row[courseIndex].toString().trim();
-                  final course =
-                      coursesByName[normalizeCourseName(courseName)] ??=
-                          courseResolver(courseName, catalog);
+                  final course = coursesByName[normalizeLoose(courseName)] ??=
+                      courseResolver(courseName, catalog);
                   final date = _dateFromCell(row[dateIndex].toString());
                   String? source(String field) {
                     final index = headers.indexOf(field);
@@ -1066,7 +1066,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _findHeadersRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
-          .map((cell) => _normalize(cell.toString()))
+          .map((cell) => normalizeKey(cell.toString()))
           .toSet();
       if ((headers.contains('legajo') ||
               headers.contains('nlegajo') ||
@@ -1081,7 +1081,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _findCoursesRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
-          .map((cell) => _normalize(cell.toString()))
+          .map((cell) => normalizeKey(cell.toString()))
           .toSet();
       final hasId = headers.any(
         const {
@@ -1115,7 +1115,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int _findTimeEntryRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
-          .map((cell) => _normalize(cell.toString()))
+          .map((cell) => normalizeKey(cell.toString()))
           .toSet();
       if (_findColumnCrm(headers.toList(), 'id') != -1 &&
           _findColumnCrm(headers.toList(), 'legajo') != -1 &&
@@ -1209,11 +1209,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Seniority _seniorityFromText(String value, String location) {
-    final normalized = _normalize(value);
+    final normalized = normalizeKey(value);
     final configured = Seniority.values.any(
       (seniority) =>
-          _normalize(seniority.name) == normalized ||
-          _normalize(seniority.label) == normalized,
+          normalizeKey(seniority.name) == normalized ||
+          normalizeKey(seniority.label) == normalized,
     );
     final validAlias = RegExp(
       r'^trainee(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$|^t$'
@@ -1284,21 +1284,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   bool _looksLikeSeniorityValue(String value) {
-    final normalized = _normalize(value);
+    final normalized = normalizeKey(value);
     return RegExp(
       r'^(?:senior|senor|sr|ssr|ss|junior|jr|j[123]|trainee|manager|gerente)',
     ).hasMatch(normalized);
   }
-
-  String _normalize(String value) => value
-      .toLowerCase()
-      .replaceAll('á', 'a')
-      .replaceAll('é', 'e')
-      .replaceAll('í', 'i')
-      .replaceAll('ó', 'o')
-      .replaceAll('ú', 'u')
-      .replaceAll('ñ', 'n')
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '');
 
   Map<String, dynamic> _toCanonicalKeys(
     Map<String, String> data,
