@@ -12,9 +12,10 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 import 'package:collection/collection.dart';
 
-/// The triangular rule: the CRM brings the hours, the LMS confirms the
-/// completion and the catalog sets the ceiling. Exploration and Teaching are
-/// credited by the CRM alone.
+/// Credits hours by category. Each course completed in the LMS credits the
+/// catalog workload of its category (business or soft skills), whatever the
+/// CRM logged for it; those CRM hours are only declared. Exploration and
+/// Teaching are credited by the CRM classification alone.
 class ComplianceService {
   /// Without versions the default plan applies.
   final TrainingPlanHistory plans;
