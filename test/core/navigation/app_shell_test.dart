@@ -1,9 +1,9 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/widgets/side_menu_providers.dart';
-import 'package:app_finnegans/core/widgets/app_shell.dart';
+import 'package:app_finnegans/core/navigation/side_menu_provider.dart';
+import 'package:app_finnegans/core/navigation/app_shell.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/core/widgets/side_menu.dart';
+import 'package:app_finnegans/core/navigation/app_navigation_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,65 +78,47 @@ Future<ProviderContainer> _show(WidgetTester tester) async {
   return container;
 }
 
-final _brand = AppTheme.light().colorScheme.primary;
+int? _selectedIndex(WidgetTester tester) => tester
+    .widget<NavigationDrawer>(find.byType(NavigationDrawer))
+    .selectedIndex;
 
-Color? _itemColor(WidgetTester tester, String label) {
-  final text = tester.widget<Text>(
-    find.descendant(of: find.byType(SideMenu), matching: find.text(label)),
-  );
-  return text.style?.color;
-}
+Finder _destination(String label) => find.descendant(
+  of: find.byType(NavigationDrawer),
+  matching: find.text(label),
+);
 
 void main() {
-  testWidgets('Navegar no reconstruye el menú y cambia el ítem activo', (
+  testWidgets('Navegar no recrea el menú y cambia el destino activo', (
     tester,
   ) async {
     await _show(tester);
 
-    final statusBefore = tester.state(find.byType(SideMenu));
+    final drawerBefore = tester.element(find.byType(AppNavigationDrawer));
     expect(find.text('Pantalla Dashboard'), findsOneWidget);
-    expect(_itemColor(tester, 'Empleados'), isNot(_brand));
+    expect(_selectedIndex(tester), 0);
 
-    // El menú navega con context.push, igual que en la app.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SideMenu),
-        matching: find.text('Empleados'),
-      ),
-    );
+    await tester.tap(_destination('Empleados'));
     await tester.pumpAndSettle();
 
     expect(find.text('Pantalla Empleados'), findsOneWidget);
-    // Misma instancia: el menú no se recreó, así su animación no se corta.
-    expect(tester.state(find.byType(SideMenu)), same(statusBefore));
-    expect(find.byType(SideMenu), findsOneWidget);
-    // El ítem activo sigue a la ruta.
-    expect(_itemColor(tester, 'Empleados'), _brand);
+    expect(
+      tester.element(find.byType(AppNavigationDrawer)),
+      same(drawerBefore),
+    );
+    expect(_selectedIndex(tester), 3);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('El ítem activo cambia de color con una transición', (
+  testWidgets('Las secciones navegan con go: no apilan pantallas', (
     tester,
   ) async {
     await _show(tester);
-    final initial = _itemColor(tester, 'Empleados');
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SideMenu),
-        matching: find.text('Empleados'),
-      ),
-    );
-    // A mitad de la transición el color no es ni el inicial ni el final.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 80));
-    final inTransition = _itemColor(tester, 'Empleados');
-    expect(inTransition, isNot(initial));
-    expect(inTransition, isNot(_brand));
-
+    await tester.tap(_destination('Empleados'));
     await tester.pumpAndSettle();
-    expect(_itemColor(tester, 'Empleados'), _brand);
-    expect(tester.takeException(), isNull);
+
+    final context = tester.element(find.byType(AppShell));
+    expect(GoRouter.of(context).canPop(), isFalse);
   });
 
   testWidgets('Plegar el menú mientras se navega no se interrumpe', (
@@ -145,14 +127,16 @@ void main() {
     final container = await _show(tester);
 
     await tester.tap(find.byKey(const Key('side_menu_toggle')));
-    // A mitad de la animación, se navega a otra pantalla.
     await tester.pump(const Duration(milliseconds: 80));
     final context = tester.element(find.byType(AppShell));
-    GoRouter.of(context).push('/empleados');
+    GoRouter.of(context).go('/empleados');
     await tester.pumpAndSettle();
 
     expect(container.read(sideMenuExpandedProvider), isFalse);
-    expect(tester.getSize(find.byType(SideMenu)).width, 0);
+    expect(
+      tester.getSize(find.byType(AppNavigationDrawer)).width,
+      collapsedDrawerWidth,
+    );
     expect(find.text('Pantalla Empleados'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -1,10 +1,9 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/widgets/side_menu_providers.dart';
+import 'package:app_finnegans/core/navigation/side_menu_provider.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
-import 'package:app_finnegans/core/widgets/side_menu.dart';
-import 'package:flutter/gestures.dart';
+import 'package:app_finnegans/core/navigation/app_navigation_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,8 +43,6 @@ Future<ProviderContainer> _showScreen(
   );
   addTearDown(container.dispose);
 
-  // SideMenu.build llama a GoRouterState.of(context): hay que montarlo bajo un
-  // GoRouter aunque no se navegue.
   final router = GoRouter(
     initialLocation: '/dashboard',
     routes: [
@@ -54,7 +51,7 @@ Future<ProviderContainer> _showScreen(
         builder: (context, state) => const Scaffold(
           body: Row(
             children: [
-              SideMenu(),
+              AppNavigationDrawer(),
               Expanded(
                 child: Column(children: [AppTopBar(title: 'Inicio')]),
               ),
@@ -89,8 +86,8 @@ Future<ProviderContainer> _showScreen(
 
 final _toggle = find.byKey(const Key('side_menu_toggle'));
 
-double _widthSideMenu(WidgetTester tester) =>
-    tester.getSize(find.byType(SideMenu)).width;
+double _drawerWidth(WidgetTester tester) =>
+    tester.getSize(find.byType(AppNavigationDrawer)).width;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -101,84 +98,36 @@ void main() {
     final container = await _showScreen(tester);
 
     expect(container.read(sideMenuExpandedProvider), isTrue);
-    expect(_widthSideMenu(tester), 260);
-    expect(find.text('Inicio'), findsWidgets);
-
-    // La línea bajo el logo y la del top bar tienen que caer a la misma altura.
-    final headerSidebar = find.ancestor(
-      of: find.text('Finnegans'),
-      matching: find.byWidgetPredicate(
-        (w) => w is Container && w.constraints?.maxHeight == 64,
-      ),
-    );
+    expect(_drawerWidth(tester), expandedDrawerWidth);
     expect(
-      tester.getBottomLeft(headerSidebar).dy,
-      tester.getBottomLeft(find.byType(AppTopBar)).dy,
+      find.descendant(
+        of: find.byType(NavigationDrawer),
+        matching: find.text('Inicio'),
+      ),
+      findsOneWidget,
     );
+    expect(tester.getBottomLeft(find.byType(AppTopBar)).dy, drawerHeaderHeight);
   });
 
-  testWidgets('La pestaña oculta y vuelve a mostrar la sidebar', (
-    tester,
-  ) async {
+  testWidgets('El botón pliega y vuelve a desplegar el menú', (tester) async {
     final container = await _showScreen(tester);
-
-    // Desplegada: la pestaña sale pegada al borde derecho (superpuesta 1px
-    // para tapar la línea).
-    expect(tester.getTopLeft(_toggle).dx, closeTo(259, 0.5));
-    final expandedHeight = tester.getCenter(_toggle).dy;
+    expect(find.byTooltip('Ocultar menú'), findsOneWidget);
 
     await tester.tap(_toggle);
     await tester.pumpAndSettle();
 
     expect(container.read(sideMenuExpandedProvider), isFalse);
-    expect(_widthSideMenu(tester), 0);
+    expect(_drawerWidth(tester), collapsedDrawerWidth);
     expect(find.text('Cerrar sesión'), findsNothing);
-    // Oculta: la pestaña sigue entera dentro de la pantalla, pegada al borde
-    // izquierdo y a la misma altura (no centrada en la pantalla).
-    expect(tester.getTopLeft(_toggle).dx, greaterThanOrEqualTo(0));
-    expect(tester.getCenter(_toggle).dy, expandedHeight);
-    expect(tester.getTopLeft(find.byType(AppTopBar)).dx, 0);
+    expect(find.byTooltip('Mostrar menú'), findsOneWidget);
 
     await tester.tap(_toggle);
     await tester.pumpAndSettle();
 
     expect(container.read(sideMenuExpandedProvider), isTrue);
-    expect(_widthSideMenu(tester), 260);
+    expect(_drawerWidth(tester), expandedDrawerWidth);
     expect(find.text('Cerrar sesión'), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
-
-  // El Tooltip se dibuja con OverlayPortal.overlayChildLayoutBuilder, que no
-  // tolera un CompositedTransformFollower entre él y el Overlay: con el mouse
-  // encima, el clic rompía el layout (pantalla roja) y la sidebar no se movía.
-  testWidgets('Hover muestra el tooltip y el clic oculta la sidebar', (
-    tester,
-  ) async {
-    final container = await _showScreen(tester);
-
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    addTearDown(mouse.removePointer);
-    await mouse.moveTo(tester.getCenter(_toggle));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-    expect(find.text('Ocultar menú'), findsOneWidget);
-
-    await tester.tap(_toggle, kind: PointerDeviceKind.mouse);
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
-    expect(container.read(sideMenuExpandedProvider), isFalse);
-    expect(_widthSideMenu(tester), 0);
-
-    await mouse.moveTo(tester.getCenter(_toggle));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
-    expect(find.text('Mostrar menú'), findsOneWidget);
-
-    await tester.tap(_toggle, kind: PointerDeviceKind.mouse);
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
-    expect(_widthSideMenu(tester), 260);
   });
 
   group('Ítems según el rol', () {

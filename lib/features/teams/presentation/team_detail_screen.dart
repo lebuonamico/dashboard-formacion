@@ -15,7 +15,6 @@ import 'package:app_finnegans/features/teams/presentation/widgets/team_detail_su
 import 'package:app_finnegans/features/teams/presentation/widgets/team_members_table.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 class TeamDetailScreen extends ConsumerWidget {
   final String area;
@@ -42,7 +41,7 @@ class TeamDetailScreen extends ConsumerWidget {
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          AppTopBar(title: 'Detalle de equipo', onBack: () => context.pop()),
+          AppTopBar(title: 'Detalle de equipo', backTo: '/equipos'),
           Expanded(
             child: detailAsync.when(
               loading: () => Center(

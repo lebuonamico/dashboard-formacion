@@ -52,7 +52,7 @@ class AreaDetailScreen extends ConsumerWidget {
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          AppTopBar(title: 'Detalle de área', onBack: () => context.pop()),
+          AppTopBar(title: 'Detalle de área', backTo: '/areas'),
           Expanded(
             child: detailAsync.when(
               loading: () => Center(

@@ -1,10 +1,7 @@
-import 'package:app_finnegans/core/widgets/side_menu.dart';
+import 'package:app_finnegans/core/navigation/app_navigation_drawer.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_chat.dart';
 import 'package:flutter/material.dart';
 
-/// Marco de todas las pantallas autenticadas: el menú lateral queda fijo y
-/// sólo cambia [child], la pantalla de la ruta actual. Así el menú no se
-/// reconstruye al navegar y su animación no se corta.
 class AppShell extends StatelessWidget {
   final Widget child;
 
@@ -18,7 +15,7 @@ class AppShell extends StatelessWidget {
           children: [
             Row(
               children: [
-                const SideMenu(),
+                const AppNavigationDrawer(),
                 Expanded(child: child),
               ],
             ),

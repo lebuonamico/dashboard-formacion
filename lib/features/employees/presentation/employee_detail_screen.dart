@@ -15,7 +15,6 @@ import 'package:app_finnegans/features/employees/presentation/widgets/seniority_
 import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -46,10 +45,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          AppTopBar(
-            title: 'Perfil del colaborador',
-            onBack: () => context.pop(),
-          ),
+          AppTopBar(title: 'Perfil del colaborador', backTo: '/empleados'),
 
           // Contenido
           Expanded(

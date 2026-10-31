@@ -15,7 +15,7 @@ import 'package:app_finnegans/features/certifications/presentation/certification
 import 'package:app_finnegans/features/employees/presentation/employee_detail_screen.dart';
 import 'package:app_finnegans/features/teams/presentation/teams_screen.dart';
 import 'package:app_finnegans/features/admin/presentation/admin_screen.dart';
-import 'package:app_finnegans/core/widgets/app_shell.dart';
+import 'package:app_finnegans/core/navigation/app_shell.dart';
 
 /// Duración del fundido al cambiar de pantalla.
 const _fadeDuration = Duration(milliseconds: 200);
