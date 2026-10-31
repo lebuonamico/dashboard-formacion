@@ -6,7 +6,7 @@ import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
 import 'package:app_finnegans/features/assistant/presentation/assistant_destination.dart';
-import 'package:app_finnegans/features/assistant/presentation/providers/assistant_chat_provider.dart';
+import 'package:app_finnegans/features/assistant/presentation/providers/assistant_chat_notifier.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_message.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
@@ -128,31 +128,15 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
   }
 
   Future<void> _clearConversation() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        icon: Icon(Icons.delete_outline_rounded, color: context.colors.ai.text),
-        title: const Text('¿Limpiar esta conversación?'),
-        content: const Text(
+    final confirmed = await showConfirmationDialog(
+      context,
+      title: '¿Limpiar esta conversación?',
+      message:
           'Se eliminarán los mensajes y el borrador del asistente. Los datos del Dashboard se conservan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: context.colors.ai.text,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Limpiar conversación'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Limpiar conversación',
+      confirmColor: context.colors.ai.text,
     );
-    if (!mounted || confirmed != true) return;
+    if (!mounted || !confirmed) return;
     ref.read(assistantChatProvider.notifier).clear();
     _text.clear();
     _lastOnMinimize = null;
