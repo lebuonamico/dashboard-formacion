@@ -164,13 +164,16 @@ class ProjectionService {
     required Map<int, List<EmployeeCompliance>> byMonth,
     required int cutoffMonth,
   }) {
-    final history = <String, Map<int, EmployeeCompliance>>{};
-    for (final MapEntry(key: month, value: items) in byMonth.entries) {
-      if (month > cutoffMonth) continue;
-      for (final item in items) {
-        (history[item.employee.employeeId] ??= {})[month] = item;
-      }
-    }
+    final history = byMonth.entries
+        .where((entry) => entry.key <= cutoffMonth)
+        .expand(
+          (entry) => entry.value.map((item) => (month: entry.key, item: item)),
+        )
+        .fold(<String, Map<int, EmployeeCompliance>>{}, (history, entry) {
+          (history[entry.item.employee.employeeId] ??= {})[entry.month] =
+              entry.item;
+          return history;
+        });
     final remaining = 12 - cutoffMonth;
     final employeeIds = {
       for (final item in byMonth[cutoffMonth] ?? const <EmployeeCompliance>[])

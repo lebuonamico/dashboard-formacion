@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
@@ -67,13 +68,12 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
     List<Map<String, dynamic>> rows,
     String column,
   ) {
-    final grouped = <String, Set<String>>{};
-    for (final row in rows) {
-      final email = normalizeLoose(row['email']?.toString() ?? '');
-      if (email.isEmpty) continue;
-      grouped.putIfAbsent(row[column].toString(), () => {}).add(email);
-    }
-    return grouped;
+    String email(Map<String, dynamic> row) =>
+        normalizeLoose(row['email']?.toString() ?? '');
+    return groupBy(
+      rows.where((row) => email(row).isNotEmpty),
+      (row) => row[column].toString(),
+    ).map((id, leaders) => MapEntry(id, leaders.map(email).toSet()));
   }
 
   @override

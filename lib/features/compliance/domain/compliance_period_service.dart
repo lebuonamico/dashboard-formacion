@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/period/domain/period_filter.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
@@ -77,46 +78,43 @@ class CompliancePeriodService {
   }) {
     final nextPeriodStart = DateTime(year, isAnnual ? 13 : month + 1);
     final lastDay = DateTime(year, isAnnual ? 13 : month + 1, 0);
-    final historyByEmployeeId = <String, List<EmployeeHistoryEntry>>{};
-    for (final entry in history ?? <EmployeeHistoryEntry>[]) {
-      historyByEmployeeId.putIfAbsent(entry.employeeId, () => []).add(entry);
-    }
+    final historyByEmployeeId = groupBy(
+      history ?? const <EmployeeHistoryEntry>[],
+      (entry) => entry.employeeId,
+    );
+    bool included(Employee employee) => includeEmployee?.call(employee) ?? true;
 
-    final eligibleEmployees = <Employee>[];
-    for (final employee in employees) {
+    Employee? eligible(Employee employee) {
       final employmentStart = employee.hireDate;
-      if (employmentStart == null) continue;
+      if (employmentStart == null) return null;
       final employmentStartDate = DateTime(
         employmentStart.year,
         employmentStart.month,
         employmentStart.day,
       );
-      if (employmentStartDate.isAfter(lastDay)) continue;
+      if (employmentStartDate.isAfter(lastDay)) return null;
       if (history == null) {
-        if (employee.isActive && (includeEmployee?.call(employee) ?? true)) {
-          eligibleEmployees.add(employee);
-        }
-        continue;
+        return employee.isActive && included(employee) ? employee : null;
       }
 
-      final employeeHistory = historyByEmployeeId[employee.employeeId] ?? [];
       final effectiveEntry =
-          historyService.effectiveAt(employeeHistory, nextPeriodStart) ??
+          historyService.effectiveAt(
+            historyByEmployeeId[employee.employeeId] ?? const [],
+            nextPeriodStart,
+          ) ??
           (throw StateError(
             'El historial del colaborador ${employee.employeeId} no tiene una '
             'vigencia única al cierre de $month/$year.',
           ));
-      if (effectiveEntry.isActive) {
-        final historicalEmployee = historyService.rebuild(
-          effectiveEntry,
-          employee,
-        );
-        if (includeEmployee?.call(historicalEmployee) ?? true) {
-          eligibleEmployees.add(historicalEmployee);
-        }
-      }
+      if (!effectiveEntry.isActive) return null;
+      final historicalEmployee = historyService.rebuild(
+        effectiveEntry,
+        employee,
+      );
+      return included(historicalEmployee) ? historicalEmployee : null;
     }
-    return eligibleEmployees;
+
+    return employees.map(eligible).nonNulls.toList();
   }
 
   int? lastMonthWithData({
@@ -124,18 +122,15 @@ class CompliancePeriodService {
     required List<LmsCertification> certifications,
     required int year,
   }) {
-    for (var month = 12; month >= 1; month--) {
-      if (hasDataInPeriod(
+    return List.generate(12, (index) => 12 - index).firstWhereOrNull(
+      (month) => hasDataInPeriod(
         timeEntries: timeEntries,
         certifications: certifications,
         year: year,
         month: month,
         isAnnual: false,
-      )) {
-        return month;
-      }
-    }
-    return null;
+      ),
+    );
   }
 
   List<EmployeeCompliance> calculateMonthlyCompliance({
@@ -294,19 +289,16 @@ class CompliancePeriodService {
     required ComplianceService complianceService,
     bool Function(Employee)? includeEmployee,
   }) {
-    final timeEntriesByMonth = <int, List<CrmTimeEntry>>{};
-    for (final entry in timeEntries) {
-      if (entry.date.year != year) continue;
-      timeEntriesByMonth.putIfAbsent(entry.date.month, () => []).add(entry);
-    }
-    final certificationsByMonth = <int, List<LmsCertification>>{};
-    for (final certification in certifications) {
-      final date = certification.completedAt;
-      if (date == null || date.year != year) continue;
-      certificationsByMonth
-          .putIfAbsent(date.month, () => [])
-          .add(certification);
-    }
+    final timeEntriesByMonth = groupBy(
+      timeEntries.where((entry) => entry.date.year == year),
+      (entry) => entry.date.month,
+    );
+    final certificationsByMonth = groupBy(
+      certifications.where(
+        (certification) => certification.completedAt?.year == year,
+      ),
+      (certification) => certification.completedAt!.month,
+    );
     return {
       for (var month = 1; month <= throughMonth; month++)
         // Only months with CRM or LMS records contribute to annual compliance.
@@ -329,10 +321,9 @@ class CompliancePeriodService {
   List<EmployeeCompliance> accumulateMonths(
     Iterable<List<EmployeeCompliance>> months,
   ) {
-    final accumulated = <String, EmployeeCompliance>{};
-
-    for (final monthlyCompliance in months) {
-      for (final monthly in monthlyCompliance) {
+    final accumulated = months.expand((month) => month).fold(
+      <String, EmployeeCompliance>{},
+      (accumulated, monthly) {
         final employee = monthly.employee;
         final key =
             '${employee.employeeId}::${employee.area}::'
@@ -363,8 +354,9 @@ class CompliancePeriodService {
                   (monthly.requiredHours[category] ?? 0),
           },
         );
-      }
-    }
+        return accumulated;
+      },
+    );
 
     return accumulated.values.toList();
   }

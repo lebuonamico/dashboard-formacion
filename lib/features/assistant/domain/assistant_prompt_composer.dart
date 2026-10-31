@@ -41,13 +41,9 @@ PREGUNTA=${jsonEncode(question)}''';
                       jsonEncode(greater!['items']).length)) {
             greater = value;
           }
-          for (final item in value.values) {
-            find(item);
-          }
+          value.values.forEach(find);
         } else if (value is List) {
-          for (final item in value) {
-            find(item);
-          }
+          value.forEach(find);
         }
       }
 

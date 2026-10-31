@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:app_finnegans/core/period/domain/period_filter.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart';
@@ -69,36 +71,54 @@ class AssistantQueryPlanner {
     final months = RegExp(
       r'\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic)(?:\s*(?:de\s+|del\s+)?((?:19|20|21)\d{2}))?\b',
     );
-    for (final m in months.allMatches(temporaryText)) {
-      final month = m[1] == 'setiembre'
-          ? 9
-          : _months.indexWhere((name) => name.startsWith(m[1]!)) + 1;
-      mentions.add((
-        start: m.start,
-        end: m.end,
-        month: month,
-        year: int.tryParse(m[2] ?? ''),
-      ));
-    }
-    for (final m in RegExp(
-      r'\b((?:19|20|21)\d{2})[-/](\d{1,2})(?![-/\d])|\b(\d{1,2})[-/]((?:19|20|21)\d{2})\b',
-    ).allMatches(temporaryText)) {
-      if (mentions.any((p) => p.start < m.end && p.end > m.start)) {
-        continue;
-      }
-      final year = int.parse((m[1] ?? m[4])!);
-      final month = int.parse((m[2] ?? m[3])!);
-      if (month < 1 || month > 12) {
-        throw const AssistantQueryException(AssistantQueryIssue.invalidMonth);
-      }
-      mentions.add((start: m.start, end: m.end, month: month, year: year));
-    }
-    mentions.sort((a, b) => a.start.compareTo(b.start));
-    for (final mention in mentions) {
-      periods.add(
-        AssistantPeriod(year: mention.year ?? commonYear, month: mention.month),
-      );
-    }
+    mentions.addAll(
+      months
+          .allMatches(temporaryText)
+          .map(
+            (m) => (
+              start: m.start,
+              end: m.end,
+              month: m[1] == 'setiembre'
+                  ? 9
+                  : _months.indexWhere((name) => name.startsWith(m[1]!)) + 1,
+              year: int.tryParse(m[2] ?? ''),
+            ),
+          ),
+    );
+    final numericMentions =
+        RegExp(
+              r'\b((?:19|20|21)\d{2})[-/](\d{1,2})(?![-/\d])|\b(\d{1,2})[-/]((?:19|20|21)\d{2})\b',
+            )
+            .allMatches(temporaryText)
+            .where(
+              (m) => !mentions.any((p) => p.start < m.end && p.end > m.start),
+            )
+            .map((m) {
+              final month = int.parse((m[2] ?? m[3])!);
+              if (month < 1 || month > 12) {
+                throw const AssistantQueryException(
+                  AssistantQueryIssue.invalidMonth,
+                );
+              }
+              return (
+                start: m.start,
+                end: m.end,
+                month: month,
+                year: int.parse((m[1] ?? m[4])!),
+              );
+            })
+            .toList();
+    mentions
+      ..addAll(numericMentions)
+      ..sort((a, b) => a.start.compareTo(b.start));
+    periods.addAll(
+      mentions.map(
+        (mention) => AssistantPeriod(
+          year: mention.year ?? commonYear,
+          month: mention.month,
+        ),
+      ),
+    );
     if (periods.isEmpty) {
       final numericMonth = RegExp(r'\bmes\s+(\d{1,2})\b').firstMatch(q);
       if (numericMonth != null) {
@@ -109,33 +129,37 @@ class AssistantQueryPlanner {
         periods.add(AssistantPeriod(year: commonYear, month: month));
       }
     }
-    final ranges = <({DateTime start, DateTime end})>[];
-    // Buscar los extremos unidos por un conector, no contar todos los meses
-    // de la pregunta: una explicación puede volver a mencionar cualquiera.
-    for (var i = 0; i + 1 < mentions.length; i++) {
-      final from = mentions[i];
-      final until = mentions[i + 1];
-      if (!_isRangeConnector(
-        temporaryText.substring(from.end, until.start),
-        temporaryText.substring(0, from.start),
-      )) {
-        continue;
-      }
-      var yearFrom = from.year ?? until.year ?? commonYear;
-      var yearUntil = until.year ?? from.year ?? commonYear;
-      if (until.month < from.month) {
-        if (from.year == null && until.year != null) {
-          yearFrom--;
-        } else if (until.year == null) {
-          yearUntil++;
-        }
-      }
-      final range = (
-        start: DateTime(yearFrom, from.month),
-        end: DateTime(yearUntil, until.month),
-      );
-      if (!ranges.contains(range)) ranges.add(range);
-    }
+    // Only the ends joined by a connector make a range, not every month in
+    // the question: an explanation may mention any of them again.
+    final ranges =
+        List.generate(
+              math.max(0, mentions.length - 1),
+              (i) => (from: mentions[i], until: mentions[i + 1]),
+            )
+            .where(
+              (pair) => _isRangeConnector(
+                temporaryText.substring(pair.from.end, pair.until.start),
+                temporaryText.substring(0, pair.from.start),
+              ),
+            )
+            .map((pair) {
+              final (:from, :until) = pair;
+              var yearFrom = from.year ?? until.year ?? commonYear;
+              var yearUntil = until.year ?? from.year ?? commonYear;
+              if (until.month < from.month) {
+                if (from.year == null && until.year != null) {
+                  yearFrom--;
+                } else if (until.year == null) {
+                  yearUntil++;
+                }
+              }
+              return (
+                start: DateTime(yearFrom, from.month),
+                end: DateTime(yearUntil, until.month),
+              );
+            })
+            .toSet()
+            .toList();
     final explicitRange = ranges.length == 1;
     if (explicitRange) {
       final range = ranges.single;
@@ -180,11 +204,12 @@ class AssistantQueryPlanner {
           'Año anterior relativo al año seleccionado en la aplicación.',
         );
       } else if (has(r'anual|\bano\b|\banos\b') || years.isNotEmpty) {
-        for (final year in years.isEmpty ? {visible.year} : years) {
-          periods.add(
-            AssistantPeriod(year: year, month: visible.month, annual: true),
-          );
-        }
+        periods.addAll(
+          (years.isEmpty ? {visible.year} : years).map(
+            (year) =>
+                AssistantPeriod(year: year, month: visible.month, annual: true),
+          ),
+        );
       } else {
         periods.add(visible);
       }
@@ -216,11 +241,15 @@ class AssistantQueryPlanner {
             'Hay varios años en la consulta. Indicá el año del acumulado anual; no se eligió uno por suposición.',
           );
         } else {
-          for (final year in annualYears) {
-            periods.add(
-              AssistantPeriod(year: year, month: visible.month, annual: true),
-            );
-          }
+          periods.addAll(
+            annualYears.map(
+              (year) => AssistantPeriod(
+                year: year,
+                month: visible.month,
+                annual: true,
+              ),
+            ),
+          );
         }
       } else {
         periods.clear();
@@ -244,10 +273,12 @@ class AssistantQueryPlanner {
         );
       } else {
         periods.clear();
-        for (var i = 0; i < count; i++) {
-          final date = DateTime(start.year, start.month + i);
-          periods.add(AssistantPeriod(year: date.year, month: date.month));
-        }
+        periods.addAll(
+          List.generate(count, (i) {
+            final date = DateTime(start.year, start.month + i);
+            return AssistantPeriod(year: date.year, month: date.month);
+          }),
+        );
       }
     } else if (periods.length > 3) {
       periods.clear();

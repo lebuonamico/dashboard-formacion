@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
@@ -39,17 +40,10 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
       throw FormatException(_errorMessage(error, read: true));
     }
 
-    final byMonth = <String, Map<Seniority, Map<CourseCategory, double>>>{};
-    for (final row in rows) {
-      final seniority = _seniority(row['seniority']);
-      byMonth.putIfAbsent(
-        row['vigente_desde'].toString(),
-        () => {},
-      )[seniority] = {
-        for (final MapEntry(key: type, value: column) in _columns.entries)
-          type: _hours(row[column], seniority, type),
-      };
-    }
+    final byMonth = groupBy(rows, (row) => row['vigente_desde'].toString()).map(
+      (month, monthRows) =>
+          MapEntry(month, Map.fromEntries(monthRows.map(_seniorityHours))),
+    );
 
     // A version missing a seniority is rejected, not completed with the
     // default values.
@@ -96,14 +90,22 @@ class SupabaseTrainingPlanRepository implements TrainingPlanRepository {
     }
   }
 
+  static MapEntry<Seniority, Map<CourseCategory, double>> _seniorityHours(
+    Map<String, dynamic> row,
+  ) {
+    final seniority = _seniority(row['seniority']);
+    return MapEntry(seniority, {
+      for (final MapEntry(key: type, value: column) in _columns.entries)
+        type: _hours(row[column], seniority, type),
+    });
+  }
+
   static Seniority _seniority(Object? value) {
     final name = value?.toString() ?? '';
-    for (final seniority in Seniority.values) {
-      if (seniority.name == name) return seniority;
-    }
-    throw FormatException(
-      'El plan de formación tiene un seniority desconocido: "$name".',
-    );
+    return Seniority.values.asNameMap()[name] ??
+        (throw FormatException(
+          'El plan de formación tiene un seniority desconocido: "$name".',
+        ));
   }
 
   static double _hours(

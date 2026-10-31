@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -195,16 +196,18 @@ final employeeDetailProvider =
           )
           .toList();
 
-      // Los dictados salen del CRM (Clasificación "Dictado de capacitaciones").
-      final taughtByCourse = <String, List<CrmTimeEntryRecord>>{};
-      for (final item in timeEntriesCrm.where((item) => item.isTaught)) {
-        final courseId =
-            item.course?.id.trim() ?? item.timeEntry.courseId?.trim();
-        final key = courseId != null && courseId.isNotEmpty
-            ? 'id:$courseId'
-            : 'nombre:${normalizeKey(item.timeEntry.courseName)}';
-        taughtByCourse.putIfAbsent(key, () => []).add(item);
-      }
+      // Taught courses come from the CRM classification "Dictado de
+      // capacitaciones".
+      final taughtByCourse = groupBy(
+        timeEntriesCrm.where((item) => item.isTaught),
+        (item) {
+          final courseId =
+              item.course?.id.trim() ?? item.timeEntry.courseId?.trim();
+          return courseId != null && courseId.isNotEmpty
+              ? 'id:$courseId'
+              : 'nombre:${normalizeKey(item.timeEntry.courseName)}';
+        },
+      );
       final taught = taughtByCourse.values.map((items) {
         final first = items.first;
         final course = first.course;

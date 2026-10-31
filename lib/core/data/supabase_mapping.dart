@@ -17,9 +17,7 @@ class SupabaseTableMapping {
         columns.values.toSet().length != columns.length) {
       throw ArgumentError('Mapeo Supabase incompleto o ambiguo.');
     }
-    for (final field in conflictFields) {
-      column(field);
-    }
+    conflictFields.forEach(column);
   }
 
   String column(String field) =>
@@ -37,9 +35,5 @@ class SupabaseTableMapping {
     for (final entry in columns.entries) entry.key: row[entry.value],
   };
 
-  void requireFields(Iterable<String> fields) {
-    for (final field in fields) {
-      column(field);
-    }
-  }
+  void requireFields(Iterable<String> fields) => fields.forEach(column);
 }
