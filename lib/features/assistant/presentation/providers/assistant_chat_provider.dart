@@ -1,21 +1,15 @@
 import 'dart:async';
 
-import 'package:app_finnegans/core/config/supabase_config.dart';
-import 'package:app_finnegans/features/assistant/data/assistant_api.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart';
+import 'package:app_finnegans/features/assistant/presentation/assistant_labels.dart';
+import 'package:app_finnegans/features/assistant/presentation/providers/assistant_repository_provider.dart';
 import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/config/supabase_client_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 
 export 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
-
-final assistantApiProvider = Provider<AssistantApi>(
-  (ref) => AssistantApi(
-    SupabaseConfig.enabled ? ref.watch(supabaseClientProvider) : null,
-  ),
-);
 
 final assistantChatProvider =
     NotifierProvider<AssistantChatController, ChatState>(
@@ -83,9 +77,14 @@ class AssistantChatController extends Notifier<ChatState> {
   void _validateSession() {
     final auth = ref.read(authProvider);
     if (!auth.enabled || !auth.hasValidSession) {
-      throw AssistantException.http(401);
+      throw const AssistantException(AssistantErrorType.session, status: 401);
     }
-    if (!auth.isAuthorized) throw AssistantException.http(403);
+    if (!auth.isAuthorized) {
+      throw const AssistantException(
+        AssistantErrorType.permission,
+        status: 403,
+      );
+    }
   }
 
   Future<void> send(String text, AssistantDestination destination) async {
@@ -160,8 +159,8 @@ class AssistantChatController extends Notifier<ChatState> {
       // Conservar el contexto de la consulta fallida aun si se navega a otro
       // módulo/período. Nunca enviar el historial ni errores como contexto.
       final response = await ref
-          .read(assistantApiProvider)
-          .query(query.payload!, cancellation: _cancellation!.future);
+          .read(assistantRepositoryProvider)
+          .ask(query.payload!, cancellation: _cancellation!.future);
       if (!_current(ticket)) return;
       _validateSession();
       _failedQuery = null;
@@ -178,10 +177,7 @@ class AssistantChatController extends Notifier<ChatState> {
     } on TimeoutException {
       _registerError(
         ticket,
-        const AssistantException(
-          AssistantException.connectionMessage,
-          type: AssistantErrorType.connection,
-        ),
+        const AssistantException(AssistantErrorType.connection),
       );
     } on FormatException catch (error) {
       // Solo validaciones redactadas por nuestro servicio; nunca propagar
@@ -190,19 +186,21 @@ class AssistantChatController extends Notifier<ChatState> {
         'Indicá un mes válido entre 1 y 12.' => error.message,
         'La consulta supera el contexto disponible. Pedí menos períodos o precisá el equipo, área o curso.' =>
           error.message,
-        _ => AssistantException.unknownMessage,
+        _ => null,
       };
       if (_current(ticket)) {
         state = state.copyWith(
           sending: true,
-          error: message,
-          canRetry: message == AssistantException.unknownMessage,
+          error:
+              message ??
+              const AssistantException(AssistantErrorType.unknown).message,
+          canRetry: message == null,
         );
       }
     } catch (_) {
       _registerError(
         ticket,
-        const AssistantException(AssistantException.unknownMessage),
+        const AssistantException(AssistantErrorType.unknown),
       );
     } finally {
       _cancelOperation();
