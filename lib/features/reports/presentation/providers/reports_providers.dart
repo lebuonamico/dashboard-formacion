@@ -10,6 +10,8 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 import 'package:app_finnegans/features/reports/presentation/pdf/report_pdf.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 // Arman el reporte de cada pantalla con los mismos cálculos que sus cards.
 // `null` cuando el período no tiene nada para reportar.
@@ -34,7 +36,7 @@ final dashboardReportProvider = FutureProvider<TrainingReport?>((ref) async {
     timeEntries: timeEntries,
     evaluatedMonths: evaluatedMonths,
   );
-  final status = ComplianceLevel.fromPercentage(kpis.compliance);
+  final status = const ComplianceLevelService().fromPercentage(kpis.compliance);
   return TrainingReport(
     type: ReportType.general,
     title: 'Plan de formación interna',

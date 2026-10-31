@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 /// Resumen de un área en el período, para las tarjetas de la pantalla Áreas.
 class AreaGlobalViewModel {
@@ -278,7 +279,7 @@ AreaGlobalViewModel _summarizeArea(
     explorationHours: _sumCategoryHours(members, CourseCategory.exploration),
     teachingHours: _sumCategoryHours(members, CourseCategory.teaching),
     compliancePercentage: percentage,
-    level: ComplianceLevel.fromPercentage(percentage),
+    level: const ComplianceLevelService().fromPercentage(percentage),
     leaders: leaders,
   );
 }
@@ -289,7 +290,7 @@ double _sumCategoryHours(
 ) {
   return members.fold<double>(
     0,
-    (total, member) => total + member.applicableHours(type),
+    (total, member) => total + member.applicableHours[type]!,
   );
 }
 

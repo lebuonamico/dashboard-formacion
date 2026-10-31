@@ -6,18 +6,16 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_period_service.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 typedef TeamLeaderResolver = String? Function(String area, String team);
 
 class TeamsService {
-  static const _onTargetPercentage = 100.0;
-  static const _atRiskPercentage = 70.0;
-
-  final TeamPeriodService periods;
+  final CompliancePeriodService periods;
   final EmployeeLookupService lookup;
 
   const TeamsService({
-    this.periods = const TeamPeriodService(),
+    this.periods = const CompliancePeriodService(),
     this.lookup = const EmployeeLookupService(),
   });
 
@@ -184,11 +182,13 @@ class TeamsService {
     final allMembersOnTarget =
         memberCount > 0 && membersOnTarget == memberCount;
 
-    if (completionPercentage >= _onTargetPercentage && allMembersOnTarget) {
+    if (completionPercentage >= ComplianceLevelService.onTargetPercentage &&
+        allMembersOnTarget) {
       return TeamStatus.onTarget;
     }
 
-    if (completionPercentage >= _atRiskPercentage || membersOnTarget > 0) {
+    if (completionPercentage >= ComplianceLevelService.atRiskPercentage ||
+        membersOnTarget > 0) {
       return TeamStatus.atRisk;
     }
 
@@ -226,7 +226,7 @@ class TeamsService {
   ) {
     return members.fold<double>(
       0,
-      (total, member) => total + member.applicableHours(category),
+      (total, member) => total + member.applicableHours[category]!,
     );
   }
 

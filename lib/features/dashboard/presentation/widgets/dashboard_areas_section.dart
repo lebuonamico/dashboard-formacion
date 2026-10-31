@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class DashboardAreasSection extends ConsumerWidget {
   final AsyncValue<List<AreaComplianceViewModel>> areasAsync;

@@ -190,7 +190,7 @@ final employeeDetailProvider =
           .first;
       if (isAnnual) {
         // Objetivo del año: los 12 meses, cada uno con su versión del plan.
-        compliance = EmployeeCompliance(
+        compliance = complianceService.summary.summarize(
           employee: compliance.employee,
           creditedHours: compliance.creditedHours,
           declaredHours: compliance.declaredHours,

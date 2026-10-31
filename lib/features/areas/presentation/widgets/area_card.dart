@@ -1,10 +1,11 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class AreaCard extends StatelessWidget {
   final AreaGlobalViewModel area;

@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/report_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
 
 EmployeeCompliance _member(
   int employeeId,
@@ -28,7 +29,7 @@ EmployeeCompliance _member(
         TrainingPlanDefaults.hours[seniority]![CourseCategory.teaching]!,
   };
   final parts = name.split(' ');
-  return EmployeeCompliance(
+  return const EmployeeComplianceService().summarize(
     employee: Employee(
       employeeId: '$employeeId',
       firstName: parts.first,

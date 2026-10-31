@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/compliance/domain/employee_compliance.dar
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 
 /// Dos cards lado a lado: Moodle vs CRM en las categorías comparables
 /// (Negocio y Blandas) y el total de cada fuente, con el desglose por
@@ -15,7 +16,9 @@ class MoodleCrmComparisonCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final comparison = MoodleCrmComparison.from(complianceList);
+    final comparison = const MoodleCrmComparisonService().compare(
+      complianceList,
+    );
     final comparables = _ComparisonCard(
       key: const Key('comparacion_comparables'),
       comparison: comparison,
@@ -59,9 +62,9 @@ class _ComparisonCard extends StatelessWidget {
     final cs = context.colorScheme;
     final colorMoodle = cs.primary;
     final colorCrm = context.colors.cyanAccent;
-    const types = MoodleCrmComparison.comparables;
-    final moodle = comparison.totalMoodle(types);
-    final crm = comparison.totalCrm(types);
+    const types = MoodleCrmComparisonService.comparables;
+    final moodle = comparison.moodleComparable;
+    final crm = comparison.crmComparable;
 
     return _Panel(
       title: 'Moodle vs CRM · Comparables',
@@ -226,7 +229,7 @@ class _CardTotalCrm extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
     final colorCrm = context.colors.cyanAccent;
-    final total = comparison.totalCrm(CourseCategory.values);
+    final total = comparison.crmTotal;
 
     return _Panel(
       title: 'Horas CRM · Total',

@@ -350,7 +350,7 @@ class AssistantContextService {
     'categorias': {
       for (final type in CourseCategory.values)
         type.label: {
-          'validas_aplicables': compliance.applicableHours(type),
+          'validas_aplicables': compliance.applicableHours[type]!,
           'objetivo': compliance.requiredHours[type] ?? 0,
         },
     },
@@ -386,7 +386,7 @@ class AssistantContextService {
     final pending = {
       for (final type in CourseCategory.values)
         if (profile != null &&
-            profile.applicableHours(type) < (profile.requiredHours[type] ?? 0))
+            profile.applicableHours[type]! < (profile.requiredHours[type] ?? 0))
           type,
     };
     final active = courses.where((c) => c.isActive).toList();

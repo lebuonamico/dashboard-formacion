@@ -3,6 +3,8 @@ import 'package:app_finnegans/features/compliance/domain/employee_compliance.dar
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/projection/domain/projection_service.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 
 /// Qué sección de la app resume el reporte.
 enum ReportType {
@@ -19,18 +21,15 @@ enum ReportType {
 }
 
 /// Semáforo de una fila del reporte, ya resuelto por quien lo arma.
-enum ReportLevel {
-  ok,
-  attention,
-  critical;
+enum ReportLevel { ok, attention, critical }
 
-  /// Mismos cortes que el semáforo de la app.
-  static ReportLevel fromPercentage(double percentage) => percentage >= 100
-      ? ReportLevel.ok
-      : percentage >= 70
-      ? ReportLevel.attention
-      : ReportLevel.critical;
-}
+/// Mismos cortes que el semáforo de la app.
+ReportLevel reportLevelFor(double percentage) =>
+    switch (const ComplianceLevelService().fromPercentage(percentage)) {
+      ComplianceLevel.onTarget => ReportLevel.ok,
+      ComplianceLevel.atRisk => ReportLevel.attention,
+      ComplianceLevel.critical => ReportLevel.critical,
+    };
 
 /// Qué dato de ubicación acompaña a cada integrante en la tabla.
 enum MemberLocation { none, team, teamAreaY }
@@ -131,7 +130,7 @@ class TrainingReport {
   Map<ReportLevel, int> get countByLevel {
     final count = {for (final level in ReportLevel.values) level: 0};
     for (final member in members) {
-      final level = ReportLevel.fromPercentage(member.totalPercentage);
+      final level = reportLevelFor(member.totalPercentage);
       count[level] = count[level]! + 1;
     }
     return count;
@@ -146,13 +145,14 @@ class TrainingReport {
       for (final type in CourseCategory.values)
         (
           tipo: type,
-          validas: sum((m) => m.applicableHours(type)),
+          validas: sum((m) => m.applicableHours[type]!),
           objetivo: sum((m) => m.requiredHours[type] ?? 0),
         ),
     ];
   }
 
-  MoodleCrmComparison get sourceComparison => MoodleCrmComparison.from(members);
+  MoodleCrmComparison get sourceComparison =>
+      const MoodleCrmComparisonService().compare(members);
 
   /// De menor a mayor cumplimiento, y por nombre a igual porcentaje.
   List<EmployeeCompliance> get listedMembers {
@@ -170,9 +170,7 @@ class TrainingReport {
     if (!criticalOnly) return sorted;
     return [
       for (final m in sorted)
-        if (ReportLevel.fromPercentage(m.totalPercentage) ==
-            ReportLevel.critical)
-          m,
+        if (reportLevelFor(m.totalPercentage) == ReportLevel.critical) m,
     ];
   }
 

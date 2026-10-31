@@ -1,58 +1,37 @@
-import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 
-/// Horas por categoría de cada fuente para un grupo de colaboradores.
-/// Moodle: cursos finalizados en el LMS por su carga horaria (solo Negocio y
-/// Blandas). CRM: horas declaradas en cada categoría.
+/// Hours per category from each source for a group of employees. Moodle:
+/// courses completed in the LMS at their workload (only Business and Soft
+/// skills). CRM: declared hours in every category.
 class MoodleCrmComparison {
   final Map<CourseCategory, double> moodle;
   final Map<CourseCategory, double> crm;
 
-  const MoodleCrmComparison({required this.moodle, required this.crm});
+  /// Totals over the categories both sources have.
+  final double moodleComparable;
+  final double crmComparable;
 
-  /// Categorías que existen en las dos fuentes.
-  static const comparables = [
-    CourseCategory.businessSkills,
-    CourseCategory.softSkills,
-  ];
+  /// CRM hours over every category.
+  final double crmTotal;
 
-  factory MoodleCrmComparison.from(List<EmployeeCompliance> items) {
-    double sum(
-      Map<CourseCategory, double> Function(EmployeeCompliance) hours,
-      CourseCategory type,
-    ) => items.fold(0, (t, item) => t + (hours(item)[type] ?? 0));
-    return MoodleCrmComparison(
-      moodle: {
-        for (final type in comparables)
-          type: sum((item) => item.creditedHours, type),
-      },
-      crm: {
-        for (final type in CourseCategory.values)
-          type: sum((item) => item.declaredHours, type),
-      },
-    );
-  }
+  /// Hours the CRM records above (or below, when negative) Moodle in the
+  /// comparable categories.
+  final double differenceComparable;
 
-  double totalMoodle(Iterable<CourseCategory> types) =>
-      types.fold(0, (t, type) => t + (moodle[type] ?? 0));
+  /// The difference as a percentage of Moodle; `null` without Moodle hours.
+  final double? percentageDifference;
 
-  double totalCrm(Iterable<CourseCategory> types) =>
-      types.fold(0, (t, type) => t + (crm[type] ?? 0));
+  /// Less than 0.05 h apart counts as matching.
+  final bool match;
 
-  /// Horas que CRM registra de más (o de menos, si es negativa) que Moodle en
-  /// las categorías comparables.
-  double get differenceComparable =>
-      totalCrm(comparables) - totalMoodle(comparables);
-
-  /// La diferencia como porcentaje de lo registrado en Moodle; `null` si
-  /// Moodle no tiene horas.
-  double? get percentageDifference {
-    final moodleComparable = totalMoodle(comparables);
-    return moodleComparable == 0
-        ? null
-        : differenceComparable / moodleComparable * 100;
-  }
-
-  /// Menos de 0.05 h de diferencia se muestra como que coinciden.
-  bool get match => differenceComparable.abs() < 0.05;
+  const MoodleCrmComparison({
+    required this.moodle,
+    required this.crm,
+    required this.moodleComparable,
+    required this.crmComparable,
+    required this.crmTotal,
+    required this.differenceComparable,
+    required this.percentageDifference,
+    required this.match,
+  });
 }

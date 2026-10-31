@@ -42,7 +42,7 @@ class CategoryHoursProgress extends StatelessWidget {
     final colors = context.colors;
     final registeredHours = compliance!.creditedHours[type] ?? 0.0;
     final completedHours = showOnlyApplicableHours
-        ? compliance!.applicableHours(type)
+        ? compliance!.applicableHours[type]!
         : registeredHours;
     final requiredHours = compliance!.requiredHours[type] ?? 0.0;
     final required = requiredHours > 0;

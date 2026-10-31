@@ -1,5 +1,4 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -7,13 +6,15 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_crm_comparison_cards.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
+import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 
 EmployeeCompliance _c({
   required Map<CourseCategory, double> moodle,
   required Map<CourseCategory, double> crm,
   String employeeId = '1',
 }) {
-  return EmployeeCompliance(
+  return const EmployeeComplianceService().summarize(
     employee: Employee(
       employeeId: employeeId,
       firstName: 'Ana',
@@ -53,19 +54,19 @@ final _items = [
 
 void main() {
   test('Suma Moodle solo en Negocio y Blandas y CRM en las 4', () {
-    final comparison = MoodleCrmComparison.from(_items);
+    final comparison = const MoodleCrmComparisonService().compare(_items);
 
     expect(comparison.moodle, {
       CourseCategory.businessSkills: 12,
       CourseCategory.softSkills: 2,
     });
-    expect(comparison.totalMoodle(MoodleCrmComparison.comparables), 14);
-    expect(comparison.totalCrm(MoodleCrmComparison.comparables), 16);
-    expect(comparison.totalCrm(CourseCategory.values), 24);
+    expect(comparison.moodleComparable, 14);
+    expect(comparison.crmComparable, 16);
+    expect(comparison.crmTotal, 24);
   });
 
   test('La diferencia de las comparables es CRM menos Moodle', () {
-    final comparison = MoodleCrmComparison.from(_items);
+    final comparison = const MoodleCrmComparisonService().compare(_items);
 
     expect(comparison.differenceComparable, 2);
     expect(comparison.percentageDifference, closeTo(14.29, 0.01));
@@ -73,13 +74,13 @@ void main() {
   });
 
   test('Sin horas en Moodle no hay porcentaje, y menos de 0.05 h coincide', () {
-    final crmOnly = MoodleCrmComparison.from([
+    final crmOnly = const MoodleCrmComparisonService().compare([
       _c(moodle: const {}, crm: {CourseCategory.softSkills: 3}),
     ]);
     expect(crmOnly.percentageDifference, isNull);
     expect(crmOnly.match, isFalse);
 
-    final equal = MoodleCrmComparison.from([
+    final equal = const MoodleCrmComparisonService().compare([
       _c(
         moodle: {CourseCategory.businessSkills: 4},
         crm: {CourseCategory.businessSkills: 4.04},

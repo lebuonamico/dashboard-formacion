@@ -1,24 +1,7 @@
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
-
-/// Los colores de cada estado los resuelve la UI según el tema activo
-/// (ver `widgets/shared/estado_colores.dart`).
-enum ComplianceLevel {
-  onTarget('En objetivo'),
-  atRisk('En riesgo'),
-  critical('Crítico');
-
-  final String label;
-
-  const ComplianceLevel(this.label);
-
-  static ComplianceLevel fromPercentage(double percentage) {
-    if (percentage >= 100.0) return ComplianceLevel.onTarget;
-    if (percentage >= 70.0) return ComplianceLevel.atRisk;
-    return ComplianceLevel.critical;
-  }
-}
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 class AreaComplianceViewModel {
   final String area;
@@ -75,7 +58,7 @@ final complianceByAreaProvider = FutureProvider<List<AreaComplianceViewModel>>((
         completedHours: completedHours,
         requiredHours: requiredHours,
         compliancePercentage: percentage,
-        level: ComplianceLevel.fromPercentage(percentage),
+        level: const ComplianceLevelService().fromPercentage(percentage),
       ),
     );
   });

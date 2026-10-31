@@ -148,7 +148,7 @@ List<pw.Widget> pdfMembers(TrainingReport report, PdfReportStyle style) {
               style: pw.TextStyle(
                 fontWeight: bold,
                 fontSize: 7.5,
-                color: ReportLevel.fromPercentage(m.totalPercentage).color,
+                color: reportLevelFor(m.totalPercentage).color,
               ),
             ),
           ],
@@ -172,7 +172,7 @@ String _location(Employee employee, MemberLocation location) =>
 String _category(EmployeeCompliance m, CourseCategory type) {
   final required = m.requiredHours[type] ?? 0;
   if (required <= 0) return '-';
-  return '${m.applicableHours(type).toStringAsFixed(1)}/'
+  return '${m.applicableHours[type]!.toStringAsFixed(1)}/'
       '${required.toStringAsFixed(0)}';
 }
 

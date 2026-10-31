@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 class DashboardSummaryCharts extends StatelessWidget {
   final AsyncValue<List<EmployeeCompliance>> complianceListAsync;
@@ -68,25 +69,21 @@ class _ComplianceSummary {
   });
 
   factory _ComplianceSummary.from(List<EmployeeCompliance> items) {
-    var meetsTarget = 0;
-    var attention = 0;
-    var doesNotMeet = 0;
-
-    for (final item in items) {
-      if (item.totalPercentage >= 100) {
-        meetsTarget++;
-      } else if (item.totalPercentage >= 70) {
-        attention++;
-      } else {
-        doesNotMeet++;
-      }
-    }
+    final levels = items
+        .map(
+          (item) => const ComplianceLevelService().fromPercentage(
+            item.totalPercentage,
+          ),
+        )
+        .toList();
+    int count(ComplianceLevel level) =>
+        levels.where((current) => current == level).length;
 
     return _ComplianceSummary(
       total: items.length,
-      meetsTarget: meetsTarget,
-      attention: attention,
-      doesNotMeet: doesNotMeet,
+      meetsTarget: count(ComplianceLevel.onTarget),
+      attention: count(ComplianceLevel.atRisk),
+      doesNotMeet: count(ComplianceLevel.critical),
     );
   }
 
@@ -115,7 +112,7 @@ class _CategorySummary {
       // Sólo lo que suma al objetivo: el total coincide con totalCompleted.
       hours[type] = items.fold<double>(
         0,
-        (total, item) => total + item.applicableHours(type),
+        (total, item) => total + item.applicableHours[type]!,
       );
     }
 

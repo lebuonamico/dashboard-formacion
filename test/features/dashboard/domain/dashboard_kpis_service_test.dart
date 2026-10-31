@@ -4,12 +4,13 @@ import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
 
 EmployeeCompliance _compliance(
   String employeeId, {
   required double required,
   double valid = 0,
-}) => EmployeeCompliance(
+}) => const EmployeeComplianceService().summarize(
   employee: Employee(
     employeeId: employeeId,
     firstName: 'Nombre $employeeId',

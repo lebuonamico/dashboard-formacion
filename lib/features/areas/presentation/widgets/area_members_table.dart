@@ -12,6 +12,7 @@ import 'package:app_finnegans/features/employees/presentation/widgets/seniority_
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 /// Integrantes del área, paginados y con selector para filtrar por avance.
 class AreaMembersTable extends StatefulWidget {
@@ -57,13 +58,14 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
     }
   }
 
-  /// Mismos cortes que el semáforo, sobre el porcentaje de cada integrante.
   String _memberStatus(EmployeeCompliance member) =>
-      member.totalPercentage >= 100.0
-      ? 'cumplido'
-      : member.totalPercentage >= 70.0
-      ? 'riesgo'
-      : 'critico';
+      switch (const ComplianceLevelService().fromPercentage(
+        member.totalPercentage,
+      )) {
+        ComplianceLevel.onTarget => 'cumplido',
+        ComplianceLevel.atRisk => 'riesgo',
+        ComplianceLevel.critical => 'critico',
+      };
 
   List<EmployeeCompliance> get _filteredMembers => widget.members
       .where(

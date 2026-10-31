@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
 
 const _business = CourseCategory.businessSkills;
 const _softSkills = CourseCategory.softSkills;
@@ -17,7 +18,7 @@ EmployeeCompliance _member(
   double exploration = 0,
 }) {
   final parts = name.split(' ');
-  return EmployeeCompliance(
+  return const EmployeeComplianceService().summarize(
     employee: Employee(
       employeeId: name,
       firstName: parts.first,
@@ -70,15 +71,15 @@ ReportBreakdownRow _row(String name, double percentage) => ReportBreakdownRow(
   target: 0,
   percentage: percentage,
   status: '',
-  level: ReportLevel.fromPercentage(percentage),
+  level: reportLevelFor(percentage),
 );
 
 void main() {
   test('El semáforo corta en 100 y 70', () {
-    expect(ReportLevel.fromPercentage(100), ReportLevel.ok);
-    expect(ReportLevel.fromPercentage(99.9), ReportLevel.attention);
-    expect(ReportLevel.fromPercentage(70), ReportLevel.attention);
-    expect(ReportLevel.fromPercentage(69.9), ReportLevel.critical);
+    expect(reportLevelFor(100), ReportLevel.ok);
+    expect(reportLevelFor(99.9), ReportLevel.attention);
+    expect(reportLevelFor(70), ReportLevel.attention);
+    expect(reportLevelFor(69.9), ReportLevel.critical);
   });
 
   test('Cuenta a cada persona en su nivel, con los tres niveles siempre', () {

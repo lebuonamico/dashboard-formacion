@@ -1,10 +1,10 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 /// Fila de cards de indicadores, la misma en Inicio, Áreas, Equipos y sus
 /// detalles: 5 columnas en pantallas anchas, 3 + 2, 2 o 1 en las más chicas.
@@ -57,7 +57,11 @@ Widget complianceKpiCard(
   Color? color,
 }) {
   final colorCard =
-      color ?? ComplianceLevel.fromPercentage(percentage).colors(context).text;
+      color ??
+      const ComplianceLevelService()
+          .fromPercentage(percentage)
+          .colors(context)
+          .text;
   if (isAnnual) {
     return DashboardKpiCard(
       title: 'CUMPLIMIENTO · AÑO $year',

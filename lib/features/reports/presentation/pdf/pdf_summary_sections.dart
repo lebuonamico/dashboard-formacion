@@ -10,6 +10,7 @@ import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 
 /// Las mismas tarjetas que la pantalla: integrantes, horas, cumplimiento y,
 /// si hay, la proyección a diciembre.
@@ -351,7 +352,7 @@ class PdfSources extends pw.StatelessWidget {
   @override
   pw.Widget build(pw.Context context) {
     final c = report.sourceComparison;
-    const comparables = MoodleCrmComparison.comparables;
+    const comparables = MoodleCrmComparisonService.comparables;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -410,11 +411,8 @@ class PdfSources extends pw.StatelessWidget {
               ),
               children: [
                 _name('Total', highlighted: true),
-                _cell(pdfHours(c.totalMoodle(comparables)), highlighted: true),
-                _cell(
-                  pdfHours(c.totalCrm(CourseCategory.values)),
-                  highlighted: true,
-                ),
+                _cell(pdfHours(c.moodleComparable), highlighted: true),
+                _cell(pdfHours(c.crmTotal), highlighted: true),
                 _cell(''),
               ],
             ),

@@ -9,12 +9,15 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_service.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
 
-class TeamPeriodService {
+class CompliancePeriodService {
   final EmployeeHistoryService historyService;
+  final EmployeeComplianceService summary;
 
-  const TeamPeriodService({
+  const CompliancePeriodService({
     this.historyService = const EmployeeHistoryService(),
+    this.summary = const EmployeeComplianceService(),
   });
 
   bool hasDataInPeriod({
@@ -252,7 +255,7 @@ class TeamPeriodService {
             '${employee.employeeId}::${employee.area}::'
             '${normalizeTeamName(employee.team)}';
         final previous = accumulated[key];
-        accumulated[key] = EmployeeCompliance(
+        accumulated[key] = summary.summarize(
           employee: monthly.employee,
           creditedHours: {
             for (final category in CourseCategory.values)

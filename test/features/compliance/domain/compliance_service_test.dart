@@ -242,7 +242,7 @@ void main() {
       final may = month(5).single;
       expect(may.requiredHours[CourseCategory.teaching], 4);
       expect(may.totalRequiredHours, 8);
-      expect(may.applicableHours(CourseCategory.teaching), 4);
+      expect(may.applicableHours[CourseCategory.teaching]!, 4);
 
       // Junio ya usa el plan nuevo: 10 h en total.
       final june = month(6).single;
@@ -282,7 +282,7 @@ void main() {
       expect(annual.requiredHours[CourseCategory.teaching], 10);
       // En el anual mayo ya no topea en 4: suma 5 + 5, contra 10 requeridas.
       expect(annual.creditedHours[CourseCategory.teaching], 10);
-      expect(annual.applicableHours(CourseCategory.teaching), 10);
+      expect(annual.applicableHours[CourseCategory.teaching]!, 10);
     });
 
     test('el anual compensa un mes flojo con uno fuerte de la misma '
@@ -310,12 +310,12 @@ void main() {
 
       // Junio y julio piden 6 h de dictado: 2 + 10 cubren las 12.
       final compensated = annual([teaching('j', 6, 2), teaching('k', 7, 10)]);
-      expect(compensated.applicableHours(CourseCategory.teaching), 12);
+      expect(compensated.applicableHours[CourseCategory.teaching]!, 12);
 
       // El excedente no pasa del objetivo anual de la categoría.
       final exceeded = annual([teaching('j', 6, 10), teaching('k', 7, 10)]);
-      expect(exceeded.applicableHours(CourseCategory.teaching), 12);
-      expect(exceeded.applicableHours(CourseCategory.softSkills), 0);
+      expect(exceeded.applicableHours[CourseCategory.teaching]!, 12);
+      expect(exceeded.applicableHours[CourseCategory.softSkills]!, 0);
     });
 
     test('sin período usa la versión vigente hoy', () {
