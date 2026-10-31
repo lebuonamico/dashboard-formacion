@@ -10,7 +10,9 @@ import 'package:app_finnegans/core/widgets/theme_transition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_finnegans/core/theme/theme_preference_repository.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 /// App mínima conectada al provider de apariencia, como `MyApp`.
 class _App extends ConsumerWidget {
@@ -27,16 +29,24 @@ class _App extends ConsumerWidget {
   );
 }
 
+void _usePreferences([Map<String, Object> values = const {}]) {
+  SharedPreferencesAsyncPlatform.instance =
+      InMemorySharedPreferencesAsync.withData(values);
+}
+
+Future<ThemeMode> _savedMode() =>
+    SharedPreferencesThemePreferenceRepository().read();
+
 void main() {
   testWidgets('El menú de la cuenta cambia y recuerda la apariencia', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    _usePreferences();
     final container = ProviderContainer(
       overrides: [
         authControllerProvider.overrideWith((ref) => AuthController(null)),
         themeModeProvider.overrideWith(
-          () => ThemeModeController(ThemeMode.light),
+          () => ThemeModeNotifier(ThemeMode.light),
         ),
       ],
     );
@@ -67,7 +77,7 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(find.byType(RawImage), findsNothing);
-    expect(await ThemeModeController.readSaved(), ThemeMode.dark);
+    expect(await _savedMode(), ThemeMode.dark);
 
     // El menú sigue abierto y el switch quedó encendido; apagarlo vuelve al
     // tema claro.
@@ -75,7 +85,7 @@ void main() {
     await tester.tap(toggleSwitch);
     await tester.pumpAndSettle();
     expect(container.read(themeModeProvider), ThemeMode.light);
-    expect(await ThemeModeController.readSaved(), ThemeMode.light);
+    expect(await _savedMode(), ThemeMode.light);
     expect(tester.takeException(), isNull);
   });
 
@@ -106,14 +116,14 @@ void main() {
       required String role,
       Employee? employee,
     }) async {
-      SharedPreferences.setMockInitialValues({});
+      _usePreferences();
       final container = ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(
             (ref) => _AuthWithRole('lider@finnegans.com', role),
           ),
           themeModeProvider.overrideWith(
-            () => ThemeModeController(ThemeMode.light),
+            () => ThemeModeNotifier(ThemeMode.light),
           ),
           orgStructureProvider.overrideWith((ref) async => structure),
           sessionEmployeeProvider.overrideWith((ref) async => employee),

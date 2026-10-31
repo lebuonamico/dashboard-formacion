@@ -6,7 +6,9 @@ import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_finnegans/core/theme/theme_preference_repository.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 /// Relación de contraste WCAG entre dos colores opacos.
 double _contrast(Color a, Color b) {
@@ -21,36 +23,44 @@ double _contrast(Color a, Color b) {
 Color _over(Color background, Color surface) =>
     Color.alphaBlend(background, surface);
 
+void _usePreferences([Map<String, Object> values = const {}]) {
+  SharedPreferencesAsyncPlatform.instance =
+      InMemorySharedPreferencesAsync.withData(values);
+}
+
+Future<ThemeMode> _savedMode() =>
+    SharedPreferencesThemePreferenceRepository().read();
+
 void main() {
   group('Preferencia de apariencia', () {
     test('sin preferencia guardada sigue al sistema', () async {
-      SharedPreferences.setMockInitialValues({});
-      expect(await ThemeModeController.readSaved(), ThemeMode.system);
+      _usePreferences();
+      expect(await _savedMode(), ThemeMode.system);
     });
 
     test('un valor desconocido también sigue al sistema', () async {
-      SharedPreferences.setMockInitialValues({
-        ThemeModeController.preferenceKey: 'violeta',
+      _usePreferences({
+        SharedPreferencesThemePreferenceRepository.preferenceKey: 'violeta',
       });
-      expect(await ThemeModeController.readSaved(), ThemeMode.system);
+      expect(await _savedMode(), ThemeMode.system);
     });
 
     test('cambiar el modo lo aplica y lo guarda', () async {
-      SharedPreferences.setMockInitialValues({});
+      _usePreferences();
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       await container.read(themeModeProvider.notifier).change(ThemeMode.dark);
 
       expect(container.read(themeModeProvider), ThemeMode.dark);
-      expect(await ThemeModeController.readSaved(), ThemeMode.dark);
+      expect(await _savedMode(), ThemeMode.dark);
     });
 
     test('arranca con el modo leído antes de runApp', () {
       final container = ProviderContainer(
         overrides: [
           themeModeProvider.overrideWith(
-            () => ThemeModeController(ThemeMode.light),
+            () => ThemeModeNotifier(ThemeMode.light),
           ),
         ],
       );

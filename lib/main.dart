@@ -2,6 +2,7 @@ import 'package:app_finnegans/core/router/app_router.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/theme/theme_mode_provider.dart';
+import 'package:app_finnegans/core/theme/theme_preference_repository.dart';
 import 'package:app_finnegans/core/widgets/theme_transition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,11 +10,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseConfig.initialize();
-  final appearance = await ThemeModeController.readSaved();
+  final appearance = await SharedPreferencesThemePreferenceRepository().read();
   runApp(
     ProviderScope(
       overrides: [
-        themeModeProvider.overrideWith(() => ThemeModeController(appearance)),
+        themeModeProvider.overrideWith(() => ThemeModeNotifier(appearance)),
       ],
       child: const MyApp(),
     ),
