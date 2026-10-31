@@ -79,7 +79,9 @@ final dashboardMonthlyEvolutionProvider =
       final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
       final certifications = await ref.watch(lmsCertificationsProvider.future);
       final userScope = await ref.watch(userScopeProvider.future);
-      final include = userScope.isTotal ? null : userScope.includesEmployee;
+      final include = ref
+          .watch(userScopeServiceProvider)
+          .employeeFilter(userScope);
       final complianceService = await ref.watch(
         complianceServiceProvider.future,
       );

@@ -2,11 +2,11 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
-import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/theme/theme_mode_provider.dart';
+import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 
 /// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
 /// tarjeta con el detalle de la cuenta, incluido el rol, y el switch de tema
@@ -364,8 +364,10 @@ class _UserCard extends StatelessWidget {
                 itemKey: 'cuenta_pertenece',
                 title: 'Pertenece a',
                 value: belongs.whenData(
-                  (employee) =>
-                      (OrgStructure.membership(employee), employee == null),
+                  (employee) => (
+                    OrgStructureLabels.membership(employee),
+                    employee == null,
+                  ),
                 ),
               ),
             ],

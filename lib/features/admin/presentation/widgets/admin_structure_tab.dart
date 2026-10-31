@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -92,11 +93,12 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
     final query = ref.watch(adminStructureSearchProvider).trim().toLowerCase();
     final counts = _Counts(ref.watch(employeesProvider).value ?? const []);
     final names = _nameByEmail();
-    final areas = structure.sortedAreas.where((area) {
+    final service = ref.watch(orgStructureServiceProvider);
+    final areas = service.sortedAreas(structure).where((area) {
       if (query.isEmpty) return true;
       return area.name.toLowerCase().contains(query) ||
-          structure
-              .teamsOf(area.id)
+          service
+              .teamsOf(structure, area.id)
               .any((team) => team.name.toLowerCase().contains(query));
     }).toList();
 
@@ -117,7 +119,7 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
         for (final area in areas) ...[
           _CardArea(
             area: area,
-            teams: structure.teamsOf(area.id),
+            teams: service.teamsOf(structure, area.id),
             counts: counts,
             nameByEmail: names,
             enabled: _actionInProgress == null,
@@ -134,7 +136,7 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
     for (final employee
         in ref.watch(employeesProvider).value ?? const <Employee>[])
       if (employee.email.trim().isNotEmpty)
-        OrgStructure.normalizeEmail(employee.email): employee.fullName,
+        normalizeLoose(employee.email): employee.fullName,
   };
 
   Future<void> _leadersArea(Area area) async {
@@ -242,17 +244,17 @@ class _Counts {
   _Counts(Iterable<Employee> employees) {
     for (final employee in employees) {
       if (!employee.isActive) continue;
-      final area = OrgStructure.payrollKey(employee.area);
+      final area = normalizeLoose(employee.area);
       _byArea[area] = (_byArea[area] ?? 0) + 1;
-      final team = (area, OrgStructure.payrollKey(employee.team));
+      final team = (area, normalizeLoose(employee.team));
       _byTeam[team] = (_byTeam[team] ?? 0) + 1;
     }
   }
 
-  int forArea(Area area) => _byArea[area.payrollKey] ?? 0;
+  int forArea(Area area) => _byArea[normalizeLoose(area.name)] ?? 0;
 
   int forTeam(Area area, Team team) =>
-      _byTeam[(area.payrollKey, team.payrollKey)] ?? 0;
+      _byTeam[(normalizeLoose(area.name), normalizeLoose(team.name))] ?? 0;
 }
 
 String _employees(int count) =>

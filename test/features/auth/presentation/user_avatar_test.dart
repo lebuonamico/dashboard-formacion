@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app_finnegans/core/theme/theme_preference_repository.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 
 /// App mínima conectada al provider de apariencia, como `MyApp`.
 class _App extends ConsumerWidget {
@@ -89,7 +90,7 @@ void main() {
   });
 
   group('Lidera y Pertenece a', () {
-    final structure = OrgStructure(
+    const structure = OrgStructure(
       areas: [Area(id: '1', name: 'PRODUCTOS TECNOLÓGICOS')],
       teams: [
         Team(
@@ -160,7 +161,7 @@ void main() {
     testWidgets('Un líder que no figura en la nómina lo dice', (tester) async {
       await openMenu(tester, role: 'teamLead');
 
-      expect(text(tester, 'cuenta_pertenece'), OrgStructure.notInPayroll);
+      expect(text(tester, 'cuenta_pertenece'), OrgStructureLabels.notInPayroll);
     });
 
     testWidgets('Un administrador no ve esos datos', (tester) async {

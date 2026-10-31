@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
+import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 
 final _creation = DateTime.utc(2026, 1, 15, 10);
 final _stamp = DateTime.utc(2026, 10, 3, 14, 30);
@@ -91,7 +92,7 @@ class _FakeStructure implements OrgStructureRepository {
 
 /// PRODUCTOS TECNOLÓGICOS con PLATAFORMA CORE y un equipo que la nómina ya
 /// no trae (INFRA), y SERVICIOS sin equipos.
-OrgStructure _structurePanel() => OrgStructure(
+OrgStructure _structurePanel() => const OrgStructure(
   areas: [
     Area(
       id: '1',
@@ -715,7 +716,7 @@ void main() {
         expect(find.text('Toda la empresa'), findsOneWidget);
         // otro.lider y bloqueado tienen rol Líder, ningún equipo y no figuran.
         expect(find.text('Sin equipos asignados'), findsNWidgets(2));
-        expect(find.text(OrgStructure.notInPayroll), findsNWidgets(2));
+        expect(find.text(OrgStructureLabels.notInPayroll), findsNWidgets(2));
       },
     );
   });

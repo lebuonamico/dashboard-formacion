@@ -942,7 +942,7 @@ void main() {
         );
         final employees = _Employees();
         final structure = _Structure(
-          OrgStructure(
+          const OrgStructure(
             areas: [Area(id: '1', name: 'PRODUCTO')],
             teams: [Team(id: '10', areaId: '1', name: 'LEGACY')],
           ),

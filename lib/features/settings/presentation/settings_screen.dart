@@ -656,7 +656,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
               final structure = await orgStructureRepository.getStructure();
               await orgStructureRepository.registerMissing(
-                structure.missingFromPayroll(importedEmployees),
+                container
+                    .read(orgStructureServiceProvider)
+                    .missingFromPayroll(structure, importedEmployees),
               );
 
               var summary = UpsertResult.empty;

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 
 /// Áreas, equipos y líderes en Supabase. Las tablas, la limpieza de líderes al
@@ -64,7 +66,7 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
   ) {
     final grouped = <String, Set<String>>{};
     for (final row in rows) {
-      final email = row['email']?.toString() ?? '';
+      final email = normalizeLoose(row['email']?.toString() ?? '');
       if (email.isEmpty) continue;
       grouped.putIfAbsent(row[column].toString(), () => {}).add(email);
     }
@@ -73,7 +75,7 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
 
   @override
   Future<void> registerMissing(PayrollGaps missing) async {
-    if (missing.empty) return;
+    if (const OrgStructureService().isEmpty(missing)) return;
     await _write(() async {
       if (missing.areas.isNotEmpty) {
         await _table(_areas).insert([
@@ -84,13 +86,13 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
       final rows = await _table(_areas).select('id,nombre');
       final idByKey = {
         for (final row in rows)
-          OrgStructure.payrollKey(row['nombre']?.toString() ?? ''): row['id'],
+          normalizeLoose(row['nombre']?.toString() ?? ''): row['id'],
       };
       await _table(_teams).insert([
         for (final missing in missing.teams)
           {
             'area_id':
-                idByKey[OrgStructure.payrollKey(missing.area)] ??
+                idByKey[normalizeLoose(missing.area)] ??
                 (throw FormatException(
                   'No se encontró el área "${missing.area}" para crear el '
                   'equipo "${missing.team}".',
@@ -119,7 +121,7 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
   ) => _write(() async {
     final desired = {
       for (final email in emails)
-        if (email.trim().isNotEmpty) OrgStructure.normalizeEmail(email),
+        if (email.trim().isNotEmpty) normalizeLoose(email),
     };
     final rows = await _table(table).select('email').eq(column, id);
     final current = {for (final row in rows) row['email'].toString()};

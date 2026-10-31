@@ -110,13 +110,13 @@ OrgStructure _structure({
   Set<String> coreLeaders = const {'lider@finnegans.com'},
 }) => OrgStructure(
   areas: [
-    Area(id: '1', name: 'PRODUCTOS TECNOLÓGICOS'),
-    Area(id: '2', name: 'SERVICIOS', leaders: {'area@finnegans.com'}),
+    const Area(id: '1', name: 'PRODUCTOS TECNOLÓGICOS'),
+    const Area(id: '2', name: 'SERVICIOS', leaders: {'area@finnegans.com'}),
   ],
   teams: [
     Team(id: '10', areaId: '1', name: 'PLATAFORMA CORE', leaders: coreLeaders),
-    Team(id: '11', areaId: '1', name: 'BACKEND'),
-    Team(id: '20', areaId: '2', name: 'SOPORTE'),
+    const Team(id: '11', areaId: '1', name: 'BACKEND'),
+    const Team(id: '20', areaId: '2', name: 'SOPORTE'),
   ],
 );
 

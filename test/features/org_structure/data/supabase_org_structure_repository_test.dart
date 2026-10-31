@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:app_finnegans/features/org_structure/data/supabase_org_structure_repository.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -68,6 +69,7 @@ void main() {
     });
 
     final structure = await fixture.repositorio.getStructure();
+    const service = OrgStructureService();
 
     expect(fixture.requests.map(_table).toSet(), {
       'areas',
@@ -79,17 +81,42 @@ void main() {
     final areas = fixture.requests.firstWhere((r) => _table(r) == 'areas');
     expect(areas.headers['accept-profile'], 'public');
     expect(areas.url.queryParameters['select'], 'id,nombre');
-    expect(structure.sortedAreas.map((area) => area.name), [
+    expect(service.sortedAreas(structure).map((area) => area.name), [
       'PRODUCTOS TECNOLÓGICOS',
       'SERVICIOS',
     ]);
-    expect(structure.areaLeaders('PRODUCTOS TECNOLÓGICOS'), {
+    expect(service.areaLeaders(structure, 'PRODUCTOS TECNOLÓGICOS'), {
       'area@finnegans.com',
     });
-    expect(structure.teamLeaders('PRODUCTOS TECNOLÓGICOS', 'PLATAFORMA CORE'), {
-      'uno@finnegans.com',
-      'dos@finnegans.com',
+    expect(
+      service.teamLeaders(
+        structure,
+        'PRODUCTOS TECNOLÓGICOS',
+        'PLATAFORMA CORE',
+      ),
+      {'uno@finnegans.com', 'dos@finnegans.com'},
+    );
+  });
+
+  test('Normaliza los emails de los líderes al leer', () async {
+    final fixture = _fixture((request) async {
+      return switch (_table(request)) {
+        'areas' => _json(request, [
+          {'id': 1, 'nombre': 'SERVICIOS'},
+        ]),
+        'equipos' => _json(request, []),
+        'area_lideres' => _json(request, [
+          {'area_id': 1, 'email': ' Area@Finnegans.COM '},
+          {'area_id': 1, 'email': ''},
+        ]),
+        'equipo_lideres' => _json(request, []),
+        _ => throw StateError('Request inesperado: ${request.url}'),
+      };
     });
+
+    final structure = await fixture.repositorio.getStructure();
+
+    expect(structure.areas.single.leaders, {'area@finnegans.com'});
   });
 
   test('Las faltantes crean primero las áreas y después sus equipos', () async {

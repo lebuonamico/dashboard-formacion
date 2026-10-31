@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/data/employees_seed.dart';
 import 'package:app_finnegans/features/org_structure/data/org_structure_seed.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/time_entries/data/crm_time_entries_seed.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,11 @@ void main() {
       final structure = OrgStructure(areas: areasSeed, teams: teamsSeed);
       for (final employee in employeesSeed) {
         expect(
-          structure.payrollTeam(employee.area, employee.team),
+          const OrgStructureService().payrollTeam(
+            structure,
+            employee.area,
+            employee.team,
+          ),
           isNotNull,
           reason: employee.employeeId,
         );

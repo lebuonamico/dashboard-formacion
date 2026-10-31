@@ -65,11 +65,13 @@ final teamComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
   final month = ref.watch(periodFilterProvider).month;
   final year = ref.watch(periodFilterProvider).year;
   final complianceService = await ref.watch(complianceServiceProvider.future);
-  final periodService = ref.read(teamsServiceProvider).periods;
+  final periodService = ref.watch(teamsServiceProvider).periods;
   final userScope = await ref.watch(userScopeProvider.future);
 
   // Apply permissions to each month's historical team rather than the current team.
-  final includeEmployee = userScope.isTotal ? null : userScope.includesEmployee;
+  final includeEmployee = ref
+      .watch(userScopeServiceProvider)
+      .employeeFilter(userScope);
 
   if (scope == PeriodScope.annual) {
     return periodService.calculateAnnualCompliance(

@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/admin/presentation/widgets/admin_styles.d
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
+import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 
 class AdminUsersTable extends StatefulWidget {
   static const usersPerPage = 8;
@@ -250,7 +251,7 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
       user.email,
     );
     return _textCell(
-      OrgStructure.membership(employee),
+      OrgStructureLabels.membership(employee),
       warning: employee == null,
     );
   }

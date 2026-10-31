@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/org_structure/domain/org_structure_service.dart';
 import 'package:app_finnegans/features/org_structure/domain/user_scope.dart';
+import 'package:app_finnegans/features/org_structure/domain/user_scope_service.dart';
+import 'package:app_finnegans/features/org_structure/presentation/org_structure_labels.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
@@ -31,6 +35,14 @@ final orgStructureProvider = FutureProvider<OrgStructure>((ref) {
   return ref.watch(orgStructureRepositoryProvider).getStructure();
 });
 
+final orgStructureServiceProvider = Provider<OrgStructureService>(
+  (ref) => const OrgStructureService(),
+);
+
+final userScopeServiceProvider = Provider<UserScopeService>(
+  (ref) => UserScopeService(structures: ref.watch(orgStructureServiceProvider)),
+);
+
 /// Qué colaboradores ve el usuario de la sesión. En modo local no hay roles
 /// y se ve todo.
 final userScopeProvider = FutureProvider<UserScope>((ref) async {
@@ -38,8 +50,13 @@ final userScopeProvider = FutureProvider<UserScope>((ref) async {
   if (!session.enabled) return const UserScope.total();
   final role = UserRole.fromString(session.role);
   if (role != null && role.canManage) return const UserScope.total();
+  final scopes = ref.watch(userScopeServiceProvider);
   final structure = await ref.watch(orgStructureProvider.future);
-  return UserScope.of(role: role, email: session.email, structure: structure);
+  return scopes.scopeFor(
+    role: role,
+    email: session.email,
+    structure: structure,
+  );
 });
 
 /// Fila de la nómina del usuario de la sesión, buscada por su email: el área
@@ -56,26 +73,30 @@ final sessionEmployeeProvider = FutureProvider<Employee?>((ref) async {
 /// Etiquetas de líderes para las tarjetas de equipos y áreas.
 class LeaderLabels {
   final OrgStructure _structure;
+  final OrgStructureService _service;
   final Map<String, String> _nameByEmail;
 
-  LeaderLabels(this._structure, this._nameByEmail);
+  LeaderLabels(this._structure, this._service, this._nameByEmail);
 
   /// `null` si el equipo no tiene líderes asignados.
   String? forTeam(String area, String team) =>
-      _label(_structure.teamLeaders(area, team));
+      _label(_service.teamLeaders(_structure, area, team));
 
-  String? forArea(String area) => _label(_structure.areaLeaders(area));
+  String? forArea(String area) =>
+      _label(_service.areaLeaders(_structure, area));
 
-  String? _label(Set<String> emails) =>
-      emails.isEmpty ? null : OrgStructure.leadersLabel(emails, _nameByEmail);
+  String? _label(Set<String> emails) => emails.isEmpty
+      ? null
+      : OrgStructureLabels.leadersLabel(emails, _nameByEmail);
 }
 
 final leaderLabelsProvider = FutureProvider<LeaderLabels>((ref) async {
+  final service = ref.watch(orgStructureServiceProvider);
   final structure = await ref.watch(orgStructureProvider.future);
   final employees = await ref.watch(employeesProvider.future);
-  return LeaderLabels(structure, {
+  return LeaderLabels(structure, service, {
     for (final employee in employees)
       if (employee.email.trim().isNotEmpty)
-        OrgStructure.normalizeEmail(employee.email): employee.fullName,
+        normalizeLoose(employee.email): employee.fullName,
   });
 });

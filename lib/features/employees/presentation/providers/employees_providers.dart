@@ -29,9 +29,12 @@ final payrollProvider = FutureProvider<List<Employee>>((ref) {
 /// que lidera.
 final employeesProvider = FutureProvider<List<Employee>>((ref) async {
   // La nómina va primero: si falla, ese es el error que tiene que verse.
+  final scopes = ref.watch(userScopeServiceProvider);
   final employees = await ref.watch(payrollProvider.future);
   final scope = await ref.watch(userScopeProvider.future);
-  return employees.where(scope.includesEmployee).toList();
+  return employees
+      .where((employee) => scopes.includesEmployee(scope, employee))
+      .toList();
 });
 
 /// Legajos que ve el usuario, o `null` si ve toda la empresa. Filtra las

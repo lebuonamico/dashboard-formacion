@@ -56,7 +56,9 @@ final complianceByMonthProvider =
         complianceServiceProvider.future,
       );
       final userScope = await ref.watch(userScopeProvider.future);
-      final include = userScope.isTotal ? null : userScope.includesEmployee;
+      final include = ref
+          .watch(userScopeServiceProvider)
+          .employeeFilter(userScope);
       final teamsService = ref.watch(teamsServiceProvider);
 
       return teamsService.periods.calculateComplianceByMonth(
