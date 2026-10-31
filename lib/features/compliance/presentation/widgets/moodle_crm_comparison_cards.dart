@@ -7,9 +7,9 @@ import 'package:app_finnegans/features/courses/presentation/course_category_labe
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_colors.dart';
 
-/// Dos cards lado a lado: Moodle vs CRM en las categorías comparables
-/// (Negocio y Blandas) y el total de cada fuente, con el desglose por
-/// categoría de cada número.
+/// Two cards side by side: Moodle vs CRM in the comparable categories
+/// (business and soft skills) and each source's total, with the breakdown by
+/// category of each number.
 class MoodleCrmComparisonCards extends StatelessWidget {
   final List<EmployeeCompliance> complianceList;
 
@@ -52,7 +52,7 @@ class MoodleCrmComparisonCards extends StatelessWidget {
   }
 }
 
-/// Moodle vs CRM en Negocio y Blandas, con columnas agrupadas por categoría.
+/// Moodle vs CRM in business and soft skills, with columns grouped by category.
 class _ComparisonCard extends StatelessWidget {
   final MoodleCrmComparison comparison;
 
@@ -175,7 +175,7 @@ class _Total extends StatelessWidget {
   }
 }
 
-/// Contenedor de las cards de la comparación: título, subtítulo y contenido.
+/// Container of the comparison cards: title, subtitle and content.
 class _Panel extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -220,7 +220,7 @@ class _Panel extends StatelessWidget {
   }
 }
 
-/// Total de horas CRM y cómo se reparten entre las cuatro categorías.
+/// Total CRM hours and how they split across the four categories.
 class _CardTotalCrm extends StatelessWidget {
   final MoodleCrmComparison comparison;
 
@@ -237,8 +237,8 @@ class _CardTotalCrm extends StatelessWidget {
       subtitle: 'Todas las horas declaradas en CRM, por categoría',
       children: [
         _Total(source: 'CRM', hours: total, color: colorCrm),
-        // Misma altura que la línea de diferencia de la otra card, para que
-        // los divisores queden alineados.
+        // Same height as the difference line of the other card, so the dividers
+        // line up.
         const SizedBox(height: 8),
         Text(
           'Repartidas entre las 4 categorías del plan',
@@ -255,8 +255,8 @@ class _CardTotalCrm extends StatelessWidget {
   }
 }
 
-/// Una columna por categoría del CRM, con su color y en una escala común a
-/// las cuatro: horas arriba, nombre y parte del total abajo.
+/// One column per CRM category, with its color and on a scale shared by the
+/// four: hours on top, name and share of the total below.
 class _ChartCrm extends StatelessWidget {
   final Map<CourseCategory, double> crm;
   final double total;
@@ -293,8 +293,8 @@ class _ChartCrm extends StatelessWidget {
   }
 }
 
-/// Columnas agrupadas: un grupo por categoría, con la columna de Moodle y la
-/// de CRM en la misma escala, separados por una línea vertical.
+/// Grouped columns: one group per category, with the Moodle and CRM
+/// columns on the same scale, separated by a vertical line.
 class _ColumnsChart extends StatelessWidget {
   final List<CourseCategory> types;
   final MoodleCrmComparison comparison;
@@ -392,7 +392,7 @@ class _ColumnsChart extends StatelessWidget {
   }
 }
 
-/// Una columna con las horas arriba y la fuente abajo.
+/// A column with the hours on top and the source below.
 class _Column extends StatelessWidget {
   final double hours;
   final double maximum;
@@ -420,8 +420,8 @@ class _Column extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Alto fijo para que todas las columnas apoyen en la misma base; las
-        // horas van justo encima de cada columna.
+        // Fixed height so every column rests on the same base; the hours go right
+        // above each column.
         SizedBox(
           height: height + 20,
           child: Column(

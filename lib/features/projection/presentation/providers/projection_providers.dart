@@ -17,8 +17,8 @@ final projectionServiceProvider = Provider<ProjectionService>(
   (ref) => ProjectionService(periods: ref.watch(teamsServiceProvider).periods),
 );
 
-/// Mes en el que se corta la proyección: el elegido en el mensual; en el
-/// anual, el último mes del año con datos. `null` si el año no tiene datos.
+/// Month the projection cuts at: the selected one in monthly; in annual,
+/// the year's last month with data. `null` if the year has no data.
 final annualProjectionCutoffMonthProvider = FutureProvider<int?>((ref) async {
   final year = ref.watch(periodFilterProvider).year;
   if (ref.watch(periodFilterProvider).scope == PeriodScope.monthly) {
@@ -36,9 +36,9 @@ final annualProjectionCutoffMonthProvider = FutureProvider<int?>((ref) async {
       );
 });
 
-/// Cumplimiento de cada mes con datos de enero al mes de corte, con la misma
-/// nómina elegible y alcance del usuario que Equipos y Áreas. Lo comparten
-/// todas las secciones; cada una filtra sus colaboradores.
+/// Compliance of each month with data from January to the cutoff month,
+/// with the same eligible payroll and user scope as Teams and Areas. Shared by
+/// every section; each one filters its employees.
 final complianceByMonthProvider =
     FutureProvider<Map<int, List<EmployeeCompliance>>>((ref) async {
       final cutoffMonth = await ref.watch(
@@ -74,10 +74,10 @@ final complianceByMonthProvider =
       );
     });
 
-/// Variación del cumplimiento de una sección: `(area: null, team: null)` es
-/// toda la nómina visible. Cada mes se filtra con dónde estaba cada
-/// colaborador ese mes, igual que el cumplimiento de Áreas y Equipos, y se
-/// acumula con el mismo cálculo que el anual.
+/// Compliance variation of a section: `(area: null, team: null)` is the
+/// whole visible payroll. Each month is filtered by where each employee was
+/// that month, like Areas' and Teams' compliance, and accumulated with the
+/// same calculation as the annual one.
 final complianceVariationProvider =
     FutureProvider.family<ComplianceVariation?, ({String? area, String? team})>(
       (ref, section) async {
@@ -96,8 +96,8 @@ final complianceVariationProvider =
       },
     );
 
-/// Proyección de un colaborador por categoría, para su pantalla de detalle.
-/// `null` si no está en la nómina elegible del mes de corte.
+/// Per-category projection of an employee, for their detail screen. `null`
+/// if they are not in the eligible payroll of the cutoff month.
 final employeeProjectionProvider =
     FutureProvider.family<EmployeeProjection?, String>((ref, employeeId) async {
       final cutoffMonth = await ref.watch(
@@ -120,8 +120,8 @@ final employeeProjectionProvider =
           );
     });
 
-/// Proyección de una sección: `(area: null, team: null)` es toda la nómina
-/// visible; con área, solo esa área; con área y equipo, solo ese equipo.
+/// Projection of a section: `(area: null, team: null)` is the whole visible
+/// payroll; with an area, only that area; with area and team, only that team.
 final annualProjectionProvider =
     FutureProvider.family<AnnualProjection?, ({String? area, String? team})>((
       ref,

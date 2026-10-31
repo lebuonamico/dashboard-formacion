@@ -2,8 +2,8 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:flutter/material.dart';
 
-/// Colores del chip de estado de un usuario autorizado, con el semáforo de
-/// la app: activo en verde, bloqueado en ámbar y eliminado en rojo.
+/// Status chip colors of an authorized user, with the app's traffic light:
+/// active green, blocked amber, deleted red.
 ColorPair userStatusColors(AppColors colors, UserStatus status) =>
     switch (status) {
       UserStatus.active => colors.success,
@@ -11,8 +11,8 @@ ColorPair userStatusColors(AppColors colors, UserStatus status) =>
       UserStatus.deleted => colors.danger,
     };
 
-/// Decoración de los campos del panel de administración. Bordes, relleno y
-/// colores salen del `inputDecorationTheme` de `AppTheme`.
+/// Admin panel field decoration. Borders, fill and colors come from
+/// AppTheme's `inputDecorationTheme`.
 InputDecoration adminInputDecoration(
   String hint,
   IconData icon, {

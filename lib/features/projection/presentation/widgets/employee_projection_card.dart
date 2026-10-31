@@ -8,8 +8,8 @@ import 'package:app_finnegans/features/courses/presentation/course_category_labe
 import 'package:app_finnegans/features/projection/domain/projection.dart';
 import 'package:app_finnegans/features/projection/presentation/projection_labels.dart';
 
-/// Proyección a fin de año de un colaborador: si llega con su tendencia y,
-/// si no, cuántas horas le faltan en cada habilidad de su plan.
+/// Year-end projection of an employee: whether their trend gets there and,
+/// if not, how many hours they lack in each skill of their plan.
 class EmployeeProjectionCard extends StatelessWidget {
   final EmployeeProjection projection;
   final int year;

@@ -12,10 +12,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
-// Las tablas largas devuelven el título y la `pw.Table` por separado para
-// que `MultiPage` pueda partir la tabla entre páginas (ver `tablaPdf`).
+// Long tables return their title and the `pw.Table` separately so
+// `MultiPage` can split the table across pages (see `pdfTable`).
 
-/// Áreas en el general, equipos en el de área.
+/// Areas in the general report, teams in the area report.
 List<pw.Widget> breakdownPdf(TrainingReport report, PdfReportStyle style) {
   const cellStyle = pw.TextStyle(fontSize: 8);
   return [
@@ -57,7 +57,7 @@ List<pw.Widget> breakdownPdf(TrainingReport report, PdfReportStyle style) {
   ];
 }
 
-/// Integrantes con sus horas por categoría. En el general, solo los críticos.
+/// Members with their hours by category. In the general report, only the critical ones.
 List<pw.Widget> pdfMembers(TrainingReport report, PdfReportStyle style) {
   final items = report.listedMembers;
   final title = report.criticalOnly
@@ -105,7 +105,7 @@ List<pw.Widget> pdfMembers(TrainingReport report, PdfReportStyle style) {
         1.3,
         0.8,
       ],
-      // Categorías, horas y %: las columnas numéricas del final.
+      // Categories, hours and %: the numeric columns at the end.
       right: {
         for (var i = 0; i < CourseCategory.values.length + 2; i++)
           i + (withLocation ? 3 : 2),
@@ -172,7 +172,7 @@ String _location(Employee employee, MemberLocation location) =>
       MemberLocation.none => '',
     };
 
-/// Horas válidas / objetivo, o "-" si su seniority no pide esa categoría.
+/// Credited hours / target, or "-" if their seniority does not require that category.
 String _category(EmployeeCompliance m, CourseCategory type) {
   final required = m.requiredHours[type] ?? 0;
   if (required <= 0) return '-';

@@ -10,12 +10,11 @@ import 'package:app_finnegans/features/org_structure/presentation/org_structure_
 import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
 import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 
-/// Usuario logueado en el top bar: foto, nombre y mail. Al hacer clic abre una
-/// tarjeta con el detalle de la cuenta, incluido el rol, y el switch de tema
-/// oscuro.
+/// Signed-in user in the top bar: photo, name and email. A click opens a
+/// card with the account details, the role included, and the dark mode switch.
 ///
-/// Cuando la app corre sin Supabase (modo local) no hay sesión, así que cae en
-/// la 'U' genérica y en el texto "Modo local".
+/// Without Supabase (local mode) there is no session, so it falls back to a
+/// generic 'U' and "Modo local".
 class UserAvatar extends ConsumerWidget {
   const UserAvatar({super.key});
 
@@ -31,8 +30,8 @@ class UserAvatar extends ConsumerWidget {
       photoUrl: auth.photoUrl,
       role: auth.role,
       localMode: !auth.enabled,
-      // Lo que lidera (asignado en el panel) y a qué equipo y área pertenece
-      // según la nómina: pueden no coincidir, por eso se muestran los dos.
+      // What they lead (assigned in the panel) and the team and area they
+      // belong to in the payroll: they may differ, so both are shown.
       leads: isLeader
           ? ref
                 .watch(orgStructureProvider)
@@ -103,13 +102,13 @@ class UserAvatar extends ConsumerWidget {
   }
 }
 
-/// Switch de tema oscuro del menú de la cuenta. Es una entrada propia (y no un
-/// `PopupMenuItem`) para tener el mismo feedback que los ítems del side menu:
-/// sin ripple, con un fondo que se desvanece entre reposo, hover y presionado.
-/// Cambiar el tema no cierra el menú, así se ve el resultado al instante.
+/// Dark mode switch of the account menu. Its own entry (not a
+/// `PopupMenuItem`) so it has the side menu's feedback: no ripple, with a
+/// background that fades between rest, hover and press. Switching the theme
+/// does not close the menu, so the result shows at once.
 ///
-/// Mientras el usuario no elija, la app sigue al sistema operativo y el switch
-/// refleja el tema que se está viendo.
+/// Until the user chooses, the app follows the operating system and the switch
+/// reflects the theme on screen.
 class _DarkModeEntry extends PopupMenuEntry<Never> {
   const _DarkModeEntry();
 
@@ -124,7 +123,7 @@ class _DarkModeEntry extends PopupMenuEntry<Never> {
 }
 
 class _DarkModeEntryState extends State<_DarkModeEntry> {
-  /// Igual que la transición de color de los ítems del side menu.
+  /// Same as the color transition of the side menu items.
   static const _duration = Duration(milliseconds: 200);
   static final _radius = BorderRadius.circular(8);
 
@@ -168,8 +167,7 @@ class _DarkModeEntryState extends State<_DarkModeEntry> {
                   type: MaterialType.transparency,
                   child: InkWell(
                     borderRadius: _radius,
-                    // Sin ripple ni resaltados propios: el feedback lo da el
-                    // fondo.
+                    // No ripple or highlights of its own: the background is the feedback.
                     splashFactory: NoSplash.splashFactory,
                     highlightColor: Colors.transparent,
                     hoverColor: Colors.transparent,
@@ -225,7 +223,7 @@ class _UserData {
   final String? role;
   final bool localMode;
 
-  /// Solo para Líder de equipo y Área; `null` para el resto.
+  /// Only for team and area leads; `null` for the rest.
   final AsyncValue<String?>? leads;
   final AsyncValue<Employee?>? belongs;
 
@@ -239,18 +237,18 @@ class _UserData {
     this.belongs,
   });
 
-  /// Primera línea del chip: el nombre si Google lo informa, si no el mail.
+  /// First line of the chip: the name if Google provides it, else the email.
   String get title =>
       name ?? email ?? (localMode ? 'Modo local' : 'Sin sesión iniciada');
 
-  /// Segunda línea: el mail, solo cuando no se usó ya como título.
+  /// Second line: the email, only when it was not used as the title.
   String? get subtitle {
     if (name != null) return email;
     if (email == null && localMode) return 'Sin sesión iniciada';
     return null;
   }
 
-  /// Primera letra del nombre o del mail. Si no hay sesión o viene raro, 'U'.
+  /// First letter of the name or email. Without a session, 'U'.
   String get initial {
     final clean = (name ?? email)?.trim() ?? '';
     if (clean.isEmpty) return 'U';
@@ -259,7 +257,7 @@ class _UserData {
   }
 }
 
-/// Foto de Google recortada en círculo; sin foto, o si no carga, la inicial.
+/// Google photo cropped to a circle; without one, or if it fails, the initial.
 class _UserPhoto extends StatelessWidget {
   final _UserData data;
   final double radius;
@@ -380,8 +378,8 @@ class _UserCard extends StatelessWidget {
   }
 }
 
-/// Un dato de la cuenta con su título chico, como el del rol. El valor es el
-/// texto y si va en ámbar.
+/// An account detail with its small title, like the role. The value is the
+/// text and whether it goes in amber.
 class _AccountData extends StatelessWidget {
   final String itemKey;
   final String title;
@@ -441,7 +439,7 @@ class _RoleBadge extends StatelessWidget {
     final cs = context.colorScheme;
     final warning = context.colors.warning;
 
-    // Un rol irreconocible se muestra tal cual, en ámbar, como en el panel admin.
+    // An unknown role is shown as is, in amber, as in the admin panel.
     final (text, color, background, description) = known != null
         ? (known.label, cs.primary, cs.primaryContainer, known.description)
         : (

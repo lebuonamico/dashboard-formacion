@@ -18,18 +18,17 @@ import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 
-/// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
-/// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].
+/// Payroll as the database returns it for the session (with RLS), read
+/// once. Shared by [employeesProvider] and [sessionEmployeeProvider].
 final payrollProvider = FutureProvider<List<Employee>>((ref) {
-  // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
+  // With RLS each user gets different rows: another session reads again.
   ref.watch(sessionDataProvider);
   return ref.watch(employeesRepositoryProvider).getEmployees();
 });
 
-/// Nómina que ve el usuario de la sesión, según su rol y las áreas o equipos
-/// que lidera.
+/// Payroll the session user sees, by role and the areas or teams they lead.
 final employeesProvider = FutureProvider<List<Employee>>((ref) async {
-  // La nómina va primero: si falla, ese es el error que tiene que verse.
+  // The payroll goes first: if it fails, that is the error to show.
   final scopes = ref.watch(userScopeServiceProvider);
   final employees = await ref.watch(payrollProvider.future);
   final scope = await ref.watch(userScopeProvider.future);
@@ -38,8 +37,8 @@ final employeesProvider = FutureProvider<List<Employee>>((ref) async {
       .toList();
 });
 
-/// Legajos que ve el usuario, o `null` si ve toda la empresa. Filtra las
-/// horas y las finalizaciones con el mismo criterio que la nómina.
+/// Employee IDs the user sees, or `null` if they see the whole company.
+/// Filters hours and certifications with the same criterion as the payroll.
 final visibleEmployeeIdsProvider = FutureProvider<Set<String>?>((ref) async {
   final scope = await ref.watch(userScopeProvider.future);
   if (scope.isTotal) return null;
@@ -50,8 +49,8 @@ final visibleEmployeeIdsProvider = FutureProvider<Set<String>?>((ref) async {
 final employeeHistoryProvider = FutureProvider<List<EmployeeHistoryEntry>>((
   ref,
 ) {
-  // Con RLS cada usuario recibe vigencias distintas: se vuelve a consultar
-  // cuando entra otro en la misma pestaña.
+  // With RLS each user gets different history rows: read again when someone
+  // else signs in on the same tab.
   ref.watch(sessionDataProvider);
   return ref.watch(employeeHistoryRepositoryProvider).getEmployeeHistory();
 });
@@ -91,7 +90,7 @@ final filteredEmployeesProvider = FutureProvider<List<Employee>>((ref) async {
       .toList();
 });
 
-/// Curso que el empleado cargó en el CRM como dictado, con las horas del período.
+/// A course the employee logged in the CRM as taught, with the period's hours.
 class TaughtCourseStats {
   final String code;
   final String name;
@@ -125,11 +124,11 @@ class EmployeeDetailViewModel {
     required this.completedCourses,
   });
 
-  /// Busca el curso del catálogo por nombre normalizado.
+  /// Looks the course up in the catalog by normalized name.
   Course? courseByName(String name) => coursesByName[normalizeKey(name)];
 }
 
-/// Detalle del empleado recalculado para el período global seleccionado.
+/// Employee detail recalculated for the selected global period.
 final employeeDetailProvider =
     FutureProvider.family<EmployeeDetailViewModel?, String>((
       ref,
@@ -167,7 +166,7 @@ final employeeDetailProvider =
         month: month,
         isAnnual: isAnnual,
       );
-      // Para mostrar se incluyen todas las que tienen fecha en el período.
+      // Every certification dated in the period is shown.
       final periodCertifications = employeeCertifications.where((item) {
         final date = item.completedAt;
         if (date == null || date.year != year) return false;

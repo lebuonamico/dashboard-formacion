@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/projection/domain/projection.dart';
 import 'package:app_finnegans/features/projection/presentation/widgets/compliance_kpi_cards.dart';
 
-/// Indicadores de todas las áreas, con las mismas cards que el inicio.
+/// Indicators of every area, with the same cards as the home screen.
 class AreasKpiSection extends StatelessWidget {
   final int totalAreas;
   final int totalEmployees;
@@ -18,11 +18,9 @@ class AreasKpiSection extends StatelessWidget {
   final int year;
   final int month;
 
-  /// Variación del cumplimiento contra el mes anterior.
   final ComplianceVariation? variation;
 
-  /// Proyección a fin de año de todas las áreas; sin ella no se muestra la
-  /// card.
+  /// Year-end projection of every area; without it the card is hidden.
   final AnnualProjection? projection;
 
   const AreasKpiSection({
@@ -90,8 +88,7 @@ class AreasKpiSection extends StatelessWidget {
   }
 }
 
-/// Horas válidas para el objetivo contra la meta del período, como en el
-/// inicio.
+/// Credited hours against the period's target, as on the home screen.
 Widget creditedHoursKpiCard(
   BuildContext context, {
   required bool isAnnual,

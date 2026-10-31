@@ -29,7 +29,7 @@ const _columns = <(String, MemberSort?)>[
   ('Por categoría', null),
 ];
 
-/// Integrantes del área, paginados y con selector para filtrar por avance.
+/// Members of the area, paginated, with a selector to filter by progress.
 class AreaMembersTable extends ConsumerStatefulWidget {
   final String areaName;
 

@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 const noReportData = 'No hay datos cargados para este período.';
 
-/// Botón compacto que imprime el reporte de la pantalla. Queda deshabilitado
-/// mientras [report] carga; sin datos o con error avisa al tocarlo.
+/// Compact button that prints the screen's report. Disabled while [report]
+/// loads; without data or on error it explains why when tapped.
 class PrintReportButton extends ConsumerWidget {
   final ProviderListenable<AsyncValue<TrainingReport?>> report;
 
@@ -30,8 +30,8 @@ class PrintReportButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reportAsync = ref.watch(report);
     final generating = ref.watch(reportPrintProvider).isLoading;
-    // Al cambiar el período queda el valor anterior mientras recarga: no se
-    // imprime hasta tener el del período elegido.
+    // When the period changes the previous value stays while reloading:
+    // nothing is printed until the selected period's report is ready.
     final loading = reportAsync.isLoading;
     final help = switch (reportAsync) {
       AsyncValue(isLoading: true) => 'Cargando datos…',
@@ -44,8 +44,8 @@ class PrintReportButton extends ConsumerWidget {
     return Tooltip(
       message: help,
       child: OutlinedButton.icon(
-        // Sin datos o con error sigue habilitado para explicar por qué no
-        // hay reporte, en vez de quedar mudo.
+        // Without data or on error it stays enabled to explain why there is no
+        // report, instead of staying silent.
         onPressed: generating || loading
             ? null
             : () => switch (reportAsync) {

@@ -10,7 +10,7 @@ import 'package:app_finnegans/features/reports/presentation/pdf/pdf_table_sectio
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-/// Maqueta el reporte en A4. La impresión la hace `ImpresionRepository`.
+/// Lays the report out on A4. `PrintRepository` prints it.
 Future<Uint8List> generateReportPdf(TrainingReport report) async {
   final style = await PdfReportStyle.load();
   final doc = pw.Document(
@@ -18,7 +18,7 @@ Future<Uint8List> generateReportPdf(TrainingReport report) async {
     author: 'Finnegans · Formación interna',
   );
   final generated = DateTime.now();
-  // Una instancia por posición: los widgets del PDF guardan su maquetado.
+  // One instance per position: PDF widgets keep their layout.
   pw.Widget spacing() => pw.SizedBox(height: 18);
 
   doc.addPage(
@@ -39,8 +39,8 @@ Future<Uint8List> generateReportPdf(TrainingReport report) async {
           : PdfShortHeader(report, style),
       footer: (context) =>
           PdfFooter(page: context.pageNumber, pages: context.pagesCount),
-      // Los bloques cortos no se parten entre páginas; las tablas largas sí,
-      // repitiendo su encabezado.
+      // Short blocks are not split across pages; long tables are, repeating
+      // their header.
       build: (context) => [
         PdfCover(report, style, generated: generated),
         pw.SizedBox(height: 16),

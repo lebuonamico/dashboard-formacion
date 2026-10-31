@@ -16,7 +16,7 @@ final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
   ref,
 ) async {
   final repo = ref.watch(lmsCertificationsRepositoryProvider);
-  // Solo las finalizaciones de los colaboradores que ve el usuario.
+  // Only the certifications of the employees the user can see.
   final employeeIds = await ref.watch(visibleEmployeeIdsProvider.future);
   final certifications = await repo.getCertifications();
   if (employeeIds == null) return certifications;

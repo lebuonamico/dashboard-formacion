@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardMonthlyHours extends StatelessWidget {
-  /// Horas válidas promedio por colaborador de cada mes y su meta.
+  /// Average credited hours per employee for each month, and its target.
   final AsyncValue<List<MonthlyHours>> evolutionAsync;
 
   const DashboardMonthlyHours({super.key, required this.evolutionAsync});
@@ -172,7 +172,7 @@ class _MonthlyHoursPainter extends CustomPainter {
   final List<_MonthlyHoursPoint> points;
   final double target;
 
-  /// El painter no tiene BuildContext: recibe colores y tipografía del tema.
+  /// The painter has no BuildContext: it gets the theme colors and type.
   final ColorScheme cs;
   final AppColors colors;
   final TextTheme textTheme;

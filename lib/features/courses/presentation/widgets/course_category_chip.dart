@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_colors.dart';
 
-/// Etiqueta de color para la categoría de un curso. La usan el catálogo de
-/// cursos y las certificaciones LMS, para que cada tipo tenga siempre el mismo
-/// color (el mismo que en los gráficos del dashboard).
+/// Color label for a course category. The catalog and the LMS
+/// certifications use it, so each type always has the same color (the one in
+/// the dashboard charts).
 class CourseCategoryChip extends StatelessWidget {
   final CourseCategory type;
 

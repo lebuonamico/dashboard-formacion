@@ -7,8 +7,8 @@ import 'package:app_finnegans/features/org_structure/domain/org_structure_servic
 extension OrgStructureLabels on OrgStructure {
   static const notInPayroll = 'No figura en la nómina';
 
-  /// Lo que lidera un usuario según su rol: toda la empresa, o los nombres
-  /// de las áreas o los equipos asignados. `null` para un rol desconocido.
+  /// What a user leads by role: the whole company, or the names of the
+  /// assigned areas or teams. `null` for an unknown role.
   String? leads({required UserRole? role, required String email}) {
     const service = OrgStructureService();
     switch (role) {
@@ -29,8 +29,8 @@ extension OrgStructureLabels on OrgStructure {
     }
   }
 
-  /// Equipo y área a los que pertenece alguien según su fila de la nómina,
-  /// para mostrar junto a lo que lidera (que es una asignación aparte).
+  /// Team and area someone belongs to according to their payroll row, shown
+  /// next to what they lead (a separate assignment).
   static String membership(Employee? employee) {
     if (employee == null) return notInPayroll;
     final team = employee.team.trim();
@@ -42,8 +42,8 @@ extension OrgStructureLabels on OrgStructure {
     return employee.isActive ? text : '$text (baja en la nómina)';
   }
 
-  /// Líderes para mostrar: el nombre de la nómina si el email coincide con el
-  /// de algún empleado visible, y si no el email.
+  /// Leaders to show: the payroll name if the email matches a visible
+  /// employee, otherwise the email.
   static String leadersLabel(
     Iterable<String> emails,
     Map<String, String> nameByEmail,

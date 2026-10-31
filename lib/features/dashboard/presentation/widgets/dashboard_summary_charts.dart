@@ -131,7 +131,7 @@ class _CategoryChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mismo color por categoría que los chips de tipo de curso.
+    // Same color per category as the course type chips.
     final legend = CourseCategory.values
         .map(
           (type) => _ChartLegendItem(

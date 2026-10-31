@@ -14,7 +14,7 @@ class AreaCard extends StatelessWidget {
   final AreaSummary area;
   final bool isAnnual;
 
-  /// Sección del menú desde la que se llegó, para que el detalle la resalte.
+  /// Menu section the user came from, so the detail highlights it.
   final String? origin;
 
   const AreaCard({

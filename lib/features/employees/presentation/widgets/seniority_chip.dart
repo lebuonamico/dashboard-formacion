@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/employees/presentation/seniority_colors.dart';
 
-/// Etiqueta de color para el seniority de un colaborador. Cada familia de
-/// nivel (Trainee, Junior, Semisenior, Senior, Manager) tiene su color; se
-/// evitan los colores del semáforo para que no se lea como un estado.
+/// Color label for an employee's seniority. Each level family (Trainee,
+/// Junior, Semisenior, Senior, Manager) has its color; traffic-light colors are
+/// avoided so it does not read as a status.
 class SeniorityChip extends StatelessWidget {
   final Seniority seniority;
 

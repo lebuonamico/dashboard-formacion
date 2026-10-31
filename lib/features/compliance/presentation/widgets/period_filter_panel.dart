@@ -6,13 +6,13 @@ import 'package:app_finnegans/core/period/presentation/period_segmented_control.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Selector de período conectado a los providers globales.
-/// Cualquier pantalla que lo use comparte el mismo período.
+/// Period selector wired to the global providers: every screen that uses it
+/// shares the same period.
 class PeriodFilterPanel extends ConsumerWidget {
-  /// Qué entra al cálculo del período, para el texto de ayuda.
+  /// What the period's calculation includes, for the help text.
   final String included;
 
-  /// Se muestra junto al título, como el botón para imprimir el reporte.
+  /// Shown next to the title, like the print report button.
   final Widget? action;
 
   const PeriodFilterPanel({
@@ -42,7 +42,6 @@ class PeriodFilterPanel extends ConsumerWidget {
             included: included,
             action: action,
           );
-          // Leandro: llama a PeriodoSegmentedControl para elegir el alcance mensual o anual.
           final scopeControl = PeriodSegmentedControl<PeriodScope>(
             selected: selectedScope,
             options: PeriodScope.values,
@@ -54,9 +53,8 @@ class PeriodFilterPanel extends ConsumerWidget {
             selectedForegroundColor: context.colorScheme.onPrimary,
             unselectedForegroundColor: context.colorScheme.onSurface,
           );
-          // El anual abarca todo el año: el mes solo se elige en mensual.
+          // The annual scope covers the whole year: the month only applies to monthly.
           final isMonthly = selectedScope == PeriodScope.monthly;
-          // Leandro: llama a _MonthField para seleccionar el mes del período.
           final monthField = _MonthField(
             selectedMonth: month,
             onChanged: (value) {
@@ -64,7 +62,6 @@ class PeriodFilterPanel extends ConsumerWidget {
               ref.read(periodFilterProvider.notifier).setMonth(value);
             },
           );
-          // Leandro: llama a _YearField para seleccionar el año del período.
           final yearField = _YearField(
             selectedYear: year,
             yearOptions: yearOptions,

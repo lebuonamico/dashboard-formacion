@@ -4,7 +4,7 @@ import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-/// Título de una sección, con una bajada opcional que explica cómo leerla.
+/// Section title, with an optional subtitle that explains how to read it.
 class PdfSectionTitle extends pw.StatelessWidget {
   final String title;
   final String? lowered;
@@ -90,7 +90,6 @@ class PdfProgressBar extends pw.StatelessWidget {
   );
 }
 
-/// Círculo de color de las leyendas.
 class PdfColorDot extends pw.StatelessWidget {
   final PdfColor color;
 
@@ -104,11 +103,11 @@ class PdfColorDot extends pw.StatelessWidget {
   );
 }
 
-/// Tabla con encabezado repetido en cada página y filas alternadas.
+/// Table with a header repeated on every page and alternating rows.
 ///
-/// Es una función y no un `pw.StatelessWidget` porque `MultiPage` decide si
-/// puede partir un widget antes de maquetarlo, y un StatelessWidget recién
-/// sabe qué contiene al maquetarse: la `pw.Table` tiene que llegar directa.
+/// A function and not a `pw.StatelessWidget` because `MultiPage` decides
+/// whether it can split a widget before laying it out, and a StatelessWidget
+/// only knows its content when laid out: the `pw.Table` has to arrive as is.
 pw.Table pdfTable({
   required List<double> widths,
   required Set<int> right,

@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.d
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-/// Encabezado de la primera página: marca, tipo, título, estado y período.
+/// First page header: brand, type, title, status and period.
 class PdfCover extends pw.StatelessWidget {
   final TrainingReport report;
   final PdfReportStyle style;
@@ -110,7 +110,7 @@ class PdfCover extends pw.StatelessWidget {
   );
 }
 
-/// Encabezado de las páginas siguientes a la primera.
+/// Header of the pages after the first one.
 class PdfShortHeader extends pw.StatelessWidget {
   final TrainingReport report;
   final PdfReportStyle style;

@@ -1,9 +1,9 @@
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:pdf/pdf.dart';
 
-/// Paleta del reporte impreso: tinta azul noche y celeste de la marca, con un
-/// semáforo sobrio. El papel es siempre blanco, así que no sigue el tema
-/// claro/oscuro de la app.
+/// Palette of the printed report: night-blue ink and the brand's light
+/// blue, with a sober traffic light. Paper is always white, so it does not
+/// follow the app's light/dark theme.
 abstract final class PdfReportColors {
   static const ink = PdfColor.fromInt(0xFF0B1B3A);
   static const softInk = PdfColor.fromInt(0xFF5B6478);

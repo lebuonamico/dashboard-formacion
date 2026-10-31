@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-/// Fuentes y logo del reporte. La regular y la bold van en el tema del
-/// documento (`fontWeight: pw.FontWeight.bold` elige la bold); la media se
-/// pide explícitamente.
+/// Report fonts and logo. Regular and bold go in the document theme
+/// (`fontWeight: pw.FontWeight.bold` picks the bold); medium is requested
+/// explicitly.
 class PdfReportStyle {
   final pw.Font regular;
   final pw.Font middle;
@@ -22,8 +22,8 @@ class PdfReportStyle {
 
   static PdfReportStyle? _cache;
 
-  /// Inter va en los assets: el reporte no depende de la red y las tildes
-  /// salen siempre bien (Helvetica no tiene Unicode).
+  /// Inter ships in the assets: the report does not depend on the network and
+  /// accents always render (Helvetica has no Unicode).
   static Future<PdfReportStyle> load() async {
     if (_cache case final style?) return style;
     Future<pw.Font> source(String weight) async =>

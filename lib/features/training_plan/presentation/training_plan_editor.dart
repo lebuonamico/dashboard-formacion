@@ -15,9 +15,9 @@ import 'package:app_finnegans/features/training_plan/presentation/training_plan_
 import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_colors.dart';
 
-/// Edita las horas mensuales requeridas por categoría para cada seniority.
-/// Cada guardado es una versión que rige desde el mes elegido: los meses
-/// anteriores conservan el plan que tenían.
+/// Edits the monthly required hours per category for each seniority. Each
+/// save is a version effective from the selected month: earlier months keep
+/// the plan they had.
 class TrainingPlanEditor extends ConsumerStatefulWidget {
   const TrainingPlanEditor({super.key});
 

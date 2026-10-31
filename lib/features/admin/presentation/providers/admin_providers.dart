@@ -182,7 +182,7 @@ final selectedAdminUserProvider = Provider.autoDispose<AuthorizedUser?>((ref) {
       ?.firstWhereOrNull((user) => user.email == email);
 });
 
-/// Búsqueda de la pestaña "Áreas y equipos". Se descarta al salir del panel.
+/// Search of the "Áreas y equipos" tab. Discarded when leaving the panel.
 final adminStructureSearchProvider =
     NotifierProvider.autoDispose<AdminStructureSearchNotifier, String>(
       AdminStructureSearchNotifier.new,
@@ -210,8 +210,8 @@ typedef AdminStructureView = ({
   Map<String, String> nameByEmail,
 });
 
-/// Las áreas de la pestaña que coinciden con la búsqueda, con sus equipos,
-/// los colaboradores activos de cada uno y los nombres de los líderes.
+/// The tab's areas that match the search, with their teams, the active
+/// employees of each and the leaders' names.
 final adminStructureViewProvider =
     FutureProvider.autoDispose<AdminStructureView>((ref) async {
       final service = ref.watch(orgStructureServiceProvider);

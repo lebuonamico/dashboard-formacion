@@ -79,12 +79,12 @@ final teamReportProvider =
 
 typedef PrintReport = Future<void> Function(TrainingReport report);
 
-/// Maqueta el PDF y abre el diálogo de impresión. Los tests lo reemplazan
-/// para no depender de las fuentes ni del diálogo del sistema.
+/// Lays out the PDF and opens the print dialog. Tests replace it so they
+/// do not depend on the fonts or the system dialog.
 final printReportProvider = Provider<PrintReport>((ref) {
   final print = ref.watch(printRepositoryProvider);
   return (report) async {
-    // Se genera antes de abrir el diálogo, así un error llega a quien llamó.
+    // Generated before opening the dialog, so an error reaches the caller.
     final bytes = await generateReportPdf(report);
     await print.printPdf(bytes, fileName: reportFileName(report));
   };
@@ -96,8 +96,8 @@ String _period(Ref ref) => detailedPeriodLabel(
   ref.watch(periodFilterProvider).year,
 );
 
-/// La proyección es una tarjeta opcional: si falla, el reporte sale sin ella,
-/// igual que la pantalla, que oculta la card.
+/// The projection is an optional card: if it fails, the report goes out
+/// without it, as the screen hides the card.
 Future<AnnualProjection?> _optionalProjection(
   Ref ref,
   ({String? area, String? team}) section,

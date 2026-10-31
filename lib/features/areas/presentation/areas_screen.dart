@@ -156,8 +156,7 @@ class _AreasContent extends ConsumerWidget {
               isAnnual: isAnnual,
             ),
           ),
-          // Moodle vs CRM de todas las áreas, con los mismos colaboradores
-          // del resumen.
+          // Moodle vs CRM of every area, with the same employees as the summary.
           if (ref.watch(teamComplianceProvider).value case final items?
               when items.isNotEmpty) ...[
             const SizedBox(height: 16),

@@ -26,8 +26,8 @@ Future<UserRole?> showRoleChangeDialog(
   );
 }
 
-/// Elige los líderes de un área o un equipo entre los usuarios activos con
-/// [role]. Devuelve el conjunto completo de emails, o `null` si se cancela.
+/// Picks the leaders of an area or team among the active users with
+/// [role]. Returns the full set of emails, or `null` if cancelled.
 Future<Set<String>?> showLeadersDialog(
   BuildContext context, {
   required String title,
@@ -84,8 +84,8 @@ class _LeadersDialogState extends State<_LeadersDialog> {
             users.knownRole(user) == widget.role)
           user.email,
     };
-    // Los asignados que perdieron el rol o el acceso se listan igual, para
-    // poder quitarlos.
+    // Assigned leaders who lost the role or the access are still listed, so
+    // they can be removed.
     final noAccess = widget.selected.difference(candidates);
     final emails = [...candidates, ...noAccess]..sort();
     final noChanges =

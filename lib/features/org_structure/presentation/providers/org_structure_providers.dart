@@ -15,12 +15,12 @@ import 'package:app_finnegans/features/employees/domain/employee_lookup_service.
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/auth/domain/user_role_parser.dart';
 
-/// Identidad de la sesión que define qué datos se leen.
+/// Session identity that decides which data is read.
 ///
-/// Los providers de datos la miran para volver a consultar cuando entra otro
-/// usuario en la misma pestaña: con RLS, cada usuario recibe filas distintas.
-/// Mira solo estos tres campos, así no se recalcula en cada cambio de la
-/// sesión (por ejemplo, mientras se valida).
+/// Data providers watch it to read again when another user signs in on the same
+/// tab: with RLS, each user gets different rows. It watches only these three
+/// fields, so it does not recompute on every session change (for example,
+/// while validating).
 final sessionDataProvider =
     Provider<({bool enabled, String? email, String? role})>(
       (ref) => ref.watch(
@@ -48,12 +48,12 @@ final orgStructureNotifierProvider =
       OrgStructureNotifier.new,
     );
 
-/// Áreas, equipos y líderes, y la asignación de líderes. Una asignación a la
-/// vez; si falla, se relanza el error y la estructura queda como estaba.
+/// Areas, teams and leaders, and the leader assignment. One assignment at a
+/// time; if it fails, the error is rethrown and the structure stays as it was.
 class OrgStructureNotifier extends AsyncNotifier<OrgStructureState> {
   @override
   Future<OrgStructureState> build() async {
-    // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
+    // With RLS each user gets different rows: another session reads again.
     ref.watch(sessionDataProvider);
     return OrgStructureState(
       structure: await ref.watch(orgStructureRepositoryProvider).getStructure(),
@@ -90,7 +90,7 @@ class OrgStructureNotifier extends AsyncNotifier<OrgStructureState> {
   }
 }
 
-/// La estructura sin el estado de la asignación en curso.
+/// The structure without the pending assignment state.
 final orgStructureProvider = FutureProvider<OrgStructure>(
   (ref) => ref.watch(
     orgStructureNotifierProvider.selectAsync((state) => state.structure),
@@ -105,8 +105,8 @@ final userScopeServiceProvider = Provider<UserScopeService>(
   (ref) => UserScopeService(structures: ref.watch(orgStructureServiceProvider)),
 );
 
-/// Qué colaboradores ve el usuario de la sesión. En modo local no hay roles
-/// y se ve todo.
+/// Which employees the session user sees. Local mode has no roles and sees
+/// everything.
 final userScopeProvider = FutureProvider<UserScope>((ref) async {
   final session = ref.watch(sessionDataProvider);
   if (!session.enabled) return const UserScope.total();
@@ -121,10 +121,10 @@ final userScopeProvider = FutureProvider<UserScope>((ref) async {
   );
 });
 
-/// Fila de la nómina del usuario de la sesión, buscada por su email: el área
-/// y el equipo a los que pertenece. Usa la nómina sin filtrar y no
-/// [employeesProvider], porque un líder puede no estar en lo que lidera (el
-/// RLS le deja leer su propia fila). `null` en modo local o si no figura.
+/// Payroll row of the session user, looked up by email: the area and team
+/// they belong to. Uses the unfiltered payroll, not [employeesProvider],
+/// because a leader may not be in what they lead (RLS lets them read their own
+/// row). `null` in local mode or if they are not in it.
 final sessionEmployeeProvider = FutureProvider<Employee?>((ref) async {
   final session = ref.watch(sessionDataProvider);
   if (!session.enabled || session.email == null) return null;
@@ -132,7 +132,7 @@ final sessionEmployeeProvider = FutureProvider<Employee?>((ref) async {
   return const EmployeeLookupService().findByEmail(employees, session.email);
 });
 
-/// Etiquetas de líderes para las tarjetas de equipos y áreas.
+/// Leader labels for the team and area cards.
 class LeaderLabels {
   final OrgStructure _structure;
   final OrgStructureService _service;
@@ -140,7 +140,7 @@ class LeaderLabels {
 
   LeaderLabels(this._structure, this._service, this._nameByEmail);
 
-  /// `null` si el equipo no tiene líderes asignados.
+  /// `null` if the team has no assigned leaders.
   String? forTeam(String area, String team) =>
       _label(_service.teamLeaders(_structure, area, team));
 
@@ -152,7 +152,7 @@ class LeaderLabels {
       : OrgStructureLabels.leadersLabel(emails, _nameByEmail);
 }
 
-/// Nombre de la nómina por email normalizado, para mostrar a los líderes.
+/// Payroll name by normalized email, to show the leaders.
 final employeeNamesByEmailProvider = FutureProvider<Map<String, String>>((
   ref,
 ) async {

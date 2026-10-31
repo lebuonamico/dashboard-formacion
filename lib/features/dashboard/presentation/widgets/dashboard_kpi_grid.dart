@@ -19,10 +19,10 @@ class DashboardKpiGrid extends StatelessWidget {
   final int selectedMonth;
   final int selectedYear;
 
-  /// Proyección a fin de año de toda la nómina visible.
+  /// Year-end projection of the whole visible payroll.
   final AsyncValue<AnnualProjection?> projectionAsync;
 
-  /// Variación del cumplimiento de toda la nómina contra el mes anterior.
+  /// Compliance variation of the whole payroll against the previous month.
   final AsyncValue<ComplianceVariation?> variationAsync;
 
   const DashboardKpiGrid({
@@ -69,7 +69,7 @@ class _KpiCards extends StatelessWidget {
   final int selectedMonth;
   final int selectedYear;
 
-  /// Mientras carga, o si el año no tiene datos, no se muestra su card.
+  /// While loading, or if the year has no data, its card is hidden.
   final AnnualProjection? projection;
   final ComplianceVariation? variation;
 
@@ -124,7 +124,7 @@ class _KpiCards extends StatelessWidget {
               'CRM en el período, sin contar las horas que dictaron. No indica '
               'si cumplieron el objetivo.',
         ),
-        // Solo las horas que suman al objetivo de cumplimiento del período.
+        // Only the hours that count towards the period's compliance target.
         DashboardKpiCard(
           title: 'HORAS VÁLIDAS · $periodLabel',
           value: '${completedHours.toStringAsFixed(1)} h',

@@ -14,8 +14,8 @@ import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_s
 import 'package:app_finnegans/features/projection/domain/projection.dart';
 import 'package:app_finnegans/features/projection/presentation/projection_labels.dart';
 
-/// Las mismas tarjetas que la pantalla: integrantes, horas, cumplimiento y,
-/// si hay, la proyección a diciembre.
+/// The same cards as the screen: members, hours, compliance and, if
+/// available, the December projection.
 class KpisPdf extends pw.StatelessWidget {
   final TrainingReport report;
 
@@ -136,7 +136,7 @@ class _CardKpiPdf extends pw.StatelessWidget {
   );
 }
 
-/// Cómo se reparten las personas evaluadas en el semáforo.
+/// How the evaluated people split across the traffic light.
 class PdfPeopleStatus extends pw.StatelessWidget {
   final TrainingReport report;
 
@@ -163,7 +163,7 @@ class PdfPeopleStatus extends pw.StatelessWidget {
           lowered:
               'Cómo se reparten las $total personas evaluadas en el semáforo',
         ),
-        // Barra apilada: una lectura rápida de la proporción.
+        // Stacked bar: a quick read of the proportion.
         pw.ClipRRect(
           horizontalRadius: 4,
           verticalRadius: 4,
@@ -213,7 +213,7 @@ class PdfPeopleStatus extends pw.StatelessWidget {
   }
 }
 
-/// Horas válidas contra objetivo en cada categoría, con una fila de total.
+/// Credited hours against the target in each category, with a total row.
 class PdfCategories extends pw.StatelessWidget {
   final TrainingReport report;
 
@@ -348,7 +348,7 @@ class PdfCategories extends pw.StatelessWidget {
   }
 }
 
-/// Horas de cada fuente sin tope, y cuánto difieren donde las dos existen.
+/// Each source's uncapped hours, and how much they differ where both exist.
 class PdfSources extends pw.StatelessWidget {
   final TrainingReport report;
 
@@ -489,7 +489,7 @@ class PdfSources extends pw.StatelessWidget {
   );
 }
 
-/// Horas válidas promedio por colaborador de los últimos meses.
+/// Average credited hours per employee over the last months.
 class PdfEvolution extends pw.StatelessWidget {
   final TrainingReport report;
 
@@ -540,7 +540,7 @@ class PdfEvolution extends pw.StatelessWidget {
                                 _height,
                               ),
                         decoration: pw.BoxDecoration(
-                          // El último mes es el del período elegido.
+                          // The last month is the selected period's one.
                           color: i == evolution.length - 1
                               ? PdfReportColors.brand
                               : PdfReportColors.track,

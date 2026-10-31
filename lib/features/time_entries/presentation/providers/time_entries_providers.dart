@@ -15,7 +15,7 @@ import 'package:app_finnegans/features/courses/domain/course_catalog_service.dar
 
 final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
   final repo = ref.watch(crmTimeEntriesRepositoryProvider);
-  // Solo las horas de los colaboradores que ve el usuario de la sesión.
+  // Only the hours of the employees the session user can see.
   final employeeIds = await ref.watch(visibleEmployeeIdsProvider.future);
   final timeEntries = await repo.getTimeEntries();
   if (employeeIds == null) return timeEntries;
