@@ -16,8 +16,6 @@ import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/employees/domain/employee.dart';
-import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
@@ -32,8 +30,8 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
-import 'package:app_finnegans/features/employees/domain/seniority_parser.dart';
 import 'package:app_finnegans/features/courses/domain/course_category_parser.dart';
+import 'package:app_finnegans/features/imports/data/payroll_file_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -443,211 +441,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             fileType: 'nomina',
             fileName: result.files.single.name,
             process: () async {
-              final rowsBySheet = const SpreadsheetReader().read(
+              final payroll = const PayrollFileParser().parse(
                 ImportFile(
                   name: result.files.single.name,
                   bytes: result.files.single.bytes!,
                 ),
               );
-              final employeesRepository = container.read(
-                employeesRepositoryProvider,
-              );
-              final coursesRepository = container.read(
-                coursesRepositoryProvider,
-              );
-              final timeEntriesRepository = container.read(
-                crmTimeEntriesRepositoryProvider,
-              );
-
-              var importedEmployees = <Employee>[];
-              var importedCourses = <Course>[];
-              var importedTimeEntries = <CrmTimeEntry>[];
-              final validatedEmployees = <String, String>{};
-
-              for (final sheet in rowsBySheet.entries) {
-                final rows = sheet.value;
-                if (!rows.any(_rowWithData)) continue;
-                final headerIndex = _findHeadersRow(rows);
-                if (headerIndex == -1) {
-                  throw FormatException(
-                    'No se reconocen los encabezados de nómina en la hoja "${sheet.key}". No se sincronizó la nómina.',
-                  );
-                }
-                final headers = rows[headerIndex]
-                    .map((header) => normalizeKey(header.toString()))
-                    .toList();
-                _validateMasterHeaders(headers, sheet.key);
-                final seniorityIndex = _findColumnSeniority(
-                  headers,
-                  rows,
-                  headerIndex,
-                );
-                if (seniorityIndex == -1 ||
-                    _findColumn(headers, const [
-                          'fechadeingreso',
-                          'fechaingreso',
-                        ]) ==
-                        -1) {
-                  throw FormatException(
-                    'Faltan las columnas Seniority o Fecha de ingreso en la hoja "${sheet.key}".',
-                  );
-                }
-
-                for (
-                  var dataRow = headerIndex + 1;
-                  dataRow < rows.length;
-                  dataRow++
-                ) {
-                  final row = rows[dataRow];
-                  if (!_rowWithData(row)) continue;
-                  final location = 'hoja "${sheet.key}", fila ${dataRow + 1}';
-                  _validateRowColumns(row, headers, location);
-                  final normalizedData = <String, String>{};
-                  for (
-                    var index = 0;
-                    index < headers.length && index < row.length;
-                    index++
-                  ) {
-                    normalizedData[headers[index]] = row[index]
-                        .toString()
-                        .trim();
-                  }
-                  if ((headers.contains('legajo') ||
-                          headers.contains('nlegajo') ||
-                          headers.contains('idempleado')) &&
-                      (headers.contains('nombre') ||
-                          headers.contains('nombreyapellido'))) {
-                    final employeeData = _toCanonicalKeys(normalizedData, {
-                      'legajo': 'employeeId',
-                      'nlegajo': 'employeeId',
-                      'idempleado': 'employeeId',
-                      'nombre': 'firstName',
-                      'nombreyapellido': 'firstName',
-                      'apellido': 'lastName',
-                      'nivel': 'seniority',
-                      'nivelseniority': 'seniority',
-                      'niveldeseniority': 'seniority',
-                      'senioridad': 'seniority',
-                      'categoria': 'seniority',
-                      'niveljerarquico': 'seniority',
-                      'grado': 'seniority',
-                      'mail': 'email',
-                      'correo': 'email',
-                      'correoelectronico': 'email',
-                      'fechadeingreso': 'hireDate',
-                      'fechaingreso': 'hireDate',
-                      'gerencia': 'area',
-                      'sector': 'area',
-                      'departamento': 'area',
-                      'unidad': 'area',
-                      'equipo': 'team',
-                      'equipogeneral': 'team',
-                      'equipofuncional': 'team',
-                      'equipoprincipal': 'team',
-                      'gerente': 'manager',
-                      'jefe': 'manager',
-                      'supervisor': 'manager',
-                      'reportaa': 'manager',
-                      for (final header in headers)
-                        if (_isColumnSeniority(header)) header: 'seniority',
-                    });
-                    if (employeeData['employeeId']?.toString().trim().isEmpty ??
-                        true) {
-                      throw FormatException('Falta el legajo en $location.');
-                    }
-                    if (employeeData['firstName']?.toString().trim().isEmpty ??
-                        true) {
-                      throw FormatException('Falta el nombre en $location.');
-                    }
-                    final seniorityText = seniorityIndex < row.length
-                        ? row[seniorityIndex].toString().trim()
-                        : '';
-                    employeeData['seniority'] = _seniorityFromText(
-                      seniorityText,
-                      location,
-                    ).name;
-                    final hireDate = employeeData['hireDate']?.toString() ?? '';
-                    final date = importDate(hireDate);
-                    if (date == null) {
-                      throw FormatException(
-                        'Fecha de ingreso inválida en $location: "$hireDate".',
-                      );
-                    }
-                    employeeData['hireDate'] = date.toIso8601String();
-                    final employee = Employee.fromJson(employeeData);
-                    _validateMasterDuplicate(
-                      validatedEmployees,
-                      employee.employeeId,
-                      employee.toJson(),
-                      'legajo',
-                      location,
-                    );
-                    importedEmployees = _replaceById(
-                      importedEmployees,
-                      employee,
-                      (item) => item.employeeId,
-                    );
-                  } else if ((headers.contains('cursonombre') ||
-                          headers.contains('nombrecurso') ||
-                          headers.contains('curso')) &&
-                      headers.contains('empleadolegajo')) {
-                    final timeEntryData = _toCanonicalKeys(normalizedData, {
-                      'cursonombre': 'courseName',
-                      'nombrecurso': 'courseName',
-                      'curso': 'courseName',
-                      'empleadolegajo': 'employeeId',
-                      'horastotales': 'hours',
-                      'fecha': 'date',
-                      'caso': 'caseRef',
-                      'descripcioncurso': 'courseDescription',
-                      'clasificacion': 'classification',
-                      'proyecto': 'project',
-                      'proyectoitem': 'projectItem',
-                      'descripcion': 'description',
-                    });
-                    final timeEntry = CrmTimeEntry.fromJson({
-                      ...timeEntryData,
-                      'kind': TimeEntryKind.taken.name,
-                    });
-                    if (timeEntry.id.isNotEmpty) {
-                      importedTimeEntries = _replaceById(
-                        importedTimeEntries,
-                        timeEntry,
-                        (item) => item.id,
-                      );
-                    }
-                  } else if (headers.contains('id') &&
-                      headers.contains('nombre') &&
-                      headers.contains('tipo')) {
-                    final course = Course.fromJson(
-                      _toCanonicalKeys(normalizedData, {
-                        'nombre': 'name',
-                        'clasificacion': 'category',
-                        'areacurso': 'courseArea',
-                        'instructorlegajo': 'instructorEmployeeId',
-                        'cargahorariahs': 'workloadHours',
-                      }),
-                    );
-                    importedCourses = _replaceById(
-                      importedCourses,
-                      course,
-                      (item) => item.id,
-                    );
-                  } else {
-                    throw const FormatException(
-                      'Encabezados no reconocidos en una hoja del archivo.',
-                    );
-                  }
-                  importedRecords++;
-                }
-              }
-              if (importedRecords == 0) {
-                throw const FormatException('El archivo no tiene registros.');
-              }
-
-              // Las áreas y los equipos nuevos de la nómina se crean antes de
-              // sincronizarla, así un fallo acá no deja empleados a medio
-              // escribir. Los que ya existen no se repiten.
+              importedRecords = payroll.rowCount;
               final orgStructureRepository = container.read(
                 orgStructureRepositoryProvider,
               );
@@ -655,21 +455,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               await orgStructureRepository.registerMissing(
                 container
                     .read(orgStructureServiceProvider)
-                    .missingFromPayroll(structure, importedEmployees),
+                    .missingFromPayroll(structure, payroll.employees),
               );
-
-              var summary = UpsertResult.empty;
-              summary += await container
+              final synced = await container
                   .read(snapshotSyncServiceProvider)
-                  .syncPayroll(employeesRepository, importedEmployees);
-              summary += await coursesRepository.upsert(importedCourses);
-              summary += await timeEntriesRepository.upsert(
-                importedTimeEntries,
-              );
+                  .syncPayroll(
+                    container.read(employeesRepositoryProvider),
+                    payroll.employees,
+                  );
               return UpsertResult(
-                processedRecords: importedRecords,
-                inserted: summary.inserted,
-                updated: summary.updated,
+                processedRecords: payroll.rowCount,
+                inserted: synced.inserted,
+                updated: synced.updated,
               );
             },
             refresh: () async {
@@ -1024,28 +821,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  List<T> _replaceById<T>(List<T> current, T newValue, String Function(T) id) {
-    final index = current.indexWhere((item) => id(item) == id(newValue));
-    if (index == -1) return [...current, newValue];
-    final result = [...current]..[index] = newValue;
-    return result;
-  }
-
-  int _findHeadersRow(List<List<dynamic>> rows) {
-    for (var index = 0; index < rows.length && index < 15; index++) {
-      final headers = rows[index]
-          .map((cell) => normalizeKey(cell.toString()))
-          .toSet();
-      if ((headers.contains('legajo') ||
-              headers.contains('nlegajo') ||
-              headers.contains('idempleado')) &&
-          (headers.contains('nombre') || headers.contains('nombreyapellido'))) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
   int _findCoursesRow(List<List<dynamic>> rows) {
     for (var index = 0; index < rows.length && index < 15; index++) {
       final headers = rows[index]
@@ -1173,83 +948,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     }
     validated[id] = content;
-  }
-
-  Seniority _seniorityFromText(String value, String location) =>
-      const SeniorityParser().tryParse(value) ??
-      (throw FormatException('Seniority inválido en $location: "$value".'));
-
-  bool _isColumnSeniority(String header) {
-    return header == 'seniority' ||
-        header == 'senority' ||
-        header.contains('seniority') ||
-        header == 'senioridad' ||
-        header == 'nivel' ||
-        header == 'nivelseniority' ||
-        header == 'niveldeseniority' ||
-        header == 'niveljerarquico' ||
-        header == 'categoria' ||
-        header == 'grado';
-  }
-
-  int _findColumnSeniority(
-    List<String> headers,
-    List<List<dynamic>> rows,
-    int headerIndex,
-  ) {
-    const specificHeaders = {
-      'seniority',
-      'senority',
-      'nivelseniority',
-      'niveldeseniority',
-      'senioridad',
-      'niveljerarquico',
-    };
-    final specificIndex = headers.indexWhere(specificHeaders.contains);
-    if (specificIndex != -1) return specificIndex;
-
-    for (var index = 0; index < headers.length; index++) {
-      final header = headers[index];
-      if (_isColumnSeniority(header)) {
-        return index;
-      }
-    }
-
-    var bestIndex = -1;
-    var highestMatchCount = 0;
-    for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
-      final matchCount = rows
-          .skip(headerIndex + 1)
-          .take(50)
-          .where((row) => columnIndex < row.length)
-          .map((row) => row[columnIndex].toString())
-          .where(_looksLikeSeniorityValue)
-          .length;
-      if (matchCount > highestMatchCount) {
-        highestMatchCount = matchCount;
-        bestIndex = columnIndex;
-      }
-    }
-    if (highestMatchCount > 0) return bestIndex;
-
-    return -1;
-  }
-
-  bool _looksLikeSeniorityValue(String value) {
-    final normalized = normalizeKey(value);
-    return RegExp(
-      r'^(?:senior|senor|sr|ssr|ss|junior|jr|j[123]|trainee|manager|gerente)',
-    ).hasMatch(normalized);
-  }
-
-  Map<String, dynamic> _toCanonicalKeys(
-    Map<String, String> data,
-    Map<String, String> aliases,
-  ) {
-    return {
-      for (final entry in data.entries)
-        aliases[entry.key] ?? entry.key: entry.value,
-    };
   }
 }
 
