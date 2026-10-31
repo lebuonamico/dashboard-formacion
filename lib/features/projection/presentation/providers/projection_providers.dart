@@ -27,7 +27,7 @@ final annualProjectionCutoffMonthProvider = FutureProvider<int?>((ref) async {
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
   return ref
-      .read(teamsServiceProvider)
+      .watch(teamsServiceProvider)
       .periods
       .lastMonthWithData(
         timeEntries: timeEntries,
@@ -57,7 +57,7 @@ final complianceByMonthProvider =
       );
       final userScope = await ref.watch(userScopeProvider.future);
       final include = userScope.isTotal ? null : userScope.includesEmployee;
-      final teamsService = ref.read(teamsServiceProvider);
+      final teamsService = ref.watch(teamsServiceProvider);
 
       return teamsService.periods.calculateComplianceByMonth(
         employees: employees,

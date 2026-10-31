@@ -16,6 +16,8 @@ EmployeeCompliance _month(
   Map<CourseCategory, double> hours,
   Map<CourseCategory, double> required, {
   String employeeId = '1',
+  String area = 'SERVICIOS',
+  String team = 'SOPORTE',
 }) {
   return const EmployeeComplianceService().summarize(
     employee: Employee(
@@ -23,9 +25,9 @@ EmployeeCompliance _month(
       firstName: 'Ana',
       lastName: 'Pérez',
       seniority: Seniority.senior1,
-      area: 'SERVICIOS',
+      area: area,
       email: '$employeeId@finnegans.com',
-      team: 'SOPORTE',
+      team: team,
     ),
     creditedHours: hours,
     declaredHours: hours,
@@ -34,8 +36,19 @@ EmployeeCompliance _month(
 }
 
 /// Un mes con una sola categoría (Negocio).
-EmployeeCompliance _c(double hours, {double target = 8, String id = '1'}) =>
-    _month({_business: hours}, {_business: target}, employeeId: id);
+EmployeeCompliance _c(
+  double hours, {
+  double target = 8,
+  String id = '1',
+  String area = 'SERVICIOS',
+  String team = 'SOPORTE',
+}) => _month(
+  {_business: hours},
+  {_business: target},
+  employeeId: id,
+  area: area,
+  team: team,
+);
 
 void main() {
   const service = ProjectionService();
@@ -300,5 +313,172 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  group('Por sección', () {
+    test('Sin área ni equipo proyecta toda la nómina', () {
+      final byMonth = {
+        8: [_c(4), _c(8, id: '2', team: 'DESARROLLO')],
+        9: [_c(6), _c(2, id: '2', team: 'DESARROLLO')],
+      };
+      final all = service.calculate(byMonth: byMonth, cutoffMonth: 9)!;
+      final section = service.calculateForSection(
+        byMonth: byMonth,
+        cutoffMonth: 9,
+      )!;
+
+      expect(section.employeeCount, 2);
+      expect(section.percentage, all.percentage);
+      expect(section.accumulated, all.accumulated);
+    });
+
+    test('Toma a quienes están en la sección en el mes de corte', () {
+      final byMonth = {
+        9: [_c(8), _c(0, id: '2', team: 'DESARROLLO')],
+      };
+
+      final support = service.calculateForSection(
+        byMonth: byMonth,
+        cutoffMonth: 9,
+        team: 'SOPORTE',
+      )!;
+      final development = service.calculateForSection(
+        byMonth: byMonth,
+        cutoffMonth: 9,
+        team: 'DESARROLLO',
+      )!;
+
+      expect(support.employeeCount, 1);
+      expect(support.arrive, 1);
+      expect(development.employeeCount, 1);
+      expect(development.arrive, 0);
+    });
+
+    test('Cuenta todo su año, aunque antes estuviera en otro equipo', () {
+      final projection = service.calculateForSection(
+        byMonth: {
+          8: [_c(8, team: 'DESARROLLO'), _c(0, id: '2', team: 'DESARROLLO')],
+          9: [_c(8), _c(0, id: '2', team: 'DESARROLLO')],
+        },
+        cutoffMonth: 9,
+        team: 'SOPORTE',
+      )!;
+
+      // Agosto en Desarrollo + septiembre en Soporte: 16 de una meta de 40.
+      expect(projection.employeeCount, 1);
+      expect(projection.accumulated, 16);
+      expect(projection.goal, 40);
+    });
+
+    test('Compara el área sin espacios ni mayúsculas', () {
+      final projection = service.calculateForSection(
+        byMonth: {
+          9: [_c(8), _c(8, id: '2', area: 'PRODUCTOS')],
+        },
+        cutoffMonth: 9,
+        area: ' servicios ',
+      )!;
+
+      expect(projection.employeeCount, 1);
+    });
+
+    test('Sin nadie de la sección en el mes de corte no hay proyección', () {
+      expect(
+        service.calculateForSection(
+          byMonth: {
+            8: [_c(8, team: 'DESARROLLO')],
+            9: [_c(8)],
+          },
+          cutoffMonth: 9,
+          team: 'DESARROLLO',
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('Variación del cumplimiento', () {
+    test('Compara las horas por persona y el acumulado del año', () {
+      final variation = service.variation(
+        byMonth: {
+          8: [_c(4), _c(8, id: '2')],
+          9: [_c(6), _c(12, id: '2')],
+        },
+        cutoffMonth: 9,
+      )!;
+
+      // Septiembre: 6 y 12 topeado en 8 → 7 por persona. Agosto: 6.
+      expect(variation.hoursPerPerson, 7);
+      expect(variation.previousHoursPerPerson, 6);
+      expect(variation.hours, 1);
+      // Acumulado: agosto 12 de 16 (75 %); a septiembre 10 + 16 de 32.
+      expect(variation.points, closeTo(6.25, 1e-9));
+    });
+
+    test('Los puntos usan el último mes con datos; las horas, el anterior', () {
+      final variation = service.variation(
+        byMonth: {
+          7: [_c(8)],
+          9: [_c(4)],
+        },
+        cutoffMonth: 9,
+      )!;
+
+      expect(variation.hoursPerPerson, 4);
+      expect(variation.previousHoursPerPerson, isNull);
+      expect(variation.hours, isNull);
+      // Julio 8 de 8 (100 %); a septiembre 12 de 16 (75 %).
+      expect(variation.points, closeTo(-25, 1e-9));
+    });
+
+    test('Sin mes anterior con datos no hay puntos ni horas de diferencia', () {
+      final variation = service.variation(
+        byMonth: {
+          9: [_c(8)],
+        },
+        cutoffMonth: 9,
+      )!;
+
+      expect(variation.hoursPerPerson, 8);
+      expect(variation.points, isNull);
+      expect(variation.previousHoursPerPerson, isNull);
+      expect(variation.hours, isNull);
+    });
+
+    test('Cada mes cuenta a quienes estaban en la sección ese mes', () {
+      final variation = service.variation(
+        byMonth: {
+          8: [_c(8, team: 'DESARROLLO'), _c(2, id: '2')],
+          9: [_c(4), _c(8, id: '2', team: 'DESARROLLO')],
+        },
+        cutoffMonth: 9,
+        team: 'soporte',
+      )!;
+
+      // Agosto: solo el 2 (2 h). Septiembre: solo el 1 (4 h).
+      expect(variation.hoursPerPerson, 4);
+      expect(variation.previousHoursPerPerson, 2);
+      expect(variation.hours, 2);
+      // Agosto 2 de 8 (25 %); a septiembre 2 + 4 de 16 (37,5 %).
+      expect(variation.points, closeTo(12.5, 1e-9));
+    });
+
+    test('Sin datos de la sección en el mes de corte no hay variación', () {
+      final byMonth = {
+        8: [_c(8)],
+        9: <EmployeeCompliance>[],
+      };
+      expect(service.variation(byMonth: byMonth, cutoffMonth: 9), isNull);
+      expect(
+        service.variation(
+          byMonth: {
+            9: [_c(8)],
+          },
+          cutoffMonth: 9,
+          area: 'PRODUCTOS',
+        ),
+        isNull,
+      );
+    });
   });
 }
