@@ -12,12 +12,12 @@ const actionFailedMessage =
 String actionErrorMessage(Object error) =>
     error is FormatException ? error.message : actionFailedMessage;
 
-/// Waits for [action] and reports the outcome with a SnackBar. Returns
-/// whether it succeeded.
+/// Waits for [action] and reports the outcome with a SnackBar (none on
+/// success without [success]). Returns whether it succeeded.
 Future<bool> runWithFeedback(
   BuildContext context, {
   required Future<void> Function() action,
-  required String success,
+  String? success,
   String Function(Object error) failure = actionErrorMessage,
 }) async {
   try {
@@ -26,7 +26,7 @@ Future<bool> runWithFeedback(
     if (context.mounted) showAppSnackBar(context, failure(error));
     return false;
   }
-  if (context.mounted) showAppSnackBar(context, success);
+  if (success != null && context.mounted) showAppSnackBar(context, success);
   return true;
 }
 

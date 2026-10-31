@@ -101,6 +101,28 @@ void main() {
     expect(_help(tester), 'Cargando datos…');
   });
 
+  testWidgets('Mientras genera muestra el progreso y no deja reimprimir', (
+    tester,
+  ) async {
+    final pending = Completer<void>();
+    await _mount(
+      tester,
+      report: () async => _report,
+      print: (_) => pending.future,
+    );
+
+    await tester.tap(find.text('Imprimir reporte'));
+    await tester.pump();
+
+    expect(find.text('Generando…'), findsOne);
+    expect(_button(tester).onPressed, isNull);
+
+    pending.complete();
+    await tester.pump();
+    expect(find.text('Imprimir reporte'), findsOne);
+    expect(_button(tester).onPressed, isNotNull);
+  });
+
   testWidgets('Si falla la impresión lo avisa y se puede reintentar', (
     tester,
   ) async {

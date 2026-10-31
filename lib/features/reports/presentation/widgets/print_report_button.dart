@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
-import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
+import 'package:app_finnegans/features/reports/presentation/providers/report_print_provider.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,36 +11,25 @@ const noReportData = 'No hay datos cargados para este período.';
 
 /// Botón compacto que imprime el reporte de la pantalla. Queda deshabilitado
 /// mientras [report] carga; sin datos o con error avisa al tocarlo.
-class PrintReportButton extends ConsumerStatefulWidget {
+class PrintReportButton extends ConsumerWidget {
   final ProviderListenable<AsyncValue<TrainingReport?>> report;
 
   const PrintReportButton({super.key, required this.report});
 
-  @override
-  ConsumerState<PrintReportButton> createState() => _PrintReportButtonState();
-}
-
-class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
-  bool _generating = false;
-
-  Future<void> _print(TrainingReport report) async {
-    setState(() => _generating = true);
-    try {
-      await ref.read(printReportProvider)(report);
-    } catch (error) {
-      if (mounted) {
-        showAppSnackBar(context, 'No se pudo generar el reporte: $error');
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
-  }
-
-  void _notify(String message) => showAppSnackBar(context, message);
+  Future<void> _print(
+    BuildContext context,
+    WidgetRef ref,
+    TrainingReport report,
+  ) => runWithFeedback(
+    context,
+    action: () => ref.read(reportPrintProvider.notifier).printReport(report),
+    failure: (error) => 'No se pudo generar el reporte: $error',
+  );
 
   @override
-  Widget build(BuildContext context) {
-    final reportAsync = ref.watch(widget.report);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reportAsync = ref.watch(report);
+    final generating = ref.watch(reportPrintProvider).isLoading;
     // Al cambiar el período queda el valor anterior mientras recarga: no se
     // imprime hasta tener el del período elegido.
     final loading = reportAsync.isLoading;
@@ -57,15 +46,20 @@ class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
       child: OutlinedButton.icon(
         // Sin datos o con error sigue habilitado para explicar por qué no
         // hay reporte, en vez de quedar mudo.
-        onPressed: _generating || loading
+        onPressed: generating || loading
             ? null
             : () => switch (reportAsync) {
-                AsyncValue(:final error?) => _notify(
+                AsyncValue(:final error?) => showAppSnackBar(
+                  context,
                   'No se pudieron cargar los datos. '
                   '${loadErrorMessage(error)}',
                 ),
-                AsyncValue(value: final report?) => _print(report),
-                _ => _notify(noReportData),
+                AsyncValue(value: final report?) => _print(
+                  context,
+                  ref,
+                  report,
+                ),
+                _ => showAppSnackBar(context, noReportData),
               },
         style: OutlinedButton.styleFrom(
           visualDensity: VisualDensity.compact,
@@ -77,14 +71,14 @@ class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        icon: _generating
+        icon: generating
             ? const SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.print_outlined, size: 16),
-        label: Text(_generating ? 'Generando…' : 'Imprimir reporte'),
+        label: Text(generating ? 'Generando…' : 'Imprimir reporte'),
       ),
     );
   }
