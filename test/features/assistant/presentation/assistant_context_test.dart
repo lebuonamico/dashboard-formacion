@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
+import 'package:app_finnegans/features/assistant/presentation/assistant_labels.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/assistant_fixtures.dart';
@@ -64,7 +65,7 @@ void main() {
         '¿Cómo viene el cumplimiento por categoría?',
       );
 
-      expect(context.label, 'Dashboard · datos del proyecto');
+      expect(assistantContextLabel(context), 'Dashboard · datos del proyecto');
       expect(context.data, {
         'origen': origin,
         'pantalla': 'Dashboard',
@@ -191,7 +192,7 @@ void main() {
         '¿Cómo viene el colaborador seleccionado?',
       );
 
-      expect(context.label, 'Personas · datos del proyecto');
+      expect(assistantContextLabel(context), 'Personas · datos del proyecto');
       expect(context.data, {
         'origen': origin,
         'pantalla': 'Personas',
@@ -331,7 +332,10 @@ void main() {
         '¿Cómo funciona la importación de nómina?',
       );
 
-      expect(context.label, 'Configuración · datos del proyecto');
+      expect(
+        assistantContextLabel(context),
+        'Configuración · datos del proyecto',
+      );
       expect(context.data, {
         'origen': origin,
         'pantalla': 'Configuración',
@@ -376,7 +380,7 @@ void main() {
         '¿Cómo viene el cumplimiento?',
       );
 
-      expect(context.label, 'Dashboard · ayuda conceptual');
+      expect(assistantContextLabel(context), 'Dashboard · ayuda conceptual');
       expect(context.data, {
         'origen': origin,
         'pantalla': 'Dashboard',

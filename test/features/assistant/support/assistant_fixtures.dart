@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_context.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

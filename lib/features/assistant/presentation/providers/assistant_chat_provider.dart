@@ -4,7 +4,7 @@ import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart
 import 'package:app_finnegans/features/assistant/presentation/assistant_labels.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_repository_provider.dart';
 import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
@@ -90,11 +90,9 @@ class AssistantChatController extends Notifier<ChatState> {
   Future<void> send(String text, AssistantDestination destination) async {
     if (_busy) return;
     final question = text.trim();
-    final validation = ref
-        .read(assistantContextServiceProvider)
-        .validateQuestion(question);
-    if (validation != null) {
-      state = state.copyWith(error: validation, canRetry: false);
+    final issue = ref.read(assistantQueryPlannerProvider).validate(question);
+    if (issue != null) {
+      state = state.copyWith(error: issue.message, canRetry: false);
       return;
     }
     try {
@@ -150,9 +148,9 @@ class AssistantChatController extends Notifier<ChatState> {
         );
         if (!_current(ticket)) return;
         query.payload = ref
-            .read(assistantContextServiceProvider)
-            .composeMessage(query.question, context);
-        query.context = context.label;
+            .read(assistantPromptComposerProvider)
+            .compose(query.question, context);
+        query.context = assistantContextLabel(context);
       }
       if (!_current(ticket)) return;
       _validateSession();
@@ -179,22 +177,12 @@ class AssistantChatController extends Notifier<ChatState> {
         ticket,
         const AssistantException(AssistantErrorType.connection),
       );
-    } on FormatException catch (error) {
-      // Solo validaciones redactadas por nuestro servicio; nunca propagar
-      // mensajes arbitrarios de repositorios, Supabase o proveedores.
-      final message = switch (error.message) {
-        'Indicá un mes válido entre 1 y 12.' => error.message,
-        'La consulta supera el contexto disponible. Pedí menos períodos o precisá el equipo, área o curso.' =>
-          error.message,
-        _ => null,
-      };
+    } on AssistantQueryException catch (error) {
       if (_current(ticket)) {
         state = state.copyWith(
           sending: true,
-          error:
-              message ??
-              const AssistantException(AssistantErrorType.unknown).message,
-          canRetry: message == null,
+          error: error.message,
+          canRetry: false,
         );
       }
     } catch (_) {

@@ -1,4 +1,41 @@
+import 'package:app_finnegans/features/assistant/domain/assistant_context.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
+
+extension AssistantModuleLabel on AssistantModule {
+  String get label => switch (this) {
+    AssistantModule.dashboard => 'Dashboard',
+    AssistantModule.areas => 'Áreas',
+    AssistantModule.teams => 'Equipos',
+    AssistantModule.teamDetail => 'Detalle de equipo',
+    AssistantModule.people => 'Personas',
+    AssistantModule.courses => 'Cursos',
+    AssistantModule.settings => 'Configuración',
+    AssistantModule.others => 'Ayuda general',
+  };
+}
+
+String assistantContextLabel(AssistantContext context) =>
+    '${context.module.label} · ${context.dynamic ? 'datos del proyecto' : 'ayuda conceptual'}';
+
+extension QuestionIssueMessage on QuestionIssue {
+  String get message => switch (this) {
+    QuestionIssue.empty => 'Escribí una pregunta.',
+    QuestionIssue.tooLong =>
+      'Usá hasta ${AssistantQueryPlanner.maxQuestion} caracteres.',
+    QuestionIssue.sensitive =>
+      'Quitá correos, enlaces, claves, tokens o credenciales de la pregunta.',
+  };
+}
+
+extension AssistantQueryExceptionMessage on AssistantQueryException {
+  String get message => switch (issue) {
+    AssistantQueryIssue.invalidMonth => 'Indicá un mes válido entre 1 y 12.',
+    AssistantQueryIssue.contextTooLarge =>
+      'La consulta supera el contexto disponible. Pedí menos períodos o precisá el equipo, área o curso.',
+  };
+}
 
 extension AssistantExceptionMessage on AssistantException {
   String get message => switch (type) {

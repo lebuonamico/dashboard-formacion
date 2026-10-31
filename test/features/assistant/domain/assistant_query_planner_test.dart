@@ -1,7 +1,10 @@
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/core/period/domain/period_filter.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _visible = AssistantPeriod(year: 2026, month: 7);
+const _visible = PeriodFilter(scope: PeriodScope.monthly, month: 7, year: 2026);
 const _dashboard = AssistantDestination(AssistantModule.dashboard);
 
 const _yearNote =
@@ -14,7 +17,7 @@ const _imprecise =
 AssistantQuery _plan(
   String question, {
   AssistantDestination destination = _dashboard,
-}) => AssistantContextService().plan(question, destination, _visible);
+}) => const AssistantQueryPlanner().plan(question, destination, _visible);
 
 List<(int, int, bool)> _periods(AssistantQuery query) => [
   for (final period in query.periods)
@@ -50,10 +53,10 @@ void main() {
       expect(
         () => _plan('¿Cómo fue el mes 13?'),
         throwsA(
-          isA<FormatException>().having(
-            (e) => e.message,
-            'message',
-            'Indicá un mes válido entre 1 y 12.',
+          isA<AssistantQueryException>().having(
+            (e) => e.issue,
+            'issue',
+            AssistantQueryIssue.invalidMonth,
           ),
         ),
       );
@@ -221,10 +224,28 @@ void main() {
     });
 
     test('solo totales cuando se pregunta cuántos, sin pedir cuáles', () {
-      final service = AssistantContextService();
+      const service = AssistantQueryPlanner();
       expect(service.totalsOnly('¿Cuántos equipos hay?'), isTrue);
       expect(service.totalsOnly('¿Cuántos equipos hay y cuáles?'), isFalse);
       expect(service.totalsOnly('¿Qué equipos hay?'), isFalse);
+    });
+  });
+
+  group('Validación de la pregunta', () {
+    const planner = AssistantQueryPlanner();
+
+    test('vacía, larga o con datos sensibles', () {
+      expect(planner.validate('  '), QuestionIssue.empty);
+      expect(planner.validate('a' * 1201), QuestionIssue.tooLong);
+      expect(
+        planner.validate('Mi correo es persona@finnegans.com'),
+        QuestionIssue.sensitive,
+      );
+    });
+
+    test('una pregunta normal es válida', () {
+      expect(planner.validate('¿Cómo viene el equipo?'), isNull);
+      expect(planner.validate('ab ' * 400), isNull);
     });
   });
 }

@@ -22,3 +22,12 @@ class AssistantException implements Exception {
       type != AssistantErrorType.session &&
       type != AssistantErrorType.permission;
 }
+
+enum AssistantQueryIssue { invalidMonth, contextTooLarge }
+
+/// A question that has to be rephrased: retrying it gives the same result.
+class AssistantQueryException implements Exception {
+  final AssistantQueryIssue issue;
+
+  const AssistantQueryException(this.issue);
+}

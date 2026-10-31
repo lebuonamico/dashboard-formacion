@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
+import 'package:app_finnegans/features/assistant/presentation/assistant_destination.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_chat_provider.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_message.dart';
@@ -245,7 +247,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
     final status = ref.watch(assistantChatProvider);
     final real = ref.watch(aiRealContextProvider);
     final uri = GoRouterState.of(context).uri;
-    final destination = AssistantDestination.fromUri(uri);
+    final destination = assistantDestinationFor(uri);
     ref.listen(assistantChatProvider, _updateScroll);
     ref.listen(authProvider.select((auth) => auth.email), (prev, next) {
       if (prev != next) {
@@ -702,7 +704,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                         key: const Key('asistente_input'),
                         controller: _text,
                         focusNode: _focus,
-                        maxLength: AssistantContextService.maxQuestion,
+                        maxLength: AssistantQueryPlanner.maxQuestion,
                         minLines: 1,
                         maxLines: compact ? 2 : 4,
                         textAlignVertical: TextAlignVertical.center,
@@ -780,7 +782,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                   ),
                   if (value.text.length > 1000)
                     Text(
-                      '${value.text.length}/${AssistantContextService.maxQuestion}',
+                      '${value.text.length}/${AssistantQueryPlanner.maxQuestion}',
                       style: noteStyle,
                     ),
                 ],

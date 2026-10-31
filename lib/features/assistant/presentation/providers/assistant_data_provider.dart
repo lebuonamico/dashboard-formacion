@@ -1,6 +1,11 @@
 import 'dart:async';
 
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_context.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_context_builder.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_payload_values.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
@@ -13,14 +18,21 @@ import 'package:app_finnegans/features/org_structure/presentation/providers/org_
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
-import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
-import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_prompt_composer.dart';
 
 final aiRealContextProvider = Provider<bool>(
   (ref) => const bool.fromEnvironment('IA_CONTEXTO_REAL', defaultValue: true),
 );
-final assistantContextServiceProvider = Provider<AssistantContextService>(
-  (ref) => AssistantContextService(),
+final assistantQueryPlannerProvider = Provider<AssistantQueryPlanner>(
+  (ref) => const AssistantQueryPlanner(),
+);
+final assistantContextBuilderProvider = Provider<AssistantContextBuilder>(
+  (ref) => AssistantContextBuilder(
+    planner: ref.watch(assistantQueryPlannerProvider),
+  ),
+);
+final assistantPromptComposerProvider = Provider<AssistantPromptComposer>(
+  (ref) => const AssistantPromptComposer(),
 );
 
 /// Solo se ejecuta al enviar. El snapshot reutiliza providers y servicios de las
@@ -40,21 +52,21 @@ Future<AssistantContext> _prepare(
   AssistantDestination destination,
   String question,
 ) async {
-  final service = ref.read(assistantContextServiceProvider);
+  final planner = ref.read(assistantQueryPlannerProvider);
+  final builder = ref.read(assistantContextBuilderProvider);
   final dynamic = ref.read(aiRealContextProvider);
-  final visible = AssistantPeriod(
-    year: ref.read(periodFilterProvider).year,
-    month: ref.read(periodFilterProvider).month,
-    annual: ref.read(periodFilterProvider).scope == PeriodScope.annual,
+  final query = planner.plan(
+    question,
+    destination,
+    ref.read(periodFilterProvider),
   );
-  final query = service.plan(question, destination, visible);
   final data = <String, Object?>{'notas_alcance': <String>[]};
   final notes = data['notas_alcance'] as List<String>;
   if (!dynamic || query.theme == AssistantTopic.conceptual) {
     data['disponibilidad'] = dynamic
         ? 'Consulta conceptual; no se solicitaron indicadores.'
         : 'Contexto dinámico deshabilitado. No se enviaron indicadores ni ejemplos estáticos.';
-    return service.prepare(query, data, dynamic: dynamic);
+    return builder.prepare(query, data, dynamic: dynamic);
   }
   if (query.theme == AssistantTopic.import) {
     data['importaciones'] = {
@@ -70,28 +82,28 @@ Future<AssistantContext> _prepare(
       'limite':
           'Sin contenido de archivos ni historial de importaciones. No puede ejecutar cargas.',
     };
-    return service.prepare(query, data, dynamic: true);
+    return builder.prepare(query, data, dynamic: true);
   }
   if (query.periods.isEmpty) {
-    return service.prepare(query, data, dynamic: true);
+    return builder.prepare(query, data, dynamic: true);
   }
   if (query.accumulated) {
     if (query.theme == AssistantTopic.general) {
-      await _addAccumulated(ref, query, data, service);
+      await _addAccumulated(ref, query, data, builder);
     } else {
       notes.add(
         'El acumulado por rango está disponible para el cumplimiento global de la organización desde el Dashboard. No se envió un total global como si correspondiera al área, equipo o perfil seleccionado.',
       );
     }
-    return service.prepare(query, data, dynamic: true);
+    return builder.prepare(query, data, dynamic: true);
   }
   if (query.theme == AssistantTopic.courses && destination.employeeId == null) {
     final courses = await ref.read(coursesProvider.future);
-    data['catalogo'] = service.catalog(courses, question);
+    data['catalogo'] = builder.catalog(courses, question);
     notes.add(
       'No hay perfil seleccionado. Recomendaciones generales, no personalizadas. El catálogo no está historizado por período.',
     );
-    return service.prepare(query, data, dynamic: true);
+    return builder.prepare(query, data, dynamic: true);
   }
 
   final results = <Map<String, Object?>>[];
@@ -116,7 +128,7 @@ Future<AssistantContext> _prepare(
         result['alcance'] =
             'No hay movimientos CRM ni LMS en este período. No evaluar incumplimiento ni inventar ceros.';
         if (query.theme == AssistantTopic.courses) {
-          result['catalogo'] = service.catalog(
+          result['catalogo'] = builder.catalog(
             await scope.read(coursesProvider.future),
             question,
           );
@@ -174,7 +186,7 @@ Future<AssistantContext> _prepare(
           };
           if (RegExp(
             r'categor|negocio|blanda|libre|dictad',
-          ).hasMatch(service.normalize(question))) {
+          ).hasMatch(planner.normalize(question))) {
             result['horas_validas_por_categoria'] = {
               'negocio': summary!.businessHours,
               'blandas': summary.softSkillsHours,
@@ -185,9 +197,9 @@ Future<AssistantContext> _prepare(
         case AssistantTopic.areas:
           final areas = await scope.read(areasPeriodSummaryProvider.future);
           var items = areas.areas.toList();
-          final q = service.normalize(question);
+          final q = planner.normalize(question);
           final explicit = items
-              .where((a) => _mentions(q, a.name, service))
+              .where((a) => _mentions(q, a.name, planner))
               .toList();
           if (explicit.isNotEmpty) {
             items = explicit;
@@ -196,20 +208,22 @@ Future<AssistantContext> _prepare(
             items = items
                 .where(
                   (a) =>
-                      service.normalize(a.name) ==
-                      service.normalize(destination.area!),
+                      planner.normalize(a.name) ==
+                      planner.normalize(destination.area!),
                 )
                 .toList();
           }
           if (q.contains('critic')) {
-            items = items.where((a) => a.level.label == 'Crítico').toList();
+            items = items
+                .where((a) => a.level == ComplianceLevel.critical)
+                .toList();
           }
           items.sort(
             (a, b) => q.contains('mayor') || q.contains('mejor')
                 ? b.compliancePercentage.compareTo(a.compliancePercentage)
                 : a.compliancePercentage.compareTo(b.compliancePercentage),
           );
-          result['areas'] = service.selection(
+          result['areas'] = builder.selection(
             items
                 .map(
                   (a) => <String, Object?>{
@@ -219,14 +233,14 @@ Future<AssistantContext> _prepare(
                     'horas_validas': a.completedHours,
                     'horas_objetivo': a.targetHours,
                     'cumplimiento_pct': a.compliancePercentage,
-                    'estado': a.level.label,
+                    'estado': a.level.payloadValue,
                   },
                 )
                 .toList(),
             total: items.length,
             criterion:
                 'Áreas calculadas; orden por cumplimiento, filtro según pregunta/selección.',
-            max: service.totalsOnly(question) ? 0 : 12,
+            max: planner.totalsOnly(question) ? 0 : 12,
           );
           if (destination.area != null) {
             notes.add(
@@ -235,13 +249,13 @@ Future<AssistantContext> _prepare(
           }
         case AssistantTopic.teams:
           var items = summary!.teams.toList();
-          final q = service.normalize(question);
+          final q = planner.normalize(question);
           final explicit = items
-              .where((e) => _mentions(q, e.name, service))
+              .where((e) => _mentions(q, e.name, planner))
               .toList();
           final explicitAreas = items
               .map((e) => e.area)
-              .where((a) => _mentions(q, a, service))
+              .where((a) => _mentions(q, a, planner))
               .toSet();
           final comparison = RegExp(
             r'compar|otros|resto|todos|que equipos|cuales|ranking|menor|mayor',
@@ -250,10 +264,10 @@ Future<AssistantContext> _prepare(
             final selected = items
                 .where(
                   (e) =>
-                      service.normalize(e.name) ==
-                          service.normalize(destination.team!) &&
-                      service.normalize(e.area) ==
-                          service.normalize(destination.area ?? ''),
+                      planner.normalize(e.name) ==
+                          planner.normalize(destination.team!) &&
+                      planner.normalize(e.area) ==
+                          planner.normalize(destination.area ?? ''),
                 )
                 .firstOrNull;
             if (selected != null) {
@@ -272,16 +286,16 @@ Future<AssistantContext> _prepare(
             items = items
                 .where(
                   (e) =>
-                      service.normalize(e.area) ==
-                      service.normalize(destination.area!),
+                      planner.normalize(e.area) ==
+                      planner.normalize(destination.area!),
                 )
                 .toList();
             if (destination.team != null) {
               items = items
                   .where(
                     (e) =>
-                        service.normalize(e.name) ==
-                        service.normalize(destination.team!),
+                        planner.normalize(e.name) ==
+                        planner.normalize(destination.team!),
                   )
                   .toList();
             }
@@ -304,18 +318,18 @@ Future<AssistantContext> _prepare(
                   : a.completionPercentage.compareTo(b.completionPercentage),
             );
           }
-          result['equipos'] = service.selection(
+          result['equipos'] = builder.selection(
             items.map(_team).toList(),
             total: items.length,
             criterion:
                 'Estado calculado por EquiposService; filtro de pregunta, prioridad o cumplimiento.',
-            max: service.totalsOnly(question) ? 0 : 12,
+            max: planner.totalsOnly(question) ? 0 : 12,
           );
         case AssistantTopic.person || AssistantTopic.courses:
           final employees = await scope.read(employeesProvider.future);
-          final q = service.normalize(question);
+          final q = planner.normalize(question);
           final matches = employees
-              .where((e) => _mentions(q, e.fullName, service))
+              .where((e) => _mentions(q, e.fullName, planner))
               .toList();
           final employeeId = matches.length == 1
               ? matches.single.employeeId
@@ -333,7 +347,7 @@ Future<AssistantContext> _prepare(
                 'No se encontró el perfil seleccionado en la nómina disponible.',
               );
             } else {
-              result['perfil_seleccionado'] = service.person(detail.compliance);
+              result['perfil_seleccionado'] = builder.person(detail.compliance);
               notes.add(
                 'El perfil conserva el alcance de su pantalla: usa atributos actuales de nómina y no reconstruye la elegibilidad histórica de Equipos.',
               );
@@ -343,7 +357,7 @@ Future<AssistantContext> _prepare(
                 );
               }
               if (query.theme == AssistantTopic.courses) {
-                result['catalogo'] = service.catalog(
+                result['catalogo'] = builder.catalog(
                   await scope.read(coursesProvider.future),
                   question,
                   profile: detail.compliance,
@@ -367,14 +381,14 @@ Future<AssistantContext> _prepare(
   }
   data['resultados'] = results;
   data['notas_alcance'] = notes.toSet().toList();
-  return service.prepare(query, data, dynamic: true);
+  return builder.prepare(query, data, dynamic: true);
 }
 
 Future<void> _addAccumulated(
   Ref ref,
   AssistantQuery query,
   Map<String, Object?> data,
-  AssistantContextService service,
+  AssistantContextBuilder builder,
 ) async {
   String key(AssistantPeriod p) =>
       '${p.year}-${p.month.toString().padLeft(2, '0')}';
@@ -437,7 +451,7 @@ Future<void> _addAccumulated(
       'cumplimiento_pct': total.compliance,
     },
   };
-  data['desglose_mensual'] = service.selection(
+  data['desglose_mensual'] = builder.selection(
     detail,
     total: detail.length,
     criterion: 'Indicadores mensuales evaluados; el acumulado no se recorta.',
@@ -466,9 +480,9 @@ Map<String, Object?> _team(TeamOverview e) => {
   'horas_validas': e.completedHours,
   'horas_objetivo': e.targetHours,
   'cumplimiento_pct': e.completionPercentage,
-  'estado': e.status.label,
+  'estado': e.status.payloadValue,
 };
-bool _mentions(String q, String name, AssistantContextService s) {
+bool _mentions(String q, String name, AssistantQueryPlanner s) {
   final n = s.normalize(name);
   return n.length >= 3 && ' $q '.contains(' $n ');
 }

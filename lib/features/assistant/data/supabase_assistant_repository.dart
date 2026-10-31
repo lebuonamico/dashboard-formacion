@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
+import 'package:app_finnegans/features/assistant/domain/assistant_prompt_composer.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_exception.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -75,8 +75,8 @@ class SupabaseAssistantRepository implements AssistantRepository {
     if (session == null || session.isExpired) throw _fromHttp(401);
     // Local defense; the endpoint enforces its own limits too.
     if (message.trim().isEmpty ||
-        message.length > AssistantContextService.maxMessage ||
-        utf8.encode(message).length > AssistantContextService.maxMessage * 4) {
+        message.length > AssistantPromptComposer.maxMessage ||
+        utf8.encode(message).length > AssistantPromptComposer.maxMessage * 4) {
       throw const AssistantException(AssistantErrorType.unknown);
     }
     final abort = Completer<void>();
