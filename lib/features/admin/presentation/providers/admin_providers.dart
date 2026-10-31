@@ -105,7 +105,7 @@ class AdminUsersNotifier extends AsyncNotifier<AdminUsersState> {
       if (!ref.mounted) return;
       state = AsyncData(state.requireValue.copyWith(users: users));
       // Changing a role deletes the leader assignments that stop applying.
-      ref.invalidate(orgStructureStateProvider);
+      ref.invalidate(orgStructureNotifierProvider);
       if (_users.isSameUser(user, ref.read(authProvider).email)) {
         await ref.read(authProvider.notifier).validateAuthorization();
       }

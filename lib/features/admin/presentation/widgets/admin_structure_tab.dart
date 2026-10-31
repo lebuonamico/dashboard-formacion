@@ -24,7 +24,7 @@ class AdminStructure extends ConsumerWidget {
     final cs = context.colorScheme;
     final view = ref.watch(adminStructureViewProvider);
     final isSaving = ref.watch(
-      orgStructureStateProvider.select(
+      orgStructureNotifierProvider.select(
         (structure) => structure.value?.isSaving ?? false,
       ),
     );
@@ -114,7 +114,7 @@ class AdminStructure extends ConsumerWidget {
   }
 
   OrgStructureNotifier _structure(WidgetRef ref) =>
-      ref.read(orgStructureStateProvider.notifier);
+      ref.read(orgStructureNotifierProvider.notifier);
 
   Future<void> _areaLeaders(
     BuildContext context,

@@ -42,7 +42,7 @@ class OrgStructureState {
       );
 }
 
-final orgStructureStateProvider =
+final orgStructureNotifierProvider =
     AsyncNotifierProvider<OrgStructureNotifier, OrgStructureState>(
       OrgStructureNotifier.new,
     );
@@ -88,7 +88,7 @@ class OrgStructureNotifier extends AsyncNotifier<OrgStructureState> {
 /// La estructura sin el estado de la asignación en curso.
 final orgStructureProvider = FutureProvider<OrgStructure>(
   (ref) => ref.watch(
-    orgStructureStateProvider.selectAsync((state) => state.structure),
+    orgStructureNotifierProvider.selectAsync((state) => state.structure),
   ),
 );
 

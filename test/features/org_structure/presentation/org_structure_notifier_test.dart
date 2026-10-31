@@ -58,21 +58,20 @@ Future<(ProviderContainer, _FakeStructure)> _setUp() async {
   );
   addTearDown(container.dispose);
   container.listen(orgStructureProvider, (_, _) {});
-  await container.read(orgStructureStateProvider.future);
+  await container.read(orgStructureNotifierProvider.future);
   return (container, repository);
 }
 
 OrgStructureState _state(ProviderContainer container) =>
-    container.read(orgStructureStateProvider).requireValue;
+    container.read(orgStructureNotifierProvider).requireValue;
 
 void main() {
   test('Asignar líderes de equipo guarda y recarga la estructura', () async {
     final (container, _) = await _setUp();
 
-    await container.read(orgStructureStateProvider.notifier).assignTeamLeaders(
-      '10',
-      {'lider@finnegans.com'},
-    );
+    await container
+        .read(orgStructureNotifierProvider.notifier)
+        .assignTeamLeaders('10', {'lider@finnegans.com'});
 
     expect(_state(container).structure.teams.single.leaders, {
       'lider@finnegans.com',
@@ -90,7 +89,7 @@ void main() {
     final before = _state(container).structure;
 
     await expectLater(
-      container.read(orgStructureStateProvider.notifier).assignAreaLeaders(
+      container.read(orgStructureNotifierProvider.notifier).assignAreaLeaders(
         '1',
         {'area@finnegans.com'},
       ),
@@ -104,7 +103,7 @@ void main() {
   test('Mientras guarda queda en curso e ignora otra asignación', () async {
     final (container, repository) = await _setUp();
     final gate = repository.gate = Completer<void>();
-    final notifier = container.read(orgStructureStateProvider.notifier);
+    final notifier = container.read(orgStructureNotifierProvider.notifier);
 
     final assigning = notifier.assignAreaLeaders('1', {'area@finnegans.com'});
     expect(_state(container).isSaving, isTrue);

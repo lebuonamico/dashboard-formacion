@@ -678,11 +678,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             refresh: () async {
               // La nómina no cambia cursos, horas ni finalizaciones: lo que
               // depende de quién ve a quién se recalcula solo desde la nómina.
-              container.invalidate(orgStructureStateProvider);
+              container.invalidate(orgStructureNotifierProvider);
               container.invalidate(payrollProvider);
               container.invalidate(employeeHistoryProvider);
               await Future.wait([
-                container.read(orgStructureStateProvider.future),
+                container.read(orgStructureNotifierProvider.future),
                 container.read(employeesProvider.future),
                 container.read(employeeHistoryProvider.future),
               ]);
