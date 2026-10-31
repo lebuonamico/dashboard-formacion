@@ -10,6 +10,7 @@ import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 export 'package:app_finnegans/core/widgets/kpi_card.dart';
 

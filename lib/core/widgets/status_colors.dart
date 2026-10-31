@@ -1,8 +1,8 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_status.dart';
-import 'package:app_finnegans/features/projection/domain/projection_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 /// Colores del semáforo de cumplimiento de un área: verde en objetivo, ámbar
 /// en riesgo y rojo crítico.

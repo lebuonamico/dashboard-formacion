@@ -1,10 +1,10 @@
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/projection/domain/projection_service.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 /// Qué sección de la app resume el reporte.
 enum ReportType {

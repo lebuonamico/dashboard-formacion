@@ -2,7 +2,6 @@ import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/projection/domain/projection_service.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
@@ -11,6 +10,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
+import 'package:app_finnegans/features/projection/presentation/projection_labels.dart';
 
 /// Las mismas tarjetas que la pantalla: integrantes, horas, cumplimiento y,
 /// si hay, la proyección a diciembre.

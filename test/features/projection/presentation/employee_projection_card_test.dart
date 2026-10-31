@@ -4,6 +4,9 @@ import 'package:app_finnegans/features/projection/domain/projection_service.dart
 import 'package:app_finnegans/features/projection/presentation/widgets/employee_projection_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
+
+const _service = ProjectionService();
 
 Future<void> _show(WidgetTester tester, EmployeeProjection projection) {
   return tester.pumpWidget(
@@ -25,23 +28,23 @@ void main() {
     // Septiembre: faltan 3 meses.
     await _show(
       tester,
-      const EmployeeProjection(
+      _service.employeeProjection(
         employeeId: '1',
         cutoffMonth: 9,
         categories: [
-          CategoryProjection(
+          _service.categoryProjection(
             type: CourseCategory.softSkills,
             accumulated: 10,
             goal: 16,
             projected: 14,
           ),
-          CategoryProjection(
+          _service.categoryProjection(
             type: CourseCategory.businessSkills,
             accumulated: 8,
             goal: 16,
             projected: 13,
           ),
-          CategoryProjection(
+          _service.categoryProjection(
             type: CourseCategory.exploration,
             accumulated: 6,
             goal: 8,
@@ -74,11 +77,11 @@ void main() {
   testWidgets('Si llega, lo dice sin pedir refuerzos', (tester) async {
     await _show(
       tester,
-      const EmployeeProjection(
+      _service.employeeProjection(
         employeeId: '1',
         cutoffMonth: 9,
         categories: [
-          CategoryProjection(
+          _service.categoryProjection(
             type: CourseCategory.businessSkills,
             accumulated: 12,
             goal: 16,

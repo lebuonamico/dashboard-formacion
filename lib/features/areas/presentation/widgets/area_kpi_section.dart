@@ -3,6 +3,7 @@ import 'package:app_finnegans/features/projection/presentation/providers/project
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 /// Indicadores de todas las áreas, con las mismas cards que el inicio.
 class AreasKpiSection extends StatelessWidget {

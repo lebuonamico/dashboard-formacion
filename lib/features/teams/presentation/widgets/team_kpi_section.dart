@@ -3,6 +3,7 @@ import 'package:app_finnegans/features/projection/presentation/providers/project
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 class TeamsKpiSection extends StatelessWidget {
   final int teamCount;

@@ -1,209 +1,295 @@
+import 'package:app_finnegans/features/compliance/domain/compliance_period_service.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-
-/// Si, con la tendencia de cada colaborador, se llega a la meta de fin de año.
-enum ProjectionStatus {
-  onTrack('En camino'),
-  reachable('Alcanzable'),
-  atRisk('En riesgo');
-
-  final String label;
-  const ProjectionStatus(this.label);
-
-  /// [percentage] es la parte de la meta que se proyecta cubrir.
-  static ProjectionStatus fromPercentage(double percentage) {
-    if (percentage >= 100) return ProjectionStatus.onTrack;
-    if (percentage >= 85) return ProjectionStatus.reachable;
-    return ProjectionStatus.atRisk;
-  }
-}
-
-/// Proyección de una categoría para un colaborador, en horas.
-class CategoryProjection {
-  final CourseCategory type;
-
-  /// Horas sin tope de los meses con datos hasta el corte.
-  final double accumulated;
-
-  /// Objetivo de los meses con datos hasta el corte más los que faltan.
-  final double goal;
-
-  /// Acumulado más lo que estima la tendencia para los meses que faltan.
-  final double projected;
-
-  const CategoryProjection({
-    required this.type,
-    required this.accumulated,
-    required this.goal,
-    required this.projected,
-  });
-
-  bool get arrives => projected >= goal;
-
-  /// Horas que le faltan a fin de año con su tendencia.
-  double get missing => arrives ? 0 : goal - projected;
-}
-
-/// Proyección a fin de año de un colaborador, solo con las categorías que
-/// pide su seniority.
-class EmployeeProjection {
-  final String employeeId;
-  final int cutoffMonth;
-  final List<CategoryProjection> categories;
-
-  /// [percentage] de su proyección cortada en el mes con datos anterior;
-  /// `null` si no hay un mes anterior en el que haya estado.
-  final double? previousPercentage;
-
-  const EmployeeProjection({
-    required this.employeeId,
-    required this.cutoffMonth,
-    required this.categories,
-    this.previousPercentage,
-  });
-
-  /// Puntos de la meta que mejoró (o empeoró) contra el mes anterior.
-  double? get variation =>
-      previousPercentage == null ? null : percentage - previousPercentage!;
-
-  int get remainingMonths => 12 - cutoffMonth;
-
-  /// Cumple todas sus categorías.
-  bool get arrives => categories.every((c) => c.arrives);
-
-  /// Horas proyectadas, cada categoría topeada en su meta.
-  double get projection => categories.fold(
-    0,
-    (t, c) => t + (c.projected < c.goal ? c.projected : c.goal),
-  );
-
-  double get goal => categories.fold(0, (t, c) => t + c.goal);
-
-  double get percentage => goal == 0 ? 100 : projection / goal * 100;
-
-  ProjectionStatus get status => ProjectionStatus.fromPercentage(percentage);
-
-  /// Categorías que no llegan, la que más falta primero.
-  List<CategoryProjection> get missing =>
-      categories.where((c) => !c.arrives).toList()
-        ..sort((a, b) => b.missing.compareTo(a.missing));
-}
-
-/// Proyección a fin de año de una sección, cortada en [cutoffMonth]. Se calcula
-/// por colaborador y categoría y después se agrupa: las horas de una persona
-/// nunca cubren lo que le falta a otra, ni las de una categoría a otra.
-/// Los valores en horas son promedios por persona.
-class AnnualProjection {
-  final int cutoffMonth;
-  final int employeeCount;
-
-  /// Colaboradores que, con su tendencia, cumplen todas sus categorías.
-  final int arrive;
-
-  /// Horas proyectadas a diciembre, cada una topeada en la meta de su
-  /// categoría.
-  final double projection;
-
-  /// Objetivo de los meses con datos hasta el corte más los que faltan.
-  final double goal;
-
-  /// Horas acumuladas hasta el corte, topeadas en la meta de su categoría.
-  final double accumulated;
-
-  /// Horas que les faltan, con su tendencia, a quienes no llegan.
-  final double missing;
-
-  final ProjectionStatus status;
-
-  /// Cumplimiento del mes de corte, con el tope mensual, en porcentaje.
-  final double monthCompliance;
-
-  /// Horas del mes de corte con el tope mensual.
-  final double recentPace;
-
-  /// Horas del mes anterior al corte con el tope mensual; `null` si ese mes no
-  /// tiene datos.
-  final double? previousMonthPace;
-
-  /// [percentage] de la proyección cortada en el mes con datos anterior;
-  /// `null` si no hay un mes anterior con datos.
-  final double? previousPercentage;
-
-  const AnnualProjection({
-    required this.cutoffMonth,
-    required this.employeeCount,
-    required this.arrive,
-    required this.projection,
-    required this.goal,
-    required this.accumulated,
-    required this.missing,
-    required this.status,
-    required this.monthCompliance,
-    required this.recentPace,
-    required this.previousMonthPace,
-    this.previousPercentage,
-  });
-
-  int get remainingMonths => 12 - cutoffMonth;
-
-  double get percentage => goal == 0 ? 100 : projection / goal * 100;
-
-  /// Puntos de la meta que mejoró (o empeoró) la proyección contra la del
-  /// mes anterior.
-  double? get projectionVariation =>
-      previousPercentage == null ? null : percentage - previousPercentage!;
-
-  /// Horas por persona y por mes que hay que sumar a la tendencia para
-  /// llegar; 0 si ya no quedan meses.
-  double get adjustment => remainingMonths == 0 ? 0 : missing / remainingMonths;
-
-  /// Diferencia de horas por persona contra el mes anterior.
-  double? get variation =>
-      previousMonthPace == null ? null : recentPace - previousMonthPace!;
-}
+import 'package:app_finnegans/features/projection/domain/projection.dart';
 
 class ProjectionService {
-  const ProjectionService();
+  static const onTrackPercentage = 100.0;
+  static const reachablePercentage = 85.0;
 
-  /// [byMonth] tiene el cumplimiento mensual de los meses con datos hasta el
-  /// corte; un mes sin datos de nadie no está y no cuenta. Se proyecta a los
-  /// colaboradores del mes de corte, con todo su historial del año. Devuelve
-  /// `null` si el mes de corte no tiene colaboradores.
+  final CompliancePeriodService periods;
+
+  const ProjectionService({this.periods = const CompliancePeriodService()});
+
+  /// [percentage] is the part of the goal the projection covers.
+  ProjectionStatus statusFor(double percentage) {
+    if (percentage >= onTrackPercentage) return ProjectionStatus.onTrack;
+    if (percentage >= reachablePercentage) return ProjectionStatus.reachable;
+    return ProjectionStatus.atRisk;
+  }
+
+  /// Projection of a section: without [area] and [team] the whole visible
+  /// payroll. The section is defined by where each employee is in the cutoff
+  /// month; their whole year history counts, even from another team.
+  AnnualProjection? calculateForSection({
+    required Map<int, List<EmployeeCompliance>> byMonth,
+    required int cutoffMonth,
+    String? area,
+    String? team,
+  }) {
+    if (area == null && team == null) {
+      return calculate(byMonth: byMonth, cutoffMonth: cutoffMonth);
+    }
+    final employeeIds = (byMonth[cutoffMonth] ?? const <EmployeeCompliance>[])
+        .where(
+          (item) =>
+              periods.belongsToTeam(item.employee, area: area, team: team),
+        )
+        .map((item) => item.employee.employeeId)
+        .toSet();
+    return calculate(
+      byMonth: byMonth.map(
+        (month, items) => MapEntry(
+          month,
+          items
+              .where((item) => employeeIds.contains(item.employee.employeeId))
+              .toList(),
+        ),
+      ),
+      cutoffMonth: cutoffMonth,
+    );
+  }
+
+  /// [byMonth] holds the monthly compliance of the months with data up to the
+  /// cutoff; a month without anyone's data is absent and does not count. It
+  /// projects the employees of the cutoff month with their whole year
+  /// history. `null` when the cutoff month has no employees.
   AnnualProjection? calculate({
     required Map<int, List<EmployeeCompliance>> byMonth,
     required int cutoffMonth,
   }) {
-    final current = _calculate(byMonth: byMonth, cutoffMonth: cutoffMonth);
-    if (current == null) return null;
-
-    // La misma proyección, cortada en el mes con datos anterior.
-    final previous =
-        byMonth.entries
-            .where((e) => e.key < cutoffMonth && e.value.isNotEmpty)
-            .map((e) => e.key)
-            .toList()
-          ..sort();
-    if (previous.isEmpty) return current;
-    final preview = _calculate(byMonth: byMonth, cutoffMonth: previous.last);
-    return AnnualProjection(
-      cutoffMonth: current.cutoffMonth,
-      employeeCount: current.employeeCount,
-      arrive: current.arrive,
-      projection: current.projection,
-      goal: current.goal,
-      accumulated: current.accumulated,
-      missing: current.missing,
-      status: current.status,
-      monthCompliance: current.monthCompliance,
-      recentPace: current.recentPace,
-      previousMonthPace: current.previousMonthPace,
+    final previous = _previousMonth(byMonth, cutoffMonth);
+    final preview = previous == null
+        ? null
+        : _calculate(byMonth: byMonth, cutoffMonth: previous);
+    return _calculate(
+      byMonth: byMonth,
+      cutoffMonth: cutoffMonth,
       previousPercentage: preview?.percentage,
+    );
+  }
+
+  /// One employee's projection, compared with the same projection cut at the
+  /// previous month they were in. [own] holds only that employee.
+  EmployeeProjection? projectEmployee({
+    required Map<int, List<EmployeeCompliance>> own,
+    required int cutoffMonth,
+  }) {
+    final current = projectEmployees(
+      byMonth: own,
+      cutoffMonth: cutoffMonth,
+    ).firstOrNull;
+    if (current == null) return null;
+    final previous = _previousMonth(own, cutoffMonth);
+    if (previous == null) return current;
+    final preview = projectEmployees(
+      byMonth: own,
+      cutoffMonth: previous,
+    ).firstOrNull;
+    return employeeProjection(
+      employeeId: current.employeeId,
+      cutoffMonth: current.cutoffMonth,
+      categories: current.categories,
+      previousPercentage: preview?.percentage,
+    );
+  }
+
+  /// Change of a section's compliance against the previous month. Each month
+  /// is filtered by where each employee was that month and accumulated with
+  /// the same calculation as the annual figure.
+  ComplianceVariation? variation({
+    required Map<int, List<EmployeeCompliance>> byMonth,
+    required int cutoffMonth,
+    String? area,
+    String? team,
+  }) {
+    final all = area == null && team == null;
+    final filtered = byMonth.map(
+      (month, items) => MapEntry(
+        month,
+        all
+            ? items
+            : items
+                  .where(
+                    (item) => periods.belongsToTeam(
+                      item.employee,
+                      area: area,
+                      team: team,
+                    ),
+                  )
+                  .toList(),
+      ),
+    );
+
+    double percentage(int until) {
+      final accumulated = periods.accumulateMonths([
+        for (final entry in filtered.entries)
+          if (entry.key <= until) entry.value,
+      ]);
+      final hours = accumulated.fold<double>(
+        0,
+        (t, c) => t + c.totalCreditedHours,
+      );
+      final target = accumulated.fold<double>(
+        0,
+        (t, c) => t + c.totalRequiredHours,
+      );
+      return target == 0 ? 0 : hours / target * 100;
+    }
+
+    double? hoursPerPerson(int month) {
+      final items = filtered[month];
+      if (items == null || items.isEmpty) return null;
+      return items.fold<double>(0, (t, c) => t + c.totalCreditedHours) /
+          items.length;
+    }
+
+    final current = hoursPerPerson(cutoffMonth);
+    if (current == null) return null;
+    final previous = _previousMonth(filtered, cutoffMonth);
+    final previousHours = hoursPerPerson(cutoffMonth - 1);
+    return ComplianceVariation(
+      points: previous == null
+          ? null
+          : percentage(cutoffMonth) - percentage(previous),
+      hoursPerPerson: current,
+      previousHoursPerPerson: previousHours,
+      hours: previousHours == null ? null : current - previousHours,
+    );
+  }
+
+  /// Projection of each employee of the cutoff month, per category, with
+  /// their whole year history in [byMonth]. Only categories with a goal.
+  List<EmployeeProjection> projectEmployees({
+    required Map<int, List<EmployeeCompliance>> byMonth,
+    required int cutoffMonth,
+  }) {
+    final history = <String, Map<int, EmployeeCompliance>>{};
+    for (final MapEntry(key: month, value: items) in byMonth.entries) {
+      if (month > cutoffMonth) continue;
+      for (final item in items) {
+        (history[item.employee.employeeId] ??= {})[month] = item;
+      }
+    }
+    final remaining = 12 - cutoffMonth;
+    final employeeIds = {
+      for (final item in byMonth[cutoffMonth] ?? const <EmployeeCompliance>[])
+        item.employee.employeeId,
+    };
+
+    return employeeIds.map((employeeId) {
+      final months = history[employeeId]!;
+      final cutoff = months[cutoffMonth]!;
+      final categories = CourseCategory.values
+          .map(
+            (type) => _projectCategory(
+              type: type,
+              months: months,
+              cutoff: cutoff,
+              cutoffMonth: cutoffMonth,
+              remaining: remaining,
+            ),
+          )
+          .whereType<CategoryProjection>()
+          .toList();
+      return employeeProjection(
+        employeeId: employeeId,
+        cutoffMonth: cutoffMonth,
+        categories: categories,
+      );
+    }).toList();
+  }
+
+  CategoryProjection? _projectCategory({
+    required CourseCategory type,
+    required Map<int, EmployeeCompliance> months,
+    required EmployeeCompliance cutoff,
+    required int cutoffMonth,
+    required int remaining,
+  }) {
+    // Uncapped by month; only the months in which it was required count.
+    final points = <({int month, double hours})>[
+      for (final MapEntry(key: month, value: item) in months.entries)
+        (
+          month: month,
+          hours: (item.requiredHours[type] ?? 0) > 0
+              ? item.creditedHours[type] ?? 0
+              : 0,
+        ),
+    ];
+    final goal =
+        months.values.fold<double>(
+          0,
+          (total, item) => total + (item.requiredHours[type] ?? 0),
+        ) +
+        (cutoff.requiredHours[type] ?? 0) * remaining;
+    if (goal <= 0) return null;
+
+    final accumulated = points.fold<double>(0, (t, p) => t + p.hours);
+    final trend = _regression(points);
+    final future = [
+      for (var month = cutoffMonth + 1; month <= 12; month++) trend(month),
+    ].where((estimated) => estimated > 0).fold(0.0, (t, e) => t + e);
+    return categoryProjection(
+      type: type,
+      accumulated: accumulated,
+      goal: goal,
+      projected: accumulated + future,
+    );
+  }
+
+  CategoryProjection categoryProjection({
+    required CourseCategory type,
+    required double accumulated,
+    required double goal,
+    required double projected,
+  }) {
+    final arrives = projected >= goal;
+    return CategoryProjection(
+      type: type,
+      accumulated: accumulated,
+      goal: goal,
+      projected: projected,
+      arrives: arrives,
+      missing: arrives ? 0 : goal - projected,
+    );
+  }
+
+  EmployeeProjection employeeProjection({
+    required String employeeId,
+    required int cutoffMonth,
+    required List<CategoryProjection> categories,
+    double? previousPercentage,
+  }) {
+    final projection = categories.fold<double>(
+      0,
+      (t, c) => t + (c.projected < c.goal ? c.projected : c.goal),
+    );
+    final goal = categories.fold<double>(0, (t, c) => t + c.goal);
+    final percentage = goal == 0 ? 100.0 : projection / goal * 100;
+    return EmployeeProjection(
+      employeeId: employeeId,
+      cutoffMonth: cutoffMonth,
+      remainingMonths: 12 - cutoffMonth,
+      categories: categories,
+      projection: projection,
+      goal: goal,
+      percentage: percentage,
+      status: statusFor(percentage),
+      arrives: categories.every((c) => c.arrives),
+      missing: categories.where((c) => !c.arrives).toList()
+        ..sort((a, b) => b.missing.compareTo(a.missing)),
+      previousPercentage: previousPercentage,
+      variation: previousPercentage == null
+          ? null
+          : percentage - previousPercentage,
     );
   }
 
   AnnualProjection? _calculate({
     required Map<int, List<EmployeeCompliance>> byMonth,
     required int cutoffMonth,
+    double? previousPercentage,
   }) {
     final atCutoff = byMonth[cutoffMonth] ?? const [];
     if (atCutoff.isEmpty) return null;
@@ -212,21 +298,14 @@ class ProjectionService {
       byMonth: byMonth,
       cutoffMonth: cutoffMonth,
     );
-    var projection = 0.0;
-    var goal = 0.0;
-    var accumulated = 0.0;
-    var missing = 0.0;
-    for (final employee in employees) {
-      projection += employee.projection;
-      goal += employee.goal;
-      for (final category in employee.categories) {
-        accumulated += category.accumulated < category.goal
-            ? category.accumulated
-            : category.goal;
-        missing += category.missing;
-      }
-    }
-    final arrive = employees.where((e) => e.arrives).length;
+    final projection = employees.fold<double>(0, (t, e) => t + e.projection);
+    final goal = employees.fold<double>(0, (t, e) => t + e.goal);
+    final categories = employees.expand((e) => e.categories);
+    final accumulated = categories.fold<double>(
+      0,
+      (t, c) => t + (c.accumulated < c.goal ? c.accumulated : c.goal),
+    );
+    final missing = categories.fold<double>(0, (t, c) => t + c.missing);
 
     final n = employees.length;
     double withCap(List<EmployeeCompliance> items) =>
@@ -237,112 +316,77 @@ class ProjectionService {
       (t, c) => t + c.totalRequiredHours,
     );
     final previous = byMonth[cutoffMonth - 1] ?? const [];
+    final remaining = 12 - cutoffMonth;
+    final averageProjection = projection / n;
+    final averageGoal = goal / n;
+    final averageMissing = missing / n;
+    final percentage = averageGoal == 0
+        ? 100.0
+        : averageProjection / averageGoal * 100;
+    final recentPace = cutoffHours / n;
+    final previousMonthPace = previous.isEmpty
+        ? null
+        : withCap(previous) / previous.length;
 
     return AnnualProjection(
       cutoffMonth: cutoffMonth,
+      remainingMonths: remaining,
       employeeCount: n,
-      arrive: arrive,
-      projection: projection / n,
-      goal: goal / n,
+      arrive: employees.where((e) => e.arrives).length,
+      projection: averageProjection,
+      goal: averageGoal,
       accumulated: accumulated / n,
-      missing: missing / n,
-      status: ProjectionStatus.fromPercentage(
-        goal == 0 ? 100 : projection / goal * 100,
-      ),
+      missing: averageMissing,
+      percentage: percentage,
+      status: statusFor(goal == 0 ? 100 : projection / goal * 100),
       monthCompliance: cutoffTarget == 0
           ? 100
           : cutoffHours / cutoffTarget * 100,
-      recentPace: cutoffHours / n,
-      previousMonthPace: previous.isEmpty
+      recentPace: recentPace,
+      previousMonthPace: previousMonthPace,
+      variation: previousMonthPace == null
           ? null
-          : withCap(previous) / previous.length,
+          : recentPace - previousMonthPace,
+      previousPercentage: previousPercentage,
+      projectionVariation: previousPercentage == null
+          ? null
+          : percentage - previousPercentage,
+      adjustment: remaining == 0 ? 0 : averageMissing / remaining,
     );
   }
 
-  /// Proyección de cada colaborador del mes de corte, por categoría, con todo
-  /// su historial del año en [byMonth]. Solo incluye las categorías con meta.
-  List<EmployeeProjection> projectEmployees({
-    required Map<int, List<EmployeeCompliance>> byMonth,
-    required int cutoffMonth,
-  }) {
-    // Historial de cada colaborador por legajo: mes -> cumplimiento.
-    final history = <String, Map<int, EmployeeCompliance>>{};
-    for (final entry in byMonth.entries) {
-      if (entry.key > cutoffMonth) continue;
-      for (final item in entry.value) {
-        (history[item.employee.employeeId] ??= {})[entry.key] = item;
-      }
-    }
-
-    final remaining = 12 - cutoffMonth;
-    final employeeIds = {
-      for (final item in byMonth[cutoffMonth] ?? const <EmployeeCompliance>[])
-        item.employee.employeeId,
-    };
-
-    return [
-      for (final employeeId in employeeIds)
-        () {
-          final months = history[employeeId]!;
-          final cutoff = months[cutoffMonth]!;
-          final categories = <CategoryProjection>[];
-
-          for (final type in CourseCategory.values) {
-            final points = <({int month, double hours})>[];
-            var goal = 0.0;
-            for (final MapEntry(key: month, value: item) in months.entries) {
-              final required = item.requiredHours[type] ?? 0;
-              goal += required;
-              // Sin tope mensual; solo cuentan los meses en que era requerida.
-              points.add((
-                month: month,
-                hours: required > 0 ? item.creditedHours[type] ?? 0 : 0,
-              ));
-            }
-            goal += (cutoff.requiredHours[type] ?? 0) * remaining;
-            if (goal <= 0) continue;
-
-            final accumulated = points.fold<double>(0, (t, p) => t + p.hours);
-            final trend = _regression(points);
-            var future = 0.0;
-            for (var month = cutoffMonth + 1; month <= 12; month++) {
-              final estimated = trend(month);
-              if (estimated > 0) future += estimated;
-            }
-            categories.add(
-              CategoryProjection(
-                type: type,
-                accumulated: accumulated,
-                goal: goal,
-                projected: accumulated + future,
-              ),
-            );
-          }
-          return EmployeeProjection(
-            employeeId: employeeId,
-            cutoffMonth: cutoffMonth,
-            categories: categories,
-          );
-        }(),
-    ];
+  /// The month with data before [cutoffMonth], or `null`.
+  static int? _previousMonth(
+    Map<int, List<EmployeeCompliance>> byMonth,
+    int cutoffMonth,
+  ) {
+    final months =
+        byMonth.entries
+            .where((e) => e.key < cutoffMonth && e.value.isNotEmpty)
+            .map((e) => e.key)
+            .toList()
+          ..sort();
+    return months.lastOrNull;
   }
 
-  /// Regresión lineal simple de las horas sobre el mes. Con un solo mes, la
-  /// tendencia es plana.
+  /// Simple linear regression of hours over the month. With a single month
+  /// the trend is flat.
   double Function(int month) _regression(
     List<({int month, double hours})> points,
   ) {
     final n = points.length;
     final meanX = points.fold<double>(0, (t, p) => t + p.month) / n;
     final meanY = points.fold<double>(0, (t, p) => t + p.hours) / n;
-    var covariance = 0.0;
-    var variance = 0.0;
-    for (final p in points) {
-      covariance += (p.month - meanX) * (p.hours - meanY);
-      variance += (p.month - meanX) * (p.month - meanX);
-    }
-    final pending = variance == 0 ? 0.0 : covariance / variance;
-    final sorted = meanY - pending * meanX;
-    return (month) => sorted + pending * month;
+    final covariance = points.fold<double>(
+      0,
+      (t, p) => t + (p.month - meanX) * (p.hours - meanY),
+    );
+    final variance = points.fold<double>(
+      0,
+      (t, p) => t + (p.month - meanX) * (p.month - meanX),
+    );
+    final slope = variance == 0 ? 0.0 : covariance / variance;
+    final intercept = meanY - slope * meanX;
+    return (month) => intercept + slope * month;
   }
 }
