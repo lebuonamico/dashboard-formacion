@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
@@ -189,14 +190,11 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
       users = await ref.read(authorizedUsersProvider.future);
     } on Object catch (error) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is FormatException
-                ? error.message
-                : 'No se pudo cargar la lista de usuarios.',
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        error is FormatException
+            ? error.message
+            : 'No se pudo cargar la lista de usuarios.',
       );
       return null;
     }
@@ -228,21 +226,16 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
       ref.invalidate(orgStructureProvider);
       await ref.read(orgStructureProvider.future);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(success)));
+      showAppSnackBar(context, success);
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       debugPrint('Panel de áreas y equipos: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo completar la acción. Intentá nuevamente.'),
-        ),
+      showAppSnackBar(
+        context,
+        'No se pudo completar la acción. Intentá nuevamente.',
       );
     } finally {
       if (mounted) setState(() => _actionInProgress = null);

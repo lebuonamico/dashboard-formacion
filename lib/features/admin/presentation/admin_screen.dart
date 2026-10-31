@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -221,14 +222,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<void> _block() async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
-    final confirmed = await confirmAction(
+    final confirmed = await showConfirmationDialog(
       context,
       title: 'Bloquear usuario',
       message:
           '${user.email} no va a poder entrar a la aplicación hasta que lo '
           'desbloquees.',
       confirmLabel: 'Bloquear',
-      color: context.colors.warning.text,
+      confirmColor: context.colors.warning.text,
+      confirmKey: const Key('admin_confirmar'),
     );
     if (!confirmed) return;
     await _save(
@@ -241,6 +243,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<void> _unblock() async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
+    final confirmed = await showConfirmationDialog(
+      context,
+      title: 'Desbloquear usuario',
+      message: '${user.email} va a poder volver a entrar a la aplicación.',
+      confirmLabel: 'Desbloquear',
+      confirmKey: const Key('admin_confirmar'),
+    );
+    if (!confirmed) return;
     await _save(
       key: 'admin_desbloquear',
       user: user.unblocked(),
@@ -251,14 +261,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<void> _delete() async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
-    final confirmed = await confirmAction(
+    final confirmed = await showConfirmationDialog(
       context,
       title: 'Eliminar usuario',
       message:
           '${user.email} ya no va a poder entrar a la aplicación. Si más '
           'adelante lo necesitás, lo podés restaurar desde la lista.',
       confirmLabel: 'Eliminar',
-      color: context.colorScheme.error,
+      confirmColor: context.colorScheme.error,
+      confirmKey: const Key('admin_confirmar'),
     );
     if (!confirmed) return;
     await _save(
@@ -271,6 +282,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<void> _restore() async {
     final user = ref.read(selectedAdminUserProvider);
     if (user == null) return;
+    final confirmed = await showConfirmationDialog(
+      context,
+      title: 'Restaurar usuario',
+      message:
+          '${user.email} vuelve a la lista y, si no está bloqueado, puede entrar a la aplicación.',
+      confirmLabel: 'Restaurar',
+      confirmKey: const Key('admin_confirmar'),
+    );
+    if (!confirmed) return;
     await _save(
       key: 'admin_restaurar',
       user: user.restored(),
@@ -313,21 +333,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       }
       onFinish?.call();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(success)));
+      showAppSnackBar(context, success);
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       debugPrint('Panel de administración: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo completar la acción. Intentá nuevamente.'),
-        ),
+      showAppSnackBar(
+        context,
+        'No se pudo completar la acción. Intentá nuevamente.',
       );
     } finally {
       if (mounted) setState(() => _actionInProgress = null);

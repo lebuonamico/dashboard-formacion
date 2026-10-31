@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'dart:math' as math;
 
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -170,9 +171,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
       notice = 'No se pudo copiar. Revisá los permisos del portapapeles.';
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(notice), duration: const Duration(seconds: 2)),
-    );
+    showAppSnackBar(context, notice);
   }
 
   void _updateScroll(ChatState? previous, ChatState next) {

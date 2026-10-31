@@ -46,6 +46,8 @@ class EmployeesScreen extends ConsumerWidget {
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar los empleados',
                         error: err,
+                        onRetry: () =>
+                            ref.invalidate(filteredEmployeesProvider),
                       ),
                       data: (employees) => FadeIn(
                         child: (() {

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Explica en lenguaje simple por qué no se pudieron cargar los datos. El
 /// detalle técnico queda en la consola, no en pantalla.
-String timeEntryErrorMessage(Object error) {
+String loadErrorMessage(Object error) {
   if (error is FormatException) return error.message;
   if (error is PostgrestException) {
     final code = error.code ?? '';
@@ -36,12 +36,14 @@ class ErrorDataState extends StatelessWidget {
   final String title;
   final Object error;
   final bool compact;
+  final VoidCallback? onRetry;
 
   const ErrorDataState({
     super.key,
     required this.title,
     required this.error,
     this.compact = false,
+    this.onRetry,
   });
 
   @override
@@ -72,10 +74,18 @@ class ErrorDataState extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              timeEntryErrorMessage(error),
+              loadErrorMessage(error),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.tonalIcon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
           ],
         ),
       ),

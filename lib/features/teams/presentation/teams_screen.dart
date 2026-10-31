@@ -42,6 +42,7 @@ class TeamsScreen extends ConsumerWidget {
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar los equipos',
                 error: error,
+                onRetry: () => ref.invalidate(teamsPeriodSummaryProvider),
               ),
               data: (summary) => FadeIn(
                 child: _TeamsOverviewContent(
@@ -162,6 +163,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
             error: (error, _) => ErrorDataState(
               title: 'No pudimos cargar los equipos',
               error: error,
+              onRetry: () => ref.invalidate(filteredTeamOverviewsProvider),
             ),
             data: (filteredTeams) => TeamResults(
               key: ValueKey(

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'dart:math' as math;
 
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -308,12 +309,9 @@ class _SideMenuState extends ConsumerState<SideMenu>
                   }
                 } catch (_) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'No se pudo completar el cierre de sesión.',
-                        ),
-                      ),
+                    showAppSnackBar(
+                      context,
+                      'No se pudo completar el cierre de sesión.',
                     );
                   }
                 }

@@ -41,6 +41,8 @@ class TimeEntriesScreen extends ConsumerWidget {
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar las horas CRM',
                         error: err,
+                        onRetry: () =>
+                            ref.invalidate(joinedTimeEntriesProvider),
                       ),
                       data: (items) => FadeIn(
                         child: (() {

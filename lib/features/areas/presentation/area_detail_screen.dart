@@ -63,6 +63,7 @@ class AreaDetailScreen extends ConsumerWidget {
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar el área',
                 error: error,
+                onRetry: () => ref.invalidate(areaDetailProvider(areaName)),
               ),
               data: (detail) => FadeIn(
                 child: (() {

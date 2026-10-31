@@ -53,6 +53,9 @@ class TeamDetailScreen extends ConsumerWidget {
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar el equipo',
                 error: error,
+                onRetry: () => ref.invalidate(
+                  teamDetailProvider((area: area, team: team)),
+                ),
               ),
               data: (detail) {
                 final label = periodLabel(scope, month, year);

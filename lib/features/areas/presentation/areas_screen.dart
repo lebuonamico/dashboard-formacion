@@ -51,6 +51,7 @@ class AreasScreen extends ConsumerWidget {
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar las áreas',
                 error: error,
+                onRetry: () => ref.invalidate(areasPeriodSummaryProvider),
               ),
               data: (summary) => FadeIn(
                 child: _AreasContent(
@@ -176,6 +177,7 @@ class _AreasContent extends ConsumerWidget {
             error: (error, _) => ErrorDataState(
               title: 'No pudimos cargar las áreas',
               error: error,
+              onRetry: () => ref.invalidate(filteredAreasProvider),
             ),
             data: (filteredAreas) => AreasResults(
               key: ValueKey(

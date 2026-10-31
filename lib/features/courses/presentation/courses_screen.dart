@@ -41,6 +41,7 @@ class CoursesScreen extends ConsumerWidget {
                       error: (err, _) => ErrorDataState(
                         title: 'No pudimos cargar los cursos',
                         error: err,
+                        onRetry: () => ref.invalidate(courseStatsProvider),
                       ),
                       data: (coursesList) => FadeIn(
                         child: (() {

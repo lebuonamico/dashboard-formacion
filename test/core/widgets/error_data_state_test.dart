@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   test('una columna inexistente se explica sin mostrar el error técnico', () {
-    final message = timeEntryErrorMessage(
+    final message = loadErrorMessage(
       const PostgrestException(
         message: 'column cursos.tipo does not exist',
         code: '42703',
@@ -17,7 +17,7 @@ void main() {
 
   test('sin permisos lo dice', () {
     expect(
-      timeEntryErrorMessage(
+      loadErrorMessage(
         const PostgrestException(message: 'denied', code: '42501'),
       ),
       contains('permisos'),
@@ -26,13 +26,13 @@ void main() {
 
   test('un FormatException conserva su mensaje', () {
     expect(
-      timeEntryErrorMessage(const FormatException('Fecha inválida.')),
+      loadErrorMessage(const FormatException('Fecha inválida.')),
       'Fecha inválida.',
     );
   });
 
   test('un error desconocido da un mensaje genérico', () {
-    final message = timeEntryErrorMessage(StateError('boom'));
+    final message = loadErrorMessage(StateError('boom'));
     expect(message, contains('error inesperado'));
     expect(message, isNot(contains('boom')));
   });

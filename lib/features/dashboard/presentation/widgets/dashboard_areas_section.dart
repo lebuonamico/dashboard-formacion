@@ -78,6 +78,7 @@ class DashboardAreasSection extends ConsumerWidget {
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar las áreas',
                 error: error,
+                onRetry: () => ref.invalidate(teamOverviewsProvider),
                 compact: true,
               ),
               data: (teams) {

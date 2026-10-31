@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
@@ -23,22 +24,19 @@ class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
   bool _generating = false;
 
   Future<void> _print(TrainingReport report) async {
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _generating = true);
     try {
       await ref.read(printReportProvider)(report);
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo generar el reporte: $error')),
-      );
+      if (mounted) {
+        showAppSnackBar(context, 'No se pudo generar el reporte: $error');
+      }
     } finally {
       if (mounted) setState(() => _generating = false);
     }
   }
 
-  void _notify(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  void _notify(String message) => showAppSnackBar(context, message);
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +62,7 @@ class _PrintReportButtonState extends ConsumerState<PrintReportButton> {
             : () => switch (reportAsync) {
                 AsyncValue(:final error?) => _notify(
                   'No se pudieron cargar los datos. '
-                  '${timeEntryErrorMessage(error)}',
+                  '${loadErrorMessage(error)}',
                 ),
                 AsyncValue(value: final report?) => _print(report),
                 _ => _notify(noReportData),

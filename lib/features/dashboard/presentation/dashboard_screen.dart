@@ -55,6 +55,7 @@ class DashboardScreen extends ConsumerWidget {
                     error: (error, _) => ErrorDataState(
                       title: 'No pudimos cargar el tablero',
                       error: error,
+                      onRetry: () => ref.invalidate(hasTeamPeriodDataProvider),
                     ),
                     data: (hasData) => FadeIn(
                       child: (() {

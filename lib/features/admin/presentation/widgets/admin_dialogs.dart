@@ -24,49 +24,6 @@ Future<UserRole?> showRoleChangeDialog(
   );
 }
 
-Future<bool> confirmAction(
-  BuildContext context, {
-  required String title,
-  required String message,
-  required String confirmLabel,
-  required Color color,
-}) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => _DialogFrame(
-      title: title,
-      width: 460,
-      children: [
-        Text(
-          message,
-          style: context.textTheme.bodyMedium?.copyWith(
-            color: context.colors.intermediateText,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              key: const Key('admin_confirmar'),
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: color),
-              child: Text(confirmLabel),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-  return confirmed ?? false;
-}
-
 /// Elige los líderes de un área o un equipo entre los usuarios activos con
 /// [role]. Devuelve el conjunto completo de emails, o `null` si se cancela.
 Future<Set<String>?> showLeadersDialog(
@@ -411,14 +368,12 @@ class _RoleChangeDialogState extends State<_RoleChangeDialog> {
 class _DialogFrame extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final double width;
   final List<Widget> children;
 
   const _DialogFrame({
     required this.title,
     required this.children,
     this.subtitle,
-    this.width = 520,
   });
 
   @override
@@ -426,7 +381,7 @@ class _DialogFrame extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: width),
+        constraints: const BoxConstraints(maxWidth: 520),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(

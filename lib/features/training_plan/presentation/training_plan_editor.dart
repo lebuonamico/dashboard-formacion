@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -138,7 +139,6 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
   }
 
   Future<void> _save(TrainingPlan plan) async {
-    final messenger = ScaffoldMessenger.of(context);
     final validity = '${monthName(_month)} $_year';
     setState(() => _saving = true);
     try {
@@ -150,15 +150,15 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
       // Recalcula todo el cumplimiento y recarga el formulario.
       ref.invalidate(trainingPlanHistoryProvider);
       await ref.read(trainingPlanHistoryProvider.future);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Plan guardado: rige desde $validity.')),
-      );
+      if (mounted) {
+        showAppSnackBar(context, 'Plan guardado: rige desde $validity.');
+      }
     } on FormatException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) showAppSnackBar(context, error.message);
     } on Object catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo guardar el plan: $error')),
-      );
+      if (mounted) {
+        showAppSnackBar(context, 'No se pudo guardar el plan: $error');
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

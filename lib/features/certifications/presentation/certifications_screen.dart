@@ -42,6 +42,7 @@ class CertificationsScreen extends ConsumerWidget {
                 error: (error, _) => ErrorDataState(
                   title: 'No pudimos cargar las certificaciones LMS',
                   error: error,
+                  onRetry: () => ref.invalidate(joinedCertificationsProvider),
                 ),
                 data: (all) => FadeIn(
                   child: (() {

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
@@ -343,23 +344,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Se importaron ${certifications.length} certificaciones LMS.',
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        'Se importaron ${certifications.length} certificaciones LMS.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar el archivo: $error')),
-      );
+      showAppSnackBar(context, 'No se pudo importar el archivo: $error');
     } finally {
       _finishImport('finalizaciones');
     }
@@ -682,23 +676,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Se importaron $importedRecords registros desde ${result.files.single.name}.',
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        'Se importaron $importedRecords registros desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar el archivo: $error')),
-      );
+      showAppSnackBar(context, 'No se pudo importar el archivo: $error');
     } finally {
       _finishImport('nomina');
     }
@@ -865,23 +852,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Se cargaron ${importedCourses.length} cursos desde ${result.files.single.name}.',
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        'Se cargaron ${importedCourses.length} cursos desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar el archivo: $error')),
-      );
+      showAppSnackBar(context, 'No se pudo importar el archivo: $error');
     } finally {
       _finishImport('cursos');
     }
@@ -1035,23 +1015,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Se cargaron ${importedTimeEntries.length} registros desde ${result.files.single.name}.',
-          ),
-        ),
+      showAppSnackBar(
+        context,
+        'Se cargaron ${importedTimeEntries.length} registros desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      showAppSnackBar(context, error.message);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo importar el archivo: $error')),
-      );
+      showAppSnackBar(context, 'No se pudo importar el archivo: $error');
     } finally {
       _finishImport('horas');
     }

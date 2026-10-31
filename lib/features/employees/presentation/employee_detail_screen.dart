@@ -60,6 +60,8 @@ class EmployeeDetailScreen extends ConsumerWidget {
               error: (err, _) => ErrorDataState(
                 title: 'No pudimos cargar el colaborador',
                 error: err,
+                onRetry: () =>
+                    ref.invalidate(employeeDetailProvider(employeeId)),
               ),
               data: (detail) => FadeIn(
                 child: (() {
