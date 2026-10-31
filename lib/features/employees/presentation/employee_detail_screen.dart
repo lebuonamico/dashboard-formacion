@@ -1,26 +1,30 @@
-import 'package:app_finnegans/core/widgets/error_data_state.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
+import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
+import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/app_top_bar.dart';
+import 'package:app_finnegans/core/widgets/color_label.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/screen_padding.dart';
+import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
+import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/widgets/employee_projection_card.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
-import 'package:app_finnegans/core/widgets/app_top_bar.dart';
-import 'package:app_finnegans/core/widgets/empty_data_state.dart';
-import 'package:app_finnegans/core/widgets/color_label.dart';
-import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
-import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/features/employees/domain/employee.dart';
-import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
-import 'package:app_finnegans/core/text/text_normalizer.dart';
-import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
-import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
   final String employeeId;
@@ -30,18 +34,6 @@ class EmployeeDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(employeeDetailProvider(employeeId));
-    final scope = ref.watch(periodFilterProvider).scope;
-    final month = ref.watch(periodFilterProvider).month;
-    final year = ref.watch(periodFilterProvider).year;
-    final periodText = scope == PeriodScope.annual
-        ? 'Año $year'
-        : '${monthName(month)} $year';
-    final hasPeriodData = ref.watch(hasTeamPeriodDataProvider).value ?? true;
-
-    final sectionStyle = context.textTheme.bodyLarge!.copyWith(
-      fontWeight: FontWeight.w700,
-      color: context.colorScheme.onSurface,
-    );
 
     return Scaffold(
       body: Column(
@@ -50,11 +42,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
             title: 'Perfil del colaborador',
             backTo: '/empleados',
           ),
-
-          // Contenido
           Expanded(
             child: detailAsync.when(
-              // Al cambiar el período mantiene los datos previos en pantalla.
+              // Keeps the previous data on screen while the period changes.
               skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => ErrorDataState(
@@ -64,84 +54,12 @@ class EmployeeDetailScreen extends ConsumerWidget {
                     ref.invalidate(employeeDetailProvider(employeeId)),
               ),
               data: (detail) => FadeIn(
-                child: (() {
-                  if (detail == null) {
-                    return const Center(child: Text('Empleado no encontrado.'));
-                  }
-
-                  final emp = detail.employee;
-                  final currentCompliance = detail.compliance;
-
-                  return ListView(
-                    padding: screenPadding,
-                    children: [
-                      // Cabecera con datos del empleado
-                      _buildEmployeeHeader(
-                        context,
-                        emp,
-                        currentCompliance,
-                        showCompliance: hasPeriodData,
+                child: detail == null
+                    ? const Center(child: Text('Empleado no encontrado.'))
+                    : _EmployeeDetailBody(
+                        employeeId: employeeId,
+                        detail: detail,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Filtro de período global
-                      const PeriodFilterPanel(),
-                      const SizedBox(height: 24),
-
-                      if (!hasPeriodData) ...[
-                        EmptyDataState.periodWithoutData(
-                          period: periodLabel(scope, month, year),
-                        ),
-                        const SizedBox(height: 24),
-                      ] else ...[
-                        // Desglose de cumplimiento por categoría
-                        Text(
-                          'Desglose del plan de formación ($periodText)',
-                          style: sectionStyle,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCategoriesGrid(context, currentCompliance),
-                        const SizedBox(height: 24),
-
-                        if (ref
-                                .watch(employeeProjectionProvider(employeeId))
-                                .value
-                            case final projection?) ...[
-                          Text('Proyección a fin de año', style: sectionStyle),
-                          const SizedBox(height: 12),
-                          EmployeeProjectionCard(
-                            projection: projection,
-                            year: year,
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-
-                        // Cursos del período: Moodle y CRM
-                        Text(
-                          'Cursos del período ($periodText)',
-                          style: sectionStyle,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCoursesColumns(context, detail),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Cursos Dictados (si aplica al seniority)
-                      if ((currentCompliance.requiredHours[CourseCategory
-                                      .teaching] ??
-                                  0) >
-                              0 ||
-                          detail.taughtCourses.isNotEmpty) ...[
-                        Text(
-                          'Cursos dictados como instructor',
-                          style: sectionStyle,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTaughtTable(context, detail.taughtCourses),
-                      ],
-                    ],
-                  );
-                })(),
               ),
             ),
           ),
@@ -149,15 +67,89 @@ class EmployeeDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildEmployeeHeader(
-    BuildContext context,
-    Employee emp,
-    EmployeeCompliance currentCompliance, {
-    required bool showCompliance,
-  }) {
+class _EmployeeDetailBody extends ConsumerWidget {
+  final String employeeId;
+  final EmployeeDetailViewModel detail;
+
+  const _EmployeeDetailBody({required this.employeeId, required this.detail});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(periodFilterProvider);
+    final periodText = period.scope == PeriodScope.annual
+        ? 'Año ${period.year}'
+        : '${monthName(period.month)} ${period.year}';
+    final hasPeriodData = ref.watch(hasTeamPeriodDataProvider).value ?? true;
+    final compliance = detail.compliance;
+    final sectionStyle = context.textTheme.bodyLarge!.copyWith(
+      fontWeight: FontWeight.w700,
+      color: context.colorScheme.onSurface,
+    );
+
+    return ListView(
+      padding: screenPadding,
+      children: [
+        _EmployeeHeader(
+          employee: detail.employee,
+          compliance: compliance,
+          showCompliance: hasPeriodData,
+        ),
+        const SizedBox(height: 16),
+        const PeriodFilterPanel(),
+        const SizedBox(height: 24),
+        if (!hasPeriodData) ...[
+          EmptyDataState.periodWithoutData(
+            period: periodLabel(period.scope, period.month, period.year),
+          ),
+          const SizedBox(height: 24),
+        ] else ...[
+          Text(
+            'Desglose del plan de formación ($periodText)',
+            style: sectionStyle,
+          ),
+          const SizedBox(height: 12),
+          _CategoriesGrid(compliance),
+          const SizedBox(height: 24),
+          if (ref.watch(employeeProjectionProvider(employeeId)).value
+              case final projection?) ...[
+            Text('Proyección a fin de año', style: sectionStyle),
+            const SizedBox(height: 12),
+            EmployeeProjectionCard(projection: projection, year: period.year),
+            const SizedBox(height: 24),
+          ],
+          Text('Cursos del período ($periodText)', style: sectionStyle),
+          const SizedBox(height: 12),
+          _CoursesColumns(detail),
+          const SizedBox(height: 24),
+        ],
+        if ((compliance.requiredHours[CourseCategory.teaching] ?? 0) > 0 ||
+            detail.taughtCourses.isNotEmpty) ...[
+          Text('Cursos dictados como instructor', style: sectionStyle),
+          const SizedBox(height: 12),
+          _TaughtTable(detail.taughtCourses),
+        ],
+      ],
+    );
+  }
+}
+
+class _EmployeeHeader extends StatelessWidget {
+  final Employee employee;
+  final EmployeeCompliance compliance;
+  final bool showCompliance;
+
+  const _EmployeeHeader({
+    required this.employee,
+    required this.compliance,
+    required this.showCompliance,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final complianceStatus = currentCompliance.meetsTarget
+    final complianceStatus = compliance.meetsTarget
         ? context.colors.success
         : context.colors.warning;
     return Container(
@@ -170,9 +162,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
             radius: 36,
             backgroundColor: cs.primary,
             child: Text(
-              emp.firstName.trim().isEmpty
+              employee.firstName.trim().isEmpty
                   ? '?'
-                  : emp.firstName.trim().substring(0, 1).toUpperCase(),
+                  : employee.firstName.trim().substring(0, 1).toUpperCase(),
               style: context.textTheme.displaySmall?.copyWith(
                 color: cs.onPrimary,
                 fontWeight: FontWeight.bold,
@@ -187,26 +179,26 @@ class EmployeeDetailScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      '${emp.firstName} ${emp.lastName}',
+                      '${employee.firstName} ${employee.lastName}',
                       style: context.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    SeniorityChip(seniority: emp.seniority),
+                    SeniorityChip(seniority: employee.seniority),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Área de ${emp.area} · Legajo: ${emp.employeeId}',
+                  'Área de ${employee.area} · Legajo: ${employee.employeeId}',
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  emp.email,
+                  employee.email,
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -216,17 +208,19 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _EmployeeData(label: 'Equipo', value: _showData(emp.team)),
+                    _EmployeeData(
+                      label: 'Equipo',
+                      value: orDash(employee.team),
+                    ),
                     _EmployeeData(
                       label: 'Gerente',
-                      value: _showData(emp.manager),
+                      value: orDash(employee.manager),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Estado de Cumplimiento Global
           if (showCompliance)
             Container(
               padding: const EdgeInsets.all(16),
@@ -237,7 +231,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    '${currentCompliance.totalCreditedHours.toStringAsFixed(0)} / ${currentCompliance.totalRequiredHours.toStringAsFixed(0)} hs LMS',
+                    '${compliance.totalCreditedHours.toStringAsFixed(0)} / ${compliance.totalRequiredHours.toStringAsFixed(0)} hs LMS',
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: complianceStatus.text,
@@ -245,7 +239,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    currentCompliance.meetsTarget
+                    compliance.meetsTarget
                         ? 'Objetivo cumplido'
                         : 'En progreso',
                     style: context.textTheme.labelMedium?.copyWith(
@@ -255,7 +249,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'CRM declaró ${currentCompliance.totalDeclaredHours.toStringAsFixed(0)} hs',
+                    'CRM declaró ${compliance.totalDeclaredHours.toStringAsFixed(0)} hs',
                     style: context.textTheme.labelMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -267,99 +261,117 @@ class EmployeeDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  String _showData(String value) => value.trim().isEmpty ? '-' : value;
+class _CategoriesGrid extends StatelessWidget {
+  final EmployeeCompliance compliance;
 
-  Widget _buildCategoriesGrid(
-    BuildContext context,
-    EmployeeCompliance currentCompliance,
-  ) {
+  const _CategoriesGrid(this.compliance);
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
-      children: CourseCategory.values.map((type) {
-        final completed = currentCompliance.creditedHours[type] ?? 0.0;
-        final declared = currentCompliance.declaredHours[type] ?? 0.0;
-        final required = currentCompliance.requiredHours[type] ?? 0.0;
-        final isRequired = required > 0;
-        final meets = isRequired && completed >= required;
-        // Libres y Dictado no existen en el LMS: se cumplen con horas CRM.
-        final source =
-            type == CourseCategory.exploration ||
-                type == CourseCategory.teaching
-            ? 'CRM'
-            : 'LMS';
-
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: context.panel(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  type.label,
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isRequired
-                      ? '${completed.toStringAsFixed(0)} / ${required.toStringAsFixed(0)} hs $source'
-                      : 'No requerida',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: !isRequired
-                        ? context.colorScheme.onSurfaceVariant
-                        : meets
-                        ? context.colors.success.text
-                        : context.colors.danger.text,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'CRM declaró ${declared.toStringAsFixed(0)} hs',
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: required == 0
-                        ? 0.0
-                        : (completed / required).clamp(0.0, 1.0),
-                    minHeight: 4,
-                    backgroundColor: context.colorScheme.surfaceContainer,
-                    color: !isRequired
-                        ? context.colorScheme.outlineVariant
-                        : meets
-                        ? context.colors.success.text
-                        : context.colors.warning.text,
-                  ),
-                ),
-              ],
+      children: CourseCategory.values
+          .map(
+            (type) => Expanded(
+              child: _CategoryCard(type: type, compliance: compliance),
             ),
-          ),
-        );
-      }).toList(),
+          )
+          .toList(),
     );
   }
+}
 
-  /// Muestra Moodle y CRM lado a lado; en pantallas angostas los apila.
-  Widget _buildCoursesColumns(
-    BuildContext context,
-    EmployeeDetailViewModel detail,
-  ) {
+class _CategoryCard extends StatelessWidget {
+  final CourseCategory type;
+  final EmployeeCompliance compliance;
+
+  const _CategoryCard({required this.type, required this.compliance});
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = compliance.creditedHours[type] ?? 0.0;
+    final declared = compliance.declaredHours[type] ?? 0.0;
+    final required = compliance.requiredHours[type] ?? 0.0;
+    final isRequired = required > 0;
+    final meets = isRequired && completed >= required;
+    // Exploration and Teaching do not exist in the LMS: CRM hours count.
+    final source =
+        type == CourseCategory.exploration || type == CourseCategory.teaching
+        ? 'CRM'
+        : 'LMS';
+
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: context.panel(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            type.label,
+            style: context.textTheme.labelMedium?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isRequired
+                ? '${completed.toStringAsFixed(0)} / ${required.toStringAsFixed(0)} hs $source'
+                : 'No requerida',
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: !isRequired
+                  ? context.colorScheme.onSurfaceVariant
+                  : meets
+                  ? context.colors.success.text
+                  : context.colors.danger.text,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'CRM declaró ${declared.toStringAsFixed(0)} hs',
+            style: context.textTheme.labelMedium?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: required == 0
+                  ? 0.0
+                  : (completed / required).clamp(0.0, 1.0),
+              minHeight: 4,
+              backgroundColor: context.colorScheme.surfaceContainer,
+              color: !isRequired
+                  ? context.colorScheme.outlineVariant
+                  : meets
+                  ? context.colors.success.text
+                  : context.colors.warning.text,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Moodle and CRM side by side; stacked on narrow screens.
+class _CoursesColumns extends StatelessWidget {
+  final EmployeeDetailViewModel detail;
+
+  const _CoursesColumns(this.detail);
+
+  @override
+  Widget build(BuildContext context) {
     final crmHours = detail.timeEntriesCrm.fold<double>(
       0,
       (total, item) => total + item.timeEntry.hours,
     );
-    // Horas del catálogo de los cursos Moodle finalizados en el período.
     final moodleHours = detail.lmsCertifications
         .where((item) => item.isCompleted)
         .fold<double>(
@@ -371,30 +383,27 @@ class EmployeeDetailScreen extends ConsumerWidget {
     final columnMoodle = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildColumnHeader(
-          context,
+        _ColumnHeader(
           icon: Icons.school_outlined,
           title: 'Moodle (LMS)',
-          detail: '${_formatHours(moodleHours)} hs',
+          detail: '${formatHours(moodleHours)} hs',
         ),
         const SizedBox(height: 8),
-        _buildColumnMoodle(context, detail),
+        _LmsCertificationsColumn(detail),
       ],
     );
     final columnCrm = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildColumnHeader(
-          context,
+        _ColumnHeader(
           icon: Icons.schedule_outlined,
           title: 'CRM (horas declaradas)',
-          detail: '${_formatHours(crmHours)} hs',
+          detail: '${formatHours(crmHours)} hs',
         ),
         const SizedBox(height: 8),
-        _buildTimeEntriesTable(
-          context,
-          detail.timeEntriesCrm,
-          detail.completedCourses,
+        _TimeEntriesColumn(
+          timeEntries: detail.timeEntriesCrm,
+          completedCourses: detail.completedCourses,
         ),
       ],
     );
@@ -418,13 +427,21 @@ class EmployeeDetailScreen extends ConsumerWidget {
       },
     );
   }
+}
 
-  Widget _buildColumnHeader(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String detail,
-  }) {
+class _ColumnHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  const _ColumnHeader({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
     return Row(
       children: [
@@ -448,8 +465,15 @@ class EmployeeDetailScreen extends ConsumerWidget {
       ],
     );
   }
+}
 
-  Widget _buildEmptyState(BuildContext context, String message) {
+class _EmptyPanel extends StatelessWidget {
+  final String message;
+
+  const _EmptyPanel(this.message);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: context.panel(),
@@ -461,15 +485,18 @@ class EmployeeDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildColumnMoodle(
-    BuildContext context,
-    EmployeeDetailViewModel detail,
-  ) {
+class _LmsCertificationsColumn extends StatelessWidget {
+  final EmployeeDetailViewModel detail;
+
+  const _LmsCertificationsColumn(this.detail);
+
+  @override
+  Widget build(BuildContext context) {
     if (detail.lmsCertifications.isEmpty) {
-      return _buildEmptyState(context, 'Sin certificaciones en el período.');
+      return const _EmptyPanel('Sin certificaciones en el período.');
     }
-
     return Column(
       children: detail.lmsCertifications.map((certification) {
         final course = detail.courseByName(certification.courseName);
@@ -478,160 +505,176 @@ class EmployeeDetailScreen extends ConsumerWidget {
           courseName: course?.name ?? certification.courseName,
           courseInfo: course == null
               ? 'Curso no encontrado en el catálogo'
-              : '${course.category.label} · ${_formatHours(course.workloadHours)} hs',
-          dateText: _formatDate(certification.completedAt!),
+              : '${course.category.label} · ${formatHours(course.workloadHours)} hs',
+          dateText: formatDate(certification.completedAt!),
         );
       }).toList(),
     );
   }
+}
 
-  Widget _buildTimeEntriesTable(
-    BuildContext context,
-    List<CrmTimeEntryRecord> timeEntries,
-    Set<String> completedCourses,
-  ) {
+class _TimeEntriesColumn extends StatelessWidget {
+  final List<CrmTimeEntryRecord> timeEntries;
+  final Set<String> completedCourses;
+
+  const _TimeEntriesColumn({
+    required this.timeEntries,
+    required this.completedCourses,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     if (timeEntries.isEmpty) {
-      return _buildEmptyState(context, 'Sin cargas CRM en el período.');
+      return const _EmptyPanel('Sin cargas CRM en el período.');
     }
-    final cs = context.colorScheme;
-    final colors = context.colors;
-
-    final groups = <String, List<CrmTimeEntryRecord>>{};
-    for (final timeEntry in timeEntries) {
-      final courseId = timeEntry.course?.id.trim() ?? '';
-      final courseName =
-          timeEntry.course?.name ?? timeEntry.timeEntry.courseName;
-      final key = courseId.isNotEmpty
-          ? 'id:$courseId'
-          : 'nombre:${courseName.trim().toLowerCase()}';
-      groups.putIfAbsent(key, () => []).add(timeEntry);
-    }
-
-    final groupedCourses = groups.entries.toList()
+    final groups = groupBy(timeEntries, _groupKey).entries.toList()
       ..sort((a, b) => _courseName(a.value).compareTo(_courseName(b.value)));
 
     return Column(
-      children: groupedCourses.map((group) {
-        final records = group.value
+      children: groups.map((group) {
+        final records = [...group.value]
           ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
-        final firstTimeEntry = records.first;
-        final courseName = _courseName(records);
-        final completedCourse = completedCourses.contains(
-          normalizeKey(courseName),
-        );
-        final declaredHours = records.fold<double>(
-          0,
-          (total, item) => total + item.timeEntry.hours,
-        );
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: context.panel(radius: 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: ExpansionTile(
-              key: PageStorageKey<String>('curso-${group.key}'),
-              tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-              childrenPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.menu_book_outlined,
-                color: cs.onSurfaceVariant,
-                size: 20,
-              ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      courseName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                  ),
-                  if (completedCourse) ...[
-                    const SizedBox(width: 8),
-                    ColorLabel(text: 'Finalizado', colors: colors.success),
-                  ],
-                ],
-              ),
-              subtitle: Text(
-                '${firstTimeEntry.course?.category.label ?? 'Tipo sin especificar'} · '
-                '${records.length} ${records.length == 1 ? 'registro' : 'registros'} · '
-                '${_formatHours(declaredHours)} hs declaradas',
-                style: context.textTheme.labelMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              children: [
-                const Divider(height: 1),
-                ...records.map((record) {
-                  final dateText = _formatDate(record.timeEntry.date);
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.event_outlined,
-                          size: 16,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            dateText,
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: colors.intermediateText,
-                            ),
-                          ),
-                        ),
-                        if (record.isTaught) ...[
-                          ColorLabel(text: 'Dictada', colors: colors.teaching),
-                          const SizedBox(width: 8),
-                        ],
-                        Text(
-                          '${_formatHours(record.timeEntry.hours)} hs',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ),
+        return _CourseTimeEntriesTile(
+          groupKey: group.key,
+          records: records,
+          completed: completedCourses.contains(
+            normalizeKey(_courseName(records)),
           ),
         );
       }).toList(),
     );
   }
 
-  String _courseName(List<CrmTimeEntryRecord> timeEntries) {
-    final first = timeEntries.first;
-    return first.course?.name ?? first.timeEntry.courseName;
+  static String _groupKey(CrmTimeEntryRecord record) {
+    final courseId = record.course?.id.trim() ?? '';
+    return courseId.isNotEmpty
+        ? 'id:$courseId'
+        : 'nombre:${_courseName([record]).trim().toLowerCase()}';
   }
+}
 
-  String _formatHours(double hours) => hours == hours.roundToDouble()
-      ? hours.toStringAsFixed(0)
-      : hours.toStringAsFixed(1);
+String _courseName(List<CrmTimeEntryRecord> timeEntries) {
+  final first = timeEntries.first;
+  return first.course?.name ?? first.timeEntry.courseName;
+}
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
+class _CourseTimeEntriesTile extends StatelessWidget {
+  final String groupKey;
+  final List<CrmTimeEntryRecord> records;
+  final bool completed;
 
-  Widget _buildTaughtTable(
-    BuildContext context,
-    List<TaughtCourseStats> taught,
-  ) {
+  const _CourseTimeEntriesTile({
+    required this.groupKey,
+    required this.records,
+    required this.completed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final declaredHours = records.fold<double>(
+      0,
+      (total, item) => total + item.timeEntry.hours,
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: context.panel(radius: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: ExpansionTile(
+          key: PageStorageKey<String>('curso-$groupKey'),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: EdgeInsets.zero,
+          leading: Icon(
+            Icons.menu_book_outlined,
+            color: cs.onSurfaceVariant,
+            size: 20,
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _courseName(records),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              if (completed) ...[
+                const SizedBox(width: 8),
+                ColorLabel(text: 'Finalizado', colors: context.colors.success),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            '${records.first.course?.category.label ?? 'Tipo sin especificar'} · '
+            '${records.length} ${records.length == 1 ? 'registro' : 'registros'} · '
+            '${formatHours(declaredHours)} hs declaradas',
+            style: context.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          children: [
+            const Divider(height: 1),
+            ...records.map(_TimeEntryRow.new),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeEntryRow extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _TimeEntryRow(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.event_outlined, size: 16, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              formatDate(record.timeEntry.date),
+              style: context.textTheme.bodySmall?.copyWith(
+                color: colors.intermediateText,
+              ),
+            ),
+          ),
+          if (record.isTaught) ...[
+            ColorLabel(text: 'Dictada', colors: colors.teaching),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            '${formatHours(record.timeEntry.hours)} hs',
+            style: context.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaughtTable extends StatelessWidget {
+  final List<TaughtCourseStats> taught;
+
+  const _TaughtTable(this.taught);
+
+  @override
+  Widget build(BuildContext context) {
     if (taught.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -674,34 +717,36 @@ class EmployeeDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
-        rows: taught.map((c) {
-          return DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  c.code,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              DataCell(
-                Text(
-                  c.name,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-              DataCell(Text(c.area)),
-              DataCell(
-                Text(
-                  '${_formatHours(c.hours)} hs',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: context.colors.teaching.text,
+        rows: taught
+            .map(
+              (course) => DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      course.code,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
+                  DataCell(
+                    Text(
+                      course.name,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  DataCell(Text(course.area)),
+                  DataCell(
+                    Text(
+                      '${formatHours(course.hours)} hs',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.teaching.text,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          );
-        }).toList(),
+            )
+            .toList(),
       ),
     );
   }
