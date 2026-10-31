@@ -6,4 +6,10 @@ extension ComplianceLevelLabel on ComplianceLevel {
     ComplianceLevel.atRisk => 'En riesgo',
     ComplianceLevel.critical => 'Crítico',
   };
+
+  String get pluralLabel => switch (this) {
+    ComplianceLevel.onTarget => 'Cumplidos',
+    ComplianceLevel.atRisk => 'En riesgo',
+    ComplianceLevel.critical => 'Críticos',
+  };
 }

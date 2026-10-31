@@ -21,6 +21,7 @@ import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_cr
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 class AreaDetailScreen extends ConsumerWidget {
   final String areaName;
@@ -110,7 +111,7 @@ class AreaDetailScreen extends ConsumerWidget {
 
 class _AreaContent extends ConsumerWidget {
   final AreaDetailViewModel detail;
-  final Set<String> filter;
+  final Set<ComplianceLevel> filter;
   final String period;
   final bool isAnnual;
   final String origin;
@@ -205,8 +206,8 @@ class _AreaContent extends ConsumerWidget {
         AreaMembersTable(
           members: detail.members,
           filter: filter,
-          onFilter: (value) =>
-              ref.read(areaMemberStatusFilterProvider.notifier).state = value,
+          onFilter: (levels) =>
+              ref.read(areaMemberStatusFilterProvider.notifier).select(levels),
         ),
       ],
     );

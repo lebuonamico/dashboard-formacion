@@ -13,14 +13,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 /// Integrantes del área, paginados y con selector para filtrar por avance.
 class AreaMembersTable extends StatefulWidget {
   final List<EmployeeCompliance> members;
 
-  /// `cumplido`, `riesgo`, `critico`; vacío = todos.
-  final Set<String> filter;
-  final ValueChanged<Set<String>> onFilter;
+  /// Vacío = todos.
+  final Set<ComplianceLevel> filter;
+  final ValueChanged<Set<ComplianceLevel>> onFilter;
 
   const AreaMembersTable({
     super.key,
@@ -58,20 +59,14 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
     }
   }
 
-  String _memberStatus(EmployeeCompliance member) =>
-      switch (const ComplianceLevelService().fromPercentage(
-        member.totalPercentage,
-      )) {
-        ComplianceLevel.onTarget => 'cumplido',
-        ComplianceLevel.atRisk => 'riesgo',
-        ComplianceLevel.critical => 'critico',
-      };
+  ComplianceLevel _memberLevel(EmployeeCompliance member) =>
+      const ComplianceLevelService().fromPercentage(member.totalPercentage);
 
   List<EmployeeCompliance> get _filteredMembers => widget.members
       .where(
         (member) =>
             widget.filter.isEmpty ||
-            widget.filter.contains(_memberStatus(member)),
+            widget.filter.contains(_memberLevel(member)),
       )
       .toList();
 
@@ -80,15 +75,10 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
     final statusOptions = const DataFilterService().cascade(
       [
         for (final member in widget.members)
-          FilterRow({'Estado': _memberStatus(member)}),
+          FilterRow({'Estado': _memberLevel(member).name}),
       ],
-      {'Estado': widget.filter},
+      {'Estado': widget.filter.map((level) => level.name).toSet()},
     )['Estado'];
-    const statusLabels = {
-      'cumplido': 'Cumplidos',
-      'riesgo': 'En riesgo',
-      'critico': 'Críticos',
-    };
     final filteredVisible = _order.apply(_filteredMembers);
     final orderIndex = _columns.indexWhere(
       (column) => column.$2 != null && column.$2 == _order.column,
@@ -121,18 +111,22 @@ class _AreaMembersTableState extends State<AreaMembersTable> {
             ),
             SizedBox(
               width: 250,
-              child: FilterDropdown<String>.multiple(
+              child: FilterDropdown<ComplianceLevel>.multiple(
                 selectedValues: widget.filter,
-                incompatibleValues:
-                    statusOptions?.incompatibleValues ?? const {},
+                incompatibleValues: {
+                  for (final name
+                      in statusOptions?.incompatibleValues ?? const <String>{})
+                    ComplianceLevel.values.byName(name),
+                },
                 hint: 'Estado',
                 icon: Icons.traffic_outlined,
                 items: [
-                  for (final value in statusOptions?.values ?? <String>[])
-                    DropdownMenuItem(
-                      value: value,
-                      child: Text(statusLabels[value] ?? value),
-                    ),
+                  for (final level in ComplianceLevel.values)
+                    if (statusOptions?.values.contains(level.name) ?? false)
+                      DropdownMenuItem(
+                        value: level,
+                        child: Text(level.pluralLabel),
+                      ),
                 ],
                 onSelectionChanged: widget.onFilter,
               ),

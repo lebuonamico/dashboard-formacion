@@ -1,6 +1,5 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
@@ -200,11 +199,22 @@ class AreaDetailViewModel {
   });
 }
 
-/// Estados de la tabla de integrantes del detalle: `cumplido`, `riesgo`,
-/// `critico`; conjunto vacío = todos. Se descarta al salir de la pantalla.
-final areaMemberStatusFilterProvider = StateProvider.autoDispose<Set<String>>(
-  (ref) => {},
-);
+/// Niveles que muestra la tabla de integrantes del detalle; vacío = todos.
+/// Se descarta al salir de la pantalla.
+final areaMemberStatusFilterProvider =
+    NotifierProvider.autoDispose<
+      AreaMemberStatusFilterNotifier,
+      Set<ComplianceLevel>
+    >(AreaMemberStatusFilterNotifier.new);
+
+class AreaMemberStatusFilterNotifier extends Notifier<Set<ComplianceLevel>> {
+  @override
+  Set<ComplianceLevel> build() => const {};
+
+  void select(Set<ComplianceLevel> levels) => state = Set.unmodifiable(levels);
+
+  void clear() => state = const {};
+}
 
 final areaDetailProvider = FutureProvider.family<AreaDetailViewModel?, String>((
   ref,
