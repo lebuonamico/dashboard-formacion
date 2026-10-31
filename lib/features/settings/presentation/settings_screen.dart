@@ -32,6 +32,7 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/domain/seniority_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -1208,24 +1209,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     validated[id] = content;
   }
 
-  Seniority _seniorityFromText(String value, String location) {
-    final normalized = normalizeKey(value);
-    final configured = Seniority.values.any(
-      (seniority) =>
-          normalizeKey(seniority.name) == normalized ||
-          normalizeKey(seniority.label) == normalized,
-    );
-    final validAlias = RegExp(
-      r'^trainee(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$|^t$'
-      r'|^(?:junior|jr|j|senior|senor|sr|s)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)?$'
-      r'|^(?:semisenior|semisenor|ssr|ss)(?:[123]|i{1,3}|primero|segundo|tercero|uno|dos|tres)$'
-      r'|^(?:manager|gerente|m)$',
-    ).hasMatch(normalized);
-    if (!configured && !validAlias) {
-      throw FormatException('Seniority inválido en $location: "$value".');
-    }
-    return Seniority.fromString(value);
-  }
+  Seniority _seniorityFromText(String value, String location) =>
+      const SeniorityParser().tryParse(value) ??
+      (throw FormatException('Seniority inválido en $location: "$value".'));
 
   bool _isColumnSeniority(String header) {
     return header == 'seniority' ||

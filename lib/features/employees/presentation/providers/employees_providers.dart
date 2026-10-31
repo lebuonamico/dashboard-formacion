@@ -14,6 +14,7 @@ import 'package:app_finnegans/features/certifications/presentation/providers/cer
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Nómina tal como la devuelve la base para la sesión (con RLS), leída una
 /// sola vez. La comparten [employeesProvider] y [sessionEmployeeProvider].

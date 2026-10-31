@@ -9,6 +9,7 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 final crmTimeEntriesProvider = FutureProvider<List<CrmTimeEntry>>((ref) async {
   final repo = ref.watch(crmTimeEntriesRepositoryProvider);

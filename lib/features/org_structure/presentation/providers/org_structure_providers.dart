@@ -6,6 +6,8 @@ import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
+import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Identidad de la sesión que define qué datos se leen.
 ///
@@ -48,7 +50,7 @@ final sessionEmployeeProvider = FutureProvider<Employee?>((ref) async {
   final session = ref.watch(sessionDataProvider);
   if (!session.enabled || session.email == null) return null;
   final employees = await ref.watch(payrollProvider.future);
-  return Employee.byEmail(employees, session.email);
+  return const EmployeeLookupService().findByEmail(employees, session.email);
 });
 
 /// Etiquetas de líderes para las tarjetas de equipos y áreas.

@@ -1,4 +1,5 @@
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Columnas por las que se pueden ordenar las tablas de integrantes.
 enum MemberSort { employeeId, employee, team, seniority, hours, compliance }

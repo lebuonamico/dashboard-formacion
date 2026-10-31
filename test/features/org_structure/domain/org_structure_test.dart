@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 
 Employee _employee(
   String employeeId,
@@ -194,11 +195,23 @@ void main() {
         'IMPLEMENTACIONES',
         email: ' ANA@x.com',
       );
-      expect(Employee.byEmail([removal, active], 'ana@X.com'), same(active));
-      expect(Employee.byEmail([removal], 'ana@x.com'), same(removal));
-      expect(Employee.byEmail([active], 'otra@x.com'), isNull);
-      expect(Employee.byEmail([active], null), isNull);
-      expect(Employee.byEmail([active], '  '), isNull);
+      expect(
+        const EmployeeLookupService().findByEmail([
+          removal,
+          active,
+        ], 'ana@X.com'),
+        same(active),
+      );
+      expect(
+        const EmployeeLookupService().findByEmail([removal], 'ana@x.com'),
+        same(removal),
+      );
+      expect(
+        const EmployeeLookupService().findByEmail([active], 'otra@x.com'),
+        isNull,
+      );
+      expect(const EmployeeLookupService().findByEmail([active], null), isNull);
+      expect(const EmployeeLookupService().findByEmail([active], '  '), isNull);
     });
 
     test('Describe equipo y área, sin equipo, baja y ausencia', () {

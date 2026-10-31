@@ -11,6 +11,7 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Integrantes del área, paginados y con selector para filtrar por avance.
 class AreaMembersTable extends StatefulWidget {

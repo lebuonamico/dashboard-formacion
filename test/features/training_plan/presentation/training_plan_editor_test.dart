@@ -9,6 +9,7 @@ import 'package:app_finnegans/features/training_plan/presentation/training_plan_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 
 class _PlanFake implements TrainingPlanRepository {
   TrainingPlanHistory plans;
@@ -114,7 +115,7 @@ void main() {
     // El resto queda como estaba.
     expect(
       saved.plan.requiredHours(Seniority.senior2),
-      Seniority.senior2.trainingPlan,
+      TrainingPlanDefaults.hours[Seniority.senior2]!,
     );
     expect(find.textContaining('Plan guardado: rige desde'), findsOneWidget);
     // El plan guardado es la nueva base: no quedan cambios pendientes.
@@ -176,7 +177,7 @@ void main() {
                 CourseCategory.exploration: 0,
                 CourseCategory.teaching: 0,
               }
-            : seniority.trainingPlan,
+            : TrainingPlanDefaults.hours[seniority]!,
     });
     final repository = _PlanFake(
       TrainingPlanHistory([

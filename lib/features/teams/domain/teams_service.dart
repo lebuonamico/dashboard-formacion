@@ -5,6 +5,7 @@ import 'package:app_finnegans/features/teams/domain/team_status.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_period_service.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 
 typedef TeamLeaderResolver = String? Function(String area, String team);
 
@@ -13,8 +14,12 @@ class TeamsService {
   static const _atRiskPercentage = 70.0;
 
   final TeamPeriodService periods;
+  final EmployeeLookupService lookup;
 
-  const TeamsService({this.periods = const TeamPeriodService()});
+  const TeamsService({
+    this.periods = const TeamPeriodService(),
+    this.lookup = const EmployeeLookupService(),
+  });
 
   List<TeamOverview> buildTeamOverviews(
     List<EmployeeCompliance> compliance, {
@@ -56,7 +61,10 @@ class TeamsService {
     if (members.isEmpty) return null;
 
     final overview = _buildTeamOverview(members, resolveLeader);
-    members.sort((a, b) => a.employee.fullName.compareTo(b.employee.fullName));
+    members.sort(
+      (a, b) =>
+          lookup.fullName(a.employee).compareTo(lookup.fullName(b.employee)),
+    );
 
     return TeamDetail(overview: overview, members: members);
   }

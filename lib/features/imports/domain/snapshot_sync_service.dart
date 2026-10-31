@@ -21,7 +21,7 @@ class SnapshotSyncService {
       incoming: employees,
       keyOf: (employee) => employee.employeeId,
       isActive: (employee) => employee.isActive,
-      withActive: (employee, active) => employee.copyWith(active: active),
+      withActive: (employee, active) => employee.copyWith(isActive: active),
     );
     return _result(employees.length, await repository.upsert(changes));
   }

@@ -5,6 +5,7 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 
 /// El plan por defecto con Junior 1 en 6 h de negocio y 2 de blandas.
 TrainingPlan _junior1SixTwo() => TrainingPlan({
@@ -16,7 +17,7 @@ TrainingPlan _junior1SixTwo() => TrainingPlan({
             CourseCategory.exploration: 0,
             CourseCategory.teaching: 0,
           }
-        : seniority.trainingPlan,
+        : TrainingPlanDefaults.hours[seniority]!,
 });
 
 void main() {
@@ -25,7 +26,10 @@ void main() {
       final plan = TrainingPlan.byDefault();
 
       for (final seniority in Seniority.values) {
-        expect(plan.requiredHours(seniority), seniority.trainingPlan);
+        expect(
+          plan.requiredHours(seniority),
+          TrainingPlanDefaults.hours[seniority]!,
+        );
       }
       expect(plan.requiredHours(Seniority.semisenior3), {
         CourseCategory.businessSkills: 1,
@@ -46,7 +50,7 @@ void main() {
                   CourseCategory.exploration: 0,
                   CourseCategory.teaching: 0,
                 }
-              : seniority.trainingPlan,
+              : TrainingPlanDefaults.hours[seniority]!,
       });
 
       expect(plan.total(Seniority.trainee), 10);
@@ -60,11 +64,13 @@ void main() {
         for (final seniority in Seniority.values)
           seniority: seniority == Seniority.junior1
               ? hours
-              : seniority.trainingPlan,
+              : TrainingPlanDefaults.hours[seniority]!,
       };
 
       expect(
-        () => TrainingPlan({Seniority.trainee: Seniority.trainee.trainingPlan}),
+        () => TrainingPlan({
+          Seniority.trainee: TrainingPlanDefaults.hours[Seniority.trainee]!,
+        }),
         throwsFormatException,
       );
       expect(
@@ -182,7 +188,9 @@ void main() {
       // Sin cambios es el plan mensual × 12.
       expect(
         plans.requiredForYear(Seniority.senior1, 2026),
-        Seniority.senior1.trainingPlan.map((type, h) => MapEntry(type, h * 12)),
+        TrainingPlanDefaults.hours[Seniority.senior1]!.map(
+          (type, h) => MapEntry(type, h * 12),
+        ),
       );
     });
   });

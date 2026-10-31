@@ -1,5 +1,7 @@
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Horas mensuales requeridas por categoría para cada seniority. Siempre
 /// está completo y es válido: el constructor rechaza lo que no lo es.
@@ -24,7 +26,8 @@ class TrainingPlan {
   factory TrainingPlan.byDefault() => _byDefault;
 
   static final _byDefault = TrainingPlan({
-    for (final seniority in Seniority.values) seniority: seniority.trainingPlan,
+    for (final seniority in Seniority.values)
+      seniority: TrainingPlanDefaults.hours[seniority]!,
   });
 
   factory TrainingPlan.fromJson(Map<String, dynamic> json) => TrainingPlan({

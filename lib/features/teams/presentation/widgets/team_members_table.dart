@@ -6,6 +6,7 @@ import 'package:app_finnegans/features/compliance/presentation/widgets/category_
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 class TeamMembersTable extends StatefulWidget {
   final List<EmployeeCompliance> members;

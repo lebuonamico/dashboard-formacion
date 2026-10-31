@@ -12,6 +12,7 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 final aiRealContextProvider = Provider<bool>(
   (ref) => const bool.fromEnvironment('IA_CONTEXTO_REAL', defaultValue: true),

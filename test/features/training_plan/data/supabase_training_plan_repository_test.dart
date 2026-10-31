@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 
 ({SupabaseTrainingPlanRepository repositorio, List<http.Request> requests})
 _fixture(Future<http.Response> Function(http.Request) respond) {
@@ -44,10 +45,14 @@ List<Map<String, Object>> _rows(
     {
       'vigente_desde': validFrom,
       'seniority': seniority.name,
-      'negocio': seniority.business,
-      'blandas': seniority.softSkills,
-      'libres': seniority.exploration,
-      'dictado': seniority.teaching,
+      'negocio': TrainingPlanDefaults
+          .hours[seniority]![CourseCategory.businessSkills]!,
+      'blandas':
+          TrainingPlanDefaults.hours[seniority]![CourseCategory.softSkills]!,
+      'libres':
+          TrainingPlanDefaults.hours[seniority]![CourseCategory.exploration]!,
+      'dictado':
+          TrainingPlanDefaults.hours[seniority]![CourseCategory.teaching]!,
       ...?changes[seniority.name],
     },
 ];
@@ -157,7 +162,7 @@ void main() {
                 CourseCategory.exploration: 0,
                 CourseCategory.teaching: 0,
               }
-            : seniority.trainingPlan,
+            : TrainingPlanDefaults.hours[seniority]!,
     });
 
     await fixture.repositorio.saveVersion(

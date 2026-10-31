@@ -7,6 +7,7 @@ import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.d
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 // Las tablas largas devuelven el título y la `pw.Table` por separado para
 // que `MultiPage` pueda partir la tabla entre páginas (ver `tablaPdf`).

@@ -2,6 +2,7 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Etiqueta de color para el seniority de un colaborador. Cada familia de
 /// nivel (Trainee, Junior, Semisenior, Senior, Manager) tiene su color; se

@@ -7,6 +7,7 @@ import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/report_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 
 EmployeeCompliance _member(
   int employeeId,
@@ -17,10 +18,14 @@ EmployeeCompliance _member(
   List<double> declared,
 ) {
   final required = {
-    CourseCategory.businessSkills: seniority.business,
-    CourseCategory.softSkills: seniority.softSkills,
-    CourseCategory.exploration: seniority.exploration,
-    CourseCategory.teaching: seniority.teaching,
+    CourseCategory.businessSkills:
+        TrainingPlanDefaults.hours[seniority]![CourseCategory.businessSkills]!,
+    CourseCategory.softSkills:
+        TrainingPlanDefaults.hours[seniority]![CourseCategory.softSkills]!,
+    CourseCategory.exploration:
+        TrainingPlanDefaults.hours[seniority]![CourseCategory.exploration]!,
+    CourseCategory.teaching:
+        TrainingPlanDefaults.hours[seniority]![CourseCategory.teaching]!,
   };
   final parts = name.split(' ');
   return EmployeeCompliance(

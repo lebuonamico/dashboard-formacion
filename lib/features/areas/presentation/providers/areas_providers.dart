@@ -6,6 +6,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Resumen de un área en el período, para las tarjetas de la pantalla Áreas.
 class AreaGlobalViewModel {

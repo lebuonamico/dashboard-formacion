@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/employees_repository.dart';
 import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/features/employees/domain/seniority_parser.dart';
 
 /// Writing `empleados` also feeds `empleado_historial` through its trigger.
 class SupabaseEmployeesRepository implements EmployeesRepository {
@@ -30,8 +31,16 @@ class SupabaseEmployeesRepository implements EmployeesRepository {
     : _table = SupabaseTable(client, mapping);
 
   @override
-  Future<List<Employee>> getEmployees() async =>
-      (await _table.read()).map(Employee.fromJson).toList();
+  Future<List<Employee>> getEmployees() async => (await _table.read())
+      .map(
+        (row) => Employee.fromJson({
+          ...row,
+          'seniority': const SeniorityParser()
+              .parse(row['seniority']?.toString() ?? '')
+              .name,
+        }),
+      )
+      .toList();
 
   @override
   Future<UpsertResult> upsert(List<Employee> employees) async {

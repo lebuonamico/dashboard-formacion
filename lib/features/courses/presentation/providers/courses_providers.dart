@@ -12,6 +12,7 @@ import 'package:app_finnegans/features/courses/presentation/providers/courses_re
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 final coursesProvider = FutureProvider<List<Course>>((ref) async {
   final repo = ref.watch(coursesRepositoryProvider);

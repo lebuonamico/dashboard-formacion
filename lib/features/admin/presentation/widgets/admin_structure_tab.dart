@@ -16,6 +16,7 @@ import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Pestaña "Áreas y equipos" del panel. Las áreas y los equipos vienen de la
 /// importación de nómina y acá solo se consultan; lo único que se cambia son

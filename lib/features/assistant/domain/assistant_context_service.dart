@@ -5,6 +5,8 @@ import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 
 export 'package:app_finnegans/features/assistant/domain/assistant_query.dart';
 
@@ -23,6 +25,7 @@ class AssistantContext {
 
 /// Selecciona intención, períodos y campos permitidos. No calcula KPIs.
 class AssistantContextService {
+  static const _lookup = EmployeeLookupService();
   static const maxQuestion = 1200;
   static const maxMessage = 6000;
   static const _months = [
@@ -335,8 +338,8 @@ class AssistantContextService {
   );
 
   Map<String, Object?> person(EmployeeCompliance compliance) => {
-    if (compliance.employee.fullName.trim().isNotEmpty)
-      'nombre': compliance.employee.fullName.trim(),
+    if (_lookup.fullName(compliance.employee).trim().isNotEmpty)
+      'nombre': _lookup.fullName(compliance.employee).trim(),
     'seniority': compliance.employee.seniority.label,
     'horas_validas': compliance.totalCreditedHours,
     'horas_declaradas': compliance.totalDeclaredHours,

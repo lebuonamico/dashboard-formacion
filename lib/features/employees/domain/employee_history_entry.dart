@@ -1,4 +1,3 @@
-import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 
 /// One validity period of an employee's payroll data.
@@ -23,11 +22,14 @@ class EmployeeHistoryEntry {
     this.validTo,
   });
 
-  Employee rebuild(Employee employee) => employee.copyWith(
+  EmployeeHistoryEntry copyWith({DateTime? validTo}) => EmployeeHistoryEntry(
+    employeeId: employeeId,
     seniority: seniority,
     area: area,
     team: team,
     manager: manager,
-    active: isActive,
+    isActive: isActive,
+    validFrom: validFrom,
+    validTo: validTo ?? this.validTo,
   );
 }

@@ -1,8 +1,8 @@
 import 'package:app_finnegans/features/employees/domain/employee_history_entry.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_repository.dart';
-import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/imports/domain/import_values.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_finnegans/features/employees/domain/seniority_parser.dart';
 
 /// Reads `public.empleado_historial`, which a database trigger fills when
 /// `empleados` changes.
@@ -32,19 +32,6 @@ class SupabaseEmployeeHistoryRepository implements EmployeeHistoryRepository {
     }
   }
 
-  static final _seniorityAlias = RegExp(
-    r'^trainee(?:[123]|i{1,3})?$|^t$'
-    r'|^(?:junior|jr|j|senior|senor|sr|s)(?:[123]|i{1,3})?$'
-    r'|^(?:semisenior|semisenor|ssr|ss)(?:[123]|i{1,3})$'
-    r'|^(?:manager|gerente|m)$',
-  );
-
-  static String _normalize(String text) => text
-      .trim()
-      .toLowerCase()
-      .replaceAll('ñ', 'n')
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '');
-
   static EmployeeHistoryEntry _fromRow(Map<String, dynamic> row) {
     if (row['activo'] is! bool ||
         (row['legajo']?.toString().trim() ?? '').isEmpty) {
@@ -58,20 +45,14 @@ class SupabaseEmployeeHistoryRepository implements EmployeeHistoryRepository {
       throw const FormatException('Intervalo inválido en empleado_historial.');
     }
     final seniorityText = row['seniority']?.toString() ?? '';
-    final normalized = _normalize(seniorityText);
-    final configured = Seniority.values.any(
-      (seniority) =>
-          _normalize(seniority.name) == normalized ||
-          _normalize(seniority.label) == normalized,
-    );
-    if (!configured && !_seniorityAlias.hasMatch(normalized)) {
-      throw FormatException(
-        'Seniority inválido en empleado_historial: "$seniorityText".',
-      );
-    }
+    final seniority =
+        const SeniorityParser().tryParse(seniorityText) ??
+        (throw FormatException(
+          'Seniority inválido en empleado_historial: "$seniorityText".',
+        ));
     return EmployeeHistoryEntry(
       employeeId: row['legajo'].toString(),
-      seniority: Seniority.fromString(seniorityText),
+      seniority: seniority,
       area: row['sector']?.toString() ?? '',
       team: row['equipo_general']?.toString() ?? '',
       manager: row['gerente']?.toString() ?? '',

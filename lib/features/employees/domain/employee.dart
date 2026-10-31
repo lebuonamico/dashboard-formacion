@@ -26,39 +26,28 @@ class Employee {
     this.isActive = true,
   });
 
-  String get fullName => '$firstName $lastName';
-
-  /// El empleado de la nómina con ese mail, comparado sin espacios ni
-  /// mayúsculas. Si hubiera dos filas, prefiere la activa.
-  static Employee? byEmail(Iterable<Employee> employees, String? email) {
-    final searched = email?.trim().toLowerCase() ?? '';
-    if (searched.isEmpty) return null;
-    Employee? found;
-    for (final employee in employees) {
-      if (employee.email.trim().toLowerCase() != searched) continue;
-      if (employee.isActive) return employee;
-      found ??= employee;
-    }
-    return found;
-  }
-
   Employee copyWith({
+    DateTime? hireDate,
+    String? employeeId,
+    String? firstName,
+    String? lastName,
     Seniority? seniority,
     String? area,
+    String? email,
     String? team,
     String? manager,
-    bool? active,
+    bool? isActive,
   }) => Employee(
-    hireDate: hireDate,
-    employeeId: employeeId,
-    firstName: firstName,
-    lastName: lastName,
+    hireDate: hireDate ?? this.hireDate,
+    employeeId: employeeId ?? this.employeeId,
+    firstName: firstName ?? this.firstName,
+    lastName: lastName ?? this.lastName,
     seniority: seniority ?? this.seniority,
     area: area ?? this.area,
-    email: email,
+    email: email ?? this.email,
     team: team ?? this.team,
     manager: manager ?? this.manager,
-    isActive: active ?? isActive,
+    isActive: isActive ?? this.isActive,
   );
 
   Map<String, dynamic> toJson() => {
@@ -81,10 +70,11 @@ class Employee {
     employeeId: json['employeeId']?.toString() ?? '',
     firstName: json['firstName']?.toString() ?? '',
     lastName: json['lastName']?.toString() ?? '',
-    seniority: Seniority.values.firstWhere(
-      (s) => s.name == json['seniority'],
-      orElse: () => Seniority.fromString(json['seniority']?.toString() ?? ''),
-    ),
+    seniority:
+        Seniority.values.asNameMap()[json['seniority']] ??
+        (throw FormatException(
+          'Seniority desconocido: "${json['seniority']}".',
+        )),
     area: json['area']?.toString() ?? '',
     email: json['email']?.toString() ?? '',
     team: json['team']?.toString() ?? '',

@@ -4,6 +4,7 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 /// Plan de formación en Supabase: una fila por mes de vigencia y seniority.
 /// La tabla y su RLS están versionados en `supabase/plan_formacion.sql`.

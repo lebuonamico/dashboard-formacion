@@ -2,6 +2,7 @@ import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.d
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/projection/domain/projection_service.dart';
+import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 
 /// Qué sección de la app resume el reporte.
 enum ReportType {
@@ -160,7 +161,11 @@ class TrainingReport {
         final percentage = a.totalPercentage.compareTo(b.totalPercentage);
         return percentage != 0
             ? percentage
-            : a.employee.fullName.compareTo(b.employee.fullName);
+            : const EmployeeLookupService()
+                  .fullName(a.employee)
+                  .compareTo(
+                    const EmployeeLookupService().fullName(b.employee),
+                  );
       });
     if (!criticalOnly) return sorted;
     return [

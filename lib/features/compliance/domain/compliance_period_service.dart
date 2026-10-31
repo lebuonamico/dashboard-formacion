@@ -8,9 +8,14 @@ import 'package:app_finnegans/features/teams/domain/team_identity.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/domain/employee_history_service.dart';
 
 class TeamPeriodService {
-  const TeamPeriodService();
+  final EmployeeHistoryService historyService;
+
+  const TeamPeriodService({
+    this.historyService = const EmployeeHistoryService(),
+  });
 
   bool hasDataInPeriod({
     required List<CrmTimeEntry> timeEntries,
@@ -91,36 +96,17 @@ class TeamPeriodService {
       }
 
       final employeeHistory = historyByEmployeeId[employee.employeeId] ?? [];
-      final effectiveEntries = employeeHistory.where((entry) {
-        final endDate = entry.validTo;
-        return entry.validFrom.isBefore(nextPeriodStart) &&
-            (endDate == null || !endDate.isBefore(nextPeriodStart));
-      }).toList();
-      // Before the first recorded state, use that earliest state rather than the current roster.
-      if (effectiveEntries.isEmpty && employeeHistory.isNotEmpty) {
-        final earliestEntry = employeeHistory.reduce(
-          (previous, current) => current.validFrom.isBefore(previous.validFrom)
-              ? current
-              : previous,
-        );
-        if (!earliestEntry.validFrom.isBefore(nextPeriodStart)) {
-          effectiveEntries.addAll(
-            employeeHistory.where(
-              (entry) =>
-                  entry.validFrom.isAtSameMomentAs(earliestEntry.validFrom),
-            ),
-          );
-        }
-      }
-      if (effectiveEntries.length != 1) {
-        throw StateError(
-          'El historial del colaborador ${employee.employeeId} no tiene una '
-          'vigencia única al cierre de $month/$year.',
-        );
-      }
-      final effectiveEntry = effectiveEntries.single;
+      final effectiveEntry =
+          historyService.effectiveAt(employeeHistory, nextPeriodStart) ??
+          (throw StateError(
+            'El historial del colaborador ${employee.employeeId} no tiene una '
+            'vigencia única al cierre de $month/$year.',
+          ));
       if (effectiveEntry.isActive) {
-        final historicalEmployee = effectiveEntry.rebuild(employee);
+        final historicalEmployee = historyService.rebuild(
+          effectiveEntry,
+          employee,
+        );
         if (includeEmployee?.call(historicalEmployee) ?? true) {
           eligibleEmployees.add(historicalEmployee);
         }

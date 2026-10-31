@@ -74,17 +74,7 @@ class InMemoryEmployeesRepository
       (entry) => entry.employeeId == employeeId && entry.validTo == null,
     );
     if (index == -1) return;
-    final open = _history[index];
-    _history[index] = EmployeeHistoryEntry(
-      employeeId: open.employeeId,
-      seniority: open.seniority,
-      area: open.area,
-      team: open.team,
-      manager: open.manager,
-      isActive: open.isActive,
-      validFrom: open.validFrom,
-      validTo: now,
-    );
+    _history[index] = _history[index].copyWith(validTo: now);
   }
 
   static EmployeeHistoryEntry _openEntry(Employee employee, DateTime from) =>

@@ -9,6 +9,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
 import 'package:app_finnegans/features/teams/domain/teams_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app_finnegans/features/training_plan/domain/training_plan_defaults.dart';
 
 void main() {
   final employee = Employee(
@@ -210,7 +211,7 @@ void main() {
                 CourseCategory.exploration: 2,
                 CourseCategory.teaching: 6,
               }
-            : seniority.trainingPlan,
+            : TrainingPlanDefaults.hours[seniority]!,
     });
     final fromJune = TrainingPlanHistory([
       TrainingPlanVersion(validFrom: DateTime(2026, 6), plan: sixTeachingHours),

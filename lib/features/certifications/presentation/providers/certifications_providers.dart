@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/certifications/presentation/providers/lms
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 
 final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
   ref,
