@@ -30,6 +30,7 @@ import 'package:app_finnegans/features/training_plan/presentation/training_plan_
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/imports/data/payroll_file_parser.dart';
 import 'package:app_finnegans/features/imports/data/course_catalog_file_parser.dart';
+import 'package:app_finnegans/features/imports/data/crm_time_entries_file_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -568,119 +569,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      final importedTimeEntries = <CrmTimeEntry>[];
+      var importedTimeEntries = <CrmTimeEntry>[];
       await container
           .read(importAuditServiceProvider)
           .run(
             fileType: 'horas_crm',
             fileName: result.files.single.name,
             process: () async {
-              final rowsBySheet = const SpreadsheetReader().read(
+              final parsed = const CrmTimeEntriesFileParser().parse(
                 ImportFile(
                   name: result.files.single.name,
                   bytes: result.files.single.bytes!,
                 ),
               );
-              final repository = container.read(
-                crmTimeEntriesRepositoryProvider,
-              );
               final catalog = await container
                   .read(coursesRepositoryProvider)
                   .getCourses();
               final coursesByName = <String, Course>{};
-
-              var recognizedHeader = false;
-
-              for (final rows in rowsBySheet.values) {
-                if (rows.length < 2) continue;
-                final headerIndex = _findTimeEntryRow(rows);
-                if (headerIndex == -1) continue;
-                recognizedHeader = true;
-                final headers = rows[headerIndex]
-                    .map((header) => normalizeKey(header.toString()))
-                    .toList();
-                final idIndex = _findColumnCrm(headers, 'id');
-                final employeeIdIndex = _findColumnCrm(headers, 'legajo');
-                final dateIndex = _findColumnCrm(headers, 'fecha');
-                final courseIndex = headers.indexOf('curso');
-                final hoursIndex = _findColumnCrm(headers, 'horas');
-                if ([
-                  idIndex,
-                  employeeIdIndex,
-                  dateIndex,
-                  courseIndex,
-                  hoursIndex,
-                ].any((index) => index == -1)) {
-                  continue;
-                }
-
-                for (final row in rows.skip(headerIndex + 1)) {
-                  if (row.every((cell) => cell.toString().trim().isEmpty)) {
-                    continue;
-                  }
-                  if ([
-                    idIndex,
-                    employeeIdIndex,
-                    dateIndex,
-                    courseIndex,
-                    hoursIndex,
-                  ].any((index) => index >= row.length)) {
-                    throw const FormatException(
-                      'Fila CRM incompleta: faltan columnas obligatorias.',
-                    );
-                  }
-                  final courseName = row[courseIndex].toString().trim();
-                  final course = coursesByName[normalizeLoose(courseName)] ??=
-                      courseResolver(courseName, catalog);
-                  final date = _dateFromCell(row[dateIndex].toString());
-                  String? source(String field) {
-                    final index = headers.indexOf(field);
-                    return index < 0 || index >= row.length
-                        ? null
-                        : row[index].toString().trim();
-                  }
-
-                  final hours =
-                      double.tryParse(
-                        row[hoursIndex].toString().replaceAll(',', '.'),
-                      ) ??
-                      0;
-                  if (hours <= 0) continue;
-                  final id = row[idIndex].toString().trim();
-                  final employeeId = row[employeeIdIndex].toString().trim();
-                  if (id.isEmpty || employeeId.isEmpty) continue;
-
-                  importedTimeEntries.add(
-                    CrmTimeEntry(
-                      id: id,
-                      courseName: course.name,
-                      courseId: course.id,
-                      caseRef: source('caso'),
-                      courseDescription: source('descripcioncurso'),
-                      classification: source('clasificacion'),
-                      project: source('proyecto'),
-                      projectItem: source('proyectoitem'),
-                      description: source('descripcion'),
-                      employeeId: employeeId,
-                      date: date,
-                      hours: hours,
-                      kind: TimeEntryKind.taken,
-                    ),
-                  );
-                }
-              }
-
-              if (importedTimeEntries.isEmpty) {
-                if (!recognizedHeader) {
-                  throw const FormatException(
-                    'No se reconocieron los encabezados. El Excel debe incluir ID de transacción, legajo, fecha, curso y horas total.',
-                  );
-                }
-                throw const FormatException(
-                  'El archivo no tiene registros CRM válidos.',
+              importedTimeEntries = parsed.map((entry) {
+                final course =
+                    coursesByName[normalizeLoose(entry.courseName)] ??=
+                        courseResolver(entry.courseName, catalog);
+                return entry.copyWith(
+                  courseName: course.name,
+                  courseId: course.id,
                 );
-              }
-              return repository.upsert(importedTimeEntries);
+              }).toList();
+              return container
+                  .read(crmTimeEntriesRepositoryProvider)
+                  .upsert(importedTimeEntries);
             },
             refresh: () async {
               container.invalidate(crmTimeEntriesProvider);
@@ -706,39 +623,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _finishImport('horas');
     }
   }
-
-  int _findTimeEntryRow(List<List<dynamic>> rows) {
-    for (var index = 0; index < rows.length && index < 15; index++) {
-      final headers = rows[index]
-          .map((cell) => normalizeKey(cell.toString()))
-          .toSet();
-      if (_findColumnCrm(headers.toList(), 'id') != -1 &&
-          _findColumnCrm(headers.toList(), 'legajo') != -1 &&
-          headers.contains('curso') &&
-          _findColumnCrm(headers.toList(), 'fecha') != -1 &&
-          _findColumnCrm(headers.toList(), 'horas') != -1) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
-  int _findColumnCrm(List<String> headers, String field) {
-    for (var index = 0; index < headers.length; index++) {
-      final header = headers[index];
-      final matches = switch (field) {
-        'id' => header.contains('transaccion') && header.contains('id'),
-        'legajo' => header.contains('legajo'),
-        'fecha' => header == 'fecha' || header.contains('fecha'),
-        'horas' => header.contains('hora') && header.contains('total'),
-        _ => false,
-      };
-      if (matches) return index;
-    }
-    return -1;
-  }
-
-  DateTime _dateFromCell(String value) => requiredDate(value);
 
   int _findColumn(List<String> headers, List<String> possible) {
     for (final possible in possible) {
