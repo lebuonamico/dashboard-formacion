@@ -1,17 +1,15 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
+import 'package:app_finnegans/features/certifications/domain/certification_stats_service.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
-import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/course_services_providers.dart';
 import 'package:app_finnegans/features/courses/domain/course_catalog_service.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
 final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
@@ -27,79 +25,32 @@ final lmsCertificationsProvider = FutureProvider<List<LmsCertification>>((
       .toList();
 });
 
-/// Certificación del LMS cruzada con la nómina y el catálogo.
-class CertificationViewModel {
-  final LmsCertification certification;
-  final Employee? employee;
-  final Course? course;
-  final CourseCategory? lmsCategory;
+final certificationStatsServiceProvider = Provider<CertificationStatsService>(
+  (ref) => CertificationStatsService(
+    classification: ref.watch(courseClassificationServiceProvider),
+  ),
+);
 
-  const CertificationViewModel({
-    required this.certification,
-    required this.employee,
-    required this.course,
-    required this.lmsCategory,
-  });
+final joinedCertificationsProvider = FutureProvider<List<CertificationRecord>>((
+  ref,
+) async {
+  final service = ref.watch(certificationStatsServiceProvider);
+  return service.join(
+    certifications: await ref.watch(lmsCertificationsProvider.future),
+    employees: await ref.watch(employeesProvider.future),
+    courses: await ref.watch(coursesProvider.future),
+  );
+});
 
-  /// Sin curso en el catálogo la finalización no acredita horas (regla
-  /// triangular de CumplimientoService).
-  bool get courseOutsideCatalog => course == null;
-
-  bool get employeeIdOutsidePayroll => employee == null;
-
-  bool get outsideCalculation =>
-      courseOutsideCatalog || employeeIdOutsidePayroll;
-}
-
-/// Todas las certificaciones importadas, sin filtrar y ordenadas: las más
-/// recientes primero y las que no tienen fecha (pendientes) al final.
-final joinedCertificationsProvider =
-    FutureProvider<List<CertificationViewModel>>((ref) async {
-      final certifications = await ref.watch(lmsCertificationsProvider.future);
-      final employees = await ref.watch(employeesProvider.future);
-      final courses = await ref.watch(coursesProvider.future);
-      final classification = ref.watch(courseClassificationServiceProvider);
-
-      final employeeMap = {for (final e in employees) e.employeeId: e};
-      // Mismo normalizador que el cálculo de cumplimiento: así el aviso de
-      // "fuera de catálogo" coincide con lo que realmente no acredita.
-      final courseMap = {
-        for (final course in courses) normalizeKey(course.name): course,
-      };
-
-      final viewModels = certifications.map((certification) {
-        final course = courseMap[normalizeKey(certification.courseName)];
-        return CertificationViewModel(
-          certification: certification,
-          employee: employeeMap[certification.employeeId],
-          course: course,
-          lmsCategory: course == null
-              ? null
-              : classification.lmsCategory(course),
-        );
-      }).toList();
-
-      viewModels.sort((a, b) {
-        final dateA = a.certification.completedAt;
-        final dateB = b.certification.completedAt;
-        if (dateA != null && dateB != null) {
-          final byDate = dateB.compareTo(dateA);
-          if (byDate != 0) return byDate;
-        } else if (dateA != null) {
-          return -1;
-        } else if (dateB != null) {
-          return 1;
-        }
-        return a.certification.courseName.toLowerCase().compareTo(
-          b.certification.courseName.toLowerCase(),
-        );
-      });
-
-      return viewModels;
-    });
+final certificationKpisProvider = FutureProvider<CertificationKpis>((
+  ref,
+) async {
+  final records = await ref.watch(joinedCertificationsProvider.future);
+  return ref.watch(certificationStatsServiceProvider).kpis(records);
+});
 
 FilterRow certificationFilterRow(
-  CertificationViewModel item,
+  CertificationRecord item,
   Map<String, String> courseIdsByName,
 ) {
   final courseId = const CourseCatalogService().courseIdFor(
@@ -138,7 +89,7 @@ final certificationFilterRowsProvider = FutureProvider<List<FilterRow>>((
 });
 
 final filteredCertificationsProvider =
-    FutureProvider<List<CertificationViewModel>>((ref) async {
+    FutureProvider<List<CertificationRecord>>((ref) async {
       final selection = ref
           .watch(dataFilterSelectionProvider(DataFilterScope.certifications))
           .values;

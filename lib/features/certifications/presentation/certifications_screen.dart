@@ -15,6 +15,7 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
+import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
 
 const _courseOutsideCatalogNotice =
     'El curso no está en el catálogo: esta finalización no acredita horas.';
@@ -59,15 +60,18 @@ class CertificationsScreen extends ConsumerWidget {
 
                     final filtered =
                         ref.watch(filteredCertificationsProvider).value ??
-                        const <CertificationViewModel>[];
+                        const <CertificationRecord>[];
+                    final kpis = ref.watch(certificationKpisProvider).value;
                     final totalPayroll =
                         ref.watch(employeesProvider).value?.length ?? 0;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        KpiGrid(items: _kpis(context, all, totalPayroll)),
-                        const SizedBox(height: 20),
+                        if (kpis != null) ...[
+                          KpiGrid(items: _kpis(context, kpis, totalPayroll)),
+                          const SizedBox(height: 20),
+                        ],
                         const _CertificationsFilterBar(),
                         const SizedBox(height: 20),
                         Expanded(
@@ -100,20 +104,18 @@ class CertificationsScreen extends ConsumerWidget {
   /// Los KPIs resumen todo lo importado, no lo que dejan ver los filtros.
   List<KpiData> _kpis(
     BuildContext context,
-    List<CertificationViewModel> all,
+    CertificationKpis kpis,
     int totalPayroll,
   ) {
     final colors = context.colors;
-    final total = all.length;
-    final completed = all.where((vm) => vm.certification.isCompleted).length;
-    final pending = total - completed;
-    final outsideCalculation = all.where((vm) => vm.outsideCalculation).length;
-    final certifiedEmployees = {
-      for (final vm in all)
-        if (vm.certification.isCompleted && !vm.employeeIdOutsidePayroll)
-          vm.certification.employeeId,
-    }.length;
-    final completedPercentage = total == 0 ? 0 : completed / total * 100;
+    final CertificationKpis(
+      :total,
+      :completed,
+      :pending,
+      :outsideCalculation,
+      :certifiedEmployees,
+      :completedPercentage,
+    ) = kpis;
 
     return [
       KpiData(
@@ -170,7 +172,7 @@ class _CertificationsFilterBar extends ConsumerWidget {
 
 /// Tabla de certificaciones, de a una página por vez y a todo el ancho.
 class _PaginatedCertificationsTable extends StatefulWidget {
-  final List<CertificationViewModel> certifications;
+  final List<CertificationRecord> certifications;
 
   const _PaginatedCertificationsTable({required this.certifications});
 
@@ -272,7 +274,7 @@ class _PaginatedCertificationsTableState
     );
   }
 
-  Widget _table(List<CertificationViewModel> visible) {
+  Widget _table(List<CertificationRecord> visible) {
     final cs = context.colorScheme;
     // Encabezados, divisores y márgenes salen del dataTableTheme.
     return DataTable(
@@ -348,7 +350,7 @@ class _PaginatedCertificationsTableState
     colors: completed ? context.colors.success : context.colors.warning,
   );
 
-  Widget _employeeCell(CertificationViewModel vm) {
+  Widget _employeeCell(CertificationRecord vm) {
     final cs = context.colorScheme;
     final emp = vm.employee;
     final employeeId = vm.certification.employeeId;
@@ -406,7 +408,7 @@ class _PaginatedCertificationsTableState
     );
   }
 
-  Widget _areaTeamCell(CertificationViewModel vm) {
+  Widget _areaTeamCell(CertificationRecord vm) {
     final cs = context.colorScheme;
     final emp = vm.employee;
     if (emp == null) {
@@ -437,7 +439,7 @@ class _PaginatedCertificationsTableState
     );
   }
 
-  Widget _courseCell(CertificationViewModel vm) {
+  Widget _courseCell(CertificationRecord vm) {
     final name = vm.course?.name ?? vm.certification.courseName;
 
     return Row(
