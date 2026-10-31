@@ -2,6 +2,9 @@ import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/features/courses/domain/course_classification_service.dart';
+import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/dashboard/domain/dashboard_distribution.dart';
 
 class DashboardAccumulatedCompliance {
   final double creditedHours;
@@ -47,20 +50,28 @@ class DashboardKpis {
 class DashboardKpisService {
   final CourseClassificationService classification;
 
-  DashboardKpisService({CourseClassificationService? classification})
-    : classification = classification ?? CourseClassificationService();
+  final ComplianceLevelService levels;
+
+  DashboardKpisService({
+    CourseClassificationService? classification,
+    this.levels = const ComplianceLevelService(),
+  }) : classification = classification ?? CourseClassificationService();
 
   DashboardAccumulatedCompliance accumulateCompliance(
     Iterable<TeamsPeriodSummary> months,
   ) {
-    var creditedHours = 0.0;
-    var targetHours = 0.0;
-    for (final month in months) {
-      if (!month.hasData || month.employeeCount == 0) continue;
-      // Las horas de cada mes ya respetan elegibilidad, categorías y topes.
-      creditedHours += month.completedHours;
-      targetHours += month.targetHours;
-    }
+    // Las horas de cada mes ya respetan elegibilidad, categorías y topes.
+    final evaluated = months
+        .where((month) => month.hasData && month.employeeCount > 0)
+        .toList();
+    final creditedHours = evaluated.fold(
+      0.0,
+      (total, month) => total + month.completedHours,
+    );
+    final targetHours = evaluated.fold(
+      0.0,
+      (total, month) => total + month.targetHours,
+    );
     return DashboardAccumulatedCompliance(
       creditedHours: creditedHours,
       targetHours: targetHours,
@@ -114,6 +125,49 @@ class DashboardKpisService {
       monthlyPace: pace,
       annualProjection: pace * 12,
       annualGoalPerPerson: monthlyTarget * 12,
+    );
+  }
+
+  ComplianceDistribution complianceDistribution(
+    List<EmployeeCompliance> complianceList,
+  ) {
+    final counts = complianceList
+        .map((item) => levels.fromPercentage(item.totalPercentage))
+        .fold(<ComplianceLevel, int>{}, (counts, level) {
+          counts[level] = (counts[level] ?? 0) + 1;
+          return counts;
+        });
+    final total = complianceList.length;
+    final onTarget = counts[ComplianceLevel.onTarget] ?? 0;
+    return ComplianceDistribution(
+      total: total,
+      onTarget: onTarget,
+      atRisk: counts[ComplianceLevel.atRisk] ?? 0,
+      critical: counts[ComplianceLevel.critical] ?? 0,
+      onTargetShare: total == 0 ? 0 : onTarget / total,
+    );
+  }
+
+  /// Only the hours that count towards the target, so the total matches the
+  /// credited hours.
+  CategoryDistribution categoryDistribution(
+    List<EmployeeCompliance> complianceList,
+  ) {
+    double sum(double Function(EmployeeCompliance item) hours) =>
+        complianceList.fold(0.0, (total, item) => total + hours(item));
+    final hours = {
+      for (final category in CourseCategory.values)
+        category: sum((item) => item.applicableHours[category]!),
+    };
+    final people = complianceList.length;
+    final totalCredited = sum((item) => item.totalCreditedHours);
+    final totalTarget = sum((item) => item.totalRequiredHours);
+    return CategoryDistribution(
+      hours: hours,
+      totalHours: hours.values.fold(0.0, (total, value) => total + value),
+      averageHours: people == 0 ? 0 : totalCredited / people,
+      averageTarget: people == 0 ? 0 : totalTarget / people,
+      totalTarget: totalTarget,
     );
   }
 }

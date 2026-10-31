@@ -5,6 +5,7 @@ import 'package:app_finnegans/features/employees/domain/employee_lookup_service.
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison_service.dart';
 import 'package:app_finnegans/features/projection/domain/projection.dart';
+import 'package:app_finnegans/features/dashboard/domain/monthly_hours.dart';
 
 /// Qué sección de la app resume el reporte.
 enum ReportType {
@@ -83,7 +84,7 @@ class TrainingReport {
   final List<ReportBreakdownRow> breakdown;
 
   /// Horas válidas por persona de los últimos meses (solo el general).
-  final List<({DateTime month, double hours})> evolution;
+  final List<MonthlyHours> evolution;
 
   const TrainingReport({
     required this.type,

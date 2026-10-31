@@ -1,11 +1,13 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/features/dashboard/domain/monthly_hours.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardMonthlyHours extends StatelessWidget {
-  /// Horas válidas promedio por colaborador de cada mes.
-  final AsyncValue<List<({DateTime month, double hours})>> evolutionAsync;
+  /// Horas válidas promedio por colaborador de cada mes y su meta.
+  final AsyncValue<List<MonthlyHours>> evolutionAsync;
 
   const DashboardMonthlyHours({super.key, required this.evolutionAsync});
 
@@ -19,10 +21,14 @@ class DashboardMonthlyHours extends StatelessWidget {
         compact: true,
       ),
       data: (monthList) {
-        if (monthList.isEmpty) return const SizedBox.shrink();
-
-        final months = _MonthlyHoursSummary.from(monthList);
-        return _MonthlyHoursCard(summary: months);
+        if (monthList.isEmpty) {
+          return const EmptyDataState(
+            compact: true,
+            icon: Icons.show_chart,
+            title: 'No hay meses para mostrar la evolución.',
+          );
+        }
+        return _MonthlyHoursCard(summary: _MonthlyHoursSummary.from(monthList));
       },
     );
   }
@@ -41,9 +47,7 @@ class _MonthlyHoursSummary {
 
   const _MonthlyHoursSummary({required this.points, required this.target});
 
-  factory _MonthlyHoursSummary.from(
-    List<({DateTime month, double hours})> months,
-  ) {
+  factory _MonthlyHoursSummary.from(List<MonthlyHours> months) {
     final points = [
       for (final item in months)
         _MonthlyHoursPoint(
@@ -52,7 +56,7 @@ class _MonthlyHoursSummary {
         ),
     ];
 
-    return _MonthlyHoursSummary(points: points, target: 8);
+    return _MonthlyHoursSummary(points: points, target: months.last.target);
   }
 }
 
@@ -87,7 +91,8 @@ class _MonthlyHoursCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Horas válidas promedio por colaborador vs meta (8,0 h)',
+                      'Horas válidas promedio por colaborador vs meta '
+                      '(${summary.target.toStringAsFixed(1).replaceAll('.', ',')} h)',
                       style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
@@ -193,6 +198,7 @@ class _MonthlyHoursPainter extends CustomPainter {
           ...points.map((point) => point.hours),
         ].reduce((max, value) => value > max ? value : max) *
         1.2;
+    final scale = maxHours == 0 ? 1.0 : maxHours;
 
     final gridPaint = Paint()
       ..color = cs.outlineVariant
@@ -210,7 +216,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       );
     }
 
-    final targetY = topPadding + chartHeight * (1 - target / maxHours);
+    final targetY = topPadding + chartHeight * (1 - target / scale);
     canvas.drawLine(
       Offset(sidePadding, targetY),
       Offset(size.width - sidePadding, targetY),
@@ -227,7 +233,7 @@ class _MonthlyHoursPainter extends CustomPainter {
     for (var index = 0; index < points.length; index++) {
       final point = points[index];
       final centerX = sidePadding + chartWidth * (index + 0.5) / points.length;
-      final barHeight = chartHeight * point.hours / maxHours;
+      final barHeight = chartHeight * point.hours / scale;
       final barTop = topPadding + chartHeight - barHeight;
       final color = index == points.length - 1 ? cs.primary : cs.outline;
       final rect = RRect.fromRectAndRadius(

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/dashboard/domain/monthly_hours.dart';
 import 'dart:io';
 
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
@@ -121,10 +122,10 @@ void main() {
       ),
     ],
     evolution: [
-      (month: DateTime(2026, 7), hours: 3.2),
-      (month: DateTime(2026, 8), hours: 4.1),
-      (month: DateTime(2026, 9), hours: 2.7),
-      (month: DateTime(2026, 10), hours: 5.3),
+      MonthlyHours(month: DateTime(2026, 7), hours: 3.2, target: 8),
+      MonthlyHours(month: DateTime(2026, 8), hours: 4.1, target: 8),
+      MonthlyHours(month: DateTime(2026, 9), hours: 2.7, target: 8),
+      MonthlyHours(month: DateTime(2026, 10), hours: 5.3, target: 8),
     ],
   );
 

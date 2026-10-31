@@ -1,7 +1,6 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
-import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/widgets/summary_card/status_badge.dart';
@@ -10,6 +9,7 @@ import 'package:app_finnegans/core/widgets/summary_card/summary_card_footer.dart
 import 'package:app_finnegans/core/widgets/summary_card/summary_card_header.dart';
 import 'package:app_finnegans/core/widgets/summary_card/summary_info_row.dart';
 import 'package:app_finnegans/core/widgets/summary_card/summary_progress.dart';
+import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,19 +17,10 @@ import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 
 class DashboardAreasSection extends ConsumerWidget {
-  final AsyncValue<List<AreaSummary>> areasAsync;
-
-  const DashboardAreasSection({super.key, required this.areasAsync});
+  const DashboardAreasSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Conservar filtros aunque el cambio de período desmonte esta sección.
-    final selection = ref
-        .watch(dataFilterSelectionProvider(DataFilterScope.dashboardAreas))
-        .values;
-    final filters = ref.watch(dataFilterServiceProvider);
-    final teamsAsync = ref.watch(teamOverviewsProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,106 +48,74 @@ class DashboardAreasSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        areasAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorDataState(
-            title: 'No pudimos cargar las áreas',
-            error: error,
-            compact: true,
-          ),
-          data: (areas) {
-            if (areas.isEmpty) {
-              return Column(
-                children: [
-                  _AreasFilterBar(rows: areas.map(_filterRow).toList()),
-                  const SizedBox(height: 16),
-                  const _EmptyAreasState(),
-                ],
-              );
-            }
-
-            final filteredAreas = areas
-                .where((area) => filters.matches(selection, _filterRow(area)))
-                .toList();
-
-            return teamsAsync.when(
+        FilterBar(
+          scope: DataFilterScope.dashboardAreas,
+          rows: ref.watch(dashboardAreaFilterRowsProvider),
+        ),
+        const SizedBox(height: 16),
+        ref
+            .watch(dashboardAreasProvider)
+            .when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar las áreas',
                 error: error,
-                onRetry: () => ref.invalidate(teamOverviewsProvider),
+                onRetry: () => ref.invalidate(dashboardAreasProvider),
                 compact: true,
               ),
-              data: (teams) {
-                final teamsByArea = <String, int>{};
-                for (final team in teams) {
-                  teamsByArea.update(
-                    team.area,
-                    (count) => count + 1,
-                    ifAbsent: () => 1,
-                  );
-                }
-
-                return Column(
-                  children: [
-                    _AreasFilterBar(rows: areas.map(_filterRow).toList()),
-                    const SizedBox(height: 16),
-                    if (filteredAreas.isEmpty)
-                      const _EmptyFilteredAreasState()
-                    else
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final columns = constraints.maxWidth >= 900
-                              ? 3
-                              : constraints.maxWidth >= 600
-                              ? 2
-                              : 1;
-
-                          return GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: columns,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  mainAxisExtent: 230,
-                                ),
-                            itemCount: filteredAreas.length,
-                            itemBuilder: (context, index) {
-                              final area = filteredAreas[index];
-                              return DashboardAreaCard(
-                                area: area,
-                                teamCount: teamsByArea[area.name] ?? 0,
-                              );
-                            },
-                          );
-                        },
-                      ),
-                  ],
-                );
-              },
-            );
-          },
-        ),
+              data: (areas) => areas.isEmpty
+                  ? const _EmptyAreasState()
+                  : const _FilteredAreasGrid(),
+            ),
       ],
     );
   }
-
-  FilterRow _filterRow(AreaSummary area) =>
-      FilterRow({'Área': area.name, 'Estado': area.level.label});
 }
 
-class _AreasFilterBar extends StatelessWidget {
-  final List<FilterRow> rows;
-
-  const _AreasFilterBar({required this.rows});
+class _FilteredAreasGrid extends ConsumerWidget {
+  const _FilteredAreasGrid();
 
   @override
-  Widget build(BuildContext context) => FilterBar(
-    scope: DataFilterScope.dashboardAreas,
-    rows: AsyncValue.data(rows),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref
+        .watch(filteredDashboardAreasProvider)
+        .when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ErrorDataState(
+            title: 'No pudimos cargar las áreas',
+            error: error,
+            onRetry: () => ref.invalidate(filteredDashboardAreasProvider),
+            compact: true,
+          ),
+          data: (areas) => areas.isEmpty
+              ? const _EmptyFilteredAreasState()
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth >= 900
+                        ? 3
+                        : constraints.maxWidth >= 600
+                        ? 2
+                        : 1;
+
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        mainAxisExtent: 230,
+                      ),
+                      itemCount: areas.length,
+                      itemBuilder: (context, index) => DashboardAreaCard(
+                        area: areas[index].area,
+                        teamCount: areas[index].teamCount,
+                      ),
+                    );
+                  },
+                ),
+        );
+  }
 }
 
 class DashboardAreaCard extends StatelessWidget {

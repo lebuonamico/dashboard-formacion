@@ -147,6 +147,12 @@ class AreasService {
       return compliance != 0 ? compliance : a.name.compareTo(b.name);
     });
 
+  /// Teams of the period in each area, keyed by the area name.
+  Map<String, int> teamCountByArea(List<TeamOverview> teams) => groupBy(
+    teams,
+    (TeamOverview team) => team.area,
+  ).map((area, areaTeams) => MapEntry(area, areaTeams.length));
+
   ComplianceLevel levelOf(EmployeeCompliance member) =>
       levels.fromPercentage(member.totalPercentage);
 

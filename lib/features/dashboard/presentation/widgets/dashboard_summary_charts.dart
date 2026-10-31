@@ -1,33 +1,36 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/widgets/donut_chart.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 
 class DashboardSummaryCharts extends StatelessWidget {
-  final AsyncValue<List<EmployeeCompliance>> complianceListAsync;
+  final AsyncValue<DashboardDistribution?> distributionAsync;
 
-  const DashboardSummaryCharts({super.key, required this.complianceListAsync});
+  const DashboardSummaryCharts({super.key, required this.distributionAsync});
 
   @override
   Widget build(BuildContext context) {
-    return complianceListAsync.when(
+    return distributionAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
       ),
-      data: (complianceList) {
-        if (complianceList.isEmpty) return const SizedBox.shrink();
-
-        final compliance = _ComplianceSummary.from(complianceList);
-        final categories = _CategorySummary.from(complianceList);
+      data: (distribution) {
+        if (distribution == null) {
+          return const EmptyDataState(
+            compact: true,
+            icon: Icons.donut_large_outlined,
+            title: 'No hay colaboradores evaluados en este período.',
+          );
+        }
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -44,8 +47,8 @@ class DashboardSummaryCharts extends StatelessWidget {
                 mainAxisExtent: cardHeight,
               ),
               children: [
-                _ComplianceChartCard(summary: compliance),
-                _CategoryChartCard(summary: categories),
+                _ComplianceChartCard(summary: distribution.compliance),
+                _CategoryChartCard(summary: distribution.categories),
               ],
             );
           },
@@ -55,91 +58,8 @@ class DashboardSummaryCharts extends StatelessWidget {
   }
 }
 
-class _ComplianceSummary {
-  final int total;
-  final int meetsTarget;
-  final int attention;
-  final int doesNotMeet;
-
-  const _ComplianceSummary({
-    required this.total,
-    required this.meetsTarget,
-    required this.attention,
-    required this.doesNotMeet,
-  });
-
-  factory _ComplianceSummary.from(List<EmployeeCompliance> items) {
-    final levels = items
-        .map(
-          (item) => const ComplianceLevelService().fromPercentage(
-            item.totalPercentage,
-          ),
-        )
-        .toList();
-    int count(ComplianceLevel level) =>
-        levels.where((current) => current == level).length;
-
-    return _ComplianceSummary(
-      total: items.length,
-      meetsTarget: count(ComplianceLevel.onTarget),
-      attention: count(ComplianceLevel.atRisk),
-      doesNotMeet: count(ComplianceLevel.critical),
-    );
-  }
-
-  double get meetsPercentage => meetsTarget / total;
-}
-
-class _CategorySummary {
-  final Map<CourseCategory, double> hours;
-  final double averageHours;
-
-  /// Objetivo del período por persona y total, para darle referencia al
-  /// promedio.
-  final double averageTarget;
-  final double totalTarget;
-
-  const _CategorySummary({
-    required this.hours,
-    required this.averageHours,
-    required this.averageTarget,
-    required this.totalTarget,
-  });
-
-  factory _CategorySummary.from(List<EmployeeCompliance> items) {
-    final hours = <CourseCategory, double>{};
-    for (final type in CourseCategory.values) {
-      // Sólo lo que suma al objetivo: el total coincide con totalCompleted.
-      hours[type] = items.fold<double>(
-        0,
-        (total, item) => total + item.applicableHours[type]!,
-      );
-    }
-
-    final totalCompleted = items.fold<double>(
-      0,
-      (total, item) => total + item.totalCreditedHours,
-    );
-
-    final totalTarget = items.fold<double>(
-      0,
-      (total, item) => total + item.totalRequiredHours,
-    );
-
-    return _CategorySummary(
-      hours: hours,
-      averageHours: totalCompleted / items.length,
-      averageTarget: totalTarget / items.length,
-      totalTarget: totalTarget,
-    );
-  }
-
-  double get totalHours =>
-      hours.values.fold(0, (total, value) => total + value);
-}
-
 class _ComplianceChartCard extends StatelessWidget {
-  final _ComplianceSummary summary;
+  final ComplianceDistribution summary;
 
   const _ComplianceChartCard({required this.summary});
 
@@ -154,19 +74,19 @@ class _ComplianceChartCard extends StatelessWidget {
     final legend = [
       _ChartLegendItem(
         label: 'Cumple (>=100%)',
-        count: summary.meetsTarget,
+        count: summary.onTarget,
         color: green,
         backgroundColor: greenBackground,
       ),
       _ChartLegendItem(
         label: 'Atención (70-84%)',
-        count: summary.attention,
+        count: summary.atRisk,
         color: amber,
         backgroundColor: amberBackground,
       ),
       _ChartLegendItem(
         label: 'No cumple (<70%)',
-        count: summary.doesNotMeet,
+        count: summary.critical,
         color: red,
         backgroundColor: redBackground,
       ),
@@ -176,7 +96,7 @@ class _ComplianceChartCard extends StatelessWidget {
       title: 'Estado de cumplimiento',
       subtitle: 'Distribución semáforo de las ${summary.total} personas',
       trailing: 'Meta según seniority',
-      footer: '${summary.meetsTarget} personas alcanzaron el 100% de la meta',
+      footer: '${summary.onTarget} personas alcanzaron el 100% de la meta',
       action: 'Ver nómina',
       onAction: () => context.push('/empleados'),
       child: Row(
@@ -184,20 +104,13 @@ class _ComplianceChartCard extends StatelessWidget {
           DonutChart(
             segments: [
               DonutChartSegment(
-                value: summary.meetsTarget.toDouble(),
+                value: summary.onTarget.toDouble(),
                 color: green,
               ),
-              DonutChartSegment(
-                value: summary.attention.toDouble(),
-                color: amber,
-              ),
-              DonutChartSegment(
-                value: summary.doesNotMeet.toDouble(),
-                color: red,
-              ),
+              DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
+              DonutChartSegment(value: summary.critical.toDouble(), color: red),
             ],
-            centerText:
-                '${(summary.meetsPercentage * 100).toStringAsFixed(0)}%',
+            centerText: '${(summary.onTargetShare * 100).toStringAsFixed(0)}%',
             centerSubtitle: 'EN META',
           ),
           const SizedBox(width: 18),
@@ -211,30 +124,23 @@ class _ComplianceChartCard extends StatelessWidget {
 }
 
 class _CategoryChartCard extends StatelessWidget {
-  final _CategorySummary summary;
+  final CategoryDistribution summary;
 
   const _CategoryChartCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
     // Mismo color por categoría que los chips de tipo de curso.
-    final colors = [
-      for (final type in CourseCategory.values)
-        context.colors.category(type).text,
-    ];
-    final legend = <_ChartLegendItem>[];
-
-    for (var index = 0; index < CourseCategory.values.length; index++) {
-      final type = CourseCategory.values[index];
-      legend.add(
-        _ChartLegendItem(
-          label: type.shortLabel,
-          value: summary.hours[type] ?? 0,
-          color: colors[index],
-          backgroundColor: context.colorScheme.surfaceContainerLow,
-        ),
-      );
-    }
+    final legend = CourseCategory.values
+        .map(
+          (type) => _ChartLegendItem(
+            label: type.shortLabel,
+            value: summary.hours[type] ?? 0,
+            color: context.colors.category(type).text,
+            backgroundColor: context.colorScheme.surfaceContainerLow,
+          ),
+        )
+        .toList();
 
     return _SummaryCard(
       title: 'Distribución por categorías',
@@ -251,14 +157,10 @@ class _CategoryChartCard extends StatelessWidget {
               children: [
                 DonutChart(
                   segments: [
-                    for (
-                      var index = 0;
-                      index < CourseCategory.values.length;
-                      index++
-                    )
+                    for (final type in CourseCategory.values)
                       DonutChartSegment(
-                        value: summary.hours[CourseCategory.values[index]] ?? 0,
-                        color: colors[index],
+                        value: summary.hours[type] ?? 0,
+                        color: context.colors.category(type).text,
                       ),
                   ],
                   centerText:

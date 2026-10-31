@@ -2,7 +2,6 @@ import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
-import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/reports_providers.dart';
@@ -24,16 +23,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final complianceAsync = ref.watch(dashboardComplianceProvider);
-    final areasAsync = ref.watch(areasByComplianceProvider);
-    final timeEntriesAsync = ref.watch(dashboardTimeEntriesProvider);
-    final teamsAsync = ref.watch(teamOverviewsProvider);
-    final evaluatedMonths =
-        ref.watch(dashboardEvaluatedMonthsProvider).value ?? 1;
-    final scope = ref.watch(periodFilterProvider).scope;
-    final month = ref.watch(periodFilterProvider).month;
-    final year = ref.watch(periodFilterProvider).year;
+    final period = ref.watch(periodFilterProvider);
 
     return Scaffold(
       body: Column(
@@ -49,74 +39,74 @@ class DashboardScreen extends ConsumerWidget {
                     action: PrintReportButton(report: dashboardReportProvider),
                   ),
                   const SizedBox(height: 24),
-                  hasDataAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, _) => ErrorDataState(
-                      title: 'No pudimos cargar el tablero',
-                      error: error,
-                      onRetry: () => ref.invalidate(hasTeamPeriodDataProvider),
-                    ),
-                    data: (hasData) => FadeIn(
-                      child: (() {
-                        if (!hasData) {
-                          return EmptyDataState.periodWithoutData(
-                            period: periodLabel(scope, month, year),
-                          );
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            DashboardKpiGrid(
-                              complianceListAsync: complianceAsync,
-                              timeEntriesAsync: timeEntriesAsync,
-                              areasAsync: areasAsync,
-                              teamsAsync: teamsAsync,
-                              scope: scope,
-                              selectedMonth: month,
-                              selectedYear: year,
-                              evaluatedMonths: evaluatedMonths,
-                              projectionAsync: ref.watch(
-                                annualProjectionProvider((
-                                  area: null,
-                                  team: null,
-                                )),
-                              ),
-                              variationAsync: ref.watch(
-                                complianceVariationProvider((
-                                  area: null,
-                                  team: null,
-                                )),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            DashboardSummaryCharts(
-                              complianceListAsync: complianceAsync,
-                            ),
-                            const SizedBox(height: 28),
-                            if (complianceAsync.value case final items?
-                                when items.isNotEmpty) ...[
-                              MoodleCrmComparisonCards(complianceList: items),
-                              const SizedBox(height: 28),
-                            ],
-                            DashboardMonthlyHours(
-                              evolutionAsync: ref.watch(
-                                dashboardMonthlyEvolutionProvider,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            DashboardAreasSection(areasAsync: areasAsync),
-                          ],
-                        );
-                      })(),
-                    ),
-                  ),
+                  ref
+                      .watch(hasTeamPeriodDataProvider)
+                      .when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, _) => ErrorDataState(
+                          title: 'No pudimos cargar el tablero',
+                          error: error,
+                          onRetry: () =>
+                              ref.invalidate(hasTeamPeriodDataProvider),
+                        ),
+                        data: (hasData) => FadeIn(
+                          child: hasData
+                              ? const _DashboardContent()
+                              : EmptyDataState.periodWithoutData(
+                                  period: periodLabel(
+                                    period.scope,
+                                    period.month,
+                                    period.year,
+                                  ),
+                                ),
+                        ),
+                      ),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DashboardContent extends ConsumerWidget {
+  const _DashboardContent();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(periodFilterProvider);
+    const wholePayroll = (area: null, team: null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DashboardKpiGrid(
+          kpisAsync: ref.watch(dashboardKpisProvider),
+          scope: period.scope,
+          selectedMonth: period.month,
+          selectedYear: period.year,
+          projectionAsync: ref.watch(annualProjectionProvider(wholePayroll)),
+          variationAsync: ref.watch(complianceVariationProvider(wholePayroll)),
+        ),
+        const SizedBox(height: 28),
+        DashboardSummaryCharts(
+          distributionAsync: ref.watch(dashboardDistributionProvider),
+        ),
+        const SizedBox(height: 28),
+        if (ref.watch(dashboardComplianceProvider).value case final items?
+            when items.isNotEmpty) ...[
+          MoodleCrmComparisonCards(complianceList: items),
+          const SizedBox(height: 28),
+        ],
+        DashboardMonthlyHours(
+          evolutionAsync: ref.watch(dashboardMonthlyEvolutionProvider),
+        ),
+        const SizedBox(height: 28),
+        const DashboardAreasSection(),
+      ],
     );
   }
 }

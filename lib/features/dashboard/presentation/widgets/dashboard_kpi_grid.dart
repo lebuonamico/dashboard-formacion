@@ -1,13 +1,11 @@
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
-import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
-import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
-import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
+import 'package:app_finnegans/core/widgets/empty_data_state.dart';
+import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/projection/domain/projection.dart';
@@ -15,17 +13,10 @@ import 'package:app_finnegans/features/projection/domain/projection.dart';
 export 'package:app_finnegans/core/widgets/kpi_card.dart';
 
 class DashboardKpiGrid extends StatelessWidget {
-  final AsyncValue<List<EmployeeCompliance>> complianceListAsync;
-  final AsyncValue<List<CrmTimeEntry>> timeEntriesAsync;
-  final AsyncValue<List<AreaSummary>> areasAsync;
-  final AsyncValue<List<TeamOverview>> teamsAsync;
+  final AsyncValue<DashboardKpiSummary?> kpisAsync;
   final PeriodScope scope;
   final int selectedMonth;
   final int selectedYear;
-
-  /// Meses evaluados en el período: 1 en el mensual, los meses con datos en
-  /// el anual. Sirve para pasar las horas del período a un ritmo mensual.
-  final int evaluatedMonths;
 
   /// Proyección a fin de año de toda la nómina visible.
   final AsyncValue<AnnualProjection?> projectionAsync;
@@ -35,58 +26,69 @@ class DashboardKpiGrid extends StatelessWidget {
 
   const DashboardKpiGrid({
     super.key,
-    required this.complianceListAsync,
-    required this.timeEntriesAsync,
-    required this.areasAsync,
-    required this.teamsAsync,
+    required this.kpisAsync,
     required this.scope,
     required this.selectedMonth,
     required this.selectedYear,
-    this.evaluatedMonths = 1,
     this.projectionAsync = const AsyncData(null),
     this.variationAsync = const AsyncData(null),
   });
 
   @override
   Widget build(BuildContext context) {
-    if (complianceListAsync.isLoading ||
-        timeEntriesAsync.isLoading ||
-        areasAsync.isLoading ||
-        teamsAsync.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final asyncValues = [
-      complianceListAsync,
-      timeEntriesAsync,
-      areasAsync,
-      teamsAsync,
-    ];
-    final error = asyncValues.where((value) => value.hasError).firstOrNull;
-    if (error != null) {
-      return ErrorDataState(
+    return kpisAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
-        error: error.error!,
+        error: error,
         compact: true,
-      );
-    }
-
-    final complianceList = complianceListAsync.value ?? [];
-    final timeEntries = timeEntriesAsync.value ?? [];
-    final areas = areasAsync.value ?? [];
-    final teams = teamsAsync.value ?? [];
-    if (complianceList.isEmpty) return const SizedBox.shrink();
-
-    final kpis = DashboardKpisService().calculate(
-      complianceList: complianceList,
-      timeEntries: timeEntries,
-      evaluatedMonths: evaluatedMonths,
+      ),
+      data: (summary) => summary == null
+          ? const EmptyDataState(
+              compact: true,
+              icon: Icons.groups_outlined,
+              title: 'No hay colaboradores elegibles en este período.',
+              message: 'Verificá la nómina elegible del período.',
+            )
+          : _KpiCards(
+              summary: summary,
+              scope: scope,
+              selectedMonth: selectedMonth,
+              selectedYear: selectedYear,
+              projection: projectionAsync.value,
+              variation: variationAsync.value,
+            ),
     );
+  }
+}
+
+class _KpiCards extends StatelessWidget {
+  final DashboardKpiSummary summary;
+  final PeriodScope scope;
+  final int selectedMonth;
+  final int selectedYear;
+
+  /// Mientras carga, o si el año no tiene datos, no se muestra su card.
+  final AnnualProjection? projection;
+  final ComplianceVariation? variation;
+
+  const _KpiCards({
+    required this.summary,
+    required this.scope,
+    required this.selectedMonth,
+    required this.selectedYear,
+    required this.projection,
+    required this.variation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final kpis = summary.kpis;
     final totalEmployees = kpis.employees;
     final completedHours = kpis.creditedHours;
     final employeesWhoTookCourse = kpis.training;
     final periodGoal = kpis.targetHours;
-    // Mientras carga, o si el año no tiene datos, no se muestra su card.
-    final projection = projectionAsync.value;
+    final projection = this.projection;
     final isAnnual = scope == PeriodScope.annual;
     final periodLabel = isAnnual
         ? 'AÑO $selectedYear'
@@ -99,8 +101,8 @@ class DashboardKpiGrid extends StatelessWidget {
           value: '$totalEmployees',
           suffix: ' nómina activa',
           progress: 1,
-          progressLabel: '${areas.length} áreas',
-          footer: '${teams.length} equipos',
+          progressLabel: '${summary.areaCount} áreas',
+          footer: '${summary.teamCount} equipos',
           icon: Icons.groups_outlined,
           color: context.colorScheme.primary,
           help: '$eligiblePayrollHelp Abajo, cuántas áreas y equipos abarcan.',
@@ -142,7 +144,7 @@ class DashboardKpiGrid extends StatelessWidget {
           year: selectedYear,
           month: selectedMonth,
           percentage: kpis.compliance,
-          variation: variationAsync.value,
+          variation: variation,
         ),
         if (projection != null) projectionKpiCard(context, projection),
       ],

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -65,5 +66,82 @@ void main() {
     );
 
     expect(kpis.annualGoalPerPerson, 0);
+  });
+
+  group('Distribuciones', () {
+    final members = [
+      _compliance('1', required: 10, valid: 10),
+      _compliance('2', required: 10, valid: 8),
+      _compliance('3', required: 10, valid: 1),
+    ];
+
+    test('Cuenta a cada persona en su nivel del semáforo', () {
+      final distribution = service.complianceDistribution(members);
+
+      expect(distribution.total, 3);
+      expect(distribution.onTarget, 1);
+      expect(distribution.atRisk, 1);
+      expect(distribution.critical, 1);
+      expect(distribution.onTargetShare, closeTo(1 / 3, 1e-9));
+    });
+
+    test('Las horas por categoría son las que suman al objetivo', () {
+      final distribution = service.categoryDistribution([
+        ...members,
+        _compliance('4', required: 2, valid: 5),
+      ]);
+
+      expect(distribution.hours[CourseCategory.businessSkills], 21);
+      expect(distribution.hours[CourseCategory.softSkills], 0);
+      expect(distribution.totalHours, 21);
+      expect(distribution.averageHours, 5.25);
+      expect(distribution.averageTarget, 8);
+      expect(distribution.totalTarget, 32);
+    });
+
+    test('Sin personas todo da 0', () {
+      final compliance = service.complianceDistribution(const []);
+      final categories = service.categoryDistribution(const []);
+
+      expect(compliance.onTargetShare, 0);
+      expect(categories.averageHours, 0);
+      expect(categories.averageTarget, 0);
+    });
+  });
+
+  test('El acumulado suma solo los meses con datos y con personas', () {
+    TeamsPeriodSummary month({
+      bool hasData = true,
+      int employees = 1,
+      required double completed,
+      required double target,
+    }) => TeamsPeriodSummary(
+      hasData: hasData,
+      teams: const [],
+      teamCount: 0,
+      employeeCount: employees,
+      completedHours: completed,
+      targetHours: target,
+      hoursDeviation: completed - target,
+      overallCompletion: 0,
+      businessHours: 0,
+      softSkillsHours: 0,
+      explorationHours: 0,
+      teachingHours: 0,
+      onTarget: 0,
+      atRisk: 0,
+      critical: 0,
+    );
+
+    final accumulated = service.accumulateCompliance([
+      month(completed: 6, target: 8),
+      month(completed: 2, target: 8),
+      month(hasData: false, completed: 100, target: 100),
+      month(employees: 0, completed: 100, target: 100),
+    ]);
+
+    expect(accumulated.creditedHours, 8);
+    expect(accumulated.targetHours, 16);
+    expect(accumulated.compliance, 50);
   });
 }
