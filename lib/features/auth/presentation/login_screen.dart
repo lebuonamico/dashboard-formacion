@@ -1,37 +1,16 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/features/auth/data/access_rejection.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  String? _rejectionMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = ref.watch(authControllerProvider);
-    if (!auth.hasValidSession && !auth.isValidatingAuthorization) {
-      // Read on arrival or after logout when login is already mounted.
-      final pendingMessage = readAccessRejectionMessage();
-      if (pendingMessage != null) {
-        _rejectionMessage = pendingMessage;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          // Consume only after this screen has actually displayed the text.
-          if (mounted && !ref.read(authControllerProvider).hasValidSession) {
-            consumeAccessRejectionMessage();
-          }
-        });
-      }
-    }
-    final loginMessage = _rejectionMessage ?? auth.error;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final loginMessage = auth.error;
     final cs = context.colorScheme;
     final colors = context.colors;
     return Scaffold(
@@ -124,9 +103,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 context.go('/dashboard');
                                 return;
                               }
-                              clearAccessRejection();
-                              setState(() => _rejectionMessage = null);
-                              await auth.signInWithGoogle();
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .signInWithGoogle();
                             },
                       // Borde y forma vienen del outlinedButtonTheme.
                       style: OutlinedButton.styleFrom(
@@ -213,11 +192,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _footerLink('Soporte', () {}),
-                  _footerDivider(),
-                  _footerLink('Política de privacidad', () {}),
-                  _footerDivider(),
-                  _footerLink('Términos de servicio', () {}),
+                  _FooterLink('Soporte', () {}),
+                  const _FooterDivider(),
+                  _FooterLink('Política de privacidad', () {}),
+                  const _FooterDivider(),
+                  _FooterLink('Términos de servicio', () {}),
                 ],
               ),
             ],
@@ -226,29 +205,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
 
-  Widget _footerLink(String text, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Text(
-        text,
-        style: context.textTheme.labelMedium?.copyWith(
-          color: context.colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    );
-  }
+class _FooterLink extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
 
-  Widget _footerDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Text(
-        '•',
-        style: context.textTheme.labelSmall?.copyWith(
-          color: context.colors.faintText,
-        ),
+  const _FooterLink(this.text, this.onTap);
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Text(
+      text,
+      style: context.textTheme.labelMedium?.copyWith(
+        color: context.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w400,
       ),
-    );
-  }
+    ),
+  );
+}
+
+class _FooterDivider extends StatelessWidget {
+  const _FooterDivider();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    child: Text(
+      '•',
+      style: context.textTheme.labelSmall?.copyWith(
+        color: context.colors.faintText,
+      ),
+    ),
+  );
 }

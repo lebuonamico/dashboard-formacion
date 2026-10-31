@@ -1,6 +1,5 @@
 import 'package:app_finnegans/core/data_filters/domain/data_filter.dart';
 import 'package:app_finnegans/core/data_filters/domain/data_filter_service.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 export 'package:app_finnegans/core/data_filters/domain/data_filter.dart';
@@ -37,10 +36,7 @@ class DataFilterSelectionNotifier extends Notifier<DataFilterSelection> {
   DataFilterSelectionNotifier(this.scope);
 
   @override
-  DataFilterSelection build() {
-    ref.watch(authControllerProvider.select((auth) => auth.email));
-    return const DataFilterSelection();
-  }
+  DataFilterSelection build() => const DataFilterSelection();
 
   void select(
     String dimension,

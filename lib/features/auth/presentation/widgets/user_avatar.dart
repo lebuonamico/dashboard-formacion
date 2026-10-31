@@ -19,7 +19,7 @@ class UserAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authControllerProvider);
+    final auth = ref.watch(authProvider);
     final cs = context.colorScheme;
     final role = UserRole.fromString(auth.role);
     final isLeader = role == UserRole.teamLead || role == UserRole.areaLead;

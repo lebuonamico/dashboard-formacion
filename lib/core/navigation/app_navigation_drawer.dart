@@ -46,7 +46,7 @@ class _ExpandedMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authControllerProvider);
+    final auth = ref.watch(authProvider);
     final destinations = visibleDestinations(
       canManage: auth.canManage || !auth.enabled,
       isTeamLead: auth.enabled && auth.knownRole == UserRole.teamLead,
@@ -181,10 +181,10 @@ class _LogoutTile extends ConsumerWidget {
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
-    final auth = ref.read(authControllerProvider);
+    final enabled = ref.read(authProvider).enabled;
     try {
-      await auth.signOut();
-      if (context.mounted) context.go(auth.enabled ? '/login' : '/');
+      await ref.read(authProvider.notifier).signOut();
+      if (context.mounted) context.go(enabled ? '/login' : '/');
     } catch (_) {
       if (context.mounted) {
         showAppSnackBar(context, 'No se pudo completar el cierre de sesión.');

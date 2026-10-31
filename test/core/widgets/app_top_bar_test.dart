@@ -1,7 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_back_button.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,9 +25,7 @@ Future<GoRouter> _show(WidgetTester tester, {required String initial}) async {
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        authControllerProvider.overrideWith((ref) => AuthController(null)),
-      ],
+      overrides: const [],
       child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     ),
   );
@@ -55,9 +52,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith((ref) => AuthController(null)),
-        ],
+        overrides: const [],
         child: MaterialApp(
           theme: AppTheme.light(),
           home: const Scaffold(body: AppTopBar(title: 'Inicio')),

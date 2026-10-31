@@ -13,7 +13,6 @@ import 'package:app_finnegans/features/time_entries/presentation/time_entries_sc
 import 'package:app_finnegans/features/courses/presentation/courses_screen.dart';
 import 'package:app_finnegans/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:app_finnegans/features/employees/presentation/employees_screen.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
@@ -78,7 +77,6 @@ Future<ProviderContainer> _show(
 
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
       employeesProvider.overrideWith((ref) async => employees ?? [_employee]),
       employeeHistoryProvider.overrideWith((ref) async => null),
       coursesProvider.overrideWith((ref) async => courses ?? [_course]),

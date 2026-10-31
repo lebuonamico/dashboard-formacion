@@ -45,7 +45,10 @@ class EmployeeDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          AppTopBar(title: 'Perfil del colaborador', backTo: '/empleados'),
+          const AppTopBar(
+            title: 'Perfil del colaborador',
+            backTo: '/empleados',
+          ),
 
           // Contenido
           Expanded(

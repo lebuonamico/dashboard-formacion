@@ -51,10 +51,7 @@ class AssistantChatController extends Notifier<ChatState> {
       _cancelOperation();
       _failedQuery = null;
     });
-    ref.listen(authControllerProvider.select((auth) => auth.email), (
-      prev,
-      next,
-    ) {
+    ref.listen(authProvider.select((auth) => auth.email), (prev, next) {
       if (prev != next) {
         _revision++;
         _cancelOperation();
@@ -84,7 +81,7 @@ class AssistantChatController extends Notifier<ChatState> {
   }
 
   void _validateSession() {
-    final auth = ref.read(authControllerProvider);
+    final auth = ref.read(authProvider);
     if (!auth.enabled || !auth.hasValidSession) {
       throw AssistantException.http(401);
     }

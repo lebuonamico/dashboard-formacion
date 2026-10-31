@@ -44,7 +44,6 @@ void main() {
     _usePreferences();
     final container = ProviderContainer(
       overrides: [
-        authControllerProvider.overrideWith((ref) => AuthController(null)),
         themeModeProvider.overrideWith(
           () => ThemeModeNotifier(ThemeMode.light),
         ),
@@ -119,8 +118,17 @@ void main() {
       _usePreferences();
       final container = ProviderContainer(
         overrides: [
-          authControllerProvider.overrideWith(
-            (ref) => _AuthWithRole('lider@finnegans.com', role),
+          authProvider.overrideWith(
+            () => AuthNotifier(
+              AuthState(
+                user: const AuthUser(
+                  id: 'test-user',
+                  email: 'lider@finnegans.com',
+                ),
+                isAuthorized: true,
+                role: role,
+              ),
+            ),
           ),
           themeModeProvider.overrideWith(
             () => ThemeModeNotifier(ThemeMode.light),
@@ -162,19 +170,4 @@ void main() {
       expect(find.byKey(const Key('cuenta_pertenece')), findsNothing);
     });
   });
-}
-
-/// Sesión con Supabase habilitado, un email y un rol fijos, sin cliente real.
-class _AuthWithRole extends AuthController {
-  final String _email;
-
-  _AuthWithRole(this._email, String role) : super(null) {
-    this.role = role;
-  }
-
-  @override
-  bool get enabled => true;
-
-  @override
-  String? get email => _email;
 }

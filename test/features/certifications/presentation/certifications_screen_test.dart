@@ -5,7 +5,6 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/certifications/presentation/certifications_screen.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -23,7 +22,6 @@ Future<GoRouter> _showCertifications(WidgetTester tester) async {
 
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
       employeesProvider.overrideWith(
         (ref) async => [
           Employee(

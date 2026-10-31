@@ -247,10 +247,7 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
     final uri = GoRouterState.of(context).uri;
     final destination = AssistantDestination.fromUri(uri);
     ref.listen(assistantChatProvider, _updateScroll);
-    ref.listen(authControllerProvider.select((auth) => auth.email), (
-      prev,
-      next,
-    ) {
+    ref.listen(authProvider.select((auth) => auth.email), (prev, next) {
       if (prev != next) {
         _text.clear();
         _focus.unfocus();

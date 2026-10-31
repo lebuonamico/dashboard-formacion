@@ -9,22 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-/// Sesión con Supabase habilitado y un rol fijo, sin cliente real.
-class _AuthWithRole extends AuthController {
-  final UserRole _role;
-
-  _AuthWithRole(this._role) : super(null);
-
-  @override
-  bool get enabled => true;
-
-  @override
-  UserRole? get knownRole => _role;
-
-  @override
-  bool get canManage => _role.canManage;
-}
-
 Future<ProviderContainer> _showScreen(
   WidgetTester tester, {
   UserRole? role,
@@ -36,9 +20,19 @@ Future<ProviderContainer> _showScreen(
 
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith(
-        (ref) => role == null ? AuthController(null) : _AuthWithRole(role),
-      ),
+      if (role != null)
+        authProvider.overrideWith(
+          () => AuthNotifier(
+            AuthState(
+              user: const AuthUser(
+                id: 'test-user',
+                email: 'usuario@finnegans.com',
+              ),
+              isAuthorized: true,
+              role: role.name,
+            ),
+          ),
+        ),
     ],
   );
   addTearDown(container.dispose);

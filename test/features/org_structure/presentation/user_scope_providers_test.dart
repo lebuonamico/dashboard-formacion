@@ -17,7 +17,6 @@ import 'package:app_finnegans/features/org_structure/domain/org_structure_reposi
 import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
@@ -225,7 +224,6 @@ ProviderContainer _container({
   final employeeIds = payroll.map((employee) => employee.employeeId);
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
       sessionDataProvider.overrideWithValue((
         enabled: enabled,
         email: email,

@@ -18,7 +18,6 @@ import 'package:app_finnegans/features/imports/domain/import_records_repository.
 import 'package:app_finnegans/features/imports/domain/upsert_repository.dart';
 import 'package:app_finnegans/features/imports/domain/import_audit_service.dart';
 import 'package:app_finnegans/features/settings/presentation/settings_screen.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
@@ -304,7 +303,6 @@ Future<ProviderContainer> _showSettings(
   addTearDown(tester.view.resetDevicePixelRatio);
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
       coursesRepositoryProvider.overrideWithValue(courses),
       employeesRepositoryProvider.overrideWithValue(employees ?? _Employees()),
       crmTimeEntriesRepositoryProvider.overrideWithValue(hours ?? _Hours()),

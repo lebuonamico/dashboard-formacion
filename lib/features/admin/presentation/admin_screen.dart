@@ -96,7 +96,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget _content() {
     final filteredUsers = ref.watch(filteredAdminUsersProvider);
     final selected = ref.watch(selectedAdminUserProvider);
-    final auth = ref.watch(authControllerProvider);
+    final auth = ref.watch(authProvider);
     final cs = context.colorScheme;
 
     return ListView(
@@ -327,9 +327,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       // aplicar: la columna Lidera y los líderes tienen que recargarse.
       ref.invalidate(orgStructureProvider);
       await ref.read(authorizedUsersProvider.future);
-      final auth = ref.read(authControllerProvider);
-      if (affectedEmail == auth.email) {
-        await auth.validateAuthorization();
+      if (affectedEmail == ref.read(authProvider).email) {
+        await ref.read(authProvider.notifier).validateAuthorization();
       }
       onFinish?.call();
       if (!mounted) return;

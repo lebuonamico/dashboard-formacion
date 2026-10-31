@@ -10,10 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthState, AuthUser;
+import 'package:app_finnegans/features/auth/data/supabase_auth_repository.dart';
+import 'package:app_finnegans/features/auth/data/access_rejection.dart';
 
-const _deniedMessage =
-    'Tu usuario no está autorizado para acceder a esta aplicación.';
+const _deniedMessage = unauthorizedAccessMessage;
 
 Map<String, dynamic> _sessionJson({String? email = 'test@example.com'}) {
   final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -100,8 +102,8 @@ class _AuthFixture {
   }
 }
 
-AuthController _controller(SupabaseClient client) {
-  final auth = AuthController(client);
+_Auth _controller(SupabaseClient client) {
+  final auth = _Auth(client);
   addTearDown(auth.dispose);
   return auth;
 }
@@ -114,8 +116,53 @@ Future<void> _waitUntil(bool Function() condition) async {
   fail('La operación de autenticación no terminó.');
 }
 
+/// Same surface the tests used before: reads the current [AuthState] and
+/// forwards the actions to [AuthNotifier].
+class _Auth extends ChangeNotifier {
+  final ProviderContainer container;
+  late final ProviderSubscription<AuthState> _subscription;
+
+  _Auth(SupabaseClient? client)
+    : container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            client == null ? null : SupabaseAuthRepository(client),
+          ),
+        ],
+      ) {
+    _subscription = container.listen(authProvider, (_, _) => notifyListeners());
+  }
+
+  AuthState get _state => container.read(authProvider);
+  AuthNotifier get _notifier => container.read(authProvider.notifier);
+
+  bool get enabled => _state.enabled;
+  bool get hasValidSession => _state.hasValidSession;
+  bool get isAuthorized => _state.isAuthorized;
+  bool get isValidatingAuthorization => _state.isValidatingAuthorization;
+  bool get isSigningIn => _state.isSigningIn;
+  bool get isAdmin => _state.isAdmin;
+  bool get canManage => _state.canManage;
+  String? get error => _state.error;
+  String? get role => _state.role;
+  String? get email => _state.email;
+
+  Future<void> signInWithGoogle() => _notifier.signInWithGoogle();
+  Future<void> signOut() => _notifier.signOut();
+  Future<void> validateAuthorization() => _notifier.validateAuthorization();
+  String? redirect(String path) => authRedirect(_state, path);
+
+  @override
+  void dispose() {
+    _subscription.close();
+    container.dispose();
+    super.dispose();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(clearAccessRejection);
 
   test(
     'Usuario admin autoriza la sesión y habilita el panel de administración',
@@ -428,7 +475,7 @@ void main() {
         ),
       ))!;
       addTearDown(() => tester.runAsync(fixture.client.dispose));
-      final auth = AuthController(fixture.client);
+      final auth = _Auth(fixture.client);
       var dashboardBuilds = 0;
       final router = GoRouter(
         initialLocation: '/dashboard',
@@ -448,8 +495,8 @@ void main() {
       addTearDown(router.dispose);
       addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [authControllerProvider.overrideWith((ref) => auth)],
+        UncontrolledProviderScope(
+          container: auth.container,
           child: MaterialApp.router(
             theme: AppTheme.light(),
             routerConfig: router,

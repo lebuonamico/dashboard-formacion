@@ -37,10 +37,21 @@ CustomTransitionPage<void> _withFade(GoRouterState state, Widget child) {
   );
 }
 
-GoRouter createAppRouter(AuthController auth) => GoRouter(
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final auth = ValueNotifier<AuthState>(ref.read(authProvider));
+  ref.listen(authProvider, (_, next) => auth.value = next);
+  final router = _createRouter(auth);
+  ref.onDispose(() {
+    router.dispose();
+    auth.dispose();
+  });
+  return router;
+});
+
+GoRouter _createRouter(ValueNotifier<AuthState> auth) => GoRouter(
   initialLocation: '/',
   refreshListenable: auth,
-  redirect: (context, state) => auth.redirect(state.uri.path),
+  redirect: (context, state) => authRedirect(auth.value, state.uri.path),
 
   routes: [
     GoRoute(
@@ -131,10 +142,3 @@ GoRouter createAppRouter(AuthController auth) => GoRouter(
     ),
   ],
 );
-
-final appRouterProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authControllerProvider.notifier);
-  final router = createAppRouter(auth);
-  ref.onDispose(router.dispose);
-  return router;
-});

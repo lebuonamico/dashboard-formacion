@@ -128,13 +128,6 @@ Employee _employee(
   isActive: active,
 );
 
-class _ManagerAuth extends AuthController {
-  _ManagerAuth() : super(null);
-
-  @override
-  bool get canManage => true;
-}
-
 Future<ProviderContainer> _showPanel(
   WidgetTester tester, {
   required AccessAdmin access,
@@ -150,7 +143,6 @@ Future<ProviderContainer> _showPanel(
 
   final container = ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
       accessAdminProvider.overrideWithValue(access),
       authorizedUsersRepositoryProvider.overrideWithValue(repository),
       if (structure != null) ...[
@@ -542,7 +534,15 @@ void main() {
   test('Academia y Administrador tienen acceso al panel', () {
     final container = ProviderContainer(
       overrides: [
-        authControllerProvider.overrideWith((ref) => _ManagerAuth()),
+        authProvider.overrideWith(
+          () => AuthNotifier(
+            const AuthState(
+              user: AuthUser(id: 'test-user', email: 'usuario@finnegans.com'),
+              isAuthorized: true,
+              role: 'academy',
+            ),
+          ),
+        ),
         authorizedUsersRepositoryProvider.overrideWithValue(_FakeUsers([])),
       ],
     );

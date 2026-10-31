@@ -1,5 +1,4 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/core/navigation/side_menu_provider.dart';
 import 'package:app_finnegans/core/navigation/app_shell.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
@@ -25,11 +24,7 @@ Future<ProviderContainer> _show(WidgetTester tester) async {
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  final container = ProviderContainer(
-    overrides: [
-      authControllerProvider.overrideWith((ref) => AuthController(null)),
-    ],
-  );
+  final container = ProviderContainer(overrides: []);
   addTearDown(container.dispose);
 
   final router = GoRouter(

@@ -41,7 +41,7 @@ class TeamDetailScreen extends ConsumerWidget {
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          AppTopBar(title: 'Detalle de equipo', backTo: '/equipos'),
+          const AppTopBar(title: 'Detalle de equipo', backTo: '/equipos'),
           Expanded(
             child: detailAsync.when(
               loading: () => Center(

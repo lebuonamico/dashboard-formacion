@@ -8,7 +8,7 @@ import 'package:app_finnegans/core/providers/core_providers.dart';
 enum AccessAdmin { allowed, denied, noSupabase }
 
 final accessAdminProvider = Provider<AccessAdmin>((ref) {
-  final auth = ref.watch(authControllerProvider);
+  final auth = ref.watch(authProvider);
   if (ref.watch(authorizedUsersRepositoryProvider) == null) {
     return AccessAdmin.noSupabase;
   }

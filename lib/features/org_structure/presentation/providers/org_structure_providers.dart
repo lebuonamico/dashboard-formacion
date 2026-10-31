@@ -11,12 +11,12 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 ///
 /// Los providers de datos la miran para volver a consultar cuando entra otro
 /// usuario en la misma pestaña: con RLS, cada usuario recibe filas distintas.
-/// Mira solo estos tres campos, así no se recalcula en cada
-/// `notifyListeners` de [AuthController] (por ejemplo, al validar).
+/// Mira solo estos tres campos, así no se recalcula en cada cambio de la
+/// sesión (por ejemplo, mientras se valida).
 final sessionDataProvider =
     Provider<({bool enabled, String? email, String? role})>(
       (ref) => ref.watch(
-        authControllerProvider.select(
+        authProvider.select(
           (auth) => (enabled: auth.enabled, email: auth.email, role: auth.role),
         ),
       ),

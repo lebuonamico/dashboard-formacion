@@ -1,261 +1,312 @@
-import 'package:app_finnegans/core/data/supabase_codes.dart';
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/legacy.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
-import 'package:app_finnegans/features/auth/domain/user_role.dart';
+import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/providers/core_providers.dart';
 import 'package:app_finnegans/features/auth/data/access_rejection.dart';
+import 'package:app_finnegans/features/auth/data/supabase_auth_repository.dart';
+import 'package:app_finnegans/features/auth/domain/auth_repository.dart';
+import 'package:app_finnegans/features/auth/domain/auth_user.dart';
+import 'package:app_finnegans/features/auth/domain/user_role.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-String? googleOAuthRedirectTo({required bool isWeb, required Uri baseUri}) =>
-    isWeb ? '${baseUri.origin}/' : null;
+export 'package:app_finnegans/features/auth/domain/auth_user.dart';
 
-class AuthController extends ChangeNotifier {
-  final SupabaseClient? _client;
-  StreamSubscription<AuthState>? _subscription;
-  String? error;
-  bool _authorizationDenied = false;
-  bool isSigningIn = false;
-  bool isValidatingAuthorization = false;
-  String? role;
-  (String, String?)? _authorizedUser;
-  (String, String?)? _validatingUser;
-  Future<void>? _authorizationFuture;
-  int _authorizationRevision = 0;
-  bool _disposed = false;
+final authRepositoryProvider = Provider<AuthRepository?>(
+  (ref) => SupabaseConfig.enabled
+      ? SupabaseAuthRepository(ref.watch(supabaseClientProvider))
+      : null,
+);
 
-  AuthController(this._client) {
-    _subscription = _client?.auth.onAuthStateChange.listen(
-      (state) {
-        if (_disposed) return;
-        if (state.event == AuthChangeEvent.signedOut) _clearAuthorization();
-        _updateSession();
-      },
-      onError: (Object authError, StackTrace stackTrace) {
-        if (_disposed) return;
-        _clearAuthorization();
-        error =
-            'No se pudo actualizar la sesión. Intentá iniciar sesión nuevamente.';
-        notifyListeners();
-      },
-    );
-    // Restored sessions must be gated before the router's first redirect.
-    if (hasValidSession) unawaited(validateAuthorization());
-  }
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);
 
-  bool get enabled => _client != null;
+const _keep = Object();
 
-  bool get hasValidSession {
-    final session = _client?.auth.currentSession;
-    return session != null && !session.isExpired;
-  }
+class AuthState {
+  final bool enabled;
+  final AuthUser? user;
+  final bool isAuthorized;
+  final String? role;
+  final bool isSigningIn;
+  final bool isValidatingAuthorization;
+  final String? error;
 
-  (String, String?)? get _currentUser {
-    final user = _client?.auth.currentUser;
-    return hasValidSession && user != null ? (user.id, user.email) : null;
-  }
+  const AuthState({
+    this.enabled = true,
+    this.user,
+    this.isAuthorized = false,
+    this.role,
+    this.isSigningIn = false,
+    this.isValidatingAuthorization = false,
+    this.error,
+  });
 
-  bool get isAuthorized =>
-      hasValidSession &&
-      _authorizedUser != null &&
-      _authorizedUser == _currentUser;
+  const AuthState.disabled() : this(enabled: false);
 
-  /// Mail del usuario autorizado, para mostrarlo en la interfaz.
-  String? get email => isAuthorized ? _authorizedUser?.$2 : null;
+  AuthState copyWith({
+    Object? user = _keep,
+    bool? isAuthorized,
+    Object? role = _keep,
+    bool? isSigningIn,
+    bool? isValidatingAuthorization,
+    Object? error = _keep,
+  }) => AuthState(
+    enabled: enabled,
+    user: identical(user, _keep) ? this.user : user as AuthUser?,
+    isAuthorized: isAuthorized ?? this.isAuthorized,
+    role: identical(role, _keep) ? this.role : role as String?,
+    isSigningIn: isSigningIn ?? this.isSigningIn,
+    isValidatingAuthorization:
+        isValidatingAuthorization ?? this.isValidatingAuthorization,
+    error: identical(error, _keep) ? this.error : error as String?,
+  );
 
-  /// Nombre que Google completa en los metadatos del usuario de Supabase.
-  String? get name => _metadata(const ['full_name', 'name']);
+  bool get hasValidSession => user != null;
 
-  /// Foto de perfil de Google, si la cuenta tiene una.
-  String? get photoUrl => _metadata(const ['avatar_url', 'picture']);
+  String? get email => isAuthorized ? user?.email : null;
 
-  String? _metadata(List<String> keys) {
-    if (!isAuthorized) return null;
-    final metadata = _client?.auth.currentUser?.userMetadata;
-    if (metadata == null) return null;
-    for (final key in keys) {
-      final value = metadata[key];
-      if (value is String && value.trim().isNotEmpty) return value.trim();
-    }
-    return null;
-  }
+  String? get name => isAuthorized ? user?.name : null;
 
-  bool get isAdmin => isAuthorized && role == UserRole.admin.name;
+  String? get photoUrl => isAuthorized ? user?.photoUrl : null;
 
-  /// Rol de la sesión autorizada, o `null` si no hay sesión o el rol guardado
-  /// no es uno de los conocidos.
   UserRole? get knownRole => isAuthorized ? UserRole.fromString(role) : null;
 
-  /// Administrador o Academia: ven toda la empresa, importan archivos y
-  /// entran al panel de administración.
   bool get canManage => knownRole?.canManage ?? false;
 
-  void _clearAuthorization() {
-    _authorizationRevision++;
-    _authorizedUser = null;
-    _validatingUser = null;
-    _authorizationFuture = null;
-    isValidatingAuthorization = false;
-    role = null;
-  }
+  bool get isAdmin => isAuthorized && role == UserRole.admin.name;
+}
 
-  void _updateSession() {
-    if (_disposed) return;
-    if (!hasValidSession) {
+/// Validates every new session against the allowlist. A late answer never
+/// authorizes anyone: each validation carries a revision that a sign out or a
+/// newer validation invalidates.
+class AuthNotifier extends Notifier<AuthState> {
+  final AuthState? _fixedState;
+
+  AuthNotifier([this._fixedState]);
+
+  int _revision = 0;
+  AuthUser? _authorizedUser;
+  AuthUser? _validatingUser;
+  Future<void>? _validation;
+  bool _denied = false;
+
+  AuthRepository? get _repository => ref.read(authRepositoryProvider);
+
+  @override
+  AuthState build() {
+    final fixedState = _fixedState;
+    if (fixedState != null) return fixedState;
+    // Filter selections belong to the user who made them.
+    listenSelf((previous, next) {
+      if (previous?.email != next.email) {
+        ref.invalidate(dataFilterSelectionProvider);
+      }
+    });
+    final repository = ref.watch(authRepositoryProvider);
+    if (repository == null) return const AuthState.disabled();
+
+    final subscription = repository.changes().listen(
+      _onChange,
+      onError: (Object _, StackTrace _) => _onChangeError(),
+    );
+    ref.onDispose(() {
       _clearAuthorization();
-      // Keep a denial visible after the automatic signedOut event.
-      notifyListeners();
-    } else if (!isAuthorized && !_authorizationDenied) {
-      unawaited(validateAuthorization());
-    } else {
-      notifyListeners();
+      unawaited(subscription.cancel());
+    });
+
+    final user = repository.currentUser();
+    if (user == null) {
+      final rejection = repository.rejectionMessage();
+      repository.clearRejection();
+      return AuthState(error: rejection);
     }
+    // A restored session stays gated until the allowlist answers, so the
+    // router never lets it through before that.
+    final revision = ++_revision;
+    _validatingUser = user;
+    _validation = Future.microtask(() => _validate(user, revision));
+    return AuthState(user: user, isValidatingAuthorization: true);
   }
 
   Future<void> validateAuthorization() {
-    if (_disposed || !enabled) return Future.value();
-    final user = _currentUser;
+    final repository = _repository;
+    if (repository == null) return Future.value();
+    final user = repository.currentUser();
     if (user == null) {
       _clearAuthorization();
-      notifyListeners();
+      _publishSignedOut();
       return Future.value();
     }
-    if (_validatingUser == user && _authorizationFuture != null) {
-      return _authorizationFuture!;
+    final validation = _validation;
+    if (validation != null && _sameUser(_validatingUser, user)) {
+      return validation;
     }
-    final revision = ++_authorizationRevision;
+    final revision = ++_revision;
     _authorizedUser = null;
-    role = null;
-    error = null;
     _validatingUser = user;
-    isValidatingAuthorization = true;
-    final validation = _validateAuthorization(user, revision);
-    _authorizationFuture = validation;
-    notifyListeners();
-    return validation;
-  }
-
-  bool _isCurrentValidation((String, String?) user, int revision) =>
-      !_disposed && revision == _authorizationRevision && _currentUser == user;
-
-  Future<void> _validateAuthorization(
-    (String, String?) user,
-    int revision,
-  ) async {
-    try {
-      final email = user.$2;
-      final row = email == null || email.isEmpty
-          ? null
-          : await _client!
-                .schema('public')
-                .from('usuarios_autorizados')
-                .select('activo,rol,ff_eliminar,ff_bloqueo')
-                .eq('email', email.trim().toLowerCase())
-                .maybeSingle();
-      if (!_isCurrentValidation(user, revision)) return;
-      if (row != null &&
-          row['activo'] == true &&
-          row['ff_eliminar'] == null &&
-          row['ff_bloqueo'] == null) {
-        final storedRole = row['rol'] as String?;
-        role = storedRole == null ? null : userRoleFromDb(storedRole);
-        _authorizedUser = user;
-        _authorizationDenied = false;
-        clearAccessRejection();
-      } else {
-        _authorizationDenied = true;
-        // Persist only the generic reason before logout or OAuth navigation.
-        rememberUnauthorizedAccess();
-        try {
-          await _client!.auth.signOut();
-        } catch (_) {
-          // Supabase clears the local session before attempting remote logout.
-        }
-      }
-    } catch (_) {
-      if (!_isCurrentValidation(user, revision)) return;
-      error =
-          'No se pudo validar la autorización de tu usuario. Intentá nuevamente.';
-    } finally {
-      if (!_disposed && revision == _authorizationRevision) {
-        _validatingUser = null;
-        _authorizationFuture = null;
-        isValidatingAuthorization = false;
-        notifyListeners();
-      }
-    }
-  }
-
-  String? redirect(String path) {
-    if (!enabled) return null;
-    final isLogin = path == '/' || path == '/login';
-    if (!isAuthorized) return path == '/login' ? null : '/login';
-    if (isLogin) return '/dashboard';
-    if (!canManage &&
-        (path.startsWith('/admin') || path.startsWith('/configuracion'))) {
-      return '/dashboard';
-    }
-    // Un líder no ve la pantalla de Áreas ni el detalle de un área, pero sí
-    // el de sus equipos, que cuelga de /areas/:area/equipos/:equipo.
-    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-    if (knownRole == UserRole.teamLead &&
-        segments.isNotEmpty &&
-        segments.first == 'areas' &&
-        segments.length <= 2) {
-      return '/equipos';
-    }
-    return null;
+    state = state.copyWith(
+      user: user,
+      isAuthorized: false,
+      role: null,
+      error: null,
+      isValidatingAuthorization: true,
+    );
+    return _validation = _validate(user, revision);
   }
 
   Future<void> signInWithGoogle() async {
-    if (!enabled || isSigningIn || isValidatingAuthorization || _disposed) {
+    final repository = _repository;
+    if (repository == null ||
+        state.isSigningIn ||
+        state.isValidatingAuthorization) {
       return;
     }
-    _authorizationDenied = false;
-    if (hasValidSession) {
+    _denied = false;
+    if (repository.currentUser() != null) {
       await validateAuthorization();
       return;
     }
-    isSigningIn = true;
-    error = null;
-    notifyListeners();
+    repository.clearRejection();
+    state = state.copyWith(isSigningIn: true, error: null);
     try {
-      final launched = await _client!.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: googleOAuthRedirectTo(isWeb: kIsWeb, baseUri: Uri.base),
-      );
-      if (!launched) {
-        error = 'No se pudo abrir el inicio de sesión con Google.';
+      final launched = await repository.signInWithGoogle();
+      if (ref.mounted && !launched) {
+        state = state.copyWith(
+          error: 'No se pudo abrir el inicio de sesión con Google.',
+        );
       }
     } catch (_) {
-      error = 'No se pudo iniciar sesión con Google. Intentá nuevamente.';
+      if (ref.mounted) {
+        state = state.copyWith(
+          error: 'No se pudo iniciar sesión con Google. Intentá nuevamente.',
+        );
+      }
     } finally {
-      isSigningIn = false;
-      if (!_disposed) notifyListeners();
+      if (ref.mounted) state = state.copyWith(isSigningIn: false);
     }
   }
 
   Future<void> signOut() async {
     _clearAuthorization();
-    _authorizationDenied = false;
-    error = null;
-    if (!_disposed) notifyListeners();
-    await _client?.auth.signOut();
+    _denied = false;
+    state = state.copyWith(
+      isAuthorized: false,
+      role: null,
+      error: null,
+      isValidatingAuthorization: false,
+    );
+    await _repository?.signOut();
   }
 
-  @override
-  void dispose() {
-    _disposed = true;
-    _clearAuthorization();
-    unawaited(_subscription?.cancel());
-    super.dispose();
+  void _onChange(AuthChange change) {
+    if (!ref.mounted) return;
+    if (change == AuthChange.signedOut) _clearAuthorization();
+    final user = _repository?.currentUser();
+    if (user == null) {
+      _clearAuthorization();
+      _publishSignedOut();
+    } else if (!_sameUser(_authorizedUser, user) && !_denied) {
+      unawaited(validateAuthorization());
+    } else {
+      state = state.copyWith(
+        user: user,
+        isAuthorized: _sameUser(_authorizedUser, user),
+      );
+    }
   }
+
+  void _onChangeError() {
+    if (!ref.mounted) return;
+    _clearAuthorization();
+    state = state.copyWith(
+      isAuthorized: false,
+      role: null,
+      isValidatingAuthorization: false,
+      error:
+          'No se pudo actualizar la sesión. Intentá iniciar sesión nuevamente.',
+    );
+  }
+
+  Future<void> _validate(AuthUser user, int revision) async {
+    final repository = _repository;
+    if (repository == null) return;
+    try {
+      final email = user.email;
+      final result = email == null || email.isEmpty
+          ? const AuthorizationResult(isAllowed: false)
+          : await repository.checkAuthorization(email);
+      if (!_isCurrentValidation(user, revision)) return;
+      if (result.isAllowed) {
+        _authorizedUser = user;
+        _denied = false;
+        repository.clearRejection();
+        state = state.copyWith(isAuthorized: true, role: result.role);
+      } else {
+        _denied = true;
+        repository.rememberRejection();
+        state = state.copyWith(error: unauthorizedAccessMessage);
+        try {
+          await repository.signOut();
+        } catch (_) {
+          // Supabase clears the local session before the remote logout.
+        }
+      }
+    } catch (_) {
+      if (!_isCurrentValidation(user, revision)) return;
+      state = state.copyWith(
+        error:
+            'No se pudo validar la autorización de tu usuario. Intentá nuevamente.',
+      );
+    } finally {
+      if (ref.mounted && revision == _revision) {
+        _validatingUser = null;
+        _validation = null;
+        state = state.copyWith(isValidatingAuthorization: false);
+      }
+    }
+  }
+
+  bool _isCurrentValidation(AuthUser user, int revision) =>
+      ref.mounted &&
+      revision == _revision &&
+      _sameUser(_repository?.currentUser(), user);
+
+  void _clearAuthorization() {
+    _revision++;
+    _authorizedUser = null;
+    _validatingUser = null;
+    _validation = null;
+  }
+
+  void _publishSignedOut() => state = state.copyWith(
+    user: null,
+    isAuthorized: false,
+    role: null,
+    isValidatingAuthorization: false,
+  );
+
+  static bool _sameUser(AuthUser? a, AuthUser? b) =>
+      a != null && b != null && a.id == b.id && a.email == b.email;
 }
 
-final authControllerProvider = ChangeNotifierProvider<AuthController>(
-  (ref) => AuthController(
-    SupabaseConfig.enabled ? ref.watch(supabaseClientProvider) : null,
-  ),
-);
+/// Route guard. Runs after the authorization check, so a missing role while
+/// validating never lets anyone through.
+String? authRedirect(AuthState auth, String path) {
+  if (!auth.enabled) return null;
+  final isLogin = path == '/' || path == '/login';
+  if (!auth.isAuthorized) return path == '/login' ? null : '/login';
+  if (isLogin) return '/dashboard';
+  if (!auth.canManage &&
+      (path.startsWith('/admin') || path.startsWith('/configuracion'))) {
+    return '/dashboard';
+  }
+  final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+  final isAreasOrAreaDetail =
+      segments.isNotEmpty && segments.first == 'areas' && segments.length <= 2;
+  if (auth.knownRole == UserRole.teamLead && isAreasOrAreaDetail) {
+    return '/equipos';
+  }
+  return null;
+}

@@ -12,7 +12,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthState, AuthUser;
+import 'package:app_finnegans/features/auth/data/supabase_auth_repository.dart';
+import 'package:app_finnegans/features/auth/data/access_rejection.dart';
 
 const _privatePaths = [
   '/dashboard',
@@ -112,8 +115,8 @@ SupabaseClient _client({
   return client;
 }
 
-AuthController _controller(SupabaseClient? client) {
-  final controller = AuthController(client);
+_Auth _controller(SupabaseClient? client) {
+  final controller = _Auth(client);
   addTearDown(controller.dispose);
   return controller;
 }
@@ -122,7 +125,7 @@ Future<void> _signIn(SupabaseClient client) => client.auth
     .signInWithPassword(email: 'test@example.com', password: 'test-password')
     .then((_) {});
 
-Future<void> _waitForAuthorization(AuthController auth) async {
+Future<void> _waitForAuthorization(_Auth auth) async {
   for (var attempt = 0; attempt < 100; attempt++) {
     if (auth.isAuthorized && !auth.isValidatingAuthorization) return;
     await Future<void>.delayed(Duration.zero);
@@ -130,8 +133,53 @@ Future<void> _waitForAuthorization(AuthController auth) async {
   fail('La sesión no completó la autorización: ${auth.error}');
 }
 
+/// Same surface the tests used before: reads the current [AuthState] and
+/// forwards the actions to [AuthNotifier].
+class _Auth extends ChangeNotifier {
+  final ProviderContainer container;
+  late final ProviderSubscription<AuthState> _subscription;
+
+  _Auth(SupabaseClient? client)
+    : container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            client == null ? null : SupabaseAuthRepository(client),
+          ),
+        ],
+      ) {
+    _subscription = container.listen(authProvider, (_, _) => notifyListeners());
+  }
+
+  AuthState get _state => container.read(authProvider);
+  AuthNotifier get _notifier => container.read(authProvider.notifier);
+
+  bool get enabled => _state.enabled;
+  bool get hasValidSession => _state.hasValidSession;
+  bool get isAuthorized => _state.isAuthorized;
+  bool get isValidatingAuthorization => _state.isValidatingAuthorization;
+  bool get isSigningIn => _state.isSigningIn;
+  bool get isAdmin => _state.isAdmin;
+  bool get canManage => _state.canManage;
+  String? get error => _state.error;
+  String? get role => _state.role;
+  String? get email => _state.email;
+
+  Future<void> signInWithGoogle() => _notifier.signInWithGoogle();
+  Future<void> signOut() => _notifier.signOut();
+  Future<void> validateAuthorization() => _notifier.validateAuthorization();
+  String? redirect(String path) => authRedirect(_state, path);
+
+  @override
+  void dispose() {
+    _subscription.close();
+    container.dispose();
+    super.dispose();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(clearAccessRejection);
 
   group('Redirect de Google', () {
     test('Web usa el origin actual con / final, sin query ni fragmento', () {
@@ -342,7 +390,7 @@ void main() {
             launchStarted.complete();
             return launchResult.future;
           });
-      final auth = AuthController(_client());
+      final auth = _Auth(_client());
       var disposed = false;
       addTearDown(() {
         if (!disposed) auth.dispose();
@@ -356,10 +404,7 @@ void main() {
       auth.dispose();
       disposed = true;
       launchResult.complete(true);
-      await pendingSignIn;
-
-      expect(auth.isSigningIn, isFalse);
-      expect(auth.hasValidSession, isFalse);
+      await expectLater(pendingSignIn, completes);
     });
   });
 
@@ -377,10 +422,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    expect(
-      container.read(authControllerProvider).enabled,
-      SupabaseConfig.enabled,
-    );
+    expect(container.read(authProvider).enabled, SupabaseConfig.enabled);
   });
 
   testWidgets('Router protege rutas y se refresca por login/logout', (
@@ -391,11 +433,9 @@ void main() {
       () async => _client(requests: requests, registerDisposal: false),
     ))!;
     addTearDown(() => tester.runAsync(client.dispose));
-    final auth = AuthController(client);
-    final container = ProviderContainer(
-      overrides: [authControllerProvider.overrideWith((ref) => auth)],
-    );
-    addTearDown(container.dispose);
+    final auth = _Auth(client);
+    final container = auth.container;
+    addTearDown(auth.dispose);
     addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
     final router = container.read(appRouterProvider);
 
