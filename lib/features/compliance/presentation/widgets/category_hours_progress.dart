@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 
@@ -32,19 +33,37 @@ class CategoryHoursProgress extends StatelessWidget {
         spacing: 6,
         runSpacing: 4,
         children: [
-          for (final type in CourseCategory.values) _buildCard(context, type),
+          for (final type in CourseCategory.values)
+            _CategoryChip(
+              type: type,
+              compliance: compliance!,
+              showOnlyApplicableHours: showOnlyApplicableHours,
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCard(BuildContext context, CourseCategory type) {
+class _CategoryChip extends StatelessWidget {
+  final CourseCategory type;
+  final EmployeeCompliance compliance;
+  final bool showOnlyApplicableHours;
+
+  const _CategoryChip({
+    required this.type,
+    required this.compliance,
+    required this.showOnlyApplicableHours,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
-    final registeredHours = compliance!.creditedHours[type] ?? 0.0;
+    final registeredHours = compliance.creditedHours[type] ?? 0.0;
     final completedHours = showOnlyApplicableHours
-        ? compliance!.applicableHours[type]!
+        ? compliance.applicableHours[type]!
         : registeredHours;
-    final requiredHours = compliance!.requiredHours[type] ?? 0.0;
+    final requiredHours = compliance.requiredHours[type] ?? 0.0;
     final required = requiredHours > 0;
     final meets = required && completedHours >= requiredHours;
     final ColorPair(text: color, :background) = !required
@@ -55,9 +74,9 @@ class CategoryHoursProgress extends StatelessWidget {
 
     return Tooltip(
       message: required
-          ? '${type.label}: ${_formatHours(completedHours)} de ${_formatHours(requiredHours)} horas'
+          ? '${type.label}: ${formatHours(completedHours)} de ${formatHours(requiredHours)} horas'
           : registeredHours > 0
-          ? '${type.label}: no requerida; ${_formatHours(registeredHours)} h registradas no suman al cumplimiento'
+          ? '${type.label}: no requerida; ${formatHours(registeredHours)} h registradas no suman al cumplimiento'
           : '${type.label}: no requerida; no suma al cumplimiento',
       child: Container(
         width: 125,
@@ -82,7 +101,7 @@ class CategoryHoursProgress extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              '${_formatHours(completedHours)}/${_formatHours(requiredHours)} h',
+              '${formatHours(completedHours)}/${formatHours(requiredHours)} h',
               style: context.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
@@ -93,8 +112,4 @@ class CategoryHoursProgress extends StatelessWidget {
       ),
     );
   }
-
-  String _formatHours(double hours) => hours == hours.roundToDouble()
-      ? hours.toStringAsFixed(0)
-      : hours.toStringAsFixed(1);
 }

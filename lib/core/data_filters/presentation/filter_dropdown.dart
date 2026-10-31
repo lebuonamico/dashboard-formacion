@@ -108,129 +108,13 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
     super.dispose();
   }
 
-  Widget _list(List<DropdownMenuItem<T>> matches, double height) {
-    if (matches.isEmpty) {
-      return const Center(child: Text('Sin opciones disponibles'));
+  void _select(DropdownMenuItem<T> item) {
+    if (widget.multiSelect) {
+      _toggle(item.value as T);
+    } else {
+      widget.onChanged?.call(item.value);
+      _menu.close();
     }
-    final needsScroll = matches.length * _rowHeight > height;
-    return Listener(
-      // La lista procesa primero la rueda; en sus extremos consumimos el
-      // evento restante para que no desplace la página que está debajo.
-      onPointerSignal: (event) {
-        if (event is PointerScrollEvent) {
-          GestureBinding.instance.pointerSignalResolver.register(event, (_) {});
-        }
-      },
-      child: ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-        child: Scrollbar(
-          controller: _scroll,
-          thumbVisibility: needsScroll,
-          trackVisibility: needsScroll,
-          interactive: true,
-          thickness: 6,
-          radius: const Radius.circular(3),
-          child: ListView.builder(
-            controller: _scroll,
-            primary: false,
-            physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.only(right: 10),
-            itemExtent: _rowHeight,
-            itemCount: matches.length,
-            itemBuilder: (context, index) {
-              final item = matches[index];
-              final label = _label(item);
-              final title =
-                  widget.itemTitleBuilder?.call(item.value as T) ?? label;
-              final subtitle = widget.itemSubtitleBuilder?.call(
-                item.value as T,
-              );
-              final incompatible = widget.incompatibleValues.contains(
-                item.value,
-              );
-              final child = Tooltip(
-                message: incompatible
-                    ? '$label: sin coincidencias con los demás filtros o el período actual.'
-                    : label,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: incompatible || subtitle != null
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(height: 1.4),
-                            ),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.textTheme.labelMedium?.copyWith(
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                            if (incompatible) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                'Sin coincidencias',
-                                style: context.textTheme.labelMedium?.copyWith(
-                                  height: 1.4,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                            ],
-                          ],
-                        )
-                      : Text(
-                          label,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(height: 1.4),
-                        ),
-                ),
-              );
-              if (widget.multiSelect) {
-                return CheckboxMenuButton(
-                  value: _selected.contains(item.value),
-                  closeOnActivate: false,
-                  isError: incompatible,
-                  trailingIcon: incompatible
-                      ? Icon(
-                          Icons.warning_amber_rounded,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.error,
-                        )
-                      : null,
-                  onChanged: item.enabled
-                      ? (_) => _toggle(item.value as T)
-                      : null,
-                  child: child,
-                );
-              }
-              return MenuItemButton(
-                onPressed: item.enabled
-                    ? () {
-                        widget.onChanged?.call(item.value);
-                        _menu.close();
-                      }
-                    : null,
-                leadingIcon: _selected.contains(item.value)
-                    ? const Icon(Icons.check, size: 18)
-                    : const SizedBox(width: 18),
-                child: child,
-              );
-            },
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -299,7 +183,19 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                   ),
                 ),
               ),
-              SizedBox(height: listHeight, child: _list(ordered, listHeight)),
+              SizedBox(
+                height: listHeight,
+                child: _OptionsList<T>(
+                  options: ordered,
+                  height: listHeight,
+                  rowHeight: _rowHeight,
+                  controller: _scroll,
+                  selected: selected,
+                  dropdown: widget,
+                  labelOf: _label,
+                  onSelect: _select,
+                ),
+              ),
               if (_canClear)
                 SizedBox(
                   height: footerHeight,
@@ -376,5 +272,188 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
     return widget.tooltip == null
         ? field
         : Tooltip(message: widget.tooltip!, child: field);
+  }
+}
+
+class _OptionsList<T> extends StatelessWidget {
+  final List<DropdownMenuItem<T>> options;
+  final double height;
+  final double rowHeight;
+  final ScrollController controller;
+  final Set<T> selected;
+  final FilterDropdown<T> dropdown;
+  final String Function(DropdownMenuItem<T>) labelOf;
+  final ValueChanged<DropdownMenuItem<T>> onSelect;
+
+  const _OptionsList({
+    required this.options,
+    required this.height,
+    required this.rowHeight,
+    required this.controller,
+    required this.selected,
+    required this.dropdown,
+    required this.labelOf,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (options.isEmpty) {
+      return const Center(child: Text('Sin opciones disponibles'));
+    }
+    final needsScroll = options.length * rowHeight > height;
+    return Listener(
+      // The list handles the wheel first; at its ends the leftover event is
+      // consumed here so it does not scroll the page underneath.
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent) {
+          GestureBinding.instance.pointerSignalResolver.register(event, (_) {});
+        }
+      },
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: Scrollbar(
+          controller: controller,
+          thumbVisibility: needsScroll,
+          trackVisibility: needsScroll,
+          interactive: true,
+          thickness: 6,
+          radius: const Radius.circular(3),
+          child: ListView.builder(
+            controller: controller,
+            primary: false,
+            physics: const ClampingScrollPhysics(),
+            padding: const EdgeInsets.only(right: 10),
+            itemExtent: rowHeight,
+            itemCount: options.length,
+            itemBuilder: (context, index) => _Option<T>(
+              item: options[index],
+              selected: selected,
+              dropdown: dropdown,
+              labelOf: labelOf,
+              onSelect: onSelect,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Option<T> extends StatelessWidget {
+  final DropdownMenuItem<T> item;
+  final Set<T> selected;
+  final FilterDropdown<T> dropdown;
+  final String Function(DropdownMenuItem<T>) labelOf;
+  final ValueChanged<DropdownMenuItem<T>> onSelect;
+
+  const _Option({
+    required this.item,
+    required this.selected,
+    required this.dropdown,
+    required this.labelOf,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final label = labelOf(item);
+    final incompatible = dropdown.incompatibleValues.contains(item.value);
+    final child = _OptionLabel(
+      label: label,
+      title: dropdown.itemTitleBuilder?.call(item.value as T) ?? label,
+      subtitle: dropdown.itemSubtitleBuilder?.call(item.value as T),
+      incompatible: incompatible,
+    );
+    if (dropdown.multiSelect) {
+      return CheckboxMenuButton(
+        value: selected.contains(item.value),
+        closeOnActivate: false,
+        isError: incompatible,
+        trailingIcon: incompatible
+            ? Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              )
+            : null,
+        onChanged: item.enabled ? (_) => onSelect(item) : null,
+        child: child,
+      );
+    }
+    return MenuItemButton(
+      onPressed: item.enabled ? () => onSelect(item) : null,
+      leadingIcon: selected.contains(item.value)
+          ? const Icon(Icons.check, size: 18)
+          : const SizedBox(width: 18),
+      child: child,
+    );
+  }
+}
+
+class _OptionLabel extends StatelessWidget {
+  final String label;
+  final String title;
+  final String? subtitle;
+  final bool incompatible;
+
+  const _OptionLabel({
+    required this.label,
+    required this.title,
+    required this.subtitle,
+    required this.incompatible,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = this.subtitle;
+    return Tooltip(
+      message: incompatible
+          ? '$label: sin coincidencias con los demás filtros o el período actual.'
+          : label,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: incompatible || subtitle != null
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(height: 1.4),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.labelMedium?.copyWith(
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  if (incompatible) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Sin coincidencias',
+                      style: context.textTheme.labelMedium?.copyWith(
+                        height: 1.4,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            : Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(height: 1.4),
+              ),
+      ),
+    );
   }
 }

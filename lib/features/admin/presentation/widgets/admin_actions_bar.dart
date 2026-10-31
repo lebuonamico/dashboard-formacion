@@ -49,45 +49,49 @@ class AdminActionsBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _header(context, user, isOwn),
+          _SelectionHeader(
+            user: user,
+            isOwn: isOwn,
+            outsideFilter: outsideFilter,
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
-              _button(
-                context,
+              _ActionButton(
+                pendingAction: pendingAction,
                 action: AdminUserAction.create,
-                key: 'admin_crear',
+                id: 'admin_crear',
                 label: 'Nuevo usuario',
                 icon: Icons.person_add_alt_1_outlined,
                 onPressed: hasAction ? null : onCreate,
                 highlighted: true,
               ),
-              _button(
-                context,
+              _ActionButton(
+                pendingAction: pendingAction,
                 action: AdminUserAction.changeRole,
-                key: 'admin_cambiar_rol',
+                id: 'admin_cambiar_rol',
                 label: 'Cambiar rol',
                 icon: Icons.badge_outlined,
                 onPressed: enabled ? onRoleChange : null,
                 tooltip: _disabledReason(user, isOwn),
               ),
               if (blocked)
-                _button(
-                  context,
+                _ActionButton(
+                  pendingAction: pendingAction,
                   action: AdminUserAction.unblock,
-                  key: 'admin_desbloquear',
+                  id: 'admin_desbloquear',
                   label: 'Desbloquear',
                   icon: Icons.lock_open_outlined,
                   onPressed: enabled ? onUnblock : null,
                   tooltip: _disabledReason(user, isOwn),
                 )
               else
-                _button(
-                  context,
+                _ActionButton(
+                  pendingAction: pendingAction,
                   action: AdminUserAction.block,
-                  key: 'admin_bloquear',
+                  id: 'admin_bloquear',
                   label: 'Bloquear',
                   icon: Icons.block_outlined,
                   onPressed: enabled && !deleted ? onBlock : null,
@@ -97,20 +101,20 @@ class AdminActionsBar extends StatelessWidget {
                   color: colors.warning.text,
                 ),
               if (deleted)
-                _button(
-                  context,
+                _ActionButton(
+                  pendingAction: pendingAction,
                   action: AdminUserAction.restore,
-                  key: 'admin_restaurar',
+                  id: 'admin_restaurar',
                   label: 'Restaurar',
                   icon: Icons.restore_outlined,
                   onPressed: enabled ? onRestore : null,
                   tooltip: _disabledReason(user, isOwn),
                 )
               else
-                _button(
-                  context,
+                _ActionButton(
+                  pendingAction: pendingAction,
                   action: AdminUserAction.delete,
-                  key: 'admin_eliminar',
+                  id: 'admin_eliminar',
                   label: 'Eliminar',
                   icon: Icons.person_remove_outlined,
                   onPressed: enabled ? onDelete : null,
@@ -124,8 +128,30 @@ class AdminActionsBar extends StatelessWidget {
     );
   }
 
-  Widget _header(BuildContext context, AuthorizedUser? user, bool isOwn) {
+  String? _disabledReason(AuthorizedUser? user, bool isOwn) {
+    if (user == null) return 'Seleccioná un usuario de la lista.';
+    if (isOwn) {
+      return 'No podés modificar tu propio usuario: perderías el acceso al panel.';
+    }
+    return null;
+  }
+}
+
+class _SelectionHeader extends StatelessWidget {
+  final AuthorizedUser? user;
+  final bool isOwn;
+  final bool outsideFilter;
+
+  const _SelectionHeader({
+    required this.user,
+    required this.isOwn,
+    required this.outsideFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
+    final user = this.user;
     if (user == null) {
       return Row(
         children: [
@@ -179,40 +205,47 @@ class AdminActionsBar extends StatelessWidget {
       ],
     );
   }
+}
 
-  String? _disabledReason(AuthorizedUser? user, bool isOwn) {
-    if (user == null) return 'Seleccioná un usuario de la lista.';
-    if (isOwn) {
-      return 'No podés modificar tu propio usuario: perderías el acceso al panel.';
-    }
-    return null;
-  }
+/// [id] names the button's key and the `loading_` key of its spinner.
+class _ActionButton extends StatelessWidget {
+  final AdminUserAction action;
+  final AdminUserAction? pendingAction;
+  final String id;
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final Color? color;
+  final bool highlighted;
 
-  Widget _button(
-    BuildContext context, {
-    required AdminUserAction action,
-    required String key,
-    required String label,
-    required IconData icon,
-    required VoidCallback? onPressed,
-    String? tooltip,
-    Color? color,
-    bool highlighted = false,
-  }) {
+  const _ActionButton({
+    required this.action,
+    required this.pendingAction,
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.color,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final cs = context.colorScheme;
     final inProgress = pendingAction == action;
     final button = OutlinedButton.icon(
-      key: Key(key),
+      key: Key(id),
       onPressed: inProgress ? null : onPressed,
       icon: inProgress
           ? SizedBox.square(
-              key: Key('loading_$key'),
+              key: Key('loading_$id'),
               dimension: 18,
               child: const CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(icon, size: 18),
       label: Text(label),
-      // Forma y borde vienen del outlinedButtonTheme.
       style:
           OutlinedButton.styleFrom(
             foregroundColor: color,
@@ -231,6 +264,7 @@ class AdminActionsBar extends StatelessWidget {
                 : null,
           ),
     );
+    final tooltip = this.tooltip;
     return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 }

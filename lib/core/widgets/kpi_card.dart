@@ -127,15 +127,6 @@ class DashboardKpiCard extends StatelessWidget {
     this.help,
   });
 
-  Widget _textSuffix(BuildContext context) => Text(
-    suffix,
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: context.textTheme.labelSmall?.copyWith(
-      color: context.colorScheme.onSurfaceVariant,
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -203,14 +194,14 @@ class DashboardKpiCard extends StatelessWidget {
               if (suffixBelow)
                 const Spacer()
               else
-                Flexible(child: _textSuffix(context)),
+                Flexible(child: _Suffix(suffix)),
               if (badge != null) ...[
                 const SizedBox(width: 6),
                 Flexible(child: badge!),
               ],
             ],
           ),
-          if (suffixBelow) ...[const SizedBox(height: 2), _textSuffix(context)],
+          if (suffixBelow) ...[const SizedBox(height: 2), _Suffix(suffix)],
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -252,6 +243,22 @@ class DashboardKpiCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Suffix extends StatelessWidget {
+  final String text;
+
+  const _Suffix(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: context.textTheme.labelSmall?.copyWith(
+      color: context.colorScheme.onSurfaceVariant,
+    ),
+  );
 }
 
 /// Quiénes cuentan en el período, para las cards de colaboradores.

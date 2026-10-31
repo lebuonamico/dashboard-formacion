@@ -20,10 +20,10 @@ class AdminUsersTable extends StatefulWidget {
 
   final List<AuthorizedUser> users;
 
-  /// Para la columna Lidera. `null` mientras carga o sin base conectada.
+  /// For the "Lidera" column. `null` while it loads.
   final OrgStructure? structure;
 
-  /// Para la columna Pertenece a. `null` mientras carga.
+  /// For the "Pertenece a" column. `null` while it loads.
   final List<Employee>? payroll;
   final String? selectedEmail;
   final String? ownEmail;
@@ -216,52 +216,76 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
                 )
               : ColorLabel(text: role.label, colors: brand),
         ),
-        DataCell(_scope(user)),
-        DataCell(_membership(user)),
+        DataCell(_ScopeCell(user: user, structure: widget.structure)),
+        DataCell(_MembershipCell(user: user, payroll: widget.payroll)),
         DataCell(
           ColorLabel(
             text: _users.status(user).label,
             colors: userStatusColors(colors, _users.status(user)),
           ),
         ),
-        DataCell(_stamp(user.createdAt)),
-        DataCell(_stamp(user.blockedAt)),
-        DataCell(_stamp(user.deletedAt)),
+        DataCell(_StampCell(user.createdAt)),
+        DataCell(_StampCell(user.blockedAt)),
+        DataCell(_StampCell(user.deletedAt)),
       ],
     );
   }
+}
 
-  /// Qué ve el usuario: toda la empresa, o las áreas o los equipos que
-  /// lidera según su rol.
-  Widget _scope(AuthorizedUser user) {
+/// What the user sees: the whole company, or the areas or teams they lead
+/// according to their role.
+class _ScopeCell extends StatelessWidget {
+  final AuthorizedUser user;
+  final OrgStructure? structure;
+
+  const _ScopeCell({required this.user, required this.structure});
+
+  @override
+  Widget build(BuildContext context) {
     final role = _users.knownRole(user);
-    // Los gestores ven todo aunque la estructura no haya cargado.
+    // Managers see everything even before the structure loads.
     final text = role != null && role.canManage
         ? 'Toda la empresa'
-        : widget.structure?.leads(role: role, email: user.email) ?? '—';
-    return _textCell(text, warning: text.startsWith('Sin '));
+        : structure?.leads(role: role, email: user.email) ?? '—';
+    return _TextCell(text, warning: text.startsWith('Sin '));
   }
+}
 
-  /// Equipo y área de su fila en la nómina, buscada por email. Solo para los
-  /// líderes: puede no coincidir con lo que lideran.
-  Widget _membership(AuthorizedUser user) {
+/// Team and area of the user's payroll row, looked up by email. Only for
+/// leaders: it may differ from what they lead.
+class _MembershipCell extends StatelessWidget {
+  final AuthorizedUser user;
+  final List<Employee>? payroll;
+
+  const _MembershipCell({required this.user, required this.payroll});
+
+  @override
+  Widget build(BuildContext context) {
     final role = _users.knownRole(user);
-    final payroll = widget.payroll;
+    final payroll = this.payroll;
     if (payroll == null ||
         (role != UserRole.teamLead && role != UserRole.areaLead)) {
-      return _textCell('—');
+      return const _TextCell('—');
     }
     final employee = const EmployeeLookupService().findByEmail(
       payroll,
       user.email,
     );
-    return _textCell(
+    return _TextCell(
       OrgStructureLabels.membership(employee),
       warning: employee == null,
     );
   }
+}
 
-  Widget _textCell(String text, {bool warning = false}) => ConstrainedBox(
+class _TextCell extends StatelessWidget {
+  final String text;
+  final bool warning;
+
+  const _TextCell(this.text, {this.warning = false});
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
     constraints: const BoxConstraints(maxWidth: 240),
     child: Tooltip(
       message: text,
@@ -277,8 +301,15 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
       ),
     ),
   );
+}
 
-  Widget _stamp(DateTime? date) => Text(
+class _StampCell extends StatelessWidget {
+  final DateTime? date;
+
+  const _StampCell(this.date);
+
+  @override
+  Widget build(BuildContext context) => Text(
     formatStamp(date),
     style: context.textTheme.bodySmall?.copyWith(
       color: date == null

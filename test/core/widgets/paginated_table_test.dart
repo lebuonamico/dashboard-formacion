@@ -15,9 +15,8 @@ Widget _table(List<int> items) => MaterialApp(
         headerHeight: 20,
         resultsLabel: 'filas',
         icon: Icons.list,
-        tableBuilder: (visible) => Column(
-          children: [for (final item in visible) Text('fila $item')],
-        ),
+        tableBuilder: (visible) =>
+            Column(children: [for (final item in visible) Text('fila $item')]),
       ),
     ),
   ),
