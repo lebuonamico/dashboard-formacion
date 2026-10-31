@@ -62,42 +62,25 @@ final teamComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
   final courses = await ref.watch(coursesProvider.future);
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
-  final scope = ref.watch(periodFilterProvider).scope;
-  final month = ref.watch(periodFilterProvider).month;
-  final year = ref.watch(periodFilterProvider).year;
   final complianceService = await ref.watch(complianceServiceProvider.future);
-  final periodService = ref.watch(teamsServiceProvider).periods;
   final userScope = await ref.watch(userScopeProvider.future);
-
-  // Apply permissions to each month's historical team rather than the current team.
-  final includeEmployee = ref
-      .watch(userScopeServiceProvider)
-      .employeeFilter(userScope);
-
-  if (scope == PeriodScope.annual) {
-    return periodService.calculateAnnualCompliance(
-      employees: employees,
-      history: history,
-      courses: courses,
-      timeEntries: timeEntries,
-      certifications: certifications,
-      year: year,
-      complianceService: complianceService,
-      includeEmployee: includeEmployee,
-    );
-  }
-
-  return periodService.calculateMonthlyCompliance(
-    employees: employees,
-    history: history,
-    courses: courses,
-    timeEntries: timeEntries,
-    certifications: certifications,
-    year: year,
-    month: month,
-    complianceService: complianceService,
-    includeEmployee: includeEmployee,
-  );
+  return ref
+      .watch(teamsServiceProvider)
+      .periods
+      .calculateForPeriod(
+        employees: employees,
+        history: history,
+        courses: courses,
+        timeEntries: timeEntries,
+        certifications: certifications,
+        period: ref.watch(periodFilterProvider),
+        complianceService: complianceService,
+        // Each month's historical team decides the permissions, not the
+        // current one.
+        includeEmployee: ref
+            .watch(userScopeServiceProvider)
+            .employeeFilter(userScope),
+      );
 });
 
 final teamsPeriodSummaryProvider = FutureProvider<TeamsPeriodSummary>((
@@ -109,13 +92,9 @@ final teamsPeriodSummaryProvider = FutureProvider<TeamsPeriodSummary>((
   final compliance = await ref.watch(teamComplianceProvider.future);
   final service = ref.watch(teamsServiceProvider);
   final leaders = await ref.watch(leaderLabelsProvider.future);
-  final uniqueEmployeeCount =
-      ref.watch(periodFilterProvider).scope == PeriodScope.annual
-      ? compliance.map((item) => item.employee.employeeId).toSet().length
-      : null;
-  return service.buildPeriodSummary(
+  return service.periodSummary(
     compliance,
-    uniqueEmployeeCount: uniqueEmployeeCount,
+    ref.watch(periodFilterProvider),
     resolveLeader: leaders.forTeam,
   );
 });

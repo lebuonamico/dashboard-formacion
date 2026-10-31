@@ -138,15 +138,15 @@ final employeeDetailProvider =
       final courses = await ref.watch(coursesProvider.future);
       final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
       final certifications = await ref.watch(lmsCertificationsProvider.future);
-      final scope = ref.watch(periodFilterProvider).scope;
-      final month = ref.watch(periodFilterProvider).month;
-      final year = ref.watch(periodFilterProvider).year;
+      final period = ref.watch(periodFilterProvider);
+      final month = period.month;
+      final year = period.year;
       final complianceService = await ref.watch(
         complianceServiceProvider.future,
       );
       final teamsService = ref.watch(teamsServiceProvider);
       final records = ref.watch(timeEntryRecordsServiceProvider);
-      final isAnnual = scope == PeriodScope.annual;
+      final isAnnual = period.scope == PeriodScope.annual;
 
       final employee = employees
           .where((emp) => emp.employeeId == employeeId)
@@ -166,14 +166,6 @@ final employeeDetailProvider =
         month: month,
         isAnnual: isAnnual,
       );
-      // Solo las finalizadas del período suman cumplimiento.
-      final periodValidCertifications = teamsService.periods
-          .filterCertificationsByPeriod(
-            certifications: employeeCertifications,
-            year: year,
-            month: month,
-            isAnnual: isAnnual,
-          );
       // Para mostrar se incluyen todas las que tienen fecha en el período.
       final periodCertifications = employeeCertifications.where((item) {
         final date = item.completedAt;
@@ -181,28 +173,14 @@ final employeeDetailProvider =
         return isAnnual || date.month == month;
       }).toList()..sort((a, b) => b.completedAt!.compareTo(a.completedAt!));
 
-      var compliance = complianceService
-          .calculateComplianceGlobal(
-            employees: [employee],
-            courses: courses,
-            timeEntries: periodTimeEntries,
-            lmsCertifications: periodValidCertifications,
-            year: year,
-            month: month,
-          )
-          .first;
-      if (isAnnual) {
-        // Objetivo del año: los 12 meses, cada uno con su versión del plan.
-        compliance = complianceService.summary.summarize(
-          employee: compliance.employee,
-          creditedHours: compliance.creditedHours,
-          declaredHours: compliance.declaredHours,
-          requiredHours: complianceService.requiredForYear(
-            employee.seniority,
-            year,
-          ),
-        );
-      }
+      final compliance = teamsService.periods.employeeCompliance(
+        employee: employee,
+        courses: courses,
+        timeEntries: employeeTimeEntries,
+        certifications: employeeCertifications,
+        period: period,
+        complianceService: complianceService,
+      );
 
       final coursesByName = {
         for (final course in courses) normalizeKey(course.name): course,

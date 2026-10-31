@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/period/domain/period_filter.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance_service.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
@@ -27,6 +28,9 @@ EmployeeCompliance _member(
   declaredHours: {CourseCategory.businessSkills: hours},
   requiredHours: {CourseCategory.businessSkills: target},
 );
+
+PeriodFilter _period(PeriodScope scope) =>
+    PeriodFilter(scope: scope, month: 7, year: 2026);
 
 void main() {
   const service = TeamsService();
@@ -78,6 +82,27 @@ void main() {
       expect(summary.teamCount, 0);
       expect(summary.hoursDeviation, 0);
       expect(summary.overallCompletion, 0);
+    });
+
+    test('En el anual, quien cambió de equipo cuenta una sola vez', () {
+      final compliance = [
+        _member('1', 'SOPORTE', hours: 8),
+        _member('1', 'DESARROLLO', hours: 8),
+        _member('2', 'SOPORTE', hours: 8),
+      ];
+
+      expect(
+        service
+            .periodSummary(compliance, _period(PeriodScope.annual))
+            .employeeCount,
+        2,
+      );
+      expect(
+        service
+            .periodSummary(compliance, _period(PeriodScope.monthly))
+            .employeeCount,
+        3,
+      );
     });
   });
 }

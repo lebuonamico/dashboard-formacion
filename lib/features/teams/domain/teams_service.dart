@@ -8,6 +8,7 @@ import 'package:app_finnegans/features/compliance/domain/compliance_period_servi
 import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/features/employees/domain/employee_lookup_service.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/core/period/domain/period_filter.dart';
 
 typedef TeamLeaderResolver = String? Function(String area, String team);
 
@@ -59,6 +60,20 @@ class TeamsService {
 
     return TeamDetail(overview: overview, members: members);
   }
+
+  /// [buildPeriodSummary] for [period]: in the annual view, someone who
+  /// changed teams counts once.
+  TeamsPeriodSummary periodSummary(
+    List<EmployeeCompliance> compliance,
+    PeriodFilter period, {
+    TeamLeaderResolver? resolveLeader,
+  }) => buildPeriodSummary(
+    compliance,
+    uniqueEmployeeCount: period.scope == PeriodScope.annual
+        ? compliance.map((item) => item.employee.employeeId).toSet().length
+        : null,
+    resolveLeader: resolveLeader,
+  );
 
   TeamsPeriodSummary buildPeriodSummary(
     List<EmployeeCompliance> compliance, {

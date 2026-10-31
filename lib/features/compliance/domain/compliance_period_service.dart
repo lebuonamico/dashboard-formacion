@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/period/domain/period_filter.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
@@ -197,6 +198,88 @@ class CompliancePeriodService {
         complianceService: complianceService,
         includeEmployee: includeEmployee,
       ).values,
+    );
+  }
+
+  /// The compliance shown by Teams, Areas and the Dashboard: monthly, or the
+  /// sum of the months with data of the year.
+  List<EmployeeCompliance> calculateForPeriod({
+    required List<Employee> employees,
+    List<EmployeeHistoryEntry>? history,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
+    required PeriodFilter period,
+    required ComplianceService complianceService,
+    bool Function(Employee)? includeEmployee,
+  }) => period.scope == PeriodScope.annual
+      ? calculateAnnualCompliance(
+          employees: employees,
+          history: history,
+          courses: courses,
+          timeEntries: timeEntries,
+          certifications: certifications,
+          year: period.year,
+          complianceService: complianceService,
+          includeEmployee: includeEmployee,
+        )
+      : calculateMonthlyCompliance(
+          employees: employees,
+          history: history,
+          courses: courses,
+          timeEntries: timeEntries,
+          certifications: certifications,
+          year: period.year,
+          month: period.month,
+          complianceService: complianceService,
+          includeEmployee: includeEmployee,
+        );
+
+  /// The profile of one employee, with their current payroll attributes and
+  /// no eligibility check. The annual target adds the 12 months, each with its
+  /// plan version.
+  EmployeeCompliance employeeCompliance({
+    required Employee employee,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
+    required PeriodFilter period,
+    required ComplianceService complianceService,
+  }) {
+    final isAnnual = period.scope == PeriodScope.annual;
+    final compliance = complianceService
+        .calculateComplianceGlobal(
+          employees: [employee],
+          courses: courses,
+          timeEntries: filterTimeEntriesByPeriod(
+            timeEntries: timeEntries
+                .where((entry) => entry.employeeId == employee.employeeId)
+                .toList(),
+            year: period.year,
+            month: period.month,
+            isAnnual: isAnnual,
+          ),
+          lmsCertifications: filterCertificationsByPeriod(
+            certifications: certifications
+                .where((item) => item.employeeId == employee.employeeId)
+                .toList(),
+            year: period.year,
+            month: period.month,
+            isAnnual: isAnnual,
+          ),
+          year: period.year,
+          month: period.month,
+        )
+        .first;
+    if (!isAnnual) return compliance;
+    return complianceService.summary.summarize(
+      employee: compliance.employee,
+      creditedHours: compliance.creditedHours,
+      declaredHours: compliance.declaredHours,
+      requiredHours: complianceService.requiredForYear(
+        employee.seniority,
+        period.year,
+      ),
     );
   }
 
