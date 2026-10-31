@@ -9,6 +9,7 @@ import 'package:app_finnegans/features/dashboard/presentation/providers/dashboar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/projection/domain/projection.dart';
+import 'package:app_finnegans/features/projection/presentation/widgets/compliance_kpi_cards.dart';
 
 export 'package:app_finnegans/core/widgets/kpi_card.dart';
 
@@ -138,15 +139,14 @@ class _KpiCards extends StatelessWidget {
           color: context.colorScheme.primary,
           help: isAnnual ? annualCreditedHoursHelp : monthCreditedHoursHelp,
         ),
-        complianceKpiCard(
-          context,
+        ComplianceKpiCard(
           isAnnual: isAnnual,
           year: selectedYear,
           month: selectedMonth,
           percentage: kpis.compliance,
           variation: variation,
         ),
-        if (projection != null) projectionKpiCard(context, projection),
+        if (projection != null) ProjectionKpiCard(projection: projection),
       ],
     );
   }

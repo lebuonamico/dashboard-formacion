@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/projection/presentation/projection_status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
@@ -45,7 +45,7 @@ class EmployeeProjectionCard extends StatelessWidget {
               ),
               if (projection.variation case final variation?) ...[
                 const SizedBox(width: 8),
-                variationBadge(context, variation, 'pts'),
+                VariationBadge(value: variation, unit: 'pts'),
               ],
               const Spacer(),
               Container(

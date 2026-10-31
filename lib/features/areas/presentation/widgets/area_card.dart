@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/core/widgets/summary_card/status_badge.dart';
 import 'package:app_finnegans/core/widgets/summary_card/summary_card.dart';
 import 'package:app_finnegans/core/widgets/summary_card/summary_card_footer.dart';

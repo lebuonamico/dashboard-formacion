@@ -13,6 +13,7 @@ import 'package:app_finnegans/features/courses/presentation/course_category_labe
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_hours_format.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_messages.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan_service.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_colors.dart';
 
 /// Edita las horas mensuales requeridas por categoría para cada seniority.
 /// Cada guardado es una versión que rige desde el mes elegido: los meses

@@ -1,5 +1,5 @@
 import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
-import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
+import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_colors.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';

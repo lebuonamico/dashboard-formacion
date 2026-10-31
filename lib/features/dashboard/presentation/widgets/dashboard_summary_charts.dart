@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_colors.dart';
 
 class DashboardSummaryCharts extends StatelessWidget {
   final AsyncValue<DashboardDistribution?> distributionAsync;
@@ -166,8 +167,8 @@ class _CategoryChartCard extends StatelessWidget {
                   centerText:
                       '${summary.averageHours.toStringAsFixed(1)} / '
                       '${summary.averageTarget.toStringAsFixed(0)} h',
-                  // Más chico que el default para que entre "x / y h".
-                  centerTextSize: 16,
+                  // Smaller than the default so "x / y h" fits.
+                  centerTextStyle: context.textTheme.bodyLarge,
                   centerSubtitle: 'POR PERSONA',
                 ),
                 const SizedBox(width: 18),

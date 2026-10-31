@@ -4,6 +4,7 @@ import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/projection/domain/projection.dart';
+import 'package:app_finnegans/features/projection/presentation/widgets/compliance_kpi_cards.dart';
 
 /// Indicadores de todas las áreas, con las mismas cards que el inicio.
 class AreasKpiSection extends StatelessWidget {
@@ -75,8 +76,7 @@ class AreasKpiSection extends StatelessWidget {
           hours: completedHours,
           target: targetHours,
         ),
-        complianceKpiCard(
-          context,
+        ComplianceKpiCard(
           isAnnual: isAnnual,
           year: year,
           month: month,
@@ -84,7 +84,7 @@ class AreasKpiSection extends StatelessWidget {
           variation: variation,
         ),
         if (projection case final projection?)
-          projectionKpiCard(context, projection),
+          ProjectionKpiCard(projection: projection),
       ],
     );
   }

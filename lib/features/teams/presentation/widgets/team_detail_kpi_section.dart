@@ -3,10 +3,11 @@ import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/features/projection/presentation/widgets/compliance_kpi_cards.dart';
 
 class TeamDetailKpiSection extends ConsumerWidget {
   final TeamOverview team;
@@ -64,8 +65,7 @@ class TeamDetailKpiSection extends ConsumerWidget {
           help: targetHelp('el equipo'),
         ),
 
-        complianceKpiCard(
-          context,
+        ComplianceKpiCard(
           isAnnual: isAnnual,
           year: year,
           month: month,
@@ -77,7 +77,7 @@ class TeamDetailKpiSection extends ConsumerWidget {
               .value,
           color: team.status.colors(context).text,
         ),
-        if (projection != null) projectionKpiCard(context, projection),
+        if (projection != null) ProjectionKpiCard(projection: projection),
       ],
     );
   }

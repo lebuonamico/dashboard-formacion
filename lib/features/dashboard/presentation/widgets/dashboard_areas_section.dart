@@ -11,7 +11,7 @@ import 'package:app_finnegans/core/widgets/summary_card/summary_info_row.dart';
 import 'package:app_finnegans/core/widgets/summary_card/summary_progress.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';

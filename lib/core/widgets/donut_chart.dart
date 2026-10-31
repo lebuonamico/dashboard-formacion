@@ -14,16 +14,16 @@ class DonutChart extends StatelessWidget {
   final List<DonutChartSegment> segments;
   final String centerText;
   final String centerSubtitle;
-  final double centerTextSize;
-  final double centerSubtitleSize;
+  final TextStyle? centerTextStyle;
+  final TextStyle? centerSubtitleStyle;
 
   const DonutChart({
     super.key,
     required this.segments,
     required this.centerText,
     required this.centerSubtitle,
-    this.centerTextSize = 20,
-    this.centerSubtitleSize = 9,
+    this.centerTextStyle,
+    this.centerSubtitleStyle,
   });
 
   @override
@@ -41,19 +41,19 @@ class DonutChart extends StatelessWidget {
             children: [
               Text(
                 centerText,
-                style: TextStyle(
-                  fontSize: centerTextSize,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
+                style: (centerTextStyle ?? context.textTheme.titleLarge)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
               ),
               Text(
                 centerSubtitle,
-                style: TextStyle(
-                  fontSize: centerSubtitleSize,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
+                style: (centerSubtitleStyle ?? context.textTheme.labelSmall)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
               ),
             ],
           ),

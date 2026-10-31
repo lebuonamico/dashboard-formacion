@@ -2,7 +2,7 @@ import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +21,7 @@ import 'package:app_finnegans/features/compliance/presentation/widgets/moodle_cr
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_kpi_section.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
+import 'package:app_finnegans/features/projection/presentation/widgets/compliance_kpi_cards.dart';
 
 class AreaDetailScreen extends ConsumerWidget {
   final String areaName;
@@ -225,8 +226,7 @@ class _AreaContent extends ConsumerWidget {
               color: context.colors.violetAccent,
               help: targetHelp('el área'),
             ),
-            complianceKpiCard(
-              context,
+            ComplianceKpiCard(
               isAnnual: isAnnual,
               year: year,
               month: month,
@@ -244,7 +244,7 @@ class _AreaContent extends ConsumerWidget {
                     )
                     .value
                 case final projection?)
-              projectionKpiCard(context, projection),
+              ProjectionKpiCard(projection: projection),
           ],
         ),
         const SizedBox(height: 16),

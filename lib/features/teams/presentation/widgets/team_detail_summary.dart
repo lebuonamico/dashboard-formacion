@@ -1,7 +1,7 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
+import 'package:app_finnegans/features/teams/presentation/team_status_colors.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_category_distribution.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:flutter/material.dart';

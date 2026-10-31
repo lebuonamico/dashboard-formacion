@@ -1,6 +1,6 @@
 import 'package:app_finnegans/features/reports/domain/training_report_builder.dart';
 import 'package:app_finnegans/features/reports/presentation/report_labels.dart';
-import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
+import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';

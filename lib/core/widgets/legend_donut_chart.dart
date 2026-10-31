@@ -48,8 +48,8 @@ class LegendDonutChart extends StatelessWidget {
               .toList(),
           centerText: centerValue,
           centerSubtitle: centerLabel,
-          centerTextSize: 24,
-          centerSubtitleSize: 11,
+          centerTextStyle: context.textTheme.headlineSmall,
+          centerSubtitleStyle: context.textTheme.labelMedium,
         ),
         const SizedBox(width: 18),
         Expanded(

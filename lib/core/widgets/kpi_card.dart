@@ -1,12 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
-import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
-import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
-import 'package:app_finnegans/core/widgets/status_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
-import 'package:app_finnegans/features/projection/domain/projection.dart';
-import 'package:app_finnegans/features/projection/presentation/projection_labels.dart';
 
 /// Fila de cards de indicadores, la misma en Inicio, Áreas, Equipos y sus
 /// detalles: 5 columnas en pantallas anchas, 3 + 2, 2 o 1 en las más chicas.
@@ -45,145 +38,23 @@ class KpiCardRow extends StatelessWidget {
   }
 }
 
-/// Card de cumplimiento con el criterio del inicio. En el anual, el acumulado
-/// del año y cuántos puntos subió o bajó contra el mes anterior; en el
-/// mensual, el del mes y la variación de horas por persona contra el anterior.
-/// [color] reemplaza al del semáforo cuando la sección tiene su propio estado.
-Widget complianceKpiCard(
-  BuildContext context, {
-  required bool isAnnual,
-  required int year,
-  required int month,
-  required double percentage,
-  ComplianceVariation? variation,
-  Color? color,
-}) {
-  final colorCard =
-      color ??
-      const ComplianceLevelService()
-          .fromPercentage(percentage)
-          .colors(context)
-          .text;
-  if (isAnnual) {
-    return DashboardKpiCard(
-      title: 'CUMPLIMIENTO · AÑO $year',
-      value: formatPercentage(percentage),
-      suffix: 'acumulado del año',
-      suffixBelow: true,
-      progress: (percentage / 100).clamp(0.0, 1.0),
-      progressLabel: 'Acumulado del año',
-      footer: '',
-      badge: variation?.points == null
-          ? null
-          : variationBadge(
-              context,
-              variation!.points!,
-              'pts',
-              key: const Key('kpi_variacion_mes'),
-            ),
-      icon: Icons.event_available_outlined,
-      color: colorCard,
-      help:
-          'Horas válidas acumuladas en el año sobre la suma de los objetivos '
-          'de los meses con datos. Los meses sin registros CRM ni LMS no '
-          'cuentan. El recuadro muestra cuántos puntos cambió contra el '
-          'acumulado hasta el mes anterior.',
+/// "▲ +2.3 pts vs mes anterior" in green, or "▼ -1.0 pts …" in red.
+class VariationBadge extends StatelessWidget {
+  final double value;
+  final String unit;
+
+  const VariationBadge({super.key, required this.value, required this.unit});
+
+  @override
+  Widget build(BuildContext context) {
+    final improved = value >= 0;
+    return DashboardKpiBadge(
+      text:
+          '${improved ? '▲ +' : '▼ '}${value.toStringAsFixed(1)} $unit '
+          'vs mes anterior',
+      colors: improved ? context.colors.success : context.colors.danger,
     );
   }
-
-  final previous = variation?.previousHoursPerPerson;
-  return DashboardKpiCard(
-    title: 'CUMPLIMIENTO · ${monthName(month).toUpperCase()}',
-    value: formatPercentage(percentage),
-    suffix: 'del objetivo del mes',
-    progress: (percentage / 100).clamp(0.0, 1.0),
-    progressLabel: variation == null
-        ? ''
-        : '${variation.hoursPerPerson.toStringAsFixed(1)} h por persona',
-    footer: previous == null
-        ? 'Sin datos del mes anterior'
-        : 'Mes anterior: ${previous.toStringAsFixed(1)} h',
-    badge: variation?.hours == null
-        ? null
-        : variationBadge(
-            context,
-            variation!.hours!,
-            'h',
-            key: const Key('kpi_variacion_mes'),
-          ),
-    icon: Icons.event_available_outlined,
-    color: colorCard,
-    help:
-        'Horas válidas del mes sobre el objetivo del mes de los colaboradores '
-        'elegibles, según su seniority. Cada persona suma como máximo su '
-        'objetivo en cada categoría. El recuadro compara las horas por '
-        'persona con el mes anterior.',
-  );
-}
-
-/// Card de proyección a fin de año con el criterio del inicio: porcentaje de
-/// la meta, variación contra el mes anterior, horas por persona, estado,
-/// cuántos llegan y el ajuste necesario.
-Widget projectionKpiCard(BuildContext context, AnnualProjection projection) {
-  final colors = projection.status.colors(context);
-  final goal = projection.goal;
-  final closed = projection.remainingMonths == 0;
-
-  return DashboardKpiCard(
-    title: 'PROYECCIÓN ANUAL',
-    value: formatPercentage(projection.percentage),
-    suffix:
-        '${projection.projection.toStringAsFixed(0)} / '
-        '${goal.toStringAsFixed(0)} h por persona',
-    suffixBelow: true,
-    progress: goal == 0 ? 1 : (projection.projection / goal).clamp(0.0, 1.0),
-    progressLabel:
-        '${projection.status.label} · ${projection.arrive} de '
-        '${projection.employeeCount} ${closed ? 'cumplieron' : 'llegan'}',
-    footer: closed
-        ? 'Año cerrado: ${formatPercentage(projection.percentage)} de la meta'
-        : projection.adjustment > 0
-        ? 'Ajuste: +${projection.adjustment.toStringAsFixed(1)} h/mes por persona'
-        : 'En camino a la meta',
-    badge: projection.projectionVariation == null
-        ? null
-        : variationBadge(
-            context,
-            projection.projectionVariation!,
-            'pts',
-            key: const Key('kpi_variacion_proyeccion'),
-          ),
-    icon: switch (projection.status) {
-      ProjectionStatus.onTrack => Icons.trending_up,
-      ProjectionStatus.reachable => Icons.trending_flat,
-      ProjectionStatus.atRisk => Icons.trending_down,
-    },
-    color: colors.text,
-    help:
-        'Estimación a diciembre: lo acumulado más la tendencia de cada '
-        'colaborador según sus meses con datos, sobre la meta del año. Las '
-        'horas de una persona no cubren a otra, ni las de una categoría a '
-        'otra. En camino: 100 % o más; Alcanzable: desde 85 %; En riesgo: '
-        'menos de 85 %. El ajuste son las horas por persona y por mes que '
-        'faltan para llegar.',
-  );
-}
-
-/// "▲ +2.3 pts vs mes anterior" en verde, o "▼ -1.0 pts …" en rojo.
-Widget variationBadge(
-  BuildContext context,
-  double value,
-  String unit, {
-  Key? key,
-}) {
-  final improved = value >= 0;
-  return DashboardKpiBadge(
-    key: key,
-    text:
-        '${improved ? '▲ +' : '▼ '}${value.toStringAsFixed(1)} $unit '
-        'vs mes anterior',
-    colors: improved ? context.colors.success : context.colors.danger,
-  );
 }
 
 /// Recuadro chico dentro de una card: estado o variación.

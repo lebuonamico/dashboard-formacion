@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/theme/pdf_report_colors.dart';
+import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_colors.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';

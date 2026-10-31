@@ -1,5 +1,3 @@
-import 'package:app_finnegans/features/employees/domain/seniority.dart';
-import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter/material.dart';
 
 /// Color de texto (o ícono) y su fondo, para chips, badges y avisos.
@@ -166,23 +164,6 @@ class AppColors extends ThemeExtension<AppColors> {
     aiUserBubble: [Color(0xFF1C2B4D), Color(0xFF29254F)],
     overGradient: Color(0xFFFFFFFF),
   );
-
-  ColorPair category(CourseCategory type) => switch (type) {
-    CourseCategory.businessSkills => business,
-    CourseCategory.softSkills => softSkills,
-    CourseCategory.exploration => exploration,
-    CourseCategory.teaching => teaching,
-  };
-
-  ColorPair level(Seniority seniority) => switch (seniority) {
-    Seniority.trainee => trainee,
-    Seniority.junior1 || Seniority.junior2 || Seniority.junior3 => junior,
-    Seniority.semisenior1 ||
-    Seniority.semisenior2 ||
-    Seniority.semisenior3 => semisenior,
-    Seniority.senior1 || Seniority.senior2 || Seniority.senior3 => senior,
-    Seniority.manager => manager,
-  };
 
   @override
   AppColors copyWith({
