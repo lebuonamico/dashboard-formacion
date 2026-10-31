@@ -4,7 +4,7 @@ import 'package:app_finnegans/features/assistant/domain/assistant_context_servic
 import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/compliance/presentation/providers/compliance_service_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -103,7 +103,7 @@ Future<AssistantContext> _prepare(
         query.theme == AssistantTopic.general ||
         query.theme == AssistantTopic.areas ||
         query.theme == AssistantTopic.teams;
-    final scope = await _snapshot(ref, period, requiresHistory: usesGroups);
+    final scope = await _snapshot(ref, period);
     final result = <String, Object?>{'periodo': period.toJson()};
     results.add(result);
     try {
@@ -387,7 +387,7 @@ Future<void> _addAccumulated(
     months.add(month);
     ProviderContainer? scope;
     try {
-      scope = await _snapshot(ref, period, requiresHistory: true);
+      scope = await _snapshot(ref, period);
       if (!await scope.read(hasTeamPeriodDataProvider.future)) {
         month['estado'] = 'sin_datos';
         continue;
@@ -470,15 +470,9 @@ bool _mentions(String q, String name, AssistantContextService s) {
   return n.length >= 3 && ' $q '.contains(' $n ');
 }
 
-Future<ProviderContainer> _snapshot(
-  Ref ref,
-  AssistantPeriod period, {
-  required bool requiresHistory,
-}) async {
+Future<ProviderContainer> _snapshot(Ref ref, AssistantPeriod period) async {
   final employeesFuture = ref.read(employeesProvider.future);
-  final historyFuture = requiresHistory
-      ? ref.read(employeeHistoryProvider.future)
-      : Future.value(null);
+  final historyFuture = ref.read(employeeHistoryProvider.future);
   final coursesFuture = ref.read(coursesProvider.future);
   final timeEntriesFuture = ref.read(crmTimeEntriesProvider.future);
   final certificationsFuture = ref.read(lmsCertificationsProvider.future);

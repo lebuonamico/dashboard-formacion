@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:app_finnegans/core/router/app_router.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/core/config/supabase_client_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

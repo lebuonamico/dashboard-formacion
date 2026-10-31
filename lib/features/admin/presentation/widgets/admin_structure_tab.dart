@@ -6,7 +6,7 @@ import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_dialogs.dart';
@@ -33,15 +33,6 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    if (ref.watch(orgStructureRepositoryProvider) == null) {
-      return const _Notice(
-        icon: Icons.cloud_off_outlined,
-        title: 'Las áreas y los equipos no están disponibles',
-        message:
-            'Esta versión de la aplicación no está conectada a la base, así '
-            'que no hay líderes para asignar.',
-      );
-    }
     final structure = ref.watch(orgStructureProvider);
 
     return ListView(
@@ -90,7 +81,7 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
                 : 'Revisá tu conexión e intentá nuevamente.',
             color: cs.error,
           ),
-          data: (data) => FadeIn(child: _list(data!)),
+          data: (data) => FadeIn(child: _list(data)),
         ),
       ],
     );
@@ -217,7 +208,6 @@ class _AdminStructureState extends ConsumerState<AdminStructure> {
   }) async {
     if (_actionInProgress != null) return;
     final repository = ref.read(orgStructureRepositoryProvider);
-    if (repository == null) return;
     setState(() => _actionInProgress = key);
     try {
       await action(repository);

@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:app_finnegans/core/legacy/local_repositories.dart';
+import 'package:app_finnegans/features/training_plan/data/in_memory_training_plan_repository.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// El plan por defecto con Junior 1 en 6 h de negocio y 2 de blandas.
 TrainingPlan _junior1SixTwo() => TrainingPlan({
@@ -188,17 +187,15 @@ void main() {
     });
   });
 
-  group('LocalPlanFormacionRepository', () {
-    setUp(() => SharedPreferences.setMockInitialValues({}));
-
+  group('InMemoryTrainingPlanRepository', () {
     test('sin nada guardado no hay versiones', () async {
-      final plans = await LocalTrainingPlanRepository().getPlans();
+      final plans = await InMemoryTrainingPlanRepository().getPlans();
 
       expect(plans.versions, isEmpty);
     });
 
     test('guarda versiones y reemplaza la del mismo mes', () async {
-      final repository = LocalTrainingPlanRepository();
+      final repository = InMemoryTrainingPlanRepository();
       await repository.saveVersion(
         TrainingPlanVersion(
           validFrom: DateTime(2026, 7),
@@ -218,8 +215,7 @@ void main() {
         ),
       );
 
-      // Otra instancia: lo lee del almacenamiento, no de memoria.
-      final plans = await LocalTrainingPlanRepository().getPlans();
+      final plans = await repository.getPlans();
       expect(plans.versions.map((v) => v.validFrom), [
         DateTime(2026, 7),
         DateTime(2026, 9),

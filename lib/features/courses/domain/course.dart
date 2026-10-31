@@ -37,24 +37,24 @@ class Course {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'nombre': name,
-    'clasificacion': category.name,
-    'areaCurso': courseArea,
-    'instructorLegajo': instructorEmployeeId,
-    'cargaHorariaHs': workloadHours,
-    'activo': isActive,
+    'name': name,
+    'category': category.name,
+    'courseArea': courseArea,
+    'instructorEmployeeId': instructorEmployeeId,
+    'workloadHours': workloadHours,
+    'isActive': isActive,
   };
 
   factory Course.fromJson(Map<String, dynamic> json) => Course(
     id: json['id']?.toString() ?? '',
-    name: json['nombre']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
     category: CourseCategory.values.firstWhere(
-      (type) => type.name == json['clasificacion'],
+      (type) => type.name == json['category'],
       orElse: () => CourseCategory.exploration,
     ),
-    courseArea: json['areaCurso']?.toString() ?? '',
-    instructorEmployeeId: json['instructorLegajo']?.toString() ?? '',
-    workloadHours: double.tryParse(json['cargaHorariaHs'].toString()) ?? 0,
-    isActive: json['activo'] as bool? ?? true,
+    courseArea: json['courseArea']?.toString() ?? '',
+    instructorEmployeeId: json['instructorEmployeeId']?.toString() ?? '',
+    workloadHours: double.tryParse(json['workloadHours'].toString()) ?? 0,
+    isActive: json['isActive'] as bool? ?? true,
   );
 }

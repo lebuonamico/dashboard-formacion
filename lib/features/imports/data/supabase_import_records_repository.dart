@@ -1,7 +1,11 @@
-import 'package:app_finnegans/core/data/supabase_codes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_finnegans/features/imports/domain/import_record.dart';
 import 'package:app_finnegans/features/imports/domain/import_records_repository.dart';
+
+const _importStatusCodes = {
+  ImportStatus.completed: 'completada',
+  ImportStatus.failed: 'fallida',
+};
 
 class SupabaseImportRecordsRepository implements ImportRecordsRepository {
   final SupabaseClient _client;
@@ -14,7 +18,7 @@ class SupabaseImportRecordsRepository implements ImportRecordsRepository {
       'tipo_archivo': record.fileType,
       'nombre_archivo': record.fileName,
       'fecha_hora': record.dateTime.toIso8601String(),
-      'estado': importStatusToDb(record.status),
+      'estado': _importStatusCodes[record.status],
       'registros_procesados': record.processedRecords,
       'insertados': record.inserted,
       'actualizados': record.updated,

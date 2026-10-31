@@ -1,4 +1,4 @@
-import 'package:app_finnegans/core/data/supabase_codes.dart';
+import 'package:app_finnegans/features/auth/data/user_role_codes.dart';
 import 'package:app_finnegans/features/auth/data/access_rejection.dart';
 import 'package:app_finnegans/features/auth/domain/auth_repository.dart';
 import 'package:app_finnegans/features/auth/domain/auth_user.dart';

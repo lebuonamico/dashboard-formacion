@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 

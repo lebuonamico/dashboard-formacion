@@ -3,28 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
 
-enum AccessAdmin { allowed, denied, noSupabase }
+enum AccessAdmin { allowed, denied }
 
+/// Without a session (local mode) everything is visible, as in the drawer.
 final accessAdminProvider = Provider<AccessAdmin>((ref) {
   final auth = ref.watch(authProvider);
-  if (ref.watch(authorizedUsersRepositoryProvider) == null) {
-    return AccessAdmin.noSupabase;
-  }
-  return auth.canManage ? AccessAdmin.allowed : AccessAdmin.denied;
+  return !auth.enabled || auth.canManage
+      ? AccessAdmin.allowed
+      : AccessAdmin.denied;
 });
 
 final authorizedUsersProvider =
-    FutureProvider.autoDispose<List<AuthorizedUser>>((ref) async {
-      final repository = ref.watch(authorizedUsersRepositoryProvider);
-      if (repository == null) {
-        throw const FormatException(
-          'El panel de administración no está disponible en esta versión.',
-        );
-      }
-      return repository.getUsers();
-    });
+    FutureProvider.autoDispose<List<AuthorizedUser>>(
+      (ref) => ref.watch(authorizedUsersRepositoryProvider).getUsers(),
+    );
 
 final selectedAdminEmailProvider = StateProvider.autoDispose<String?>(
   (ref) => null,

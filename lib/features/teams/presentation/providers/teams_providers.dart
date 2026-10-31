@@ -2,7 +2,7 @@ import 'package:app_finnegans/features/compliance/domain/employee_compliance.dar
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/features/teams/domain/teams_service.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/compliance/presentation/providers/compliance_service_provider.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
@@ -112,7 +112,7 @@ final teamsPeriodSummaryProvider = FutureProvider<TeamsPeriodSummary>((
   return service.buildPeriodSummary(
     compliance,
     uniqueEmployeeCount: uniqueEmployeeCount,
-    resolveLeader: leaders?.forTeam,
+    resolveLeader: leaders.forTeam,
   );
 });
 
@@ -158,6 +158,6 @@ final teamDetailProvider =
         compliance: compliance,
         area: selection.area,
         team: selection.team,
-        resolveLeader: leaders?.forTeam,
+        resolveLeader: leaders.forTeam,
       );
     });

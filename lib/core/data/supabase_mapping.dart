@@ -1,5 +1,4 @@
-/// Physical names and conflict constraints are supplied after SQL design.
-/// No table names, historical keys or deletion policy are assumed here.
+/// Logical field names mapped to the physical columns of one table.
 class SupabaseTableMapping {
   final String table;
   final Map<String, String> columns;
@@ -43,18 +42,4 @@ class SupabaseTableMapping {
       column(field);
     }
   }
-}
-
-class SupabaseMappings {
-  final SupabaseTableMapping employees;
-  final SupabaseTableMapping courses;
-  final SupabaseTableMapping hours;
-  final SupabaseTableMapping completions;
-
-  const SupabaseMappings({
-    required this.employees,
-    required this.courses,
-    required this.hours,
-    required this.completions,
-  });
 }

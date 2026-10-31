@@ -1,28 +1,13 @@
 import 'dart:convert';
 
-import 'package:app_finnegans/core/data/supabase_mapping.dart';
-import 'package:app_finnegans/core/data/supabase_repositories.dart';
+import 'package:app_finnegans/features/courses/data/supabase_courses_repository.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
+import 'package:app_finnegans/features/imports/domain/snapshot_sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-final _mapping = SupabaseTableMapping(
-  table: 'cursos',
-  conflictFields: ['id'],
-  columns: {
-    for (final field in [
-      'id',
-      'nombre',
-      'clasificacion',
-      'cargaHorariaHs',
-      'activo',
-    ])
-      field: 'col_$field',
-  },
-);
 
 Course _course(String id, String name, {double hours = 4}) => Course(
   id: id,
@@ -38,18 +23,18 @@ void main() {
       'e inserta los nuevos', () async {
     final existing = [
       {
-        'col_id': '107',
-        'col_nombre': 'ISO 9001',
-        'col_clasificacion': 'habilidadesBlandas',
-        'col_cargaHorariaHs': 2,
-        'col_activo': true,
+        'id_curso': '107',
+        'nombre': 'ISO 9001',
+        'clasificacion': 'habilidadesBlandas',
+        'carga_horaria': 2,
+        'activo': true,
       },
       {
-        'col_id': '200',
-        'col_nombre': 'Curso discontinuado',
-        'col_clasificacion': 'habilidadesDeNegocio',
-        'col_cargaHorariaHs': 1,
-        'col_activo': true,
+        'id_curso': '200',
+        'nombre': 'Curso discontinuado',
+        'clasificacion': 'habilidadesDeNegocio',
+        'carga_horaria': 1,
+        'activo': true,
       },
     ];
     final written = <Map<String, dynamic>>[];
@@ -65,11 +50,11 @@ void main() {
           );
           return http.Response('', 201, request: request);
         }
-        final keysOnly = request.url.queryParameters['select'] == 'col_id';
+        final keysOnly = request.url.queryParameters['select'] == 'id_curso';
         return http.Response(
           jsonEncode([
             for (final row in existing)
-              keysOnly ? {'col_id': row['col_id']} : row,
+              keysOnly ? {'id_curso': row['id_curso']} : row,
           ]),
           200,
           request: request,
@@ -82,21 +67,21 @@ void main() {
     );
     addTearDown(client.dispose);
 
-    final result = await SupabaseCoursesRepository(client, _mapping)
-        .syncSnapshotWithResult([
+    final result = await const SnapshotSyncService()
+        .syncCourseCatalog(SupabaseCoursesRepository(client), [
           _course('30014', ' iso 9001 ', hours: 8),
           _course('30001', 'Administración de accesos'),
         ]);
 
-    final byId = {for (final row in written) row['col_id']: row};
+    final byId = {for (final row in written) row['id_curso']: row};
     expect(byId.keys, unorderedEquals(['107', '30001', '200']));
     // El existente conserva su ID y toma los datos del archivo.
-    expect(byId['107']!['col_cargaHorariaHs'], 8);
-    expect(byId['107']!['col_clasificacion'], 'habilidadesDeNegocio');
-    expect(byId['107']!['col_activo'], isTrue);
-    expect(byId['30001']!['col_activo'], isTrue);
+    expect(byId['107']!['carga_horaria'], 8);
+    expect(byId['107']!['clasificacion'], 'habilidadesDeNegocio');
+    expect(byId['107']!['activo'], isTrue);
+    expect(byId['30001']!['activo'], isTrue);
     // El que ya no viene en el archivo se desactiva.
-    expect(byId['200']!['col_activo'], isFalse);
+    expect(byId['200']!['activo'], isFalse);
     expect(result.processedRecords, 2);
     expect(result.inserted, 1);
   });

@@ -36,7 +36,7 @@ class UserAvatar extends ConsumerWidget {
                 .watch(orgStructureProvider)
                 .whenData(
                   (structure) =>
-                      structure?.leads(role: role, email: auth.email ?? ''),
+                      structure.leads(role: role, email: auth.email ?? ''),
                 )
           : null,
       belongs: isLeader ? ref.watch(sessionEmployeeProvider) : null,

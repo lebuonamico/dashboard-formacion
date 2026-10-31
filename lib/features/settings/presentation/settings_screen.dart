@@ -13,17 +13,18 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/imports/domain/import_values.dart';
-import 'package:app_finnegans/features/employees/domain/employees_repository.dart';
-import 'package:app_finnegans/features/courses/domain/courses_repository.dart';
-import 'package:app_finnegans/features/time_entries/domain/crm_time_entries_repository.dart';
-import 'package:app_finnegans/features/certifications/domain/lms_certifications_repository.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
+import 'package:app_finnegans/features/imports/presentation/providers/import_providers.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
@@ -334,7 +335,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
               return container
                   .read(lmsCertificationsRepositoryProvider)
-                  .upsertCertificationsWithResult(certifications);
+                  .upsert(certifications);
             },
             refresh: () async {
               container.invalidate(lmsCertificationsProvider);
@@ -516,9 +517,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       (headers.contains('nombre') ||
                           headers.contains('nombreyapellido'))) {
                     final employeeData = _toCanonicalKeys(normalizedData, {
-                      'nlegajo': 'legajo',
-                      'idempleado': 'legajo',
-                      'nombreyapellido': 'nombre',
+                      'legajo': 'employeeId',
+                      'nlegajo': 'employeeId',
+                      'idempleado': 'employeeId',
+                      'nombre': 'firstName',
+                      'nombreyapellido': 'firstName',
+                      'apellido': 'lastName',
                       'nivel': 'seniority',
                       'nivelseniority': 'seniority',
                       'niveldeseniority': 'seniority',
@@ -526,32 +530,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       'categoria': 'seniority',
                       'niveljerarquico': 'seniority',
                       'grado': 'seniority',
-                      'email': 'mail',
-                      'correo': 'mail',
-                      'fechadeingreso': 'fechaIngreso',
-                      'fechaingreso': 'fechaIngreso',
-                      'correoelectronico': 'mail',
+                      'mail': 'email',
+                      'correo': 'email',
+                      'correoelectronico': 'email',
+                      'fechadeingreso': 'hireDate',
+                      'fechaingreso': 'hireDate',
                       'gerencia': 'area',
                       'sector': 'area',
                       'departamento': 'area',
                       'unidad': 'area',
-                      'team': 'equipo',
-                      'equipo': 'equipo',
-                      'equipogeneral': 'equipo',
-                      'equipofuncional': 'equipo',
-                      'equipoprincipal': 'equipo',
-                      'manager': 'gerente',
-                      'jefe': 'gerente',
-                      'supervisor': 'gerente',
-                      'reportaa': 'gerente',
+                      'equipo': 'team',
+                      'equipogeneral': 'team',
+                      'equipofuncional': 'team',
+                      'equipoprincipal': 'team',
+                      'gerente': 'manager',
+                      'jefe': 'manager',
+                      'supervisor': 'manager',
+                      'reportaa': 'manager',
                       for (final header in headers)
                         if (_isColumnSeniority(header)) header: 'seniority',
                     });
-                    if (employeeData['legajo']?.toString().trim().isEmpty ??
+                    if (employeeData['employeeId']?.toString().trim().isEmpty ??
                         true) {
                       throw FormatException('Falta el legajo en $location.');
                     }
-                    if (employeeData['nombre']?.toString().trim().isEmpty ??
+                    if (employeeData['firstName']?.toString().trim().isEmpty ??
                         true) {
                       throw FormatException('Falta el nombre en $location.');
                     }
@@ -562,15 +565,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       seniorityText,
                       location,
                     ).name;
-                    final hireDate =
-                        employeeData['fechaIngreso']?.toString() ?? '';
+                    final hireDate = employeeData['hireDate']?.toString() ?? '';
                     final date = importDate(hireDate);
                     if (date == null) {
                       throw FormatException(
                         'Fecha de ingreso inválida en $location: "$hireDate".',
                       );
                     }
-                    employeeData['fechaIngreso'] = date.toIso8601String();
+                    employeeData['hireDate'] = date.toIso8601String();
                     final employee = Employee.fromJson(employeeData);
                     _validateMasterDuplicate(
                       validatedEmployees,
@@ -589,15 +591,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           headers.contains('curso')) &&
                       headers.contains('empleadolegajo')) {
                     final timeEntryData = _toCanonicalKeys(normalizedData, {
-                      'cursonombre': 'cursoNombre',
-                      'nombrecurso': 'cursoNombre',
-                      'curso': 'cursoNombre',
-                      'empleadolegajo': 'empleadoLegajo',
-                      'horastotales': 'horasTotales',
+                      'cursonombre': 'courseName',
+                      'nombrecurso': 'courseName',
+                      'curso': 'courseName',
+                      'empleadolegajo': 'employeeId',
+                      'horastotales': 'hours',
+                      'fecha': 'date',
+                      'caso': 'caseRef',
+                      'descripcioncurso': 'courseDescription',
+                      'clasificacion': 'classification',
+                      'proyecto': 'project',
+                      'proyectoitem': 'projectItem',
+                      'descripcion': 'description',
                     });
                     final timeEntry = CrmTimeEntry.fromJson({
                       ...timeEntryData,
-                      'tipo': TimeEntryKind.taken.name,
+                      'kind': TimeEntryKind.taken.name,
                     });
                     if (timeEntry.id.isNotEmpty) {
                       importedTimeEntries = _replaceById(
@@ -611,9 +620,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       headers.contains('tipo')) {
                     final course = Course.fromJson(
                       _toCanonicalKeys(normalizedData, {
-                        'areacurso': 'areaCurso',
-                        'instructorlegajo': 'instructorLegajo',
-                        'cargahorariahs': 'cargaHorariaHs',
+                        'nombre': 'name',
+                        'clasificacion': 'category',
+                        'areacurso': 'courseArea',
+                        'instructorlegajo': 'instructorEmployeeId',
+                        'cargahorariahs': 'workloadHours',
                       }),
                     );
                     importedCourses = _replaceById(
@@ -639,23 +650,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final orgStructureRepository = container.read(
                 orgStructureRepositoryProvider,
               );
-              if (orgStructureRepository != null) {
-                final structure = await orgStructureRepository.getStructure();
-                await orgStructureRepository.registerMissing(
-                  structure.missingFromPayroll(importedEmployees),
-                );
-              }
+              final structure = await orgStructureRepository.getStructure();
+              await orgStructureRepository.registerMissing(
+                structure.missingFromPayroll(importedEmployees),
+              );
 
               var summary = UpsertResult.empty;
-              // Leandro: llama a la sincronización de nómina para actualizar la foto vigente solo después de validar el archivo completo.
-              summary += await employeesRepository.syncSnapshotWithResult(
-                importedEmployees,
+              summary += await container
+                  .read(snapshotSyncServiceProvider)
+                  .syncPayroll(employeesRepository, importedEmployees);
+              summary += await coursesRepository.upsert(importedCourses);
+              summary += await timeEntriesRepository.upsert(
+                importedTimeEntries,
               );
-              summary += await coursesRepository.upsertCoursesWithResult(
-                importedCourses,
-              );
-              summary += await timeEntriesRepository
-                  .upsertTimeEntriesWithResult(importedTimeEntries);
               return UpsertResult(
                 processedRecords: importedRecords,
                 inserted: summary.inserted,
@@ -835,8 +842,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'No se encontraron cursos. Verificá las columnas de ID y nombre.',
                 );
               }
-              // Leandro: llama a la sincronización del catálogo para dar altas, bajas y reactivaciones después de validar todas las hojas.
-              return repository.syncSnapshotWithResult(importedCourses);
+              return container
+                  .read(snapshotSyncServiceProvider)
+                  .syncCourseCatalog(repository, importedCourses);
             },
             refresh: () async {
               container.invalidate(coursesProvider);
@@ -900,9 +908,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final repository = container.read(
                 crmTimeEntriesRepositoryProvider,
               );
-              final coursesRepository = container.read(
-                coursesRepositoryProvider,
-              );
+              final catalog = await container
+                  .read(coursesRepositoryProvider)
+                  .getCourses();
               final coursesByName = <String, Course>{};
 
               var recognizedHeader = false;
@@ -947,12 +955,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                   final courseName = row[courseIndex].toString().trim();
                   final course =
-                      coursesByName[normalizeCourseName(
-                        courseName,
-                      )] ??= courseResolver(
-                        courseName,
-                        await coursesRepository.getCourses(name: courseName),
-                      );
+                      coursesByName[normalizeCourseName(courseName)] ??=
+                          courseResolver(courseName, catalog);
                   final date = _dateFromCell(row[dateIndex].toString());
                   String? source(String field) {
                     final index = headers.indexOf(field);
@@ -1001,9 +1005,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'El archivo no tiene registros CRM válidos.',
                 );
               }
-              return repository.upsertTimeEntriesWithResult(
-                importedTimeEntries,
-              );
+              return repository.upsert(importedTimeEntries);
             },
             refresh: () async {
               container.invalidate(crmTimeEntriesProvider);

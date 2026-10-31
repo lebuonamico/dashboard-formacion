@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/core/config/supabase_client_provider.dart';
 import 'package:app_finnegans/features/auth/data/access_rejection.dart';
 import 'package:app_finnegans/features/auth/data/supabase_auth_repository.dart';
 import 'package:app_finnegans/features/auth/domain/auth_repository.dart';

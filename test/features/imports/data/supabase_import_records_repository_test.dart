@@ -1,9 +1,19 @@
 import 'dart:convert';
 
 import 'package:app_finnegans/core/config/supabase_config.dart';
+import 'package:app_finnegans/features/imports/data/in_memory_import_records_repository.dart';
 import 'package:app_finnegans/features/imports/data/supabase_import_records_repository.dart';
 import 'package:app_finnegans/features/imports/domain/import_record.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/core/config/supabase_client_provider.dart';
+import 'package:app_finnegans/features/certifications/data/supabase_lms_certifications_repository.dart';
+import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
+import 'package:app_finnegans/features/courses/data/supabase_courses_repository.dart';
+import 'package:app_finnegans/features/employees/data/supabase_employees_repository.dart';
+import 'package:app_finnegans/features/employees/domain/employee.dart';
+import 'package:app_finnegans/features/employees/domain/seniority.dart';
+import 'package:app_finnegans/features/time_entries/data/supabase_crm_time_entries_repository.dart';
+import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
+import 'package:app_finnegans/features/imports/presentation/providers/import_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -14,94 +24,74 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Mapeo del esquema físico Supabase', () {
-    late ProviderContainer container;
-
-    setUp(() => container = ProviderContainer());
-    tearDown(() => container.dispose());
-
     test('Empleados conserva los campos y usa legajo como conflicto', () {
-      final mapping = container.read(supabaseMappingsProvider).employees;
-      final source = <String, dynamic>{
-        'legajo': '10',
-        'mail': 'ana@example.com',
-        'nombre': 'Ana',
-        'apellido': 'Pérez',
-        'seniority': 'Senior',
-        'area': 'Producto',
-        'equipo': 'Formación',
-        'gerente': 'María',
-        'fechaIngreso': '2024-03-01',
-        'activo': true,
-      };
+      final mapping = SupabaseEmployeesRepository.mapping;
+      final employee = Employee(
+        employeeId: '10',
+        email: 'ana@example.com',
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        seniority: Seniority.senior1,
+        area: 'Producto',
+        team: 'Formación',
+        manager: 'María',
+        hireDate: DateTime(2024, 3),
+      );
       final row = <String, dynamic>{
         'legajo': '10',
         'correo': 'ana@example.com',
         'nombre': 'Ana',
         'apellido': 'Pérez',
-        'seniority': 'Senior',
+        'seniority': 'senior1',
         'sector': 'Producto',
         'equipo_general': 'Formación',
         'gerente': 'María',
-        'fecha_ingreso': '2024-03-01',
+        'fecha_ingreso': '2024-03-01T00:00:00.000',
         'activo': true,
       };
 
       expect(mapping.table, 'empleados');
       expect(mapping.onConflict, 'legajo');
-      expect(mapping.encode(source), row);
-      expect(mapping.decode(row), source);
+      expect(mapping.encode(employee.toJson()), row);
+      expect(mapping.decode(row), employee.toJson());
     });
 
     test('Cursos usa id_curso y excluye campos ajenos al contrato LMS', () {
-      final mapping = container.read(supabaseMappingsProvider).courses;
-      final source = <String, dynamic>{
-        'id': '107',
-        'nombre': 'Curso LMS',
-        'clasificacion': 'habilidadesDeNegocio',
-        'cargaHorariaHs': 4.0,
-        'activo': true,
-      };
-      final row = <String, dynamic>{
-        'id_curso': '107',
-        'nombre': 'Curso LMS',
-        'clasificacion': 'habilidadesDeNegocio',
-        'carga_horaria': 4.0,
-        'activo': true,
-      };
+      final mapping = SupabaseCoursesRepository.mapping;
 
       expect(mapping.table, 'cursos');
       expect(mapping.onConflict, 'id_curso');
-      expect(
-        mapping.encode({
-          ...source,
-          'areaCurso': 'Campo local',
-          'instructorLegajo': 'Campo local',
-        }),
-        row,
-      );
-      expect(mapping.decode(row), source);
+      expect(mapping.columns, {
+        'id': 'id_curso',
+        'name': 'nombre',
+        'category': 'clasificacion',
+        'workloadHours': 'carga_horaria',
+        'isActive': 'activo',
+      });
     });
 
     test('Horas conserva trazabilidad y usa transaccion_id como conflicto', () {
-      final mapping = container.read(supabaseMappingsProvider).hours;
-      final source = <String, dynamic>{
-        'id': 'txn-001',
-        'empleadoLegajo': '10',
-        'cursoId': '107',
-        'fecha': '2025-01-15',
-        'caso': 'Choras - 90',
-        'descripcionCurso': 'Curso CRM',
-        'clasificacion': 'Capacitación',
-        'proyecto': 'Proyecto A',
-        'proyectoItem': 'Item B',
-        'horasTotales': 2.5,
-        'descripcion': 'Actividad original',
-      };
+      final mapping = SupabaseCrmTimeEntriesRepository.mapping;
+      final entry = CrmTimeEntry(
+        id: 'txn-001',
+        employeeId: '10',
+        courseId: '107',
+        courseName: 'Curso CRM',
+        date: DateTime(2025, 1, 15),
+        caseRef: 'Choras - 90',
+        courseDescription: 'Curso CRM',
+        classification: 'Capacitación',
+        project: 'Proyecto A',
+        projectItem: 'Item B',
+        hours: 2.5,
+        description: 'Actividad original',
+        kind: TimeEntryKind.taken,
+      );
       final row = <String, dynamic>{
         'transaccion_id': 'txn-001',
         'legajo': '10',
         'curso_id': '107',
-        'fecha': '2025-01-15',
+        'fecha': '2025-01-15T00:00:00.000',
         'caso': 'Choras - 90',
         'descripcion_curso': 'Curso CRM',
         'clasificacion': 'Capacitación',
@@ -113,29 +103,28 @@ void main() {
 
       expect(mapping.table, 'horas_capacitacion');
       expect(mapping.onConflict, 'transaccion_id');
-      expect(mapping.encode(source), row);
-      expect(mapping.decode(row), source);
+      expect(mapping.encode(entry.toJson()), row);
     });
 
     test('Finalizaciones usa el conflicto compuesto legajo,curso_id', () {
-      final mapping = container.read(supabaseMappingsProvider).completions;
-      final source = <String, dynamic>{
-        'legajo': '10',
-        'cursoId': '107',
-        'finalizoCurso': true,
-        'fechaFinalizacion': '2025-01-15',
-      };
+      final mapping = SupabaseLmsCertificationsRepository.mapping;
+      final certification = LmsCertification(
+        employeeId: '10',
+        courseId: '107',
+        courseName: 'Curso LMS',
+        isCompleted: true,
+        completedAt: DateTime(2025, 1, 15),
+      );
       final row = <String, dynamic>{
         'legajo': '10',
         'curso_id': '107',
         'finalizo': true,
-        'fecha_finalizacion': '2025-01-15',
+        'fecha_finalizacion': '2025-01-15T00:00:00.000',
       };
 
       expect(mapping.table, 'finalizaciones_cursos');
       expect(mapping.onConflict, 'legajo,curso_id');
-      expect(mapping.encode(source), row);
-      expect(mapping.decode(row), source);
+      expect(mapping.encode(certification.toJson()), row);
     });
   });
 
@@ -269,7 +258,10 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        expect(container.read(importRecordsRepositoryProvider), isNull);
+        expect(
+          container.read(importRecordsRepositoryProvider),
+          isA<InMemoryImportRecordsRepository>(),
+        );
         return;
       }
 

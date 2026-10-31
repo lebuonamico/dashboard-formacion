@@ -9,7 +9,8 @@ import 'package:app_finnegans/features/admin/domain/authorized_users_repository.
 import 'package:app_finnegans/features/admin/presentation/admin_screen.dart';
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_actions_bar.dart';
@@ -17,7 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 
 final _creation = DateTime.utc(2026, 1, 15, 10);
@@ -130,12 +130,11 @@ Employee _employee(
 
 Future<ProviderContainer> _showPanel(
   WidgetTester tester, {
-  required AccessAdmin access,
+  AccessAdmin? access,
   _FakeUsers? repository,
   _FakeStructure? structure,
   List<Employee> employees = const [],
 }) async {
-  SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -143,8 +142,9 @@ Future<ProviderContainer> _showPanel(
 
   final container = ProviderContainer(
     overrides: [
-      accessAdminProvider.overrideWithValue(access),
-      authorizedUsersRepositoryProvider.overrideWithValue(repository),
+      if (access != null) accessAdminProvider.overrideWithValue(access),
+      if (repository != null)
+        authorizedUsersRepositoryProvider.overrideWithValue(repository),
       if (structure != null) ...[
         sessionDataProvider.overrideWithValue((
           enabled: true,
@@ -203,13 +203,13 @@ void main() {
     expect(find.byType(DataTable), findsNothing);
   });
 
-  testWidgets('En modo local avisa que el panel no está disponible', (
+  testWidgets('En modo local el panel funciona con los usuarios en memoria', (
     tester,
   ) async {
-    await _showPanel(tester, access: AccessAdmin.noSupabase);
+    await _showPanel(tester);
 
-    expect(find.text('El panel no está disponible'), findsOneWidget);
-    expect(find.byKey(const Key('admin_crear')), findsNothing);
+    expect(find.text('admin@finnegans-demo.com'), findsOneWidget);
+    expect(find.byKey(const Key('admin_crear')), findsOneWidget);
   });
 
   testWidgets('Las acciones se habilitan al seleccionar una fila', (

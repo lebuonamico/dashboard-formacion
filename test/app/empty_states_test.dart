@@ -24,7 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_finnegans/features/employees/data/in_memory_employees_repository.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 
 const _year = 2026;
@@ -69,16 +69,20 @@ Future<ProviderContainer> _show(
   List<CrmTimeEntry> timeEntries = const [],
   List<LmsCertification> certifications = const [],
 }) async {
-  SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(2400, 2000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
+  final payroll = InMemoryEmployeesRepository(
+    employees: employees ?? [_employee],
+  );
   final container = ProviderContainer(
     overrides: [
-      employeesProvider.overrideWith((ref) async => employees ?? [_employee]),
-      employeeHistoryProvider.overrideWith((ref) async => null),
+      employeesProvider.overrideWith((ref) => payroll.getEmployees()),
+      employeeHistoryProvider.overrideWith(
+        (ref) => payroll.getEmployeeHistory(),
+      ),
       coursesProvider.overrideWith((ref) async => courses ?? [_course]),
       crmTimeEntriesProvider.overrideWith((ref) async => timeEntries),
       dashboardTimeEntriesProvider.overrideWith((ref) async => timeEntries),

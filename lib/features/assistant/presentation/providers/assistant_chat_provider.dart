@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/assistant/data/assistant_api.dart';
 import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_context_service.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/core/config/supabase_client_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 

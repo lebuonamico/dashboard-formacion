@@ -62,33 +62,33 @@ class Employee {
   );
 
   Map<String, dynamic> toJson() => {
-    'fechaIngreso': hireDate?.toIso8601String(),
-    'legajo': employeeId,
-    'nombre': firstName,
-    'apellido': lastName,
+    'hireDate': hireDate?.toIso8601String(),
+    'employeeId': employeeId,
+    'firstName': firstName,
+    'lastName': lastName,
     'seniority': seniority.name,
     'area': area,
-    'mail': email,
-    'equipo': team,
-    'gerente': manager,
-    'activo': isActive,
+    'email': email,
+    'team': team,
+    'manager': manager,
+    'isActive': isActive,
   };
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
-    hireDate: json['fechaIngreso'] == null
+    hireDate: json['hireDate'] == null
         ? null
-        : requiredDate(json['fechaIngreso'].toString()),
-    employeeId: json['legajo']?.toString() ?? '',
-    firstName: json['nombre']?.toString() ?? '',
-    lastName: json['apellido']?.toString() ?? '',
+        : requiredDate(json['hireDate'].toString()),
+    employeeId: json['employeeId']?.toString() ?? '',
+    firstName: json['firstName']?.toString() ?? '',
+    lastName: json['lastName']?.toString() ?? '',
     seniority: Seniority.values.firstWhere(
       (s) => s.name == json['seniority'],
       orElse: () => Seniority.fromString(json['seniority']?.toString() ?? ''),
     ),
     area: json['area']?.toString() ?? '',
-    email: json['mail']?.toString() ?? '',
-    team: json['equipo']?.toString() ?? '',
-    manager: json['gerente']?.toString() ?? '',
-    isActive: json['activo'] as bool? ?? true,
+    email: json['email']?.toString() ?? '',
+    team: json['team']?.toString() ?? '',
+    manager: json['manager']?.toString() ?? '',
+    isActive: json['isActive'] as bool? ?? true,
   );
 }

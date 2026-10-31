@@ -4,7 +4,7 @@ import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 
 /// Identidad de la sesión que define qué datos se leen.
@@ -22,12 +22,11 @@ final sessionDataProvider =
       ),
     );
 
-/// Áreas, equipos y líderes. `null` en modo local, donde no hay sesión.
-final orgStructureProvider = FutureProvider<OrgStructure?>((ref) async {
-  if (!ref.watch(sessionDataProvider).enabled) return null;
-  final repository = ref.watch(orgStructureRepositoryProvider);
-  if (repository == null) return null;
-  return repository.getStructure();
+/// Áreas, equipos y líderes.
+final orgStructureProvider = FutureProvider<OrgStructure>((ref) {
+  // Con RLS cada usuario recibe filas distintas: otra sesión vuelve a leer.
+  ref.watch(sessionDataProvider);
+  return ref.watch(orgStructureRepositoryProvider).getStructure();
 });
 
 /// Qué colaboradores ve el usuario de la sesión. En modo local no hay roles
@@ -69,10 +68,8 @@ class LeaderLabels {
       emails.isEmpty ? null : OrgStructure.leadersLabel(emails, _nameByEmail);
 }
 
-/// `null` en modo local, donde no hay líderes asignados.
-final leaderLabelsProvider = FutureProvider<LeaderLabels?>((ref) async {
+final leaderLabelsProvider = FutureProvider<LeaderLabels>((ref) async {
   final structure = await ref.watch(orgStructureProvider.future);
-  if (structure == null) return null;
   final employees = await ref.watch(employeesProvider.future);
   return LeaderLabels(structure, {
     for (final employee in employees)

@@ -119,7 +119,7 @@ final areasPeriodSummaryProvider = FutureProvider<AreasPeriodSummary>((
       _summarizeArea(
         entry.key,
         entry.value,
-        leaders: leaders?.forArea(entry.key),
+        leaders: leaders.forArea(entry.key),
       ),
   ]..sort(_compareAreasByPriority);
 
@@ -229,7 +229,7 @@ final areaDetailProvider = FutureProvider.family<AreaDetailViewModel?, String>((
   final name = members.first.employee.area;
 
   return AreaDetailViewModel(
-    area: _summarizeArea(name, members, leaders: leaders?.forArea(name)),
+    area: _summarizeArea(name, members, leaders: leaders.forArea(name)),
     teams: teams,
     members: members,
   );

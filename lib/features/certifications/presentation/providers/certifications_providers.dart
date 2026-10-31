@@ -5,7 +5,7 @@ import 'package:app_finnegans/features/certifications/domain/lms_certification.d
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 

@@ -1,11 +1,27 @@
 import 'dart:convert';
 
 import 'package:app_finnegans/core/config/supabase_config.dart';
-import 'package:app_finnegans/core/legacy/local_repositories.dart';
-import 'package:app_finnegans/core/data/supabase_repositories.dart';
+import 'package:app_finnegans/features/admin/data/in_memory_authorized_users_repository.dart';
+import 'package:app_finnegans/features/certifications/data/in_memory_lms_certifications_repository.dart';
+import 'package:app_finnegans/features/certifications/data/lms_certifications_seed.dart';
+import 'package:app_finnegans/features/certifications/data/supabase_lms_certifications_repository.dart';
+import 'package:app_finnegans/features/courses/data/courses_seed.dart';
+import 'package:app_finnegans/features/courses/data/in_memory_courses_repository.dart';
+import 'package:app_finnegans/features/courses/data/supabase_courses_repository.dart';
+import 'package:app_finnegans/features/employees/data/employees_seed.dart';
+import 'package:app_finnegans/features/employees/data/in_memory_employees_repository.dart';
+import 'package:app_finnegans/features/employees/data/supabase_employees_repository.dart';
+import 'package:app_finnegans/features/time_entries/data/crm_time_entries_seed.dart';
+import 'package:app_finnegans/features/time_entries/data/in_memory_crm_time_entries_repository.dart';
+import 'package:app_finnegans/features/time_entries/data/supabase_crm_time_entries_repository.dart';
 import 'package:app_finnegans/features/admin/data/supabase_authorized_users_repository.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/core/config/supabase_client_provider.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -14,55 +30,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-void _seedLocalData() {
-  SharedPreferences.setMockInitialValues({
-    'formacion_empleados': jsonEncode([
-      {
-        'legajo': 'LOCAL-ONLY',
-        'nombre': 'Empleado local',
-        'apellido': 'Ficticio',
-        'seniority': 'trainee',
-        'area': 'Sector local',
-        'mail': 'local@example.com',
-        'equipo': 'Equipo local',
-        'gerente': 'Gerente local',
-      },
-    ]),
-    'formacion_cursos': jsonEncode([
-      {
-        'id': 'LOCAL-COURSE',
-        'nombre': 'Curso local ficticio',
-        'clasificacion': 'habilidadesDeNegocio',
-        'areaCurso': 'Área local',
-        'instructorLegajo': 'LOCAL-ONLY',
-        'cargaHorariaHs': 2,
-      },
-    ]),
-    'formacion_carga_de_horas_crm': jsonEncode([
-      {
-        'id': 'LOCAL-HOURS',
-        'cursoNombre': 'Curso local ficticio',
-        'cursoId': 'LOCAL-COURSE',
-        'empleadoLegajo': 'LOCAL-ONLY',
-        'fecha': '2025-01-15',
-        'horasTotales': 2,
-        'tipo': 'tomada',
-      },
-    ]),
-    'formacion_certificaciones_moodle': jsonEncode([
-      {
-        'legajo': 'LOCAL-ONLY',
-        'cursoNombre': 'Curso local ficticio',
-        'cursoId': 'LOCAL-COURSE',
-        'finalizoCurso': true,
-        'fechaFinalizacion': '2025-01-15',
-      },
-    ]),
-  });
-}
 
 ProviderContainer _remoteContainer(SupabaseClient client) => ProviderContainer(
   overrides: [
@@ -104,10 +72,9 @@ void _expectRemoteRepositories(ProviderContainer container) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUp(_seedLocalData);
 
   test(
-    'USE_SUPABASE=false selects explicit local repositories without a client',
+    'USE_SUPABASE=false selects in-memory repositories without a client',
     () async {
       final container = ProviderContainer(
         overrides: [
@@ -120,38 +87,39 @@ void main() {
 
       expect(
         container.read(employeesRepositoryProvider),
-        isA<LocalEmployeesRepository>(),
+        isA<InMemoryEmployeesRepository>(),
       );
       expect(
         container.read(coursesRepositoryProvider),
-        isA<LocalCoursesRepository>(),
+        isA<InMemoryCoursesRepository>(),
       );
       expect(
         container.read(crmTimeEntriesRepositoryProvider),
-        isA<LocalCrmTimeEntriesRepository>(),
+        isA<InMemoryCrmTimeEntriesRepository>(),
       );
       expect(
         container.read(lmsCertificationsRepositoryProvider),
-        isA<LocalLmsCertificationsRepository>(),
-      );
-      expect(container.read(authorizedUsersRepositoryProvider), isNull);
-      expect(
-        (await container.read(employeesProvider.future)).single.employeeId,
-        'LOCAL-ONLY',
+        isA<InMemoryLmsCertificationsRepository>(),
       );
       expect(
-        (await container.read(coursesProvider.future)).single.id,
-        'LOCAL-COURSE',
+        container.read(authorizedUsersRepositoryProvider),
+        isA<InMemoryAuthorizedUsersRepository>(),
       );
       expect(
-        (await container.read(crmTimeEntriesProvider.future)).single.id,
-        'LOCAL-HOURS',
+        await container.read(employeesProvider.future),
+        hasLength(employeesSeed.length),
       );
       expect(
-        (await container.read(
-          lmsCertificationsProvider.future,
-        )).single.employeeId,
-        'LOCAL-ONLY',
+        await container.read(coursesProvider.future),
+        hasLength(coursesSeed.length),
+      );
+      expect(
+        await container.read(crmTimeEntriesProvider.future),
+        hasLength(crmTimeEntriesSeed.length),
+      );
+      expect(
+        await container.read(lmsCertificationsProvider.future),
+        hasLength(lmsCertificationsSeed.length),
       );
     },
     skip: SupabaseConfig.enabled,
@@ -231,7 +199,7 @@ void main() {
     }
 
     test(
-      'Empty remote tables remain empty despite populated preferences',
+      'Empty remote tables remain empty despite the in-memory seed',
       () async {
         final requests = <http.Request>[];
         final client = SupabaseClient(
@@ -243,7 +211,10 @@ void main() {
               '[]',
               200,
               request: request,
-              headers: {'content-type': 'application/json'},
+              headers: {
+                'content-type': 'application/json',
+                'content-range': '*/0',
+              },
             );
           }),
         );
@@ -260,75 +231,56 @@ void main() {
       },
     );
 
-    test(
-      'Repository filters use the physical columns in remote GETs',
-      () async {
-        final requests = <http.Request>[];
-        final client = SupabaseClient(
-          'https://test.supabase.co',
-          'public-test-key',
-          httpClient: MockClient((request) async {
-            requests.add(request);
-            return http.Response(
-              '[]',
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }),
-        );
-        addTearDown(client.dispose);
-        final container = _remoteContainer(client);
-        addTearDown(container.dispose);
+    test('Reads select the physical columns of each table', () async {
+      final requests = <http.Request>[];
+      final client = SupabaseClient(
+        'https://test.supabase.co',
+        'public-test-key',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return http.Response(
+            '[]',
+            200,
+            request: request,
+            headers: {
+              'content-type': 'application/json',
+              'content-range': '*/0',
+            },
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final container = _remoteContainer(client);
+      addTearDown(container.dispose);
 
-        await container
-            .read(employeesRepositoryProvider)
-            .getEmployees(
-              employeeId: '10',
-              team: 'Equipo remoto',
-              sector: 'Sector remoto',
-            );
-        expect(requests.last.url.queryParameters['legajo'], 'eq.10');
-        expect(
-          requests.last.url.queryParameters['equipo_general'],
-          'eq.Equipo remoto',
-        );
-        expect(requests.last.url.queryParameters['sector'], 'eq.Sector remoto');
+      await container.read(employeesRepositoryProvider).getEmployees();
+      await container.read(coursesRepositoryProvider).getCourses();
+      await container.read(crmTimeEntriesRepositoryProvider).getTimeEntries();
+      await container
+          .read(lmsCertificationsRepositoryProvider)
+          .getCertifications();
 
-        await container.read(coursesRepositoryProvider).getCourses(id: '107');
-        expect(requests.last.url.queryParameters['id_curso'], 'eq.107');
-
-        await container
-            .read(crmTimeEntriesRepositoryProvider)
-            .getTimeEntries(
-              employeeId: '10',
-              courseId: '107',
-              from: DateTime(2025, 1),
-              until: DateTime(2025, 2),
-            );
-        expect(requests.last.url.queryParameters['legajo'], 'eq.10');
-        expect(requests.last.url.queryParameters['curso_id'], 'eq.107');
-        expect(
-          requests.last.url.queryParametersAll['fecha'],
-          containsAll([
-            'gte.2025-01-01T00:00:00.000',
-            'lt.2025-02-01T00:00:00.000',
-          ]),
-        );
-
-        await container
-            .read(lmsCertificationsRepositoryProvider)
-            .getCertifications(employeeId: '10', courseId: '107');
-        expect(requests.last.url.queryParameters['legajo'], 'eq.10');
-        expect(requests.last.url.queryParameters['curso_id'], 'eq.107');
-        expect(requests.map((request) => request.url.path), [
-          '/rest/v1/empleados',
-          '/rest/v1/cursos',
-          '/rest/v1/horas_capacitacion',
-          '/rest/v1/finalizaciones_cursos',
-        ]);
-      },
-    );
+      final selectByTable = {
+        for (final request in requests)
+          request.url.pathSegments.last: request.url.queryParameters['select'],
+      };
+      expect(selectByTable, {
+        'empleados': SupabaseEmployeesRepository.mapping.columns.values.join(
+          ',',
+        ),
+        'cursos': SupabaseCoursesRepository.mapping.columns.values.join(','),
+        'horas_capacitacion': SupabaseCrmTimeEntriesRepository
+            .mapping
+            .columns
+            .values
+            .join(','),
+        'finalizaciones_cursos': SupabaseLmsCertificationsRepository
+            .mapping
+            .columns
+            .values
+            .join(','),
+      });
+    });
 
     test('Course view models preserve auxiliary employee errors', () async {
       final client = SupabaseClient(
@@ -340,7 +292,10 @@ void main() {
             denied ? '{"message":"employees denied","code":"42501"}' : '[]',
             denied ? 403 : 200,
             request: request,
-            headers: {'content-type': 'application/json'},
+            headers: {
+              'content-type': 'application/json',
+              'content-range': '*/0',
+            },
           );
         }),
       );
@@ -381,7 +336,10 @@ void main() {
                   : '[]',
               denied ? 403 : 200,
               request: request,
-              headers: {'content-type': 'application/json'},
+              headers: {
+                'content-type': 'application/json',
+                'content-range': '*/0',
+              },
             );
           }),
         );
@@ -404,18 +362,17 @@ void main() {
           expect(await container.read(employeesProvider.future), isEmpty);
         }
         expect(await container.read(crmTimeEntriesProvider.future), isEmpty);
-        await container.pump();
-
-        final state = container.read(joinedTimeEntriesProvider);
-        expect(state.hasError, isTrue);
-        expect(
-          state.error,
-          isA<PostgrestException>().having(
-            (error) => error.message,
-            'message',
-            '$table denied',
+        await expectLater(
+          container.read(joinedTimeEntriesProvider.future),
+          throwsA(
+            isA<PostgrestException>().having(
+              (error) => error.message,
+              'message',
+              '$table denied',
+            ),
           ),
         );
+        expect(container.read(joinedTimeEntriesProvider).hasError, isTrue);
       });
     }
   }, skip: !SupabaseConfig.enabled);

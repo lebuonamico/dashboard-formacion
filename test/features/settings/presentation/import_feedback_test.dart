@@ -15,11 +15,17 @@ import 'package:app_finnegans/features/courses/domain/courses_repository.dart';
 import 'package:app_finnegans/features/employees/domain/employees_repository.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
 import 'package:app_finnegans/features/imports/domain/import_records_repository.dart';
-import 'package:app_finnegans/features/imports/domain/upsert_repository.dart';
+import 'package:app_finnegans/features/imports/data/in_memory_import_records_repository.dart';
+import 'package:app_finnegans/features/org_structure/data/in_memory_org_structure_repository.dart';
 import 'package:app_finnegans/features/imports/domain/import_audit_service.dart';
 import 'package:app_finnegans/features/settings/presentation/settings_screen.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
+import 'package:app_finnegans/features/imports/presentation/providers/import_providers.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -30,7 +36,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class _Audit implements ImportRecordsRepository {
   final records = <ImportRecord>[];
@@ -69,8 +74,7 @@ class _FileSelector extends FilePicker {
   }
 }
 
-class _Courses extends CoursesRepository
-    implements CountedUpsertRepository<Course> {
+class _Courses implements CoursesRepository {
   final saved = <Course>[];
   int queries = 0;
   int upserts = 0;
@@ -79,7 +83,7 @@ class _Courses extends CoursesRepository
   Object? persistenceError;
 
   @override
-  Future<List<Course>> getCourses({String? id, String? name}) async {
+  Future<List<Course>> getCourses() async {
     queries++;
     if (upserts > 0 && pendingQuery != null) {
       return pendingQuery!.future;
@@ -88,7 +92,8 @@ class _Courses extends CoursesRepository
   }
 
   @override
-  Future<UpsertResult> upsertWithResult(List<Course> items) async {
+  Future<UpsertResult> upsert(List<Course> items) async {
+    if (items.isEmpty) return UpsertResult.empty;
     upserts++;
     if (persistenceError case final error?) throw error;
     final result =
@@ -106,47 +111,22 @@ class _Courses extends CoursesRepository
     }
     return result;
   }
-
-  @override
-  Future<void> upsert(List<Course> items) async {
-    await upsertWithResult(items);
-  }
-
-  @override
-  Future<void> replaceCourses(List<Course> courses) async {
-    fail('El importador debe usar UPSERT.');
-  }
-
-  @override
-  Future<void> resetToMock() async {
-    fail('El importador no debe solicitar mocks.');
-  }
 }
 
-class _Employees extends EmployeesRepository
-    implements CountedUpsertRepository<Employee> {
+class _Employees implements EmployeesRepository {
   int queries = 0;
   int saved = 0;
   final batches = <List<Employee>>[];
   final employeesByEmployeeId = <String, Employee>{};
 
   @override
-  Future<List<Employee>> getEmployees({
-    String? employeeId,
-    String? team,
-    String? sector,
-  }) async {
+  Future<List<Employee>> getEmployees() async {
     queries++;
     return employeesByEmployeeId.values.toList();
   }
 
   @override
-  Future<void> replaceEmployees(List<Employee> employees) async {
-    fail('El importador debe usar UPSERT.');
-  }
-
-  @override
-  Future<UpsertResult> upsertWithResult(List<Employee> items) async {
+  Future<UpsertResult> upsert(List<Employee> items) async {
     saved++;
     batches.add(List.of(items));
     final updated = items
@@ -161,61 +141,38 @@ class _Employees extends EmployeesRepository
       updated: updated,
     );
   }
-
-  @override
-  Future<void> upsert(List<Employee> items) async {
-    await upsertWithResult(items);
-  }
-
-  @override
-  Future<void> resetToMock() async {
-    fail('El importador no debe solicitar mocks.');
-  }
 }
 
-class _Hours extends CrmTimeEntriesRepository {
+class _Hours implements CrmTimeEntriesRepository {
   int queries = 0;
   List<CrmTimeEntry> Function()? read;
 
   @override
-  Future<List<CrmTimeEntry>> getTimeEntries({
-    String? employeeId,
-    String? courseId,
-    DateTime? from,
-    DateTime? until,
-  }) async {
+  Future<List<CrmTimeEntry>> getTimeEntries() async {
     queries++;
     return read?.call() ?? [];
   }
 
   @override
-  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {
+  Future<UpsertResult> upsert(List<CrmTimeEntry> timeEntries) async {
+    if (timeEntries.isEmpty) return UpsertResult.empty;
     fail('Un archivo inválido no debe persistir horas.');
-  }
-
-  @override
-  Future<void> resetToMock() async {
-    fail('El importador no debe solicitar mocks.');
   }
 }
 
-class _Certifications extends LmsCertificationsRepository {
+class _Certifications implements LmsCertificationsRepository {
   int queries = 0;
   List<LmsCertification> Function()? read;
 
   @override
-  Future<List<LmsCertification>> getCertifications({
-    String? employeeId,
-    String? courseId,
-  }) async {
+  Future<List<LmsCertification>> getCertifications() async {
     queries++;
     return read?.call() ?? [];
   }
 
   @override
-  Future<void> replaceCertifications(
-    List<LmsCertification> certifications,
-  ) async {
+  Future<UpsertResult> upsert(List<LmsCertification> certifications) async {
+    if (certifications.isEmpty) return UpsertResult.empty;
     fail('La importación de cursos no debe persistir finalizaciones.');
   }
 }
@@ -296,7 +253,6 @@ Future<ProviderContainer> _showSettings(
     }
   };
   addTearDown(() => FlutterError.onError = reportError);
-  SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1800, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -311,7 +267,9 @@ Future<ProviderContainer> _showSettings(
       ),
       // Sin estructura explícita no se toca el cliente de Supabase, aunque
       // los tests corran con USE_SUPABASE=true.
-      orgStructureRepositoryProvider.overrideWithValue(structure),
+      orgStructureRepositoryProvider.overrideWithValue(
+        structure ?? InMemoryOrgStructureRepository(areas: [], teams: []),
+      ),
       if (structure != null)
         sessionDataProvider.overrideWithValue((
           enabled: true,
@@ -574,10 +532,11 @@ void main() {
     );
 
     test(
-      'El modo sin auditoría mantiene la persistencia y el refresh',
+      'La auditoría en memoria registra la importación y refresca',
       () async {
         var refreshes = 0;
-        final result = await const ImportAuditService().run(
+        final audit = InMemoryImportRecordsRepository();
+        final result = await ImportAuditService(audit: audit).run(
           fileType: 'cursos_lms',
           fileName: 'local.csv',
           process: () async =>
@@ -588,6 +547,7 @@ void main() {
         expect(result.inserted, 1);
         expect(result.updated, 0);
         expect(refreshes, 1);
+        expect(audit.records.single.status, ImportStatus.completed);
       },
     );
   });
@@ -752,7 +712,7 @@ void main() {
         () async => _csv('cursos.csv', _catalog),
       );
       final courses = _Courses()
-        ..saved.add(Course.fromJson({'id': '107', 'nombre': 'Curso anterior'}));
+        ..saved.add(Course.fromJson({'id': '107', 'name': 'Curso anterior'}));
       final hours = _Hours()
         ..read = () => [
           CrmTimeEntry(

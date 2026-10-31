@@ -2,7 +2,7 @@ import 'package:app_finnegans/features/compliance/domain/employee_compliance.dar
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/dashboard/domain/dashboard_kpis_service.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/reports/presentation/providers/print_repository_provider.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/area_compliance_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';

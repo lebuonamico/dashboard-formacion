@@ -3,12 +3,12 @@ import 'package:app_finnegans/core/data_filters/presentation/filter_dimensions.d
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_entry.dart';
-import 'package:app_finnegans/features/employees/domain/employee_history_repository.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_service.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
+import 'package:app_finnegans/features/compliance/presentation/providers/compliance_service_provider.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
@@ -41,16 +41,13 @@ final visibleEmployeeIdsProvider = FutureProvider<Set<String>?>((ref) async {
   return {for (final employee in employees) employee.employeeId};
 });
 
-final employeeHistoryProvider = FutureProvider<List<EmployeeHistoryEntry>?>((
+final employeeHistoryProvider = FutureProvider<List<EmployeeHistoryEntry>>((
   ref,
-) async {
-  final repo = ref.watch(employeesRepositoryProvider);
-  if (repo is! EmployeeHistoryRepository) return null;
+) {
   // Con RLS cada usuario recibe vigencias distintas: se vuelve a consultar
   // cuando entra otro en la misma pestaña.
   ref.watch(sessionDataProvider);
-  // Leandro: llama a getHistorialEmpleados para consultar las vigencias sin escribir un historial paralelo.
-  return (repo as EmployeeHistoryRepository).getEmployeeHistory();
+  return ref.watch(employeeHistoryRepositoryProvider).getEmployeeHistory();
 });
 
 FilterRow employeeFilterRow(Employee employee) => FilterRow(

@@ -16,23 +16,23 @@ class LmsCertification {
   });
 
   Map<String, dynamic> toJson() => {
-    'cursoId': courseId,
-    'legajo': employeeId,
-    'cursoNombre': courseName,
-    'finalizoCurso': isCompleted,
-    'fechaFinalizacion': completedAt?.toIso8601String(),
+    'courseId': courseId,
+    'employeeId': employeeId,
+    'courseName': courseName,
+    'isCompleted': isCompleted,
+    'completedAt': completedAt?.toIso8601String(),
   };
 
   factory LmsCertification.fromJson(Map<String, dynamic> json) {
-    final completed = json['finalizoCurso'];
+    final completed = json['isCompleted'];
     return LmsCertification(
-      courseId: json['cursoId']?.toString(),
-      employeeId: json['legajo']?.toString() ?? '',
-      courseName: json['cursoNombre']?.toString() ?? '',
+      courseId: json['courseId']?.toString(),
+      employeeId: json['employeeId']?.toString() ?? '',
+      courseName: json['courseName']?.toString() ?? '',
       isCompleted: completed == true || completed?.toString() == 'true',
-      completedAt: json['fechaFinalizacion'] == null
+      completedAt: json['completedAt'] == null
           ? null
-          : requiredDate(json['fechaFinalizacion'].toString()),
+          : requiredDate(json['completedAt'].toString()),
     );
   }
 }

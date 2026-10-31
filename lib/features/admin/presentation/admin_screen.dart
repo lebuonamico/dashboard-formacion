@@ -9,7 +9,7 @@ import 'package:app_finnegans/features/admin/domain/authorized_users_repository.
 import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/authorized_users_repository_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_actions_bar.dart';
@@ -46,14 +46,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 message:
                     'El panel de administración está reservado para los '
                     'usuarios con rol Administrador o Academia.',
-              ),
-              AccessAdmin.noSupabase => const _CenteredState(
-                icon: Icons.cloud_off_outlined,
-                title: 'El panel no está disponible',
-                message:
-                    'Esta versión de la aplicación no está conectada a '
-                    'la lista de usuarios, así que no hay usuarios para '
-                    'administrar.',
               ),
             },
           ),
@@ -168,15 +160,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
   }
 
-  AuthorizedUsersRepository _repository() {
-    final repository = ref.read(authorizedUsersRepositoryProvider);
-    if (repository == null) {
-      throw const FormatException(
-        'El panel de administración no está disponible en esta versión.',
-      );
-    }
-    return repository;
-  }
+  AuthorizedUsersRepository _repository() =>
+      ref.read(authorizedUsersRepositoryProvider);
 
   Future<void> _createUser() async {
     final data = await showUserCreationDialog(context);

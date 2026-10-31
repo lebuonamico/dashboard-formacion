@@ -5,20 +5,24 @@ import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/domain/employee_history_entry.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
-import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entries_repository.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certifications_repository.dart';
 import 'package:app_finnegans/features/courses/domain/courses_repository.dart';
-import 'package:app_finnegans/features/employees/domain/employee_history_repository.dart';
-import 'package:app_finnegans/features/employees/domain/employees_repository.dart';
-import 'package:app_finnegans/features/org_structure/domain/org_structure_repository.dart';
-import 'package:app_finnegans/features/training_plan/domain/training_plan_repository.dart';
+import 'package:app_finnegans/features/employees/data/in_memory_employees_repository.dart';
+import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
+import 'package:app_finnegans/features/org_structure/data/in_memory_org_structure_repository.dart';
+import 'package:app_finnegans/features/training_plan/data/in_memory_training_plan_repository.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_data_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
-import 'package:app_finnegans/core/providers/core_providers.dart';
+import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
+import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
+import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
+import 'package:app_finnegans/features/training_plan/presentation/providers/training_plan_providers.dart';
+import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
@@ -29,44 +33,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _year = 2026;
 
-class _FakeEmployees implements EmployeesRepository {
-  final List<Employee> employees;
-  _FakeEmployees(this.employees);
-
-  @override
-  Future<List<Employee>> getEmployees({
-    String? employeeId,
-    String? team,
-    String? sector,
-  }) async => employees;
-
-  @override
-  Future<void> replaceEmployees(List<Employee> employees) async {}
-
-  @override
-  Future<void> resetToMock() async {}
-}
-
-class _FakeEmployeesWithHistory extends _FakeEmployees
-    implements EmployeeHistoryRepository {
-  final List<EmployeeHistoryEntry> history;
-  _FakeEmployeesWithHistory(super.employees, this.history);
-
-  @override
-  Future<List<EmployeeHistoryEntry>> getEmployeeHistory() async => history;
-}
-
 class _FakeCourses implements CoursesRepository {
   @override
-  Future<List<Course>> getCourses({String? id, String? name}) async => [
-    _course,
-  ];
+  Future<List<Course>> getCourses() async => [_course];
 
   @override
-  Future<void> replaceCourses(List<Course> courses) async {}
-
-  @override
-  Future<void> resetToMock() async {}
+  Future<UpsertResult> upsert(List<Course> courses) =>
+      throw UnimplementedError();
 }
 
 class _FakeTimeEntries implements CrmTimeEntriesRepository {
@@ -74,24 +47,11 @@ class _FakeTimeEntries implements CrmTimeEntriesRepository {
   _FakeTimeEntries(this.timeEntries);
 
   @override
-  Future<List<CrmTimeEntry>> getTimeEntries({
-    String? employeeId,
-    String? courseId,
-    DateTime? from,
-    DateTime? until,
-  }) async => timeEntries
-      .where(
-        (timeEntry) =>
-            (from == null || !timeEntry.date.isBefore(from)) &&
-            (until == null || timeEntry.date.isBefore(until)),
-      )
-      .toList();
+  Future<List<CrmTimeEntry>> getTimeEntries() async => timeEntries;
 
   @override
-  Future<void> replaceTimeEntries(List<CrmTimeEntry> timeEntries) async {}
-
-  @override
-  Future<void> resetToMock() async {}
+  Future<UpsertResult> upsert(List<CrmTimeEntry> timeEntries) =>
+      throw UnimplementedError();
 }
 
 class _FakeCertifications implements LmsCertificationsRepository {
@@ -99,27 +59,11 @@ class _FakeCertifications implements LmsCertificationsRepository {
   _FakeCertifications(this.certifications);
 
   @override
-  Future<List<LmsCertification>> getCertifications({
-    String? employeeId,
-    String? courseId,
-  }) async => certifications;
+  Future<List<LmsCertification>> getCertifications() async => certifications;
 
   @override
-  Future<void> replaceCertifications(
-    List<LmsCertification> certifications,
-  ) async {}
-}
-
-class _FakeStructure implements OrgStructureRepository {
-  final OrgStructure structure;
-  _FakeStructure(this.structure);
-
-  @override
-  Future<OrgStructure> getStructure() async => structure;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName}');
+  Future<UpsertResult> upsert(List<LmsCertification> certifications) =>
+      throw UnimplementedError();
 }
 
 final _course = Course(
@@ -199,16 +143,6 @@ List<LmsCertification> _completions(Iterable<String> employeeIds, int month) =>
         ),
     ];
 
-/// Sin versiones: rige el plan por defecto, como antes de poder editarlo.
-class _PlanFake implements TrainingPlanRepository {
-  @override
-  Future<TrainingPlanHistory> getPlans() async =>
-      const TrainingPlanHistory.empty();
-
-  @override
-  Future<void> saveVersion(TrainingPlanVersion version) async {}
-}
-
 ProviderContainer _container({
   required bool enabled,
   String? email,
@@ -222,6 +156,10 @@ ProviderContainer _container({
 }) {
   final payroll = employees ?? _employees;
   final employeeIds = payroll.map((employee) => employee.employeeId);
+  final payrollRepository = InMemoryEmployeesRepository(
+    employees: payroll,
+    history: history,
+  );
   final container = ProviderContainer(
     overrides: [
       sessionDataProvider.overrideWithValue((
@@ -230,15 +168,17 @@ ProviderContainer _container({
         role: role,
       )),
       orgStructureRepositoryProvider.overrideWithValue(
-        structure == null ? null : _FakeStructure(structure),
+        InMemoryOrgStructureRepository(
+          areas: structure?.areas ?? const [],
+          teams: structure?.teams ?? const [],
+        ),
       ),
-      employeesRepositoryProvider.overrideWithValue(
-        history == null
-            ? _FakeEmployees(payroll)
-            : _FakeEmployeesWithHistory(payroll, history),
-      ),
+      employeesRepositoryProvider.overrideWithValue(payrollRepository),
+      employeeHistoryRepositoryProvider.overrideWithValue(payrollRepository),
       coursesRepositoryProvider.overrideWithValue(_FakeCourses()),
-      trainingPlanRepositoryProvider.overrideWithValue(_PlanFake()),
+      trainingPlanRepositoryProvider.overrideWithValue(
+        InMemoryTrainingPlanRepository(),
+      ),
       crmTimeEntriesRepositoryProvider.overrideWithValue(
         _FakeTimeEntries(timeEntries ?? _timeEntries(employeeIds, 6)),
       ),
@@ -399,13 +339,23 @@ void main() {
   });
 
   test('En modo local se ve todo y no hay sesión que buscar', () async {
-    final container = _container(enabled: false);
+    final container = _container(enabled: false, structure: _structure());
 
-    expect(await container.read(orgStructureProvider.future), isNull);
     expect(await container.read(visibleEmployeeIdsProvider.future), isNull);
     expect(await container.read(sessionEmployeeProvider.future), isNull);
     final employees = await container.read(employeesProvider.future);
     expect(employees.map((e) => e.employeeId), ['1', '2', '3', '4']);
+
+    // Los líderes asignados se muestran aunque no filtren nada.
+    final summary = await container.read(teamsPeriodSummaryProvider.future);
+    expect(
+      summary.teams.firstWhere((e) => e.name == 'PLATAFORMA CORE').leader,
+      'Lía Líder',
+    );
+  });
+
+  test('Sin líderes asignados la tarjeta muestra el Gerente', () async {
+    final container = _container(enabled: false);
 
     final summary = await container.read(teamsPeriodSummaryProvider.future);
     expect(

@@ -3,8 +3,8 @@ import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/imports/domain/import_records_repository.dart';
 
 class ImportAuditService {
-  final ImportRecordsRepository? audit;
-  const ImportAuditService({this.audit});
+  final ImportRecordsRepository audit;
+  const ImportAuditService({required this.audit});
 
   Future<UpsertResult> run({
     required String fileType,
@@ -19,7 +19,7 @@ class ImportAuditService {
     try {
       result = await process();
       persisted = true;
-      await audit?.register(
+      await audit.register(
         ImportRecord(
           fileType: fileType,
           fileName: fileName,
@@ -41,7 +41,7 @@ class ImportAuditService {
         );
       }
       try {
-        await audit?.register(
+        await audit.register(
           ImportRecord(
             fileType: fileType,
             fileName: fileName,
