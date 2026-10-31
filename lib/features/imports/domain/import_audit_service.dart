@@ -4,7 +4,9 @@ import 'package:app_finnegans/features/imports/domain/import_records_repository.
 
 class ImportAuditService {
   final ImportRecordsRepository audit;
-  const ImportAuditService({required this.audit});
+  final DateTime Function() now;
+
+  const ImportAuditService({required this.audit, this.now = DateTime.now});
 
   Future<UpsertResult> run({
     required String fileType,
@@ -12,7 +14,7 @@ class ImportAuditService {
     required Future<UpsertResult> Function() process,
     Future<void> Function()? refresh,
   }) async {
-    final dateTime = DateTime.now().toUtc();
+    final dateTime = now().toUtc();
     var result = UpsertResult.empty;
     var persisted = false;
     var audited = false;

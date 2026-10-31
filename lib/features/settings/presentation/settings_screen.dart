@@ -1,7 +1,6 @@
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/features/imports/domain/upsert_result.dart';
 import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'dart:async';
 
@@ -10,27 +9,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:app_finnegans/features/imports/domain/import_values.dart';
-import 'package:app_finnegans/features/courses/domain/course.dart';
-import 'package:app_finnegans/features/time_entries/domain/crm_time_entry.dart';
-import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
-import 'package:app_finnegans/features/employees/presentation/providers/employees_repository_providers.dart';
-import 'package:app_finnegans/features/courses/presentation/providers/courses_repository_provider.dart';
-import 'package:app_finnegans/features/time_entries/presentation/providers/crm_time_entries_repository_provider.dart';
-import 'package:app_finnegans/features/certifications/presentation/providers/lms_certifications_repository_provider.dart';
 import 'package:app_finnegans/features/imports/presentation/providers/import_providers.dart';
-import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_repository_provider.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/training_plan/presentation/training_plan_editor.dart';
-import 'package:app_finnegans/core/text/text_normalizer.dart';
-import 'package:app_finnegans/features/imports/data/payroll_file_parser.dart';
-import 'package:app_finnegans/features/imports/data/course_catalog_file_parser.dart';
-import 'package:app_finnegans/features/imports/data/crm_time_entries_file_parser.dart';
-import 'package:app_finnegans/features/imports/data/lms_certifications_file_parser.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -237,34 +222,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      var certifications = <LmsCertification>[];
-      await container
-          .read(importAuditServiceProvider)
-          .run(
-            fileType: 'finalizaciones',
-            fileName: result.files.single.name,
-            process: () async {
-              certifications = const LmsCertificationsFileParser().parse(
-                ImportFile(
-                  name: result.files.single.name,
-                  bytes: result.files.single.bytes!,
-                ),
-              );
-              return container
-                  .read(lmsCertificationsRepositoryProvider)
-                  .upsert(certifications);
-            },
-            refresh: () async {
-              container.invalidate(lmsCertificationsProvider);
-              await Future.wait([
-                container.read(lmsCertificationsProvider.future),
-              ]);
-            },
-          );
+      final imported = await container.read(importLmsCertificationsProvider)(
+        ImportFile(
+          name: result.files.single.name,
+          bytes: result.files.single.bytes!,
+        ),
+        refresh: () async {
+          container.invalidate(lmsCertificationsProvider);
+          await Future.wait([container.read(lmsCertificationsProvider.future)]);
+        },
+      );
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Se importaron ${certifications.length} certificaciones LMS.',
+        'Se importaron ${imported.processedRecords} certificaciones LMS.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
@@ -289,58 +260,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      var importedRecords = 0;
-      await container
-          .read(importAuditServiceProvider)
-          .run(
-            fileType: 'nomina',
-            fileName: result.files.single.name,
-            process: () async {
-              final payroll = const PayrollFileParser().parse(
-                ImportFile(
-                  name: result.files.single.name,
-                  bytes: result.files.single.bytes!,
-                ),
-              );
-              importedRecords = payroll.rowCount;
-              final orgStructureRepository = container.read(
-                orgStructureRepositoryProvider,
-              );
-              final structure = await orgStructureRepository.getStructure();
-              await orgStructureRepository.registerMissing(
-                container
-                    .read(orgStructureServiceProvider)
-                    .missingFromPayroll(structure, payroll.employees),
-              );
-              final synced = await container
-                  .read(snapshotSyncServiceProvider)
-                  .syncPayroll(
-                    container.read(employeesRepositoryProvider),
-                    payroll.employees,
-                  );
-              return UpsertResult(
-                processedRecords: payroll.rowCount,
-                inserted: synced.inserted,
-                updated: synced.updated,
-              );
-            },
-            refresh: () async {
-              // La nómina no cambia cursos, horas ni finalizaciones: lo que
-              // depende de quién ve a quién se recalcula solo desde la nómina.
-              container.invalidate(orgStructureNotifierProvider);
-              container.invalidate(payrollProvider);
-              container.invalidate(employeeHistoryProvider);
-              await Future.wait([
-                container.read(orgStructureNotifierProvider.future),
-                container.read(employeesProvider.future),
-                container.read(employeeHistoryProvider.future),
-              ]);
-            },
-          );
+      final imported = await container.read(importPayrollProvider)(
+        ImportFile(
+          name: result.files.single.name,
+          bytes: result.files.single.bytes!,
+        ),
+        refresh: () async {
+          container.invalidate(orgStructureNotifierProvider);
+          container.invalidate(payrollProvider);
+          container.invalidate(employeeHistoryProvider);
+          await Future.wait([
+            container.read(orgStructureNotifierProvider.future),
+            container.read(employeesProvider.future),
+            container.read(employeeHistoryProvider.future),
+          ]);
+        },
+      );
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Se importaron $importedRecords registros desde ${result.files.single.name}.',
+        'Se importaron ${imported.processedRecords} registros desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
@@ -365,43 +304,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      var importedCourses = <Course>[];
-      await container
-          .read(importAuditServiceProvider)
-          .run(
-            fileType: 'cursos_lms',
-            fileName: result.files.single.name,
-            process: () async {
-              importedCourses = CourseCatalogFileParser().parse(
-                ImportFile(
-                  name: result.files.single.name,
-                  bytes: result.files.single.bytes!,
-                ),
-              );
-              return container
-                  .read(snapshotSyncServiceProvider)
-                  .syncCourseCatalog(
-                    container.read(coursesRepositoryProvider),
-                    importedCourses,
-                  );
-            },
-            refresh: () async {
-              container.invalidate(coursesProvider);
-              container.invalidate(crmTimeEntriesProvider);
-              container.invalidate(dashboardTimeEntriesProvider);
-              container.invalidate(lmsCertificationsProvider);
-              await Future.wait([
-                container.read(coursesProvider.future),
-                container.read(crmTimeEntriesProvider.future),
-                container.read(dashboardTimeEntriesProvider.future),
-                container.read(lmsCertificationsProvider.future),
-              ]);
-            },
-          );
+      final imported = await container.read(importCourseCatalogProvider)(
+        ImportFile(
+          name: result.files.single.name,
+          bytes: result.files.single.bytes!,
+        ),
+        refresh: () async {
+          container.invalidate(coursesProvider);
+          container.invalidate(crmTimeEntriesProvider);
+          container.invalidate(dashboardTimeEntriesProvider);
+          container.invalidate(lmsCertificationsProvider);
+          await Future.wait([
+            container.read(coursesProvider.future),
+            container.read(crmTimeEntriesProvider.future),
+            container.read(dashboardTimeEntriesProvider.future),
+            container.read(lmsCertificationsProvider.future),
+          ]);
+        },
+      );
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Se cargaron ${importedCourses.length} cursos desde ${result.files.single.name}.',
+        'Se cargaron ${imported.processedRecords} cursos desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
@@ -426,49 +350,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       if (result == null || result.files.single.bytes == null) return;
 
-      var importedTimeEntries = <CrmTimeEntry>[];
-      await container
-          .read(importAuditServiceProvider)
-          .run(
-            fileType: 'horas_crm',
-            fileName: result.files.single.name,
-            process: () async {
-              final parsed = const CrmTimeEntriesFileParser().parse(
-                ImportFile(
-                  name: result.files.single.name,
-                  bytes: result.files.single.bytes!,
-                ),
-              );
-              final catalog = await container
-                  .read(coursesRepositoryProvider)
-                  .getCourses();
-              final coursesByName = <String, Course>{};
-              importedTimeEntries = parsed.map((entry) {
-                final course =
-                    coursesByName[normalizeLoose(entry.courseName)] ??=
-                        courseResolver(entry.courseName, catalog);
-                return entry.copyWith(
-                  courseName: course.name,
-                  courseId: course.id,
-                );
-              }).toList();
-              return container
-                  .read(crmTimeEntriesRepositoryProvider)
-                  .upsert(importedTimeEntries);
-            },
-            refresh: () async {
-              container.invalidate(crmTimeEntriesProvider);
-              container.invalidate(dashboardTimeEntriesProvider);
-              await Future.wait([
-                container.read(crmTimeEntriesProvider.future),
-                container.read(dashboardTimeEntriesProvider.future),
-              ]);
-            },
-          );
+      final imported = await container.read(importCrmTimeEntriesProvider)(
+        ImportFile(
+          name: result.files.single.name,
+          bytes: result.files.single.bytes!,
+        ),
+        loadCatalog: () => container.read(coursesProvider.future),
+        refresh: () async {
+          container.invalidate(crmTimeEntriesProvider);
+          container.invalidate(dashboardTimeEntriesProvider);
+          await Future.wait([
+            container.read(crmTimeEntriesProvider.future),
+            container.read(dashboardTimeEntriesProvider.future),
+          ]);
+        },
+      );
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Se cargaron ${importedTimeEntries.length} registros desde ${result.files.single.name}.',
+        'Se cargaron ${imported.processedRecords} registros desde ${result.files.single.name}.',
       );
     } on FormatException catch (error) {
       if (!mounted) return;
