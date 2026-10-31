@@ -144,7 +144,7 @@ final employeeDetailProvider =
       final complianceService = await ref.watch(
         complianceServiceProvider.future,
       );
-      final teamsService = ref.read(teamsServiceProvider);
+      final teamsService = ref.watch(teamsServiceProvider);
       final records = ref.watch(timeEntryRecordsServiceProvider);
       final isAnnual = scope == PeriodScope.annual;
 

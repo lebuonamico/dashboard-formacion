@@ -9,6 +9,7 @@ import 'package:app_finnegans/core/data_filters/presentation/data_filter_selecti
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
+import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_finnegans/features/teams/presentation/team_status_labels.dart';
 
@@ -40,7 +41,7 @@ final hasTeamPeriodDataProvider = FutureProvider<bool>((ref) async {
   final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
   final certifications = await ref.watch(lmsCertificationsProvider.future);
   return ref
-      .read(teamsServiceProvider)
+      .watch(teamsServiceProvider)
       .periods
       .hasDataInPeriod(
         timeEntries: timeEntries,
@@ -106,7 +107,7 @@ final teamsPeriodSummaryProvider = FutureProvider<TeamsPeriodSummary>((
     return const TeamsPeriodSummary.noData();
   }
   final compliance = await ref.watch(teamComplianceProvider.future);
-  final service = ref.read(teamsServiceProvider);
+  final service = ref.watch(teamsServiceProvider);
   final leaders = await ref.watch(leaderLabelsProvider.future);
   final uniqueEmployeeCount =
       ref.watch(periodFilterProvider).scope == PeriodScope.annual
@@ -155,7 +156,7 @@ final teamDetailProvider =
       selection,
     ) async {
       final compliance = await ref.watch(teamComplianceProvider.future);
-      final service = ref.read(teamsServiceProvider);
+      final service = ref.watch(teamsServiceProvider);
       final leaders = await ref.watch(leaderLabelsProvider.future);
       return service.getTeamDetail(
         compliance: compliance,
@@ -163,4 +164,16 @@ final teamDetailProvider =
         team: selection.team,
         resolveLeader: leaders.forTeam,
       );
+    });
+
+final sortedTeamMembersProvider =
+    FutureProvider.family<
+      List<EmployeeCompliance>,
+      ({String area, String team})
+    >((ref, section) async {
+      final detail = await ref.watch(teamDetailProvider(section).future);
+      final order = ref.watch(memberOrderProvider(MemberTable.team));
+      return ref
+          .watch(memberOrderServiceProvider)
+          .sort(detail?.members ?? const [], order);
     });

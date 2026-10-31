@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
@@ -41,19 +42,13 @@ class _TeamResultsState extends State<TeamResults> {
   bool _haveSameTeams(
     List<TeamOverview> previousTeams,
     List<TeamOverview> currentTeams,
-  ) {
-    if (previousTeams.length != currentTeams.length) return false;
-    for (var index = 0; index < currentTeams.length; index++) {
-      final previous = previousTeams[index];
-      final current = currentTeams[index];
-      if (previous.id != current.id ||
-          previous.completedHours != current.completedHours ||
-          previous.targetHours != current.targetHours) {
-        return false;
-      }
-    }
-    return true;
-  }
+  ) => const ListEquality<(String, double, double)>().equals(
+    previousTeams.map(_resultKey).toList(),
+    currentTeams.map(_resultKey).toList(),
+  );
+
+  (String, double, double) _resultKey(TeamOverview team) =>
+      (team.id, team.completedHours, team.targetHours);
 
   @override
   Widget build(BuildContext context) {

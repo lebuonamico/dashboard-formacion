@@ -24,17 +24,10 @@ class TeamDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(teamDetailProvider((area: area, team: team)));
-    final hasDataAsync = ref.watch(hasTeamPeriodDataProvider);
-    final scope = ref.watch(periodFilterProvider).scope;
-    final month = ref.watch(periodFilterProvider).month;
-    final year = ref.watch(periodFilterProvider).year;
-    final detailedLabel = detailedPeriodLabel(scope, month, year);
-
+    final section = (area: area, team: team);
+    final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
-      action: PrintReportButton(
-        report: teamReportProvider((area: area, team: team)),
-      ),
+      action: PrintReportButton(report: teamReportProvider(section)),
     );
 
     return Scaffold(
@@ -43,52 +36,34 @@ class TeamDetailScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Detalle de equipo', backTo: '/equipos'),
           Expanded(
-            child: detailAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  color: context.colorScheme.primary,
+            child: ref
+                .watch(hasTeamPeriodDataProvider)
+                .when(
+                  loading: () => const _Loading(),
+                  error: (error, _) => ErrorDataState(
+                    title: 'No pudimos cargar el equipo',
+                    error: error,
+                    onRetry: () => ref.invalidate(hasTeamPeriodDataProvider),
+                  ),
+                  data: (hasData) => hasData
+                      ? _TeamDetailBody(
+                          section: section,
+                          periodControls: periodControls,
+                        )
+                      : FadeIn(
+                          child: _EmptyContent(
+                            periodControls: periodControls,
+                            child: EmptyDataState.periodWithoutData(
+                              icon: Icons.groups_outlined,
+                              period: periodLabel(
+                                period.scope,
+                                period.month,
+                                period.year,
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
-              ),
-              error: (error, _) => ErrorDataState(
-                title: 'No pudimos cargar el equipo',
-                error: error,
-                onRetry: () => ref.invalidate(
-                  teamDetailProvider((area: area, team: team)),
-                ),
-              ),
-              data: (detail) {
-                final label = periodLabel(scope, month, year);
-                final Widget content;
-                if (!(hasDataAsync.value ?? true)) {
-                  content = _EmptyContent(
-                    periodControls: periodControls,
-                    child: EmptyDataState.periodWithoutData(
-                      icon: Icons.groups_outlined,
-                      period: label,
-                    ),
-                  );
-                } else if (detail == null) {
-                  content = _EmptyContent(
-                    periodControls: periodControls,
-                    child: EmptyDataState(
-                      icon: Icons.groups_outlined,
-                      title:
-                          'El equipo $team no tiene colaboradores elegibles en $label.',
-                      message:
-                          'Probá otro período o verificá la nómina del equipo.',
-                    ),
-                  );
-                } else {
-                  content = _TeamDetailContent(
-                    detail: detail,
-                    periodLabel: detailedLabel,
-                    isAnnual: scope == PeriodScope.annual,
-                    periodControls: periodControls,
-                  );
-                }
-                return FadeIn(child: content);
-              },
-            ),
           ),
         ],
       ),
@@ -96,14 +71,72 @@ class TeamDetailScreen extends ConsumerWidget {
   }
 }
 
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: CircularProgressIndicator(color: context.colorScheme.primary),
+  );
+}
+
+class _TeamDetailBody extends ConsumerWidget {
+  final ({String area, String team}) section;
+  final Widget periodControls;
+
+  const _TeamDetailBody({required this.section, required this.periodControls});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(periodFilterProvider);
+
+    return ref
+        .watch(teamDetailProvider(section))
+        .when(
+          loading: () => const _Loading(),
+          error: (error, _) => ErrorDataState(
+            title: 'No pudimos cargar el equipo',
+            error: error,
+            onRetry: () => ref.invalidate(teamDetailProvider(section)),
+          ),
+          data: (detail) => FadeIn(
+            child: detail == null
+                ? _EmptyContent(
+                    periodControls: periodControls,
+                    child: EmptyDataState(
+                      icon: Icons.groups_outlined,
+                      title:
+                          'El equipo ${section.team} no tiene colaboradores elegibles en ${periodLabel(period.scope, period.month, period.year)}.',
+                      message:
+                          'Probá otro período o verificá la nómina del equipo.',
+                    ),
+                  )
+                : _TeamDetailContent(
+                    detail: detail,
+                    section: section,
+                    periodLabel: detailedPeriodLabel(
+                      period.scope,
+                      period.month,
+                      period.year,
+                    ),
+                    isAnnual: period.scope == PeriodScope.annual,
+                    periodControls: periodControls,
+                  ),
+          ),
+        );
+  }
+}
+
 class _TeamDetailContent extends StatelessWidget {
   final TeamDetail detail;
+  final ({String area, String team}) section;
   final String periodLabel;
   final bool isAnnual;
   final Widget periodControls;
 
   const _TeamDetailContent({
     required this.detail,
+    required this.section,
     required this.periodLabel,
     required this.isAnnual,
     required this.periodControls,
@@ -128,7 +161,7 @@ class _TeamDetailContent extends StatelessWidget {
           MoodleCrmComparisonCards(complianceList: detail.members),
         ],
         const SizedBox(height: 24),
-        TeamMembersTable(members: detail.members),
+        TeamMembersTable(section: section),
       ],
     );
   }
