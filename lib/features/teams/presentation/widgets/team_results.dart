@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
@@ -58,14 +59,15 @@ class _TeamResultsState extends State<TeamResults> {
             (constraints.maxWidth / (_maxCardWidth + _gridSpacing)).ceil();
         final columnCount = calculatedColumns < 1 ? 1 : calculatedColumns;
         final itemsPerPage = columnCount * _rowsPerPage;
-        final pageCount = (widget.teams.length / itemsPerPage).ceil();
-        final safePage = pageCount == 0
-            ? 0
-            : _currentPage.clamp(0, pageCount - 1);
-        final startIndex = safePage * itemsPerPage;
-        final endIndex = (startIndex + itemsPerPage).clamp(
-          0,
-          widget.teams.length,
+        final (
+          page: safePage,
+          :pageCount,
+          start: startIndex,
+          end: endIndex,
+        ) = pageWindow(
+          page: _currentPage,
+          pageSize: itemsPerPage,
+          total: widget.teams.length,
         );
         final visibleTeams = widget.teams.sublist(startIndex, endIndex);
 

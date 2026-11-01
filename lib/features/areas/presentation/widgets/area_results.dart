@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
@@ -54,12 +55,16 @@ class _AreasResultsState extends State<AreasResults> {
             (constraints.maxWidth / (_maxCardWidth + _gridSpacing)).ceil();
         final columns = calculatedColumns < 1 ? 1 : calculatedColumns;
         final itemsPerPage = columns * _rowsPerPage;
-        final pageCount = (widget.areas.length / itemsPerPage).ceil();
-        final safePage = pageCount == 0
-            ? 0
-            : _currentPage.clamp(0, pageCount - 1);
-        final from = safePage * itemsPerPage;
-        final until = (from + itemsPerPage).clamp(0, widget.areas.length);
+        final (
+          page: safePage,
+          :pageCount,
+          start: from,
+          end: until,
+        ) = pageWindow(
+          page: _currentPage,
+          pageSize: itemsPerPage,
+          total: widget.areas.length,
+        );
         final visibleAreas = widget.areas.sublist(from, until);
 
         return Column(

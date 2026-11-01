@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:flutter/material.dart';
 
@@ -60,11 +61,8 @@ class _PaginatedTableState<T> extends State<PaginatedTable<T>> {
                   total < _minimumPerPage ? _minimumPerPage : total,
                 );
 
-        final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
-        final safePage = _currentPage.clamp(0, totalPages - 1);
-        final start = safePage * perPage;
-        final calculatedEnd = start + perPage;
-        final end = calculatedEnd > total ? total : calculatedEnd;
+        final (page: safePage, pageCount: totalPages, :start, :end) =
+            pageWindow(page: _currentPage, pageSize: perPage, total: total);
         final table = SingleChildScrollView(
           child: widget.tableBuilder(widget.items.sublist(start, end)),
         );

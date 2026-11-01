@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -87,12 +88,11 @@ class _MembersPage extends ConsumerWidget {
     final order = ref.watch(memberOrderProvider(MemberTable.area));
     final members = view.members;
     final totalMembers = members.length;
-    final totalPages = totalMembers == 0
-        ? 1
-        : (totalMembers + _membersPerPage - 1) ~/ _membersPerPage;
-    final safePage = currentPage.clamp(0, totalPages - 1);
-    final start = safePage * _membersPerPage;
-    final end = (start + _membersPerPage).clamp(0, totalMembers);
+    final (page: safePage, pageCount: totalPages, :start, :end) = pageWindow(
+      page: currentPage,
+      pageSize: _membersPerPage,
+      total: totalMembers,
+    );
     final orderIndex = _columns.indexWhere(
       (column) => column.$2 != null && column.$2 == order.column,
     );

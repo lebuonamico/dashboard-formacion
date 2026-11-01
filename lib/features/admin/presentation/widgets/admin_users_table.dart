@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -56,13 +57,12 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
 
   @override
   Widget build(BuildContext context) {
-    const perPage = AdminUsersTable.usersPerPage;
     final total = widget.users.length;
-    final totalPages = total == 0 ? 1 : (total + perPage - 1) ~/ perPage;
-    final safePage = _currentPage.clamp(0, totalPages - 1);
-    final start = safePage * perPage;
-    final calculatedEnd = start + perPage;
-    final end = calculatedEnd > total ? total : calculatedEnd;
+    final (page: safePage, pageCount: totalPages, :start, :end) = pageWindow(
+      page: _currentPage,
+      pageSize: AdminUsersTable.usersPerPage,
+      total: total,
+    );
     final visible = widget.users.sublist(start, end);
 
     return Column(
