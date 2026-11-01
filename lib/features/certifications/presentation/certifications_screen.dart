@@ -14,7 +14,6 @@ import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
-import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,16 +70,28 @@ class _CertificationsContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final kpis = ref.watch(certificationKpisProvider).value;
-    final totalPayroll = ref.watch(employeesProvider).value?.length ?? 0;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (kpis != null) ...[
-          KpiGrid(items: _kpis(context, kpis, totalPayroll)),
-          const SizedBox(height: 20),
-        ],
+        ref
+            .watch(certificationKpiSummaryProvider)
+            .when(
+              skipLoadingOnReload: true,
+              loading: () => const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, _) => ErrorDataState(
+                title: 'No pudimos cargar los indicadores',
+                error: error,
+                compact: true,
+                onRetry: () => ref.invalidate(certificationKpiSummaryProvider),
+              ),
+              data: (summary) => KpiGrid(
+                items: _kpis(context, summary.kpis, summary.payrollCount),
+              ),
+            ),
+        const SizedBox(height: 20),
         const _CertificationsFilterBar(),
         const SizedBox(height: 20),
         Expanded(

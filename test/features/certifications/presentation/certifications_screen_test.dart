@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/courses/domain/course.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
@@ -11,10 +14,15 @@ import 'package:app_finnegans/features/employees/presentation/providers/employee
 import 'package:app_finnegans/core/navigation/app_navigation_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Future<GoRouter> _showCertifications(WidgetTester tester) async {
+Future<GoRouter> _showCertifications(
+  WidgetTester tester, {
+  List<Override> overrides = const [],
+  bool settle = true,
+}) async {
   tester.view.physicalSize = const Size(2200, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -64,7 +72,9 @@ Future<GoRouter> _showCertifications(WidgetTester tester) async {
           ),
         ],
       ),
+      ...overrides,
     ],
+    retry: (_, _) => null,
   );
   addTearDown(container.dispose);
 
@@ -108,7 +118,7 @@ Future<GoRouter> _showCertifications(WidgetTester tester) async {
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
   return router;
 }
@@ -149,5 +159,52 @@ void main() {
 
     expect(router.state.uri.toString(), '/certificaciones');
     expect(find.byType(CertificationsScreen), findsOneWidget);
+  });
+
+  testWidgets('Los KPIs muestran el indicador mientras cargan', (tester) async {
+    final kpis = Completer<({CertificationKpis kpis, int payrollCount})>();
+    await _showCertifications(
+      tester,
+      overrides: [
+        certificationKpiSummaryProvider.overrideWith((_) => kpis.future),
+      ],
+      settle: false,
+    );
+    // La tabla ya cargó; solo los KPIs esperan.
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Ana Pérez'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Colaboradores certificados'), findsNothing);
+  });
+
+  testWidgets('Si los KPIs fallan, Reintentar los vuelve a pedir', (
+    tester,
+  ) async {
+    var attempts = 0;
+    await _showCertifications(
+      tester,
+      overrides: [
+        certificationKpiSummaryProvider.overrideWith((ref) async {
+          attempts++;
+          if (attempts == 1) throw Exception('timeout');
+          return (
+            kpis: await ref.watch(certificationKpisProvider.future),
+            payrollCount: 1,
+          );
+        }),
+      ],
+    );
+
+    expect(find.text('No pudimos cargar los indicadores'), findsOneWidget);
+    expect(find.text('Ana Pérez'), findsOneWidget);
+
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(attempts, 2);
+    expect(find.text('No pudimos cargar los indicadores'), findsNothing);
+    expect(find.text('de 1 en la nómina'), findsOneWidget);
   });
 }

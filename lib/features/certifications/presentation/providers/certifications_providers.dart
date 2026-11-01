@@ -49,6 +49,14 @@ final certificationKpisProvider = FutureProvider<CertificationKpis>((
   return ref.watch(certificationStatsServiceProvider).kpis(records);
 });
 
+/// The KPIs with the payroll size they are compared against.
+final certificationKpiSummaryProvider =
+    FutureProvider<({CertificationKpis kpis, int payrollCount})>((ref) async {
+      final kpis = await ref.watch(certificationKpisProvider.future);
+      final employees = await ref.watch(employeesProvider.future);
+      return (kpis: kpis, payrollCount: employees.length);
+    });
+
 FilterRow certificationFilterRow(
   CertificationRecord item,
   Map<String, String> courseIdsByName,
