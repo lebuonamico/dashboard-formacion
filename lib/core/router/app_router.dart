@@ -37,6 +37,7 @@ CustomTransitionPage<void> _withFade(GoRouterState state, Widget child) {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // read and listen, not watch: a watch would rebuild the GoRouter.
   final auth = ValueNotifier<AuthState>(ref.read(authProvider));
   ref.listen(authProvider, (_, next) => auth.value = next);
   final router = _createRouter(auth);

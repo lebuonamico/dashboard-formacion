@@ -27,9 +27,6 @@ class FilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selection = ref.watch(dataFilterSelectionProvider(scope));
-    final selectionNotifier = ref.read(
-      dataFilterSelectionProvider(scope).notifier,
-    );
     final service = ref.watch(dataFilterServiceProvider);
     final rowsReady = rows.hasValue && !rows.hasError;
     final options = service.cascade(
@@ -55,17 +52,15 @@ class FilterBar extends ConsumerWidget {
               options: dimensionOptions,
               selected: selection.values[dimension] ?? const {},
               enabled: rowsReady,
-              onSelectionChanged: (values) => selectionNotifier.select(
-                dimension,
-                values,
-                labels: dimensionOptions.labels,
-              ),
+              onSelectionChanged: (values) => ref
+                  .read(dataFilterSelectionProvider(scope).notifier)
+                  .select(dimension, values, labels: dimensionOptions.labels),
             ),
           ...extraFilters,
         ],
         onClear: isActive
             ? () {
-                selectionNotifier.clear();
+                ref.read(dataFilterSelectionProvider(scope).notifier).clear();
                 onClearExtraFilters?.call();
               }
             : null,

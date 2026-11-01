@@ -54,7 +54,7 @@ class OptionalYearFilter extends ConsumerWidget {
         for (final option in years)
           DropdownMenuItem<int?>(value: option, child: Text('$option')),
       ],
-      onChanged: ref.read(provider.notifier).setYear,
+      onChanged: (year) => ref.read(provider.notifier).setYear(year),
     );
   }
 }
@@ -82,6 +82,6 @@ class OptionalMonthFilter extends ConsumerWidget {
       for (var month = 1; month <= 12; month++)
         DropdownMenuItem<int?>(value: month, child: Text(monthName(month))),
     ],
-    onChanged: ref.read(provider.notifier).setMonth,
+    onChanged: (month) => ref.read(provider.notifier).setMonth(month),
   );
 }

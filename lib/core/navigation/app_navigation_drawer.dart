@@ -134,7 +134,8 @@ class _DrawerHeader extends ConsumerWidget {
             key: const Key('side_menu_toggle'),
             tooltip: 'Ocultar menú',
             icon: const Icon(Icons.chevron_left),
-            onPressed: ref.read(sideMenuExpandedProvider.notifier).toggle,
+            onPressed: () =>
+                ref.read(sideMenuExpandedProvider.notifier).toggle(),
           ),
         ],
       ),
@@ -155,7 +156,7 @@ class _CollapsedMenu extends ConsumerWidget {
           key: const Key('side_menu_toggle'),
           tooltip: 'Mostrar menú',
           icon: const Icon(Icons.menu),
-          onPressed: ref.read(sideMenuExpandedProvider.notifier).toggle,
+          onPressed: () => ref.read(sideMenuExpandedProvider.notifier).toggle(),
         ),
       ),
     ),
