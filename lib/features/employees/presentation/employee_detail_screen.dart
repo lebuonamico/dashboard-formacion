@@ -2,7 +2,6 @@ import 'package:app_finnegans/core/formatting/date_formatter.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
-import 'package:app_finnegans/core/text/text_normalizer.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
@@ -12,6 +11,7 @@ import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/domain/employee_detail.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
@@ -22,7 +22,6 @@ import 'package:app_finnegans/features/projection/presentation/providers/project
 import 'package:app_finnegans/features/projection/presentation/widgets/employee_projection_card.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,7 +70,7 @@ class EmployeeDetailScreen extends ConsumerWidget {
 
 class _EmployeeDetailBody extends ConsumerWidget {
   final String employeeId;
-  final EmployeeDetailViewModel detail;
+  final EmployeeDetail detail;
 
   const _EmployeeDetailBody({required this.employeeId, required this.detail});
 
@@ -81,7 +80,7 @@ class _EmployeeDetailBody extends ConsumerWidget {
     final periodText = period.scope == PeriodScope.annual
         ? 'Año ${period.year}'
         : '${monthName(period.month)} ${period.year}';
-    final hasPeriodData = ref.watch(hasTeamPeriodDataProvider).value ?? true;
+    final hasPeriodData = detail.hasPeriodData;
     final compliance = detail.compliance;
     final sectionStyle = context.textTheme.bodyLarge!.copyWith(
       fontWeight: FontWeight.w700,
@@ -362,31 +361,19 @@ class _CategoryCard extends StatelessWidget {
 
 /// Moodle and CRM side by side; stacked on narrow screens.
 class _CoursesColumns extends StatelessWidget {
-  final EmployeeDetailViewModel detail;
+  final EmployeeDetail detail;
 
   const _CoursesColumns(this.detail);
 
   @override
   Widget build(BuildContext context) {
-    final crmHours = detail.timeEntriesCrm.fold<double>(
-      0,
-      (total, item) => total + item.timeEntry.hours,
-    );
-    final moodleHours = detail.lmsCertifications
-        .where((item) => item.isCompleted)
-        .fold<double>(
-          0,
-          (total, item) =>
-              total +
-              (detail.courseByName(item.courseName)?.workloadHours ?? 0),
-        );
     final columnMoodle = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ColumnHeader(
           icon: Icons.school_outlined,
           title: 'Moodle (LMS)',
-          detail: '${formatHours(moodleHours)} hs',
+          detail: '${formatHours(detail.creditedLmsHours)} hs',
         ),
         const SizedBox(height: 8),
         _LmsCertificationsColumn(detail),
@@ -398,13 +385,10 @@ class _CoursesColumns extends StatelessWidget {
         _ColumnHeader(
           icon: Icons.schedule_outlined,
           title: 'CRM (horas declaradas)',
-          detail: '${formatHours(crmHours)} hs',
+          detail: '${formatHours(detail.crmHours)} hs',
         ),
         const SizedBox(height: 8),
-        _TimeEntriesColumn(
-          timeEntries: detail.timeEntriesCrm,
-          completedCourses: detail.completedCourses,
-        ),
+        _TimeEntriesColumn(detail.timeEntryGroups),
       ],
     );
 
@@ -488,18 +472,19 @@ class _EmptyPanel extends StatelessWidget {
 }
 
 class _LmsCertificationsColumn extends StatelessWidget {
-  final EmployeeDetailViewModel detail;
+  final EmployeeDetail detail;
 
   const _LmsCertificationsColumn(this.detail);
 
   @override
   Widget build(BuildContext context) {
-    if (detail.lmsCertifications.isEmpty) {
+    if (detail.certifications.isEmpty) {
       return const _EmptyPanel('Sin certificaciones en el período.');
     }
     return Column(
-      children: detail.lmsCertifications.map((certification) {
-        final course = detail.courseByName(certification.courseName);
+      children: detail.certifications.map((item) {
+        final certification = item.certification;
+        final course = item.course;
         return _LmsCertificationCard(
           certification: certification,
           courseName: course?.name ?? certification.courseName,
@@ -514,68 +499,28 @@ class _LmsCertificationsColumn extends StatelessWidget {
 }
 
 class _TimeEntriesColumn extends StatelessWidget {
-  final List<CrmTimeEntryRecord> timeEntries;
-  final Set<String> completedCourses;
+  final List<CourseTimeEntries> groups;
 
-  const _TimeEntriesColumn({
-    required this.timeEntries,
-    required this.completedCourses,
-  });
+  const _TimeEntriesColumn(this.groups);
 
   @override
   Widget build(BuildContext context) {
-    if (timeEntries.isEmpty) {
+    if (groups.isEmpty) {
       return const _EmptyPanel('Sin cargas CRM en el período.');
     }
-    final groups = groupBy(timeEntries, _groupKey).entries.toList()
-      ..sort((a, b) => _courseName(a.value).compareTo(_courseName(b.value)));
-
-    return Column(
-      children: groups.map((group) {
-        final records = [...group.value]
-          ..sort((a, b) => b.timeEntry.date.compareTo(a.timeEntry.date));
-        return _CourseTimeEntriesTile(
-          groupKey: group.key,
-          records: records,
-          completed: completedCourses.contains(
-            normalizeKey(_courseName(records)),
-          ),
-        );
-      }).toList(),
-    );
+    return Column(children: groups.map(_CourseTimeEntriesTile.new).toList());
   }
-
-  static String _groupKey(CrmTimeEntryRecord record) {
-    final courseId = record.course?.id.trim() ?? '';
-    return courseId.isNotEmpty
-        ? 'id:$courseId'
-        : 'nombre:${_courseName([record]).trim().toLowerCase()}';
-  }
-}
-
-String _courseName(List<CrmTimeEntryRecord> timeEntries) {
-  final first = timeEntries.first;
-  return first.course?.name ?? first.timeEntry.courseName;
 }
 
 class _CourseTimeEntriesTile extends StatelessWidget {
-  final String groupKey;
-  final List<CrmTimeEntryRecord> records;
-  final bool completed;
+  final CourseTimeEntries group;
 
-  const _CourseTimeEntriesTile({
-    required this.groupKey,
-    required this.records,
-    required this.completed,
-  });
+  const _CourseTimeEntriesTile(this.group);
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final declaredHours = records.fold<double>(
-      0,
-      (total, item) => total + item.timeEntry.hours,
-    );
+    final records = group.records;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -583,7 +528,7 @@ class _CourseTimeEntriesTile extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: ExpansionTile(
-          key: PageStorageKey<String>('curso-$groupKey'),
+          key: PageStorageKey<String>('curso-${group.key}'),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
           childrenPadding: EdgeInsets.zero,
           leading: Icon(
@@ -595,7 +540,7 @@ class _CourseTimeEntriesTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  _courseName(records),
+                  group.courseName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodyMedium?.copyWith(
@@ -604,7 +549,7 @@ class _CourseTimeEntriesTile extends StatelessWidget {
                   ),
                 ),
               ),
-              if (completed) ...[
+              if (group.isCompleted) ...[
                 const SizedBox(width: 8),
                 ColorLabel(text: 'Finalizado', colors: context.colors.success),
               ],
@@ -613,7 +558,7 @@ class _CourseTimeEntriesTile extends StatelessWidget {
           subtitle: Text(
             '${records.first.course?.category.label ?? 'Tipo sin especificar'} · '
             '${records.length} ${records.length == 1 ? 'registro' : 'registros'} · '
-            '${formatHours(declaredHours)} hs declaradas',
+            '${formatHours(group.hours)} hs declaradas',
             style: context.textTheme.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
             ),
@@ -669,7 +614,7 @@ class _TimeEntryRow extends StatelessWidget {
 }
 
 class _TaughtTable extends StatelessWidget {
-  final List<TaughtCourseStats> taught;
+  final List<TaughtCourse> taught;
 
   const _TaughtTable(this.taught);
 
