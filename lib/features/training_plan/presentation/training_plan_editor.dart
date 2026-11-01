@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/clock/clock_provider.dart';
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -106,82 +107,90 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
       context,
       action: _editor.save,
       success: 'Plan guardado: rige desde $validity.',
-      failure: (error) => error is FormatException
-          ? error.message
-          : 'No se pudo guardar el plan: $error',
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final draftAsync = ref.watch(trainingPlanEditorProvider);
-    final draft = draftAsync.value;
-    if (draft == null) {
-      return draftAsync.hasError
-          ? Text(
-              'No se pudo cargar el plan de formación: ${draftAsync.error}',
-              style: TextStyle(color: context.colors.danger.text),
-            )
-          : const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-    }
-    final saving = draft.isSaving;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _Validity(
-          draft: draft,
-          today: ref.watch(clockProvider)(),
-          onChooseMonth: saving
-              ? null
-              : (year, month) => _chooseMonth(draft, year, month),
-        ),
-        const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: _PlanTable(
-            draft: draft,
-            controllers: _controllers,
-            service: ref.watch(trainingPlanServiceProvider),
-            onChanged: saving ? null : _editor.setHours,
+    return ref
+        .watch(trainingPlanEditorProvider)
+        .when(
+          skipLoadingOnReload: true,
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
           ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.end,
-          children: [
-            TextButton.icon(
-              key: const Key('plan_restaurar'),
-              onPressed: saving ? null : _editor.restoreDefaults,
-              icon: const Icon(Icons.restart_alt, size: 18),
-              label: const Text('Restaurar valores por defecto'),
-            ),
-            TextButton(
-              key: const Key('plan_descartar'),
-              onPressed: draft.hasChanges && !saving ? _editor.discard : null,
-              child: const Text('Descartar cambios'),
-            ),
-            FilledButton.icon(
-              key: const Key('plan_guardar'),
-              onPressed: draft.editedPlan != null && draft.hasChanges && !saving
-                  ? () => _save(draft)
-                  : null,
-              icon: saving
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined, size: 18),
-              label: const Text('Guardar plan'),
-            ),
-          ],
-        ),
-      ],
-    );
+          // The draft only waits for the history: reading it again rebuilds
+          // the draft too.
+          error: (error, _) => ErrorDataState(
+            title: 'No se pudo cargar el plan de formación',
+            error: error,
+            compact: true,
+            onRetry: () => ref.invalidate(trainingPlanHistoryProvider),
+          ),
+          data: (draft) {
+            final saving = draft.isSaving;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Validity(
+                  draft: draft,
+                  today: ref.watch(clockProvider)(),
+                  onChooseMonth: saving
+                      ? null
+                      : (year, month) => _chooseMonth(draft, year, month),
+                ),
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: _PlanTable(
+                    draft: draft,
+                    controllers: _controllers,
+                    service: ref.watch(trainingPlanServiceProvider),
+                    onChanged: saving ? null : _editor.setHours,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      key: const Key('plan_restaurar'),
+                      onPressed: saving ? null : _editor.restoreDefaults,
+                      icon: const Icon(Icons.restart_alt, size: 18),
+                      label: const Text('Restaurar valores por defecto'),
+                    ),
+                    TextButton(
+                      key: const Key('plan_descartar'),
+                      onPressed: draft.hasChanges && !saving
+                          ? _editor.discard
+                          : null,
+                      child: const Text('Descartar cambios'),
+                    ),
+                    FilledButton.icon(
+                      key: const Key('plan_guardar'),
+                      onPressed:
+                          draft.editedPlan != null &&
+                              draft.hasChanges &&
+                              !saving
+                          ? () => _save(draft)
+                          : null,
+                      icon: saving
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined, size: 18),
+                      label: const Text('Guardar plan'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
   }
 }
 

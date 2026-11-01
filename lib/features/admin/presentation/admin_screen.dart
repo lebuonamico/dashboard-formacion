@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -134,11 +135,10 @@ class _UsersTab extends ConsumerWidget {
             padding: EdgeInsets.symmetric(vertical: 72),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => _CenteredState(
-            icon: Icons.error_outline,
+          error: (error, _) => ErrorDataState(
             title: 'No pudimos cargar los usuarios',
-            message: _errorMessage(error),
-            color: cs.error,
+            error: error,
+            onRetry: () => ref.invalidate(adminUsersProvider),
           ),
           data: (users) => FadeIn(
             child: users.isEmpty
@@ -281,23 +281,17 @@ class _UsersTab extends ConsumerWidget {
       success: 'Se restauró a ${user.email}.',
     );
   }
-
-  static String _errorMessage(Object error) => error is FormatException
-      ? error.message
-      : 'Revisá tu conexión e intentá nuevamente.';
 }
 
 class _CenteredState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
-  final Color? color;
 
   const _CenteredState({
     required this.icon,
     required this.title,
     required this.message,
-    this.color,
   });
 
   @override
@@ -312,14 +306,14 @@ class _CenteredState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 34, color: color ?? cs.onSurfaceVariant),
+            Icon(icon, size: 34, color: cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: color ?? cs.onSurface,
+                color: cs.onSurface,
               ),
             ),
             const SizedBox(height: 6),

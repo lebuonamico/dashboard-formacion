@@ -90,10 +90,12 @@ class _DashboardContent extends ConsumerWidget {
           selectedYear: period.year,
           projectionAsync: ref.watch(annualProjectionProvider(wholePayroll)),
           variationAsync: ref.watch(complianceVariationProvider(wholePayroll)),
+          onRetry: () => ref.invalidate(dashboardKpisProvider),
         ),
         const SizedBox(height: 28),
         DashboardSummaryCharts(
           distributionAsync: ref.watch(dashboardDistributionProvider),
+          onRetry: () => ref.invalidate(dashboardDistributionProvider),
         ),
         const SizedBox(height: 28),
         if (ref.watch(dashboardComplianceProvider).value case final items?
@@ -103,6 +105,7 @@ class _DashboardContent extends ConsumerWidget {
         ],
         DashboardMonthlyHours(
           evolutionAsync: ref.watch(dashboardMonthlyEvolutionProvider),
+          onRetry: () => ref.invalidate(dashboardMonthlyEvolutionProvider),
         ),
         const SizedBox(height: 28),
         const DashboardAreasSection(),

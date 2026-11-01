@@ -8,8 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class DashboardMonthlyHours extends StatelessWidget {
   /// Average credited hours per employee for each month, and its target.
   final AsyncValue<List<MonthlyHours>> evolutionAsync;
+  final VoidCallback? onRetry;
 
-  const DashboardMonthlyHours({super.key, required this.evolutionAsync});
+  const DashboardMonthlyHours({
+    super.key,
+    required this.evolutionAsync,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +24,7 @@ class DashboardMonthlyHours extends StatelessWidget {
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
+        onRetry: onRetry,
       ),
       data: (monthList) {
         if (monthList.isEmpty) {

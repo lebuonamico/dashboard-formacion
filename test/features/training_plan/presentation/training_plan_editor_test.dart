@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/clock/clock_provider.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/features/training_plan/presentation/providers/training_plan_editor_provider.dart';
 import 'package:app_finnegans/features/training_plan/domain/training_plan.dart';
 import 'package:app_finnegans/features/employees/domain/seniority.dart';
@@ -17,14 +18,22 @@ import 'package:app_finnegans/features/training_plan/domain/training_plan_servic
 class _PlanFake implements TrainingPlanRepository {
   TrainingPlanHistory plans;
   final saved = <TrainingPlanVersion>[];
+  Object? loadError;
+  Object? saveError;
 
   _PlanFake([this.plans = const TrainingPlanHistory.empty()]);
 
   @override
-  Future<TrainingPlanHistory> getPlans() async => plans;
+  Future<TrainingPlanHistory> getPlans() async {
+    final error = loadError;
+    if (error != null) throw error;
+    return plans;
+  }
 
   @override
   Future<void> saveVersion(TrainingPlanVersion version) async {
+    final error = saveError;
+    if (error != null) throw error;
     saved.add(version);
     plans = const TrainingPlanService().withVersion(plans, version);
   }
@@ -45,6 +54,7 @@ Future<ProviderContainer> _showEditor(
       trainingPlanRepositoryProvider.overrideWithValue(repository),
       if (today != null) clockProvider.overrideWithValue(() => today),
     ],
+    retry: (_, _) => null,
   );
   addTearDown(container.dispose);
 
@@ -144,6 +154,47 @@ void main() {
       ),
       saved.plan,
     );
+  });
+
+  testWidgets('Si el plan no carga, muestra el error y Reintentar lo trae', (
+    tester,
+  ) async {
+    final repository = _PlanFake()..loadError = Exception('detalle técnico');
+    await _showEditor(tester, repository);
+
+    expect(find.text('No se pudo cargar el plan de formación'), findsOneWidget);
+    expect(find.textContaining('detalle técnico'), findsNothing);
+    expect(find.byKey(const Key('plan_guardar')), findsNothing);
+
+    repository.loadError = null;
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar el plan de formación'), findsNothing);
+    expect(_total(tester, Seniority.junior1), '8 h');
+  });
+
+  testWidgets('Si guardar falla, avisa sin el texto de la excepción', (
+    tester,
+  ) async {
+    final repository = _PlanFake()..saveError = Exception('detalle técnico');
+    await _showEditor(tester, repository);
+
+    await tester.enterText(
+      _field(Seniority.junior1, CourseCategory.businessSkills),
+      '6',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('plan_guardar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('plan_confirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(actionFailedMessage), findsOneWidget);
+    expect(find.textContaining('detalle técnico'), findsNothing);
+    expect(repository.saved, isEmpty);
+    // La edición sobrevive al fallo y se puede volver a guardar.
+    expect(_canSave(tester), isTrue);
   });
 
   testWidgets('Guardar pide confirmación y cancelar no guarda', (tester) async {

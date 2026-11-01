@@ -32,12 +32,17 @@ class _FakeUsers implements AuthorizedUsersRepository {
   final created = <AuthorizedUser>[];
   final saved = <AuthorizedUser>[];
   Object? saveError;
+  Object? loadError;
   Completer<void>? gate;
 
   _FakeUsers(this.users);
 
   @override
-  Future<List<AuthorizedUser>> getUsers() async => users;
+  Future<List<AuthorizedUser>> getUsers() async {
+    final error = loadError;
+    if (error != null) throw error;
+    return users;
+  }
 
   @override
   Future<void> create(AuthorizedUser user) async {
@@ -431,6 +436,29 @@ void main() {
       findsOneWidget,
     );
     expect(repository.saved, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Si la lista no carga, Reintentar la vuelve a pedir', (
+    tester,
+  ) async {
+    final repository = _FakeUsers([_user(email: 'ana@finnegans.com')])
+      ..loadError = Exception('timeout');
+    await _showPanel(
+      tester,
+      access: AccessAdmin.allowed,
+      repository: repository,
+    );
+
+    expect(find.text('No pudimos cargar los usuarios'), findsOneWidget);
+    expect(find.text('ana@finnegans.com'), findsNothing);
+
+    repository.loadError = null;
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No pudimos cargar los usuarios'), findsNothing);
+    expect(find.text('ana@finnegans.com'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

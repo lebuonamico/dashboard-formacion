@@ -25,6 +25,8 @@ class DashboardKpiGrid extends StatelessWidget {
   /// Compliance variation of the whole payroll against the previous month.
   final AsyncValue<ComplianceVariation?> variationAsync;
 
+  final VoidCallback? onRetry;
+
   const DashboardKpiGrid({
     super.key,
     required this.kpisAsync,
@@ -33,6 +35,7 @@ class DashboardKpiGrid extends StatelessWidget {
     required this.selectedYear,
     this.projectionAsync = const AsyncData(null),
     this.variationAsync = const AsyncData(null),
+    this.onRetry,
   });
 
   @override
@@ -43,6 +46,7 @@ class DashboardKpiGrid extends StatelessWidget {
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
+        onRetry: onRetry,
       ),
       data: (summary) => summary == null
           ? const EmptyDataState(

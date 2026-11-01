@@ -12,8 +12,13 @@ import 'package:app_finnegans/features/courses/presentation/course_category_colo
 
 class DashboardSummaryCharts extends StatelessWidget {
   final AsyncValue<DashboardDistribution?> distributionAsync;
+  final VoidCallback? onRetry;
 
-  const DashboardSummaryCharts({super.key, required this.distributionAsync});
+  const DashboardSummaryCharts({
+    super.key,
+    required this.distributionAsync,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +28,7 @@ class DashboardSummaryCharts extends StatelessWidget {
         title: 'No pudimos cargar esta sección',
         error: error,
         compact: true,
+        onRetry: onRetry,
       ),
       data: (distribution) {
         if (distribution == null) {

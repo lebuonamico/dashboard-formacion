@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/org_structure/domain/org_structure.dart';
@@ -66,13 +67,10 @@ class AdminStructure extends ConsumerWidget {
             padding: EdgeInsets.symmetric(vertical: 72),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (error, _) => _Notice(
-            icon: Icons.error_outline,
+          error: (error, _) => ErrorDataState(
             title: 'No pudimos cargar las áreas y los equipos',
-            message: error is FormatException
-                ? error.message
-                : 'Revisá tu conexión e intentá nuevamente.',
-            color: cs.error,
+            error: error,
+            onRetry: () => ref.invalidate(orgStructureNotifierProvider),
           ),
           data: (view) => FadeIn(
             child: view.areas.isEmpty
@@ -460,13 +458,11 @@ class _Notice extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
-  final Color? color;
 
   const _Notice({
     required this.icon,
     required this.title,
     required this.message,
-    this.color,
   });
 
   @override
@@ -481,14 +477,14 @@ class _Notice extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 34, color: color ?? cs.onSurfaceVariant),
+            Icon(icon, size: 34, color: cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: color ?? cs.onSurface,
+                color: cs.onSurface,
               ),
             ),
             const SizedBox(height: 6),
