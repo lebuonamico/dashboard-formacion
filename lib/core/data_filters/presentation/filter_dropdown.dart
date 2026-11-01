@@ -153,7 +153,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
     );
     final field = MenuAnchor(
       controller: _menu,
-      useRootOverlay: true,
+      useRootOverlay: false,
       onOpen: () {
         setState(() => _search.clear());
         if (_scroll.hasClients) _scroll.jumpTo(0);
