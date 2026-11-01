@@ -105,7 +105,7 @@ class _ComplianceChartCard extends StatelessWidget {
       trailing: 'Meta según seniority',
       footer: '${summary.onTarget} personas alcanzaron el 100% de la meta',
       action: 'Ver nómina',
-      onAction: () => context.push('/empleados'),
+      onAction: () => context.go('/empleados'),
       child: Row(
         children: [
           DonutChart(
@@ -157,7 +157,7 @@ class _CategoryChartCard extends StatelessWidget {
       trailing: '4 Pilares',
       footer: 'Capacitaciones distribuidas entre los 4 pilares',
       action: 'Ver cursos',
-      onAction: () => context.push('/cursos'),
+      onAction: () => context.go('/cursos'),
       child: summary.totalHours == 0
           ? const _NoCategoryData()
           : Row(

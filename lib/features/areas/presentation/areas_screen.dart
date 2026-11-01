@@ -5,7 +5,6 @@ import 'package:app_finnegans/core/widgets/side_by_side_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
@@ -28,13 +27,6 @@ class AreasScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(areasPeriodSummaryProvider);
     final filteredAreasAsync = ref.watch(filteredAreasProvider);
-    final requestedOrigin = GoRouterState.of(
-      context,
-    ).uri.queryParameters['origen'];
-    const validOrigins = {'dashboard', 'areas', 'equipos'};
-    final origin = validOrigins.contains(requestedOrigin)
-        ? requestedOrigin
-        : null;
 
     return Scaffold(
       backgroundColor: context.colorScheme.surfaceContainerLow,
@@ -58,7 +50,6 @@ class AreasScreen extends ConsumerWidget {
                 child: _AreasContent(
                   summary: summary,
                   filteredAreasAsync: filteredAreasAsync,
-                  origin: origin,
                 ),
               ),
             ),
@@ -72,12 +63,10 @@ class AreasScreen extends ConsumerWidget {
 class _AreasContent extends ConsumerWidget {
   final AreasPeriodSummary summary;
   final AsyncValue<List<AreaSummary>> filteredAreasAsync;
-  final String? origin;
 
   const _AreasContent({
     required this.summary,
     required this.filteredAreasAsync,
-    required this.origin,
   });
 
   @override
@@ -187,7 +176,6 @@ class _AreasContent extends ConsumerWidget {
               areas: filteredAreas,
               totalAreas: summary.areaCount,
               isAnnual: isAnnual,
-              origin: origin,
             ),
           ),
         ],

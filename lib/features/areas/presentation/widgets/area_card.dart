@@ -14,28 +14,17 @@ class AreaCard extends StatelessWidget {
   final AreaSummary area;
   final bool isAnnual;
 
-  /// Menu section the user came from, so the detail highlights it.
-  final String? origin;
-
-  const AreaCard({
-    super.key,
-    required this.area,
-    this.isAnnual = false,
-    this.origin,
-  });
+  const AreaCard({super.key, required this.area, this.isAnnual = false});
 
   @override
   Widget build(BuildContext context) {
     final colors = area.level.colors(context);
-    final destination = '/areas/${Uri.encodeComponent(area.name)}';
     final employees = area.memberCount;
     final leaders = area.leaders;
 
     return SummaryCard(
       colors: colors,
-      onTap: () => context.push(
-        origin == null ? destination : '$destination?origen=$origin',
-      ),
+      onTap: () => context.push('/areas/${Uri.encodeComponent(area.name)}'),
       header: SummaryCardHeader(
         title: area.name,
         subtitle:

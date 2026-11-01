@@ -14,14 +14,12 @@ class AreasResults extends StatefulWidget {
   final List<AreaSummary> areas;
   final int totalAreas;
   final bool isAnnual;
-  final String? origin;
 
   const AreasResults({
     super.key,
     required this.areas,
     required this.totalAreas,
     this.isAnnual = false,
-    this.origin,
   });
 
   @override
@@ -111,11 +109,7 @@ class _AreasResultsState extends State<AreasResults> {
                 ),
                 const SizedBox(height: 18),
               ],
-              _AreasGrid(
-                areas: visibleAreas,
-                isAnnual: widget.isAnnual,
-                origin: widget.origin,
-              ),
+              _AreasGrid(areas: visibleAreas, isAnnual: widget.isAnnual),
             ],
           ],
         );
@@ -127,13 +121,8 @@ class _AreasResultsState extends State<AreasResults> {
 class _AreasGrid extends StatelessWidget {
   final List<AreaSummary> areas;
   final bool isAnnual;
-  final String? origin;
 
-  const _AreasGrid({
-    required this.areas,
-    required this.isAnnual,
-    required this.origin,
-  });
+  const _AreasGrid({required this.areas, required this.isAnnual});
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +137,7 @@ class _AreasGrid extends StatelessWidget {
       ),
       itemCount: areas.length,
       itemBuilder: (context, index) =>
-          AreaCard(area: areas[index], isAnnual: isAnnual, origin: origin),
+          AreaCard(area: areas[index], isAnnual: isAnnual),
     );
   }
 }

@@ -37,7 +37,7 @@ class DashboardAreasSection extends ConsumerWidget {
               ),
             ),
             TextButton.icon(
-              onPressed: () => context.push('/areas?origen=dashboard'),
+              onPressed: () => context.go('/areas'),
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Ver todas las áreas'),
               style: TextButton.styleFrom(
