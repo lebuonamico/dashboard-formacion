@@ -3,26 +3,25 @@ import 'package:flutter/material.dart';
 
 export 'package:app_finnegans/core/theme/app_colors.dart';
 
-/// Temas claro y oscuro de la app. Las pantallas no escriben colores: leen
-/// `context.colorScheme` (superficies, textos, bordes, marca) y
-/// `context.colores` ([AppColors]: estados, categorías, seniority, side menu,
-/// asistente). Los estilos de componentes compartidos (inputs, menús,
-/// divisores, botones) también salen de acá.
+/// Light and dark themes. Screens do not write colors: they read
+/// `context.colorScheme` (surfaces, text, borders, brand) and `context.colors`
+/// ([AppColors]: states, categories, seniority, side menu, assistant). Shared
+/// component styles (inputs, menus, dividers, buttons) also live here.
 abstract final class AppTheme {
-  static const _marca = Color(0xFF0D53C3);
+  static const _brand = Color(0xFF0D53C3);
 
-  static ThemeData light() => _construir(_esquemaClaro, AppColors.light);
+  static ThemeData light() => _build(_lightScheme, AppColors.light);
 
-  static ThemeData dark() => _construir(_esquemaOscuro, AppColors.dark);
+  static ThemeData dark() => _build(_darkScheme, AppColors.dark);
 
-  // Slate de Tailwind sobre el azul Finnegans: es la paleta que ya usaba la
-  // app, ahora con nombre según su función.
-  static final _esquemaClaro =
+  // Tailwind slate over the Finnegans blue: the palette the app already used,
+  // now named by role.
+  static final _lightScheme =
       ColorScheme.fromSeed(
-        seedColor: _marca,
+        seedColor: _brand,
         brightness: Brightness.light,
       ).copyWith(
-        primary: _marca,
+        primary: _brand,
         onPrimary: const Color(0xFFFFFFFF),
         primaryContainer: const Color(0xFFEFF6FF),
         onPrimaryContainer: const Color(0xFF1D4ED8),
@@ -44,11 +43,11 @@ abstract final class AppTheme {
         surfaceTint: const Color(0x00000000),
       );
 
-  // Fondos slate profundos (no negro puro) y el azul de marca aclarado para
-  // que textos y links cumplan contraste AA sobre superficies oscuras.
-  static final _esquemaOscuro =
+  // Deep slate backgrounds (not pure black) and a lighter brand blue, so text
+  // and links meet AA contrast on dark surfaces.
+  static final _darkScheme =
       ColorScheme.fromSeed(
-        seedColor: _marca,
+        seedColor: _brand,
         brightness: Brightness.dark,
       ).copyWith(
         primary: const Color(0xFF60A5FA),
@@ -73,21 +72,35 @@ abstract final class AppTheme {
         surfaceTint: const Color(0x00000000),
       );
 
-  static ThemeData _construir(ColorScheme cs, AppColors colores) {
-    final bordeInput = OutlineInputBorder(
+  static const _textTheme = TextTheme(
+    displaySmall: TextStyle(fontSize: 28),
+    titleMedium: TextStyle(fontSize: 18),
+    bodySmall: TextStyle(fontSize: 13),
+    labelSmall: TextStyle(fontSize: 10),
+  );
+
+  static ThemeData _build(ColorScheme cs, AppColors colors) {
+    final borderInput = OutlineInputBorder(
       borderRadius: BorderRadius.circular(6),
       borderSide: BorderSide(color: cs.outlineVariant),
     );
 
     return ThemeData(
       useMaterial3: true,
+      textTheme: _textTheme.apply(
+        bodyColor: cs.onSurface,
+        displayColor: cs.onSurface,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
       colorScheme: cs,
-      extensions: [colores],
+      extensions: [colors],
       scaffoldBackgroundColor: cs.surfaceContainerLow,
       canvasColor: cs.surface,
       dividerTheme: DividerThemeData(color: cs.outlineVariant, thickness: 1),
-      // Tablas paginadas (empleados, cursos, CRM, LMS): encabezados chicos en
-      // gris, sin fondo, y filas a todo el ancho del panel.
+      // Paginated tables (employees, courses, CRM, LMS): small grey headers, no
+      // background, and rows across the whole panel.
       dataTableTheme: DataTableThemeData(
         headingRowColor: const WidgetStatePropertyAll(Color(0x00000000)),
         headingTextStyle: TextStyle(
@@ -108,10 +121,10 @@ abstract final class AppTheme {
           vertical: 13,
           horizontal: 10,
         ),
-        border: bordeInput,
-        enabledBorder: bordeInput,
-        disabledBorder: bordeInput,
-        focusedBorder: bordeInput.copyWith(
+        border: borderInput,
+        enabledBorder: borderInput,
+        disabledBorder: borderInput,
+        focusedBorder: borderInput.copyWith(
           borderSide: BorderSide(color: cs.primary, width: 1.5),
         ),
       ),
@@ -124,7 +137,7 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: cs.primary,
-          disabledForegroundColor: colores.textoTenue,
+          disabledForegroundColor: colors.faintText,
           side: BorderSide(color: cs.outlineVariant),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
@@ -143,27 +156,28 @@ abstract final class AppTheme {
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: cs.primary,
-        linearTrackColor: colores.graficoPista,
+        linearTrackColor: colors.chartTrack,
       ),
     );
   }
 }
 
-/// Acceso corto al tema desde los widgets.
-extension TemaContexto on BuildContext {
+extension ThemeContext on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
-  AppColors get colores => Theme.of(this).extension<AppColors>()!;
+  TextTheme get textTheme => Theme.of(this).textTheme;
 
-  /// Panel estándar (cards, tablas, barras de filtros): superficie, borde
-  /// suave y radio 8, con sombra opcional.
-  BoxDecoration panel({bool sombra = false, double radio = 8}) {
+  AppColors get colors => Theme.of(this).extension<AppColors>()!;
+
+  /// Standard panel (cards, tables, filter bars): surface, soft border and
+  /// radius 8, with an optional shadow.
+  BoxDecoration panel({bool shadow = false, double radius = 8}) {
     final cs = colorScheme;
     return BoxDecoration(
       color: cs.surface,
-      borderRadius: BorderRadius.circular(radio),
+      borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: cs.outlineVariant),
-      boxShadow: sombra
+      boxShadow: shadow
           ? [
               BoxShadow(
                 color: cs.shadow.withValues(alpha: 0.035),

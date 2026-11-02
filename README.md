@@ -8,7 +8,7 @@ El sistema reúne la nómina de empleados, el catálogo de cursos, las horas dec
 
 - [Tecnologías y módulos](#tecnologías-y-módulos)
 - [Cómo ejecutar](#cómo-ejecutar)
-- [Acceso y seguridad](#acceso-y-seguridad)
+- [Acceso, roles y seguridad](#acceso-roles-y-seguridad)
 - [Reglas de negocio principales](#reglas-de-negocio-principales)
 - [Importación de datos](#importación-de-datos)
 - [Referencias QA](#referencias-qa)
@@ -21,24 +21,25 @@ El sistema reúne la nómina de empleados, el catálogo de cursos, las horas dec
 | Tecnología | Uso |
 | --- | --- |
 | Flutter / Flutter Web y Dart | Interfaz y ejecución web en Chrome. |
-| Riverpod | Estado, providers y selección de dependencias. |
-| go_router | Navegación y protección de rutas. |
+| Riverpod (`Notifier`, `AsyncNotifier`, `FutureProvider`) | Estado, derivados y selección de dependencias. |
+| go_router | Navegación (`go` entre secciones, `push` a los detalles) y protección de rutas. |
 | Supabase / PostgreSQL | Persistencia remota y seguridad mediante RLS. |
 | Google OAuth / Supabase Auth | Inicio de sesión y mantenimiento de la sesión. |
-| SharedPreferences | Persistencia local y preferencias. |
+| SharedPreferencesAsync | Solo la preferencia de tema claro u oscuro. |
 | excel, csv y file_picker | Selección y lectura de archivos. |
+| pdf y printing | Reportes imprimibles de Dashboard, Equipos y Áreas. |
 
 | Módulo | Función |
 | --- | --- |
-| Inicio / Dashboard | Resumen de formación, categorías y avance por áreas. |
+| Inicio / Dashboard | Resumen de formación, categorías, evolución mensual, proyección y avance por áreas. |
 | Áreas | Consulta de áreas y detalle de sus colaboradores y equipos. |
 | Equipos | Seguimiento mensual y anual, filtros y detalle por equipo. |
-| Empleados | Nómina, búsqueda y detalle individual de formación. |
-| Cursos | Consulta del catálogo y filtros por tipo. |
-| Carga de horas CRM | Consulta de horas declaradas por colaborador y curso. |
-| Certificaciones LMS | Consulta de finalizaciones por legajo o curso. |
-| Métricas | Alcance, proyección y formación impartida; ruta `/metricas`. |
-| Configuración | Importación de las cuatro fuentes y opción de sincronizar cursos desde Moodle. |
+| Empleados | Nómina, búsqueda y perfil individual con su proyección a fin de año. |
+| Cursos | Catálogo con personas, horas CRM y finalizaciones por curso. |
+| Carga de horas CRM | Horas declaradas por colaborador y curso. |
+| Certificaciones LMS | Finalizaciones por legajo o curso. |
+| Configuración | Importación de las cuatro fuentes y editor del plan de formación por seniority. |
+| Panel de administración | Usuarios autorizados y líderes de áreas y equipos (Administrador y Academia). |
 
 ## Cómo ejecutar
 
@@ -56,13 +57,15 @@ flutter pub get
 
 El runner Dart admite únicamente `local` y `supabase`, funciona en macOS, Windows y Linux y abre Chrome en **http://localhost:3000**.
 
-### Desarrollo con mocks/local
+### Desarrollo en modo local
 
 ```console
 dart run tool/run.dart local
 ```
 
-Ejecuta Flutter con `USE_SUPABASE=false`. Utiliza los repositories locales y mocks existentes, con persistencia en SharedPreferences, sin conectar a Supabase. La pantalla inicial conserva su botón de acceso: en este modo lleva al Dashboard sin realizar Google OAuth.
+Ejecuta Flutter con `USE_SUPABASE=false`, sin conectar a Supabase. Cada feature usa un repositorio **en memoria** con un seed coherente: dos áreas, tres equipos, unos diez colaboradores con fecha de ingreso, cursos de las cuatro categorías, horas CRM, finalizaciones LMS, usuarios y líderes. En **julio, agosto y septiembre de 2026** se ven los tres estados de equipo (en objetivo, en riesgo y crítico); como el período inicial es el mes actual, hay que elegir esos meses.
+
+Los datos importados viven mientras la app está abierta: recargar la página vuelve al seed. La pantalla inicial conserva su botón de acceso, que en este modo lleva al Dashboard sin Google OAuth.
 
 ### Desarrollo con Supabase real
 
@@ -84,62 +87,79 @@ El runner carga el archivo mediante `--dart-define-from-file=config/supabase.loc
 
 **`config/supabase.local.json` está ignorado por Git y no debe subirse al repositorio.**
 
-## Acceso y seguridad
+### Verificación
+
+```console
+flutter analyze lib test
+flutter test
+```
+
+`flutter analyze` sin rutas también revisa carpetas que no son de la app; para el código se usa `lib test`. Algunos tests de repositorios Supabase solo corren con `--dart-define=USE_SUPABASE=true` y una URL y clave de prueba.
+
+## Acceso, roles y seguridad
 
 ```text
 Google OAuth → Supabase Auth → usuarios_autorizados → Dashboard
 ```
 
-- Flutter consulta `public.usuarios_autorizados` por el email autenticado y exige `activo=true` antes de mostrar las rutas privadas. Ante una denegación, cierra la sesión y muestra el mensaje correspondiente.
-- Las sesiones válidas se restauran y vuelven a validar. Los cambios de autenticación actualizan la navegación; el logout utiliza Supabase Auth.
-- `rol` se conserva en el estado de Auth para uso futuro, sin permisos diferenciados por rol.
-- La validación en Flutter mejora la experiencia de acceso. La protección de los datos corresponde a **Row Level Security (RLS)** en Supabase.
+- Flutter consulta `public.usuarios_autorizados` por el email autenticado y exige que esté activo, sin bloqueo ni eliminación, antes de mostrar las rutas privadas. Ante una denegación, cierra la sesión y muestra el motivo en el login.
+- Los roles deciden qué datos se ven:
+
+| Rol | Ve | Configuración y panel |
+| --- | --- | --- |
+| Administrador | Toda la empresa | Sí |
+| Academia | Toda la empresa | Sí |
+| Área | Los colaboradores de las áreas que lidera | No |
+| Líder de equipo | Los integrantes de los equipos que lidera | No |
+
+- Las áreas y los equipos salen de la importación de nómina; en el panel solo se asignan sus líderes. Una asignación no se borra: quitar un líder le pone fecha de baja (`ff_baja`) y volver a asignarlo la reactiva.
+- La validación en Flutter mejora la experiencia de acceso. La protección de los datos corresponde a **Row Level Security (RLS)** en Supabase, con el mismo criterio de alcance que la app.
 
 El entorno remoto requiere Google habilitado en Supabase, el email autorizado y las políticas RLS configuradas. En Flutter Web, el callback usa el origen actual (`Uri.base.origin`); para este runner, permitir `http://localhost:3000/**` en las URLs de redirección de Supabase.
 
-La aplicación consume un esquema existente con `empleados`, `empleado_historial`, `cursos`, `horas_capacitacion`, `finalizaciones_cursos`, `importaciones` y `usuarios_autorizados`. El repositorio no incluye migraciones SQL para crearlo. **Nunca utilizar `service_role` en el frontend ni publicar credenciales privadas.**
+La aplicación consume un esquema existente con `empleados`, `empleado_historial`, `cursos`, `horas_capacitacion`, `finalizaciones_cursos`, `importaciones`, `usuarios_autorizados`, `areas`, `equipos`, `area_lideres`, `equipo_lideres` y `plan_formacion`. Los scripts SQL (áreas y equipos con su RLS, plan de formación y baja lógica de líderes) se corren a mano en el SQL Editor y no se versionan en este repositorio; **tienen que estar aplicados antes de desplegar la app**. **Nunca utilizar `service_role` en el frontend ni publicar credenciales privadas.**
 
 ## Reglas de negocio principales
 
-El objetivo general es de **8 horas por colaborador por mes**, distribuidas según seniority entre **Habilidades de negocio**, **Habilidades blandas**, **Libres / Exploración** y **Dictado de capacitaciones**.
+El objetivo de cada colaborador es mensual y depende de su seniority, repartido entre **Habilidades de negocio**, **Habilidades blandas**, **Libres / Exploración** y **Dictado de capacitaciones**. El plan por defecto suma **8 horas por mes**; se edita en Configuración y queda versionado por mes, así un cambio no reescribe los meses anteriores.
 
-Las horas válidas provienen de CRM y requieren la finalización del curso en LMS. Se limitan por la carga máxima del curso y por el objetivo de cada categoría; una categoría sin objetivo no suma al cumplimiento.
+- **Negocio y Blandas:** cada curso finalizado en el LMS acredita la carga horaria del catálogo. Las horas cargadas en el CRM para esos cursos quedan como declaradas.
+- **Libres y Dictado:** se acreditan con las horas del CRM según su clasificación.
+- Cada categoría suma como máximo su objetivo, y una categoría sin objetivo no suma al cumplimiento. No se compensa entre categorías.
 
 ```text
 Cumplimiento = horas válidas aplicables / horas objetivo del período × 100
 ```
 
-### Seguimiento mensual de Equipos
+Un equipo está **en objetivo** con 100 % o más y todos sus integrantes cumpliendo; **en riesgo** con 70 % o más o algún integrante cumpliendo; y **crítico** en otro caso.
 
-- La elegibilidad considera la fecha de ingreso y el estado histórico activo al cierre del mes, sin reinterpretar el pasado únicamente con el estado actual.
+### Seguimiento mensual
+
+- La elegibilidad considera la fecha de ingreso y el estado histórico activo al cierre del mes, sin reinterpretar el pasado con el estado actual.
 - Para períodos anteriores al primer historial, se usa ese primer estado conocido, siempre que la persona ya haya ingresado.
-- Un equipo con colaboradores elegibles aparece aunque tenga **0 horas**. No se excluyen personas por falta de actividad.
-- Sin ningún registro CRM o LMS del mes, Equipos muestra **“Sin datos”**, sin interpretar la ausencia de información como incumplimiento.
+- Un equipo con colaboradores elegibles aparece aunque tenga **0 horas**.
+- Sin ningún registro CRM o LMS del mes, las pantallas muestran **“Sin datos”**, sin interpretar la ausencia de información como incumplimiento.
 
-### Seguimiento anual de Equipos
+### Seguimiento anual
 
 Se acumulan únicamente los meses con registros CRM o LMS. Las horas y los objetivos anuales suman sus resultados mensuales, respetando altas, bajas y cambios de equipo mes a mes.
 
-**Colaboradores** cuenta legajos únicos elegibles en al menos uno de esos meses. Por equipo, se cuentan quienes tuvieron objetivo en ese equipo durante el año. El cumplimiento divide las horas válidas acumuladas por el objetivo acumulado; no se calcula como cantidad de personas × 96 horas.
-
-Estas reglas históricas y anuales describen **Equipos**; los demás módulos conservan sus propios providers de indicadores.
+**Colaboradores** cuenta legajos únicos elegibles en al menos uno de esos meses. El cumplimiento divide las horas válidas acumuladas por el objetivo acumulado; no se calcula como cantidad de personas × horas fijas. Dashboard, Equipos, Áreas, el perfil del colaborador y el asistente usan el mismo cálculo.
 
 ## Importación de datos
 
-Las cargas se realizan desde **Configuración**. Las importaciones por archivo distinguen maestros vigentes de movimientos históricos:
+Las cargas se realizan desde **Configuración**. Cada importación pide confirmación después de elegir el archivo y avisa el resultado. Las importaciones distinguen maestros vigentes de movimientos históricos:
 
 | Fuente | Formatos | Comportamiento |
 | --- | --- | --- |
-| Nómina | `.xlsx`, `.csv` | Snapshot autoritativo por `legajo`: presentes activos, ausentes de una carga válida inactivos y reapariciones activas nuevamente. Sin eliminación física; en Supabase, el trigger existente registra cambios en `empleado_historial`. |
-| Cursos | `.xlsx`, `.csv` | Snapshot por ID: activa presentes, inactiva ausentes y permite reactivación, sin eliminación física. |
-| Horas CRM | `.xlsx`, `.csv` | UPSERT por `transaccion_id` en PostgreSQL (`id` en Dart): inserta claves nuevas y actualiza existentes. La ausencia en otra carga no elimina movimientos. |
+| Nómina | `.xlsx`, `.csv` | Foto vigente por `legajo`: presentes activos, ausentes inactivos y reapariciones activas nuevamente. Sin eliminación física; registra antes las áreas y equipos nuevos. En Supabase, el trigger existente registra cambios en `empleado_historial`. |
+| Cursos | `.xlsx`, `.csv` | Foto vigente por ID: activa presentes, inactiva ausentes y permite reactivación, sin eliminación física. |
+| Horas CRM | `.xlsx`, `.csv` | UPSERT por `transaccion_id`: inserta claves nuevas y actualiza existentes. La ausencia en otra carga no elimina movimientos. |
 | Finalizaciones LMS | `.xlsx` | UPSERT por `legajo` + `curso_id`: inserta combinaciones nuevas y actualiza existentes. La ausencia en otra carga no implica `finalizo=false`. |
 
-CRM resuelve la columna `Curso` contra el nombre normalizado del catálogo (`NombreCurso`), sin usar `Choras - XX` como identificador. Las fechas inválidas se rechazan, sin reemplazarlas por la fecha actual.
+Los CSV aceptan fin de línea CRLF, LF o CR y BOM UTF-8. CRM resuelve la columna `Curso` contra el nombre del catálogo, sin usar `Choras - XX` como identificador. Las fechas inválidas se rechazan, sin reemplazarlas por la fecha actual.
 
-La auditoría remota registra en `public.importaciones` el archivo, tipo, fecha, estado, procesados, insertados, actualizados y errores. El modo local conserva los repositories existentes, sin auditoría remota ni reconstrucción desde `empleado_historial`.
-
-La sincronización directa de cursos desde Moodle utiliza UPSERT; la inactivación de ausentes descrita arriba corresponde a la importación por archivo.
+La auditoría registra el archivo, tipo, fecha, estado, procesados, insertados, actualizados y errores (en Supabase, en `public.importaciones`).
 
 ### Dataset base
 
@@ -150,7 +170,7 @@ Cargar en este orden:
 3. **Horas CRM**.
 4. **Finalizaciones LMS**.
 
-Los archivos QA adicionales de desarrollo no forman parte del dataset base. Los archivos de datos no están incluidos en este repositorio y deben obtenerse por separado.
+Los archivos de datos no están incluidos en este repositorio y deben obtenerse por separado.
 
 ## Referencias QA
 
@@ -179,41 +199,51 @@ Valores de referencia de la validación manual del **dataset base 01–04**, par
 
 ## Arquitectura y estructura
 
+El código está organizado **por features**, cada una con tres capas, y todos los identificadores están en inglés (los textos de la interfaz, las rutas visibles y los nombres de Supabase siguen en español).
+
 ```text
-UI → Providers → Services / Repositories → Supabase
-                                        → Persistencia local / mocks
+presentation (pantallas, widgets, providers y Notifiers)
+     ↓
+domain       (entidades, services con las reglas y contratos de repositorio)
+     ↑
+data         (repositorios en memoria con seed y repositorios Supabase)
 ```
 
-La UI consume providers; los servicios concentran cálculos y coordinación de importaciones, y los repositories implementan el acceso a datos. Los widgets no consultan Supabase directamente. La autorización se centraliza en `AuthController`.
+- Las **entidades** solo tienen datos (`copyWith`, `toJson`/`fromJson`); los cálculos viven en services del dominio.
+- Cada pantalla mira providers; las mutaciones las hace un `Notifier` dueño de su estado, y la UI avisa con SnackBars y pide confirmación en las acciones sensibles.
+- Los widgets no consultan Supabase: cada feature tiene su provider de repositorio, que elige la implementación en memoria o la de Supabase según `USE_SUPABASE`. Los nombres físicos de tablas y columnas están solo en `data/`.
 
 ```text
 lib/
-├── core/                       # Router y configuración de Supabase
-├── domain/
-│   ├── modelos/                 # Entidades y resultados de formación
-│   ├── servicios/               # Cumplimiento, equipos e importaciones
-│   ├── repositorios/            # Contratos de acceso a datos
-│   └── importacion/             # Conversión y validación de valores
-├── data/                       # Repositories locales y cliente Moodle
-│   └── supabase/               # Repositories remotos y mappings
-└── presentation/               # Pantallas, providers, widgets y utilidades
-config/                         # Ejemplo de configuración por dart-define
-tool/run.dart                   # Runner local / Supabase
-test/                           # Pruebas existentes
-web/                            # Entrada y recursos de Flutter Web
+├── core/                 # Router, navegación, tema, período, filtros, widgets compartidos
+└── features/
+    ├── admin/            # Usuarios autorizados
+    ├── areas/  teams/    # Seguimiento por área y por equipo
+    ├── assistant/        # Chat con el asistente de IA
+    ├── auth/             # Sesión, autorización y roles
+    ├── certifications/   # Finalizaciones LMS
+    ├── compliance/       # Regla de acreditación y cumplimiento por período
+    ├── courses/          # Catálogo y categorías
+    ├── dashboard/        # Inicio
+    ├── employees/        # Nómina, historial y perfil
+    ├── imports/          # Lectura de archivos e importaciones
+    ├── org_structure/    # Áreas, equipos, líderes y alcance del usuario
+    ├── projection/       # Proyección a fin de año
+    ├── reports/          # Reportes PDF
+    ├── settings/         # Pantalla de configuración
+    ├── time_entries/     # Horas CRM
+    └── training_plan/    # Plan de formación versionado
+config/                   # Ejemplo de configuración por dart-define
+tool/run.dart             # Runner local / Supabase
+test/                     # Pruebas, con la misma estructura que lib/
+web/                      # Entrada y recursos de Flutter Web
 ```
-
-La selección del backend y los mappings físicos están en `core_providers.dart`; `USE_SUPABASE` determina qué implementaciones se utilizan.
 
 ## Asistente de IA
 
-Las pantallas internas incluyen un chat flotante conectado a la Edge Function
-existente `asistente-ia`. Utiliza la sesión de Supabase; la clave de Gemini permanece
-en el servidor. En modo local se puede inspeccionar la interfaz, pero no consultar IA.
+Las pantallas internas incluyen un chat flotante conectado a la Edge Function existente `asistente-ia`. Utiliza la sesión de Supabase; la clave de Gemini permanece en el servidor. En modo local se puede ver la interfaz, pero no consulta a la IA.
 
-La primera versión usa **contexto ficticio identificado**, con respuestas generadas
-por el servicio real. Dashboard y Equipos tienen un adaptador para agregados,
-deshabilitado por defecto; los demás módulos ofrecen ayuda conceptual.
+Con `IA_CONTEXTO_REAL` (dart-define, activo por defecto) la consulta envía los indicadores reales del período que interpreta la pregunta, con el alcance del usuario: un líder solo envía los datos de lo que lidera. Nunca viajan el legajo, el mail ni la URL.
 
 ## Mejora futura
 
