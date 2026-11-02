@@ -1,0 +1,191 @@
+import 'package:app_finnegans/core/widgets/page_window.dart';
+import 'package:collection/collection.dart';
+import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/features/teams/domain/team_overview.dart';
+import 'package:app_finnegans/core/widgets/result_pagination.dart';
+import 'package:app_finnegans/features/teams/presentation/widgets/team_card.dart';
+import 'package:app_finnegans/core/widgets/summary_card/count_badge.dart';
+import 'package:flutter/material.dart';
+
+const _maxCardWidth = 410.0;
+const _gridSpacing = 16.0;
+const _rowsPerPage = 2;
+const _cardHeight = 252.0;
+
+class TeamResults extends StatefulWidget {
+  final List<TeamOverview> teams;
+  final int teamCount;
+  final bool isAnnual;
+
+  const TeamResults({
+    super.key,
+    required this.teams,
+    required this.teamCount,
+    this.isAnnual = false,
+  });
+
+  @override
+  State<TeamResults> createState() => _TeamResultsState();
+}
+
+class _TeamResultsState extends State<TeamResults> {
+  int _currentPage = 0;
+
+  @override
+  void didUpdateWidget(covariant TeamResults oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!_haveSameTeams(oldWidget.teams, widget.teams)) {
+      _currentPage = 0;
+    }
+  }
+
+  bool _haveSameTeams(
+    List<TeamOverview> previousTeams,
+    List<TeamOverview> currentTeams,
+  ) => const ListEquality<(String, double, double)>().equals(
+    previousTeams.map(_resultKey).toList(),
+    currentTeams.map(_resultKey).toList(),
+  );
+
+  (String, double, double) _resultKey(TeamOverview team) =>
+      (team.id, team.completedHours, team.targetHours);
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final calculatedColumns =
+            (constraints.maxWidth / (_maxCardWidth + _gridSpacing)).ceil();
+        final columnCount = calculatedColumns < 1 ? 1 : calculatedColumns;
+        final itemsPerPage = columnCount * _rowsPerPage;
+        final (
+          page: safePage,
+          :pageCount,
+          start: startIndex,
+          end: endIndex,
+        ) = pageWindow(
+          page: _currentPage,
+          pageSize: itemsPerPage,
+          total: widget.teams.length,
+        );
+        final visibleTeams = widget.teams.sublist(startIndex, endIndex);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Equipos',
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: context.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CountBadge(count: widget.teams.length),
+                const Spacer(),
+                Text(
+                  widget.teams.length == widget.teamCount
+                      ? '${widget.teamCount} equipos en el período'
+                      : '${widget.teams.length} de ${widget.teamCount} equipos',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 13),
+            if (widget.teams.isEmpty)
+              const _EmptySearch()
+            else ...[
+              if (pageCount > 1) ...[
+                ResultsPagination(
+                  currentPage: safePage,
+                  pageCount: pageCount,
+                  from: startIndex + 1,
+                  until: endIndex,
+                  totalResults: widget.teams.length,
+                  resultsLabel: 'equipos',
+                  icon: Icons.view_module_outlined,
+                  onPrevious: safePage == 0
+                      ? null
+                      : () => setState(() => _currentPage = safePage - 1),
+                  onNext: safePage == pageCount - 1
+                      ? null
+                      : () => setState(() => _currentPage = safePage + 1),
+                ),
+                const SizedBox(height: 18),
+              ],
+
+              _TeamsGrid(teams: visibleTeams, isAnnual: widget.isAnnual),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TeamsGrid extends StatelessWidget {
+  final List<TeamOverview> teams;
+  final bool isAnnual;
+
+  const _TeamsGrid({required this.teams, required this.isAnnual});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: _maxCardWidth,
+        crossAxisSpacing: _gridSpacing,
+        mainAxisSpacing: _gridSpacing,
+        mainAxisExtent: _cardHeight,
+      ),
+      itemCount: teams.length,
+
+      itemBuilder: (context, index) =>
+          TeamCard(team: teams[index], isAnnual: isAnnual),
+    );
+  }
+}
+
+class _EmptySearch extends StatelessWidget {
+  const _EmptySearch();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 24),
+      decoration: context.panel(),
+      child: Column(
+        children: [
+          Icon(
+            Icons.search_off_outlined,
+            size: 30,
+            color: context.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'No encontramos equipos con esos filtros.',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Probá con otra búsqueda, área o estado.',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

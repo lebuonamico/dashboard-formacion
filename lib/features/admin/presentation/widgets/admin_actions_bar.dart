@@ -1,0 +1,270 @@
+import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user_service.dart';
+import 'package:app_finnegans/features/admin/presentation/providers/admin_providers.dart';
+
+class AdminActionsBar extends StatelessWidget {
+  final AuthorizedUser? selected;
+  final bool outsideFilter;
+  final AdminUserAction? pendingAction;
+  final String? ownEmail;
+  final VoidCallback onCreate;
+  final VoidCallback onRoleChange;
+  final VoidCallback onBlock;
+  final VoidCallback onUnblock;
+  final VoidCallback onDelete;
+  final VoidCallback onRestore;
+
+  const AdminActionsBar({
+    super.key,
+    required this.selected,
+    required this.outsideFilter,
+    required this.pendingAction,
+    required this.ownEmail,
+    required this.onCreate,
+    required this.onRoleChange,
+    required this.onBlock,
+    required this.onUnblock,
+    required this.onDelete,
+    required this.onRestore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final user = selected;
+    final hasAction = pendingAction != null;
+    const users = AuthorizedUserService();
+    final isOwn = user != null && users.isSameUser(user, ownEmail);
+    final enabled = user != null && !isOwn && !hasAction;
+    final status = user == null ? null : users.status(user);
+    final deleted = status == UserStatus.deleted;
+    final blocked = status == UserStatus.blocked;
+    final colors = context.colors;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: context.panel(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SelectionHeader(
+            user: user,
+            isOwn: isOwn,
+            outsideFilter: outsideFilter,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _ActionButton(
+                pendingAction: pendingAction,
+                action: AdminUserAction.create,
+                id: 'admin_crear',
+                label: 'Nuevo usuario',
+                icon: Icons.person_add_alt_1_outlined,
+                onPressed: hasAction ? null : onCreate,
+                highlighted: true,
+              ),
+              _ActionButton(
+                pendingAction: pendingAction,
+                action: AdminUserAction.changeRole,
+                id: 'admin_cambiar_rol',
+                label: 'Cambiar rol',
+                icon: Icons.badge_outlined,
+                onPressed: enabled ? onRoleChange : null,
+                tooltip: _disabledReason(user, isOwn),
+              ),
+              if (blocked)
+                _ActionButton(
+                  pendingAction: pendingAction,
+                  action: AdminUserAction.unblock,
+                  id: 'admin_desbloquear',
+                  label: 'Desbloquear',
+                  icon: Icons.lock_open_outlined,
+                  onPressed: enabled ? onUnblock : null,
+                  tooltip: _disabledReason(user, isOwn),
+                )
+              else
+                _ActionButton(
+                  pendingAction: pendingAction,
+                  action: AdminUserAction.block,
+                  id: 'admin_bloquear',
+                  label: 'Bloquear',
+                  icon: Icons.block_outlined,
+                  onPressed: enabled && !deleted ? onBlock : null,
+                  tooltip: deleted
+                      ? 'El usuario está eliminado: restauralo antes de bloquearlo.'
+                      : _disabledReason(user, isOwn),
+                  color: colors.warning.text,
+                ),
+              if (deleted)
+                _ActionButton(
+                  pendingAction: pendingAction,
+                  action: AdminUserAction.restore,
+                  id: 'admin_restaurar',
+                  label: 'Restaurar',
+                  icon: Icons.restore_outlined,
+                  onPressed: enabled ? onRestore : null,
+                  tooltip: _disabledReason(user, isOwn),
+                )
+              else
+                _ActionButton(
+                  pendingAction: pendingAction,
+                  action: AdminUserAction.delete,
+                  id: 'admin_eliminar',
+                  label: 'Eliminar',
+                  icon: Icons.person_remove_outlined,
+                  onPressed: enabled ? onDelete : null,
+                  tooltip: _disabledReason(user, isOwn),
+                  color: context.colorScheme.error,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _disabledReason(AuthorizedUser? user, bool isOwn) {
+    if (user == null) return 'Seleccioná un usuario de la lista.';
+    if (isOwn) {
+      return 'No podés modificar tu propio usuario: perderías el acceso al panel.';
+    }
+    return null;
+  }
+}
+
+class _SelectionHeader extends StatelessWidget {
+  final AuthorizedUser? user;
+  final bool isOwn;
+  final bool outsideFilter;
+
+  const _SelectionHeader({
+    required this.user,
+    required this.isOwn,
+    required this.outsideFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final user = this.user;
+    if (user == null) {
+      return Row(
+        children: [
+          Icon(Icons.touch_app_outlined, size: 18, color: cs.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Seleccioná un usuario de la lista para habilitar las acciones.',
+              style: context.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Icon(Icons.person_outline, size: 18, color: cs.primary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Seleccionado: ${user.email}',
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                ),
+              ),
+              if (outsideFilter)
+                Text(
+                  '(no aparece con los filtros actuales)',
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: context.colors.warning.text,
+                  ),
+                ),
+              if (isOwn)
+                Text(
+                  'Es tu propio usuario: no podés modificarlo desde acá.',
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// [id] names the button's key and the `loading_` key of its spinner.
+class _ActionButton extends StatelessWidget {
+  final AdminUserAction action;
+  final AdminUserAction? pendingAction;
+  final String id;
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final Color? color;
+  final bool highlighted;
+
+  const _ActionButton({
+    required this.action,
+    required this.pendingAction,
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.color,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final inProgress = pendingAction == action;
+    final button = OutlinedButton.icon(
+      key: Key(id),
+      onPressed: inProgress ? null : onPressed,
+      icon: inProgress
+          ? SizedBox.square(
+              key: Key('loading_$id'),
+              dimension: 18,
+              child: const CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon, size: 18),
+      label: Text(label),
+      style:
+          OutlinedButton.styleFrom(
+            foregroundColor: color,
+            backgroundColor: highlighted ? cs.primary : null,
+            disabledForegroundColor: cs.onSurfaceVariant.withValues(
+              alpha: 0.45,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ).copyWith(
+            foregroundColor: highlighted
+                ? WidgetStateProperty.resolveWith(
+                    (states) => states.contains(WidgetState.disabled)
+                        ? cs.onPrimary.withValues(alpha: 0.6)
+                        : cs.onPrimary,
+                  )
+                : null,
+          ),
+    );
+    final tooltip = this.tooltip;
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
+  }
+}

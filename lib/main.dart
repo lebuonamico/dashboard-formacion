@@ -1,18 +1,21 @@
-import 'package:app_finnegans/core/app_router.dart';
+import 'package:app_finnegans/core/router/app_router.dart';
 import 'package:app_finnegans/core/config/supabase_config.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
-import 'package:app_finnegans/presentation/providers/tema_provider.dart';
-import 'package:app_finnegans/presentation/widgets/transicion_tema.dart';
+import 'package:app_finnegans/core/theme/theme_mode_provider.dart';
+import 'package:app_finnegans/core/theme/theme_preference_repository.dart';
+import 'package:app_finnegans/core/widgets/theme_transition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseConfig.initialize();
-  final apariencia = await TemaController.leerGuardado();
+  final appearance = await SharedPreferencesThemePreferenceRepository().read();
   runApp(
     ProviderScope(
-      overrides: [temaProvider.overrideWith(() => TemaController(apariencia))],
+      overrides: [
+        themeModeProvider.overrideWith(() => ThemeModeNotifier(appearance)),
+      ],
       child: const MyApp(),
     ),
   );
@@ -28,11 +31,11 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ref.watch(temaProvider),
-      // El cambio de tema lo anima TransicionTema con un fundido; interpolar
-      // el ThemeData reconstruiría toda la app en cada frame.
+      themeMode: ref.watch(themeModeProvider),
+      // ThemeTransition animates the theme change with a fade; interpolating
+      // the ThemeData would rebuild the whole app on every frame.
       themeAnimationDuration: Duration.zero,
-      builder: (context, child) => TransicionTema(child: child!),
+      builder: (context, child) => ThemeTransition(child: child!),
       routerConfig: ref.watch(appRouterProvider),
     );
   }

@@ -1,0 +1,114 @@
+import 'dart:math' as math;
+
+import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+
+class DonutChartSegment {
+  final double value;
+  final Color color;
+
+  const DonutChartSegment({required this.value, required this.color});
+}
+
+class DonutChart extends StatelessWidget {
+  final List<DonutChartSegment> segments;
+  final String centerText;
+  final String centerSubtitle;
+  final TextStyle? centerTextStyle;
+  final TextStyle? centerSubtitleStyle;
+
+  const DonutChart({
+    super.key,
+    required this.segments,
+    required this.centerText,
+    required this.centerSubtitle,
+    this.centerTextStyle,
+    this.centerSubtitleStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    return SizedBox(
+      width: 132,
+      height: 132,
+      child: CustomPaint(
+        painter: _DonutPainter(segments, context.colors.chartTrack),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                centerText,
+                style: (centerTextStyle ?? context.textTheme.titleLarge)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+              ),
+              Text(
+                centerSubtitle,
+                style: (centerSubtitleStyle ?? context.textTheme.labelSmall)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  final List<DonutChartSegment> segments;
+  final Color trackColor;
+
+  const _DonutPainter(this.segments, this.trackColor);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 8;
+    const strokeWidth = 16.0;
+    final total = segments.fold<double>(
+      0,
+      (sum, segment) => sum + segment.value,
+    );
+    final backgroundPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+    if (total == 0) return;
+
+    var startAngle = -math.pi / 2;
+    for (final segment in segments) {
+      if (segment.value == 0) continue;
+      final sweepAngle = (segment.value / total) * math.pi * 2;
+      final paint = Paint()
+        ..color = segment.color
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.butt
+        ..strokeWidth = strokeWidth;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter oldDelegate) {
+    return oldDelegate.segments != segments ||
+        oldDelegate.trackColor != trackColor;
+  }
+}

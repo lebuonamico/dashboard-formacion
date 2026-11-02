@@ -8,3 +8,12 @@ analyzer:
     - macos/**
     - linux/**
 include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    - prefer_const_constructors
+    - prefer_const_literals_to_create_immutables
+    - prefer_const_declarations
+    - prefer_final_locals
+    - avoid_print
+    - avoid_dynamic_calls
