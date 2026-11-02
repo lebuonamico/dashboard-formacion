@@ -1,3 +1,4 @@
+
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
@@ -75,6 +76,8 @@ class _TeamsOverviewContent extends ConsumerWidget {
     final selectedMonth = ref.watch(periodFilterProvider).month;
     final selectedYear = ref.watch(periodFilterProvider).year;
 
+    final items = ref.watch(teamComplianceProvider).value;
+
     return ListView(
       padding: screenPadding,
       children: [
@@ -144,11 +147,11 @@ class _TeamsOverviewContent extends ConsumerWidget {
             ),
           ),
 
-          if (ref.watch(teamComplianceProvider).value case final items?
-              when items.isNotEmpty) ...[
+          if (items != null && items.isNotEmpty) ...[
             const SizedBox(height: 16),
             MoodleCrmComparisonCards(complianceList: items),
           ],
+
           const SizedBox(height: 24),
           FilterBar(
             scope: DataFilterScope.teams,

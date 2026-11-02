@@ -61,8 +61,6 @@ class TeamsService {
     return TeamDetail(overview: overview, members: members);
   }
 
-  /// [buildPeriodSummary] for [period]: in the annual view, someone who
-  /// changed teams counts once.
   TeamsPeriodSummary periodSummary(
     List<EmployeeCompliance> compliance,
     PeriodFilter period, {
@@ -117,7 +115,6 @@ class TeamsService {
   ) {
     final firstEmployee = members.first.employee;
     final teamName = normalizeTeamName(firstEmployee.team);
-    // Assigned leaders take precedence over the manager from the employee roster.
     final assignedLeaders = resolveLeader?.call(firstEmployee.area, teamName);
     final completedHours = members.fold<double>(
       0,
