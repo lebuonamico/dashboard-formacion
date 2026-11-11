@@ -14,6 +14,7 @@ import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
+import 'package:app_finnegans/features/pending_reminders/presentation/widgets/notify_pending_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -93,7 +94,12 @@ class _CertificationsContent extends ConsumerWidget {
             ),
         const SizedBox(height: 20),
         const _CertificationsFilterBar(),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        const Align(
+          alignment: Alignment.centerRight,
+          child: NotifyPendingButton(),
+        ),
+        const SizedBox(height: 12),
         Expanded(
           child: ref
               .watch(filteredCertificationsProvider)

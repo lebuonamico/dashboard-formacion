@@ -228,12 +228,14 @@ lib/
     ├── employees/        # Nómina, historial y perfil
     ├── imports/          # Lectura de archivos e importaciones
     ├── org_structure/    # Áreas, equipos, líderes y alcance del usuario
+    ├── pending_reminders/# Mails de cursos pendientes desde Certificaciones LMS
     ├── projection/       # Proyección a fin de año
     ├── reports/          # Reportes PDF
     ├── settings/         # Pantalla de configuración
     ├── time_entries/     # Horas CRM
     └── training_plan/    # Plan de formación versionado
 config/                   # Ejemplo de configuración por dart-define
+supabase/                 # Edge Function y SQL de las notificaciones por mail
 tool/run.dart             # Runner local / Supabase
 test/                     # Pruebas, con la misma estructura que lib/
 web/                      # Entrada y recursos de Flutter Web
@@ -244,6 +246,16 @@ web/                      # Entrada y recursos de Flutter Web
 Las pantallas internas incluyen un chat flotante conectado a la Edge Function existente `asistente-ia`. Utiliza la sesión de Supabase; la clave de Gemini permanece en el servidor. En modo local se puede ver la interfaz, pero no consulta a la IA.
 
 Con `IA_CONTEXTO_REAL` (dart-define, activo por defecto) la consulta envía los indicadores reales del período que interpreta la pregunta, con el alcance del usuario: un líder solo envía los datos de lo que lidera. Nunca viajan el legajo, el mail ni la URL.
+
+## Notificación de cursos pendientes por mail
+
+En **Certificaciones LMS**, el botón **Notificar pendientes por mail** toma lo que muestran los filtros (Tipo, Área, Equipo, Curso, Persona y Estado) y le manda a cada colaborador un mail con los cursos que tiene **pendientes** dentro de esa selección. Antes de enviar, un diálogo muestra a quién se le escribe, qué cursos recibe cada persona y quiénes se omiten por estar fuera de la nómina, inactivos o sin mail.
+
+- Lo pueden usar todos los roles, cada uno dentro de su alcance.
+- Flutter solo envía legajos e IDs de curso a la Edge Function `notificar-pendientes` ([supabase/functions/notificar-pendientes/index.ts](supabase/functions/notificar-pendientes/index.ts)). La función lee mails y estados con el JWT de quien llama, así RLS aplica el mismo alcance que la app, y envía los mails con **Resend**.
+- Cada envío queda en `public.notificaciones_pendientes` ([supabase/sql/notificaciones_pendientes.sql](supabase/sql/notificaciones_pendientes.sql)). La tabla la escribe solo la función y la leen Administrador y Academia.
+- En modo local el diálogo funciona igual, pero no se envía ningún mail.
+- Requiere los secrets `RESEND_API_KEY` y `RESEND_FROM` (y `LMS_URL`, que es opcional) en Supabase. La configuración completa está en [docs/configuracion-notificaciones-mail.md](docs/configuracion-notificaciones-mail.md).
 
 ## Mejora futura
 
