@@ -31,8 +31,84 @@
 
   <title>Finnegans · Portal de formación</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Loading splash: visible while main.dart.js downloads (seconds on a phone
+    over 4G). Colors are the scaffold background, text and primary of
+    AppTheme (lib/core/theme/app_theme.dart): keep them in sync.
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body { background: #F8FAFC; }
+    body.splash-dark { background: #0B1220; }
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 16px;
+      box-sizing: border-box;
+      background: #F8FAFC;
+      color: #0F172A;
+      font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+      text-align: center;
+      transition: opacity 200ms ease-out;
+    }
+    #splash .splash-title { font-size: 18px; font-weight: 600; }
+    #splash .splash-detail { font-size: 14px; color: #64748B; }
+    #splash .splash-spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #E2E8F0;
+      border-top-color: #0D53C3;
+      border-radius: 50%;
+      animation: splash-spin 900ms linear infinite;
+    }
+    .splash-dark #splash { background: #0B1220; color: #E2E8F0; }
+    .splash-dark #splash .splash-detail { color: #94A3B8; }
+    .splash-dark #splash .splash-spinner {
+      border-color: #263248;
+      border-top-color: #60A5FA;
+    }
+    #splash.splash-hidden { opacity: 0; pointer-events: none; }
+    @keyframes splash-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #splash .splash-spinner { animation-duration: 3s; }
+      #splash { transition: none; }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash" role="status" aria-live="polite">
+    <div class="splash-spinner" aria-hidden="true"></div>
+    <div class="splash-title">Finnegans · Portal de formación</div>
+    <div class="splash-detail">Cargando…</div>
+  </div>
+  <script>
+    (function () {
+      // Same choice as the app: the saved appearance (SharedPreferencesAsync
+      // stores it in localStorage as JSON, without a prefix) or, without one,
+      // the operating system's.
+      var saved = null;
+      try {
+        saved = JSON.parse(window.localStorage.getItem('apariencia'));
+      } catch (e) {}
+      var dark = saved === 'dark' ||
+        (saved !== 'light' && window.matchMedia &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.body.classList.add('splash-dark');
+
+      window.addEventListener('flutter-first-frame', function () {
+        var splash = document.getElementById('splash');
+        if (!splash) return;
+        splash.classList.add('splash-hidden');
+        setTimeout(function () { splash.remove(); }, 250);
+      }, { once: true });
+    })();
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -7,6 +7,7 @@ import '../../tool/run.dart';
 const _usage =
     'Uso:\n\n'
     '  dart run tool/run.dart local\n'
+    '  dart run tool/run.dart local --lan\n'
     '  dart run tool/run.dart supabase';
 
 class _ProcessCall {
@@ -29,6 +30,8 @@ void main() {
   late Directory project;
   late List<_ProcessCall> calls;
   late List<String> errors;
+  late List<String> infos;
+  var lanAddresses = <String>[];
   var processExitCode = 0;
   ProcessException? processError;
 
@@ -58,6 +61,8 @@ void main() {
     startProcess: startProcess,
     isWindows: windows,
     reportError: errors.add,
+    reportInfo: infos.add,
+    listLanAddresses: () async => lanAddresses,
   );
 
   Future<File> createConfig([String content = '{}']) async {
@@ -73,6 +78,8 @@ void main() {
     project = await Directory.systemTemp.createTemp('two_mode_runner_test_');
     calls = [];
     errors = [];
+    infos = [];
+    lanAddresses = ['192.168.0.15'];
     processExitCode = 0;
     processError = null;
   });
@@ -88,6 +95,10 @@ void main() {
     'modo desconocido': ['invalid'],
     'argumentos extra en local': ['local', 'extra'],
     'argumentos extra en supabase': ['supabase', 'extra'],
+    '--lan sin modo': ['--lan'],
+    '--lan antes del modo': ['--lan', 'local'],
+    '--lan con un modo desconocido': ['dev', '--lan'],
+    'argumentos extra después de --lan': ['local', '--lan', 'extra'],
   };
   for (final entry in invalidArguments.entries) {
     test('${entry.key}: muestra el uso y no inicia Flutter', () async {
@@ -158,6 +169,59 @@ void main() {
       expect(await config.readAsString(), 'configuración delegada a Flutter');
     },
   );
+
+  test(
+    'LOCAL --lan sirve en la red local e informa la dirección para el celular',
+    () async {
+      lanAddresses = ['192.168.0.15', '10.0.0.4'];
+      expect(await run(['local', '--lan']), 0);
+      expect(errors, isEmpty);
+      final call = calls.single;
+      expect(call.executable, 'flutter');
+      expect(call.arguments, [
+        'run',
+        '-d',
+        'web-server',
+        '--web-hostname',
+        '0.0.0.0',
+        '--web-port',
+        '3000',
+        '--dart-define=USE_SUPABASE=false',
+      ]);
+      expect(call.mode, ProcessStartMode.inheritStdio);
+      expect(infos, contains('  http://192.168.0.15:3000'));
+      expect(infos, contains('  http://10.0.0.4:3000'));
+    },
+  );
+
+  test('LOCAL --lan sin IP de red local explica cómo buscarla', () async {
+    lanAddresses = [];
+    expect(await run(['local', '--lan']), 0);
+    expect(calls, hasLength(1));
+    expect(infos.first, contains('ipconfig'));
+  });
+
+  test('LOCAL --lan usa flutter.bat con shell en Windows', () async {
+    expect(await run(['local', '--lan'], windows: true), 0);
+    final call = calls.single;
+    expect(call.executable, 'flutter.bat');
+    expect(call.runInShell, isTrue);
+    expect(call.arguments, contains('web-server'));
+  });
+
+  test('SUPABASE --lan se rechaza: el login no vuelve a la IP local', () async {
+    await createConfig();
+    expect(await run(['supabase', '--lan']), 1);
+    expect(calls, isEmpty);
+    expect(infos, isEmpty);
+    expect(errors, hasLength(1));
+    expect(errors.single, contains('local --lan'));
+  });
+
+  test('Sin --lan no informa direcciones de red', () async {
+    expect(await run(['local']), 0);
+    expect(infos, isEmpty);
+  });
 
   for (final mode in ['local', 'supabase']) {
     test('$mode usa flutter.bat con shell e inheritStdio en Windows', () async {
