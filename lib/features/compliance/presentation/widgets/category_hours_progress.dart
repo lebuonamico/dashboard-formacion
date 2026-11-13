@@ -21,7 +21,7 @@ class CategoryHoursProgress extends StatelessWidget {
       return SizedBox(
         width: 256,
         child: Text(
-          'Sin datos de cumplimiento',
+          'Sin datos en el período',
           style: TextStyle(color: context.colorScheme.onSurfaceVariant),
         ),
       );

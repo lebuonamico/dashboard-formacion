@@ -460,6 +460,37 @@ void main() {
 
       expect(find.textContaining('Página 2 de'), findsOneWidget);
     });
+
+    testWidgets('el progreso por categoría es el del período elegido', (
+      tester,
+    ) async {
+      final other = _course.copyWith(id: '2', name: 'Finanzas');
+      await _show(
+        tester,
+        route: '/empleados',
+        screen: (_) => const EmployeesScreen(),
+        courses: [_course, other],
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 10),
+          ),
+          // Another month: before, every month added up against one target.
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: other.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month - 1, 10),
+          ),
+        ],
+      );
+
+      expect(find.text('Período de análisis'), findsOneWidget);
+      expect(find.text('4/4 hs'), findsOneWidget);
+      expect(find.text('8/4 hs'), findsNothing);
+    });
   });
 
   group('Cursos', () {

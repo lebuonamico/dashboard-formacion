@@ -10,10 +10,11 @@ import 'package:app_finnegans/core/widgets/paginated_table.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
-import 'package:app_finnegans/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
 import 'package:app_finnegans/features/employees/domain/employee.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
+import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,12 @@ class EmployeesScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // The category progress is the selected period's, the
+                  // same one the profile opens with.
+                  const PeriodFilterPanel(
+                    included: 'los colaboradores elegibles',
+                  ),
+                  const SizedBox(height: 20),
                   const _EmployeesFiltersBar(),
                   const SizedBox(height: 20),
                   Expanded(
@@ -97,8 +104,9 @@ class _EmployeesResults extends ConsumerWidget {
       );
     }
     return ref
-        .watch(globalComplianceProvider)
+        .watch(teamComplianceProvider)
         .when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => _PaginatedEmployeesTable(
             employees: employees,
