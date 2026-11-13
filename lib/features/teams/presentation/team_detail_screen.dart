@@ -28,7 +28,9 @@ class TeamDetailScreen extends ConsumerWidget {
     final section = (area: area, team: team);
     final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
-      included: 'los integrantes del equipo elegibles',
+      included:
+          'Se incluyen los integrantes del equipo elegibles al cierre, aunque '
+          'tengan 0 horas.',
       action: PrintReportButton(report: teamReportProvider(section)),
     );
 

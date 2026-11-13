@@ -445,9 +445,10 @@ class PdfSources extends pw.StatelessWidget {
     if (c.match) return 'En Negocio y Blandas las dos fuentes coinciden.';
     final difference = c.differenceComparable;
     final sign = difference > 0 ? '+' : '-';
+    // A difference that rounds to 0% would read "(+0%)": it is left out.
     final percentage = switch (c.percentageDifference) {
-      final p? => ' ($sign${p.abs().toStringAsFixed(0)}%)',
-      null => '',
+      final p? when p.round() != 0 => ' ($sign${p.abs().toStringAsFixed(0)}%)',
+      _ => '',
     };
     return 'En Negocio y Blandas, CRM registra ${pdfHours(difference.abs())} '
         '${difference > 0 ? 'más' : 'menos'} que el LMS$percentage.';

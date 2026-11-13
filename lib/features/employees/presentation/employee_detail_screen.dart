@@ -109,7 +109,11 @@ class _EmployeeDetailBody extends ConsumerWidget {
           showCompliance: hasEmployeeData,
         ),
         const SizedBox(height: 16),
-        const PeriodFilterPanel(),
+        const PeriodFilterPanel(
+          included:
+              'El colaborador cuenta desde su mes de ingreso, aunque tenga 0 '
+              'horas.',
+        ),
         const SizedBox(height: 24),
         if (!detail.hasPeriodData)
           EmptyDataState.periodWithoutData(period: label)

@@ -131,4 +131,34 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('Una diferencia que redondea a 0% no muestra el porcentaje', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    // 1 h sobre 300 h es 0,3%: se muestran las horas, no "(+0%)".
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MoodleCrmComparisonCards(
+              complianceList: [
+                _c(
+                  moodle: {CourseCategory.businessSkills: 300},
+                  crm: {CourseCategory.businessSkills: 301},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('CRM registra 1 hs más que el LMS.'), findsOne);
+    expect(find.textContaining('+0%'), findsNothing);
+  });
 }

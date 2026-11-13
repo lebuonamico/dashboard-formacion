@@ -36,7 +36,9 @@ class AreaDetailScreen extends ConsumerWidget {
     ref.watch(areaMemberStatusFilterProvider);
     final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
-      included: 'los integrantes del área elegibles',
+      included:
+          'Se incluyen los integrantes del área elegibles al cierre, aunque '
+          'tengan 0 horas.',
       action: PrintReportButton(report: areaReportProvider(areaName)),
     );
     final requestedOrigin = GoRouterState.of(

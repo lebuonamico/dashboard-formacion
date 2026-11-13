@@ -39,7 +39,9 @@ class EmployeesScreen extends ConsumerWidget {
                   // The category progress is the selected period's, the
                   // same one the profile opens with.
                   const PeriodFilterPanel(
-                    included: 'los colaboradores elegibles',
+                    included:
+                        'Se incluyen los colaboradores elegibles al cierre, '
+                        'aunque tengan 0 horas.',
                   ),
                   const SizedBox(height: 20),
                   const _EmployeesFiltersBar(),

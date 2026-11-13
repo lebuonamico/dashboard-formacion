@@ -9,7 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Period selector wired to the global providers: every screen that uses it
 /// shares the same period.
 class PeriodFilterPanel extends ConsumerWidget {
-  /// What the period's calculation includes, for the help text.
+  /// Who the period's calculation includes, as a sentence of the monthly
+  /// help text.
   final String included;
 
   /// Shown next to the title, like the print report button.
@@ -17,7 +18,9 @@ class PeriodFilterPanel extends ConsumerWidget {
 
   const PeriodFilterPanel({
     super.key,
-    this.included = 'todos los equipos con colaboradores elegibles',
+    this.included =
+        'Se incluyen todos los equipos con colaboradores elegibles al '
+        'cierre, aunque tengan 0 horas.',
     this.action,
   });
 
@@ -129,7 +132,7 @@ class _PeriodTitle extends StatelessWidget {
         Tooltip(
           message: isAnnual
               ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
-              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $included al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
+              : 'El período se evalúa si tiene registros CRM o LMS. $included Si no hay registros, se muestra Sin datos.',
           child: Icon(
             Icons.info_outline,
             size: 16,

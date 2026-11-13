@@ -122,9 +122,11 @@ class _ComparisonCard extends StatelessWidget {
   String _differenceText() {
     if (comparison.match) return 'Las dos fuentes coinciden.';
     final difference = comparison.differenceComparable;
+    // A difference that rounds to 0% would read "(+0%)": it is left out.
     final percentage = switch (comparison.percentageDifference) {
-      final p? => ' (${p > 0 ? '+' : ''}${p.toStringAsFixed(0)}%)',
-      null => '',
+      final p? when p.round() != 0 =>
+        ' (${p > 0 ? '+' : ''}${p.toStringAsFixed(0)}%)',
+      _ => '',
     };
     return 'CRM registra ${formatHours(difference.abs())} hs '
         '${difference > 0 ? 'más' : 'menos'} que el LMS$percentage.';

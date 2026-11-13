@@ -205,6 +205,31 @@ void main() {
       expect(profile['horas_validas'], 4.0);
     });
 
+    test('el anual del perfil suma sus meses con datos desde el ingreso, '
+        'como la pantalla', () async {
+      final context = await AssistantContextBuilder().build(
+        const AssistantQueryPlanner().plan(
+          '¿Cómo viene el colaborador seleccionado?',
+          const AssistantDestination(AssistantModule.people, employeeId: '1'),
+          const PeriodFilter(scope: PeriodScope.annual, month: 9, year: 2026),
+        ),
+        dynamic: true,
+        loadData: () async => _data(
+          employees: [
+            _employee('1', 'Backend', hireDate: DateTime(2026, 8, 1)),
+            _employee('2', 'Frontend'),
+          ],
+          // July has data, but it is before the hire month.
+          certifications: [_completion('1', 8), _completion('2', 7)],
+        ),
+      );
+
+      final profile = _result(context)['perfil_seleccionado'] as Map;
+      // Only August: 4 + 4 of Junior 1, not 12 months.
+      expect(profile['horas_objetivo'], 8.0);
+      expect(profile['horas_validas'], 4.0);
+    });
+
     test('un perfil que no está en la nómina queda anotado', () async {
       final context = await _build(
         '¿Cómo viene el colaborador seleccionado?',

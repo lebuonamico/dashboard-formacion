@@ -101,7 +101,9 @@ class _AreasContent extends ConsumerWidget {
         ),
         const SizedBox(height: 18),
         const PeriodFilterPanel(
-          included: 'todas las áreas con colaboradores elegibles',
+          included:
+              'Se incluyen todas las áreas con colaboradores elegibles al '
+              'cierre, aunque tengan 0 horas.',
         ),
         const SizedBox(height: 22),
         if (!summary.hasData)
