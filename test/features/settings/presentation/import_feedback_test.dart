@@ -640,10 +640,7 @@ void main() {
       refresh.complete(List.of(courses.saved));
       await tester.pumpAndSettle();
       _verifyLoading(tester, 'cursos', false);
-      expect(
-        find.text('Se cargaron 1 cursos desde cursos.csv.'),
-        findsOneWidget,
-      );
+      expect(find.text('Se cargó 1 curso desde cursos.csv.'), findsOneWidget);
       expect(courses.saved.single.id, '107');
       expect(tester.takeException(), isNull);
     });

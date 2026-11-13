@@ -4,7 +4,8 @@ import 'package:app_finnegans/features/pending_reminders/domain/pending_reminder
 const noPendingReminders =
     'No hay cursos pendientes para notificar con estos filtros.';
 
-String peopleCount(int count) => count == 1 ? '1 persona' : '$count personas';
+String peopleCount(int count) =>
+    count == 1 ? '1 colaborador' : '$count colaboradores';
 
 String courseCount(int count) => count == 1 ? '1 curso' : '$count cursos';
 

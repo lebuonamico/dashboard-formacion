@@ -42,7 +42,7 @@ class TeamsStatusSummary extends StatelessWidget {
           color: context.colors.warning.text,
           backgroundColor: context.colors.warning.background,
           help:
-              'Equipos con avance parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
+              'Equipos con cumplimiento parcial: tienen horas suficientes o al menos algún integrante en objetivo, pero todavía presentan desvíos.',
         ),
         DonutSlice(
           label: 'Críticos',
@@ -50,7 +50,7 @@ class TeamsStatusSummary extends StatelessWidget {
           color: context.colors.danger.text,
           backgroundColor: context.colors.danger.background,
           help:
-              'Equipos con bajo avance y sin integrantes cumpliendo el objetivo individual.',
+              'Equipos con bajo cumplimiento y sin integrantes cumpliendo el objetivo individual.',
         ),
       ],
     );
@@ -99,7 +99,7 @@ class _StatusHeading extends StatelessWidget {
             const SizedBox(width: 6),
             Tooltip(
               message:
-                  'Verde exige horas completas y todos los integrantes en objetivo. Riesgo y crítico indican desvíos por horas o personas.',
+                  'En objetivo exige el 100% de las horas y todos los integrantes cumpliendo. En riesgo y Crítico indican desvíos por horas o por colaboradores.',
               child: Icon(
                 Icons.info_outline,
                 size: 16,

@@ -54,13 +54,13 @@ class AreaCard extends StatelessWidget {
         colors: colors,
         help: isAnnual
             ? 'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.'
-            : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
+            : 'Colaboradores que cumplen su plan por categoría. El porcentaje de la derecha compara horas válidas contra objetivo.',
       ),
       footer: SummaryCardFooter(
         completedHours: area.completedHours,
         targetHours: area.targetHours,
         deviation: area.hoursDeviation,
-        actionLabel: 'Ver área',
+        actionLabel: 'Ver detalle',
       ),
     );
   }

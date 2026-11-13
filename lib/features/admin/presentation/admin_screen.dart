@@ -144,7 +144,7 @@ class _UsersTab extends ConsumerWidget {
             child: users.isEmpty
                 ? const _CenteredState(
                     icon: Icons.manage_accounts_outlined,
-                    title: 'No hay usuarios para mostrar',
+                    title: 'No hay usuarios para mostrar.',
                     message:
                         'Probá limpiar los filtros o dar de alta un usuario nuevo.',
                   )

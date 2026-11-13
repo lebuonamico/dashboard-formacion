@@ -163,11 +163,19 @@ class _CollapsedMenu extends ConsumerWidget {
   );
 }
 
-class _LogoutTile extends ConsumerWidget {
+class _LogoutTile extends ConsumerStatefulWidget {
   const _LogoutTile();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LogoutTile> createState() => _LogoutTileState();
+}
+
+class _LogoutTileState extends ConsumerState<_LogoutTile> {
+  /// A second click while signing out would sign out twice.
+  bool _signingOut = false;
+
+  @override
+  Widget build(BuildContext context) {
     final error = context.colorScheme.error;
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -176,20 +184,24 @@ class _LogoutTile extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         leading: Icon(Icons.logout_rounded, color: error),
         title: Text('Cerrar sesión', style: TextStyle(color: error)),
-        onTap: () => _signOut(context, ref),
+        enabled: !_signingOut,
+        onTap: _signOut,
       ),
     );
   }
 
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+  Future<void> _signOut() async {
     final enabled = ref.read(authProvider).enabled;
+    setState(() => _signingOut = true);
     try {
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) context.go(enabled ? '/login' : '/');
+      if (mounted) context.go(enabled ? '/login' : '/');
     } catch (_) {
-      if (context.mounted) {
+      if (mounted) {
         showAppSnackBar(context, 'No se pudo completar el cierre de sesión.');
       }
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
     }
   }
 }

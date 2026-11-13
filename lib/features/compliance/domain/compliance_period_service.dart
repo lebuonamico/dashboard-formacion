@@ -278,6 +278,116 @@ class CompliancePeriodService {
     );
   }
 
+  /// First month of [year] the employee has data in: their hire month, or
+  /// January if they joined earlier or have no hire date. `null` if they
+  /// joined after [year].
+  int? firstEmployeeMonth(Employee employee, int year) {
+    final hireDate = employee.hireDate;
+    if (hireDate == null || hireDate.year < year) return 1;
+    return hireDate.year == year ? hireDate.month : null;
+  }
+
+  /// Months of [year] with CRM or LMS records, the same ones that count in
+  /// [calculateComplianceByMonth].
+  List<int> monthsWithData({
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
+    required int year,
+  }) => {
+    ...timeEntries
+        .where((entry) => entry.date.year == year)
+        .map((entry) => entry.date.month),
+    ...certifications
+        .map((certification) => certification.completedAt)
+        .nonNulls
+        .where((date) => date.year == year)
+        .map((date) => date.month),
+  }.sorted((a, b) => a.compareTo(b));
+
+  /// Whether the employee's profile has data in [period]: a month with
+  /// records from their hire month on. Before joining there is no data, not 0.
+  bool hasEmployeeDataInPeriod({
+    required Employee employee,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
+    required PeriodFilter period,
+  }) {
+    final firstMonth = firstEmployeeMonth(employee, period.year);
+    if (firstMonth == null) return false;
+    if (period.scope == PeriodScope.annual) {
+      return monthsWithData(
+        timeEntries: timeEntries,
+        certifications: certifications,
+        year: period.year,
+      ).any((month) => month >= firstMonth);
+    }
+    return period.month >= firstMonth &&
+        hasDataInPeriod(
+          timeEntries: timeEntries,
+          certifications: certifications,
+          year: period.year,
+          month: period.month,
+          isAnnual: false,
+        );
+  }
+
+  /// The profile of one employee, with their current payroll attributes.
+  /// Monthly, as [employeeCompliance]. Annual, like Teams and Areas: the sum
+  /// of the months with data from their hire month on, each with its plan
+  /// version. [timeEntries] and [certifications] are everyone's in scope,
+  /// to know which months have data.
+  EmployeeCompliance employeeProfileCompliance({
+    required Employee employee,
+    required List<Course> courses,
+    required List<CrmTimeEntry> timeEntries,
+    required List<LmsCertification> certifications,
+    required PeriodFilter period,
+    required ComplianceService complianceService,
+  }) {
+    if (period.scope != PeriodScope.annual) {
+      return employeeCompliance(
+        employee: employee,
+        courses: courses,
+        timeEntries: timeEntries,
+        certifications: certifications,
+        period: period,
+        complianceService: complianceService,
+      );
+    }
+    final firstMonth = firstEmployeeMonth(employee, period.year);
+    final months = firstMonth == null
+        ? const <int>[]
+        : monthsWithData(
+            timeEntries: timeEntries,
+            certifications: certifications,
+            year: period.year,
+          ).where((month) => month >= firstMonth);
+    return accumulateMonths(
+          months.map(
+            (month) => [
+              employeeCompliance(
+                employee: employee,
+                courses: courses,
+                timeEntries: timeEntries,
+                certifications: certifications,
+                period: PeriodFilter(
+                  scope: PeriodScope.monthly,
+                  month: month,
+                  year: period.year,
+                ),
+                complianceService: complianceService,
+              ),
+            ],
+          ),
+        ).firstOrNull ??
+        summary.summarize(
+          employee: employee,
+          creditedHours: const {},
+          declaredHours: const {},
+          requiredHours: const {},
+        );
+  }
+
   Map<int, List<EmployeeCompliance>> calculateComplianceByMonth({
     required List<Employee> employees,
     List<EmployeeHistoryEntry>? history,

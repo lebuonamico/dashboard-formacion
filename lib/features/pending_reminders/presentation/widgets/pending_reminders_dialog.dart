@@ -48,8 +48,9 @@ class _PlanSummary extends StatelessWidget {
       children: [
         Text(
           'Se enviará un mail a ${peopleCount(plan.reminders.length)} '
-          'con ${courseCount(plan.courseCount)} pendientes en total. '
-          'Cada persona recibe solo sus cursos.',
+          'con ${courseCount(plan.courseCount)} '
+          '${plan.courseCount == 1 ? 'pendiente' : 'pendientes'} en total. '
+          'Cada colaborador recibe solo sus cursos.',
           style: context.textTheme.bodyMedium,
         ),
         const SizedBox(height: 12),

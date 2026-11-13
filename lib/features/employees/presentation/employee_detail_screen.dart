@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/navigation/app_destination.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
@@ -24,6 +25,7 @@ import 'package:app_finnegans/features/teams/presentation/providers/teams_provid
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class EmployeeDetailScreen extends ConsumerWidget {
   final String employeeId;
@@ -37,9 +39,12 @@ class EmployeeDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const AppTopBar(
+          AppTopBar(
             title: 'Perfil del colaborador',
-            backTo: '/empleados',
+            backTo: originBackPath(
+              GoRouterState.of(context).uri.queryParameters['origen'],
+              '/empleados',
+            ),
           ),
           Expanded(
             child: detailAsync.when(
@@ -54,7 +59,14 @@ class EmployeeDetailScreen extends ConsumerWidget {
               ),
               data: (detail) => FadeIn(
                 child: detail == null
-                    ? const Center(child: Text('Empleado no encontrado.'))
+                    ? SingleChildScrollView(
+                        child: EmptyDataState(
+                          icon: Icons.person_off_outlined,
+                          title: 'No encontramos al colaborador $employeeId.',
+                          message:
+                              'Puede no estar en la nómina o fuera de tu alcance.',
+                        ),
+                      )
                     : _EmployeeDetailBody(
                         employeeId: employeeId,
                         detail: detail,
@@ -80,8 +92,9 @@ class _EmployeeDetailBody extends ConsumerWidget {
     final periodText = period.scope == PeriodScope.annual
         ? 'Año ${period.year}'
         : '${monthName(period.month)} ${period.year}';
-    final hasPeriodData = detail.hasPeriodData;
+    final hasEmployeeData = detail.hasEmployeeData;
     final compliance = detail.compliance;
+    final label = periodLabel(period.scope, period.month, period.year);
     final sectionStyle = context.textTheme.bodyLarge!.copyWith(
       fontWeight: FontWeight.w700,
       color: context.colorScheme.onSurface,
@@ -93,42 +106,107 @@ class _EmployeeDetailBody extends ConsumerWidget {
         _EmployeeHeader(
           employee: detail.employee,
           compliance: compliance,
-          showCompliance: hasPeriodData,
+          showCompliance: hasEmployeeData,
         ),
         const SizedBox(height: 16),
         const PeriodFilterPanel(),
         const SizedBox(height: 24),
-        if (!hasPeriodData) ...[
-          EmptyDataState.periodWithoutData(
-            period: periodLabel(period.scope, period.month, period.year),
-          ),
-          const SizedBox(height: 24),
-        ] else ...[
+        if (!detail.hasPeriodData)
+          EmptyDataState.periodWithoutData(period: label)
+        else if (!hasEmployeeData)
+          _EmployeeWithoutData(employee: detail.employee, period: label)
+        else ...[
           Text(
             'Desglose del plan de formación ($periodText)',
             style: sectionStyle,
           ),
           const SizedBox(height: 12),
           _CategoriesGrid(compliance),
-          const SizedBox(height: 24),
-          if (ref.watch(employeeProjectionProvider(employeeId)).value
-              case final projection?) ...[
-            Text('Proyección a fin de año', style: sectionStyle),
-            const SizedBox(height: 12),
-            EmployeeProjectionCard(projection: projection, year: period.year),
-            const SizedBox(height: 24),
-          ],
+        ],
+        const SizedBox(height: 24),
+        _ProjectionSection(
+          employeeId: employeeId,
+          year: period.year,
+          titleStyle: sectionStyle,
+        ),
+        if (hasEmployeeData) ...[
           Text('Cursos del período ($periodText)', style: sectionStyle),
           const SizedBox(height: 12),
           _CoursesColumns(detail),
           const SizedBox(height: 24),
         ],
-        if ((compliance.requiredHours[CourseCategory.teaching] ?? 0) > 0 ||
-            detail.taughtCourses.isNotEmpty) ...[
+        if (hasEmployeeData &&
+            ((compliance.requiredHours[CourseCategory.teaching] ?? 0) > 0 ||
+                detail.taughtCourses.isNotEmpty)) ...[
           Text('Cursos dictados como instructor', style: sectionStyle),
           const SizedBox(height: 12),
           _TaughtTable(detail.taughtCourses),
         ],
+      ],
+    );
+  }
+}
+
+/// A period before the employee joined: no data, instead of everything at 0.
+class _EmployeeWithoutData extends StatelessWidget {
+  final Employee employee;
+  final String period;
+
+  const _EmployeeWithoutData({required this.employee, required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    final hireDate = employee.hireDate;
+    return EmptyDataState(
+      icon: Icons.event_busy_outlined,
+      title: 'No hay datos cargados del colaborador para $period.',
+      message: hireDate == null
+          ? null
+          : 'Ingresó el ${formatDate(hireDate)}: sus datos se cuentan desde '
+                'ese mes.',
+    );
+  }
+}
+
+/// Always shown, so an employee without data says so instead of losing the
+/// section. Optional like the other projections: hidden while it loads or if
+/// it fails.
+class _ProjectionSection extends ConsumerWidget {
+  final String employeeId;
+  final int year;
+  final TextStyle titleStyle;
+
+  const _ProjectionSection({
+    required this.employeeId,
+    required this.year,
+    required this.titleStyle,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectionAsync = ref.watch(employeeProjectionProvider(employeeId));
+    if (!projectionAsync.hasValue) return const SizedBox.shrink();
+    final cutoffMonth = ref.watch(annualProjectionCutoffMonthProvider).value;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Proyección a fin de año', style: titleStyle),
+        const SizedBox(height: 12),
+        if (projectionAsync.value case final projection?)
+          EmployeeProjectionCard(projection: projection, year: year)
+        else
+          EmptyDataState(
+            key: const Key('proyeccion_sin_datos'),
+            compact: true,
+            icon: Icons.trending_flat,
+            title: 'Sin datos para proyectar.',
+            message:
+                'No hay datos cargados del colaborador'
+                '${cutoffMonth == null ? ' en $year' : ' hasta ${monthName(cutoffMonth)} $year'}. '
+                'La proyección usa sus meses con datos desde el ingreso.',
+          ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -177,11 +255,15 @@ class _EmployeeHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      '${employee.firstName} ${employee.lastName}',
-                      style: context.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: cs.onSurface,
+                    Flexible(
+                      child: Text(
+                        '${employee.firstName} ${employee.lastName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -190,14 +272,14 @@ class _EmployeeHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Área de ${employee.area} · Legajo: ${employee.employeeId}',
+                  'Área: ${orDash(employee.area)} · Legajo ${employee.employeeId}',
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  employee.email,
+                  orDash(employee.email),
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -212,7 +294,7 @@ class _EmployeeHeader extends StatelessWidget {
                       value: orDash(employee.team),
                     ),
                     _EmployeeData(
-                      label: 'Gerente',
+                      label: 'Líder',
                       value: orDash(employee.manager),
                     ),
                   ],
@@ -230,7 +312,7 @@ class _EmployeeHeader extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    '${compliance.totalCreditedHours.toStringAsFixed(0)} / ${compliance.totalRequiredHours.toStringAsFixed(0)} hs LMS',
+                    '${formatAchievedHours(compliance.totalCreditedHours, target: compliance.totalRequiredHours)} / ${formatHours(compliance.totalRequiredHours)} hs válidas',
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: complianceStatus.text,
@@ -248,7 +330,7 @@ class _EmployeeHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'CRM declaró ${compliance.totalDeclaredHours.toStringAsFixed(0)} hs',
+                    'CRM declaró ${formatHours(compliance.totalDeclaredHours)} hs',
                     style: context.textTheme.labelMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -270,6 +352,7 @@ class _CategoriesGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      spacing: 12,
       children: CourseCategory.values
           .map(
             (type) => Expanded(
@@ -301,7 +384,6 @@ class _CategoryCard extends StatelessWidget {
         : 'LMS';
 
     return Container(
-      margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(16),
       decoration: context.panel(),
       child: Column(
@@ -319,7 +401,7 @@ class _CategoryCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             isRequired
-                ? '${completed.toStringAsFixed(0)} / ${required.toStringAsFixed(0)} hs $source'
+                ? '${formatAchievedHours(completed, target: required)} / ${formatHours(required)} hs $source'
                 : 'No requerida',
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
@@ -327,12 +409,12 @@ class _CategoryCard extends StatelessWidget {
                   ? context.colorScheme.onSurfaceVariant
                   : meets
                   ? context.colors.success.text
-                  : context.colors.danger.text,
+                  : context.colors.warning.text,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'CRM declaró ${declared.toStringAsFixed(0)} hs',
+            'CRM declaró ${formatHours(declared)} hs',
             style: context.textTheme.labelMedium?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
@@ -359,7 +441,7 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-/// Moodle and CRM side by side; stacked on narrow screens.
+/// LMS and CRM side by side; stacked on narrow screens.
 class _CoursesColumns extends StatelessWidget {
   final EmployeeDetail detail;
 
@@ -372,7 +454,7 @@ class _CoursesColumns extends StatelessWidget {
       children: [
         _ColumnHeader(
           icon: Icons.school_outlined,
-          title: 'Moodle (LMS)',
+          title: 'LMS',
           detail: '${formatHours(detail.creditedLmsHours)} hs',
         ),
         const SizedBox(height: 8),
@@ -525,8 +607,12 @@ class _CourseTimeEntriesTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: context.panel(radius: 6),
-      child: ClipRRect(
+      // A Material of its own: the ink of the tile would paint behind the
+      // panel's color.
+      child: Material(
+        type: MaterialType.transparency,
         borderRadius: BorderRadius.circular(6),
+        clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
           key: PageStorageKey<String>('curso-${group.key}'),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -631,67 +717,76 @@ class _TaughtTable extends StatelessWidget {
     }
 
     return Container(
+      width: double.infinity,
       decoration: context.panel(),
-      child: DataTable(
-        headingRowColor: WidgetStatePropertyAll(
-          context.colorScheme.surfaceContainerLow,
-        ),
-        columns: const [
-          DataColumn(
-            label: Text(
-              'Código',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Curso impartido',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Área temática',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Horas sumadas al plan',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-        rows: taught
-            .map(
-              (course) => DataRow(
-                cells: [
-                  DataCell(
-                    Text(
-                      course.code,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      course.name,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  DataCell(Text(course.area)),
-                  DataCell(
-                    Text(
-                      '${formatHours(course.hours)} hs',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.teaching.text,
-                      ),
-                    ),
-                  ),
-                ],
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              headingRowColor: WidgetStatePropertyAll(
+                context.colorScheme.surfaceContainerLow,
               ),
-            )
-            .toList(),
+              columns: const [
+                DataColumn(
+                  label: Text(
+                    'ID',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Curso dictado',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Área temática',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Horas sumadas al plan',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              rows: taught
+                  .map(
+                    (course) => DataRow(
+                      cells: [
+                        DataCell(
+                          Text(
+                            course.code,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            course.name,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        DataCell(Text(course.area)),
+                        DataCell(
+                          Text(
+                            '${formatHours(course.hours)} hs',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: context.colors.teaching.text,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -782,7 +877,7 @@ class _LmsCertificationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     ColorLabel(
-                      text: completed ? 'Finalizado' : 'En curso',
+                      text: completed ? 'Finalizado' : 'Pendiente',
                       colors: completed
                           ? context.colors.success
                           : context.colors.warning,

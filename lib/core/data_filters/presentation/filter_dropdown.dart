@@ -176,9 +176,16 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                       if (_scroll.hasClients) _scroll.jumpTo(0);
                       setState(() {});
                     },
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar opciones...',
-                      prefixIcon: Icon(Icons.search),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar opciones…',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Borrar búsqueda',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => setState(_search.clear),
+                            ),
                     ),
                   ),
                 ),
@@ -187,6 +194,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                 height: listHeight,
                 child: _OptionsList<T>(
                   options: ordered,
+                  searching: _search.text.trim().isNotEmpty,
                   height: listHeight,
                   rowHeight: _rowHeight,
                   controller: _scroll,
@@ -250,6 +258,9 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
 
 class _OptionsList<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> options;
+
+  /// With a search typed, an empty list means nothing matches it.
+  final bool searching;
   final double height;
   final double rowHeight;
   final ScrollController controller;
@@ -260,6 +271,7 @@ class _OptionsList<T> extends StatelessWidget {
 
   const _OptionsList({
     required this.options,
+    required this.searching,
     required this.height,
     required this.rowHeight,
     required this.controller,
@@ -272,7 +284,13 @@ class _OptionsList<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (options.isEmpty) {
-      return const Center(child: Text('Sin opciones disponibles'));
+      return Center(
+        child: Text(
+          searching
+              ? 'Sin coincidencias con la búsqueda'
+              : 'Sin opciones disponibles',
+        ),
+      );
     }
     final needsScroll = options.length * rowHeight > height;
     return Listener(

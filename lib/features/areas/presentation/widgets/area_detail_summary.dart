@@ -163,7 +163,7 @@ class _AreaProgressPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Avance del área',
+            'Cumplimiento del área',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: context.colorScheme.onSurface,
@@ -181,7 +181,7 @@ class _AreaProgressPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} h',
+                '${formatAchievedHours(area.completedHours, target: area.targetHours)} de ${formatHours(area.targetHours)} hs',
                 style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.onSurfaceVariant,
@@ -211,12 +211,12 @@ class _AreaProgressPanel extends StatelessWidget {
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',
-            value: '${average.toStringAsFixed(1)} h',
+            value: '${formatHours(average)} hs',
           ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: formatHoursDeviation(area.hoursDeviation, unit: 'h'),
+            value: formatHoursDeviation(area.hoursDeviation),
           ),
         ],
       ),

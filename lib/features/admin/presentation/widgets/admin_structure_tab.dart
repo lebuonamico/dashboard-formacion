@@ -208,8 +208,8 @@ class _EmptyAreas extends StatelessWidget {
   Widget build(BuildContext context) => _Notice(
     icon: Icons.account_tree_outlined,
     title: searching
-        ? 'Ningún área o equipo coincide con la búsqueda'
-        : 'Todavía no hay áreas',
+        ? 'Ninguna área o equipo coincide con la búsqueda.'
+        : 'Todavía no hay áreas.',
     message: searching
         ? 'Probá con otro nombre.'
         : 'Se crean al importar la nómina desde Configuración.',

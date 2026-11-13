@@ -83,7 +83,7 @@ class LmsCertificationsFileParser
     );
     if (columns.completedAt == -1) {
       throw const FormatException(
-        'Falta la columna Fecha de finalización en el Excel de Moodle.',
+        'Falta la columna Fecha de finalización en el Excel del LMS.',
       );
     }
     return rows

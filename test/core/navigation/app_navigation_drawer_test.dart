@@ -159,7 +159,7 @@ void main() {
       expect(find.text(settings), findsNothing);
       expect(find.text(panel), findsNothing);
       expect(find.text('Equipos'), findsOneWidget);
-      expect(find.text('Empleados'), findsOneWidget);
+      expect(find.text('Colaboradores'), findsOneWidget);
     });
   });
 }

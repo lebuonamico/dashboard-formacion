@@ -92,7 +92,7 @@ void main() {
     expect(find.text('Pantalla Dashboard'), findsOneWidget);
     expect(_selectedIndex(tester), 0);
 
-    await tester.tap(_destination('Empleados'));
+    await tester.tap(_destination('Colaboradores'));
     await tester.pumpAndSettle();
 
     expect(find.text('Pantalla Empleados'), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
   ) async {
     await _show(tester);
 
-    await tester.tap(_destination('Empleados'));
+    await tester.tap(_destination('Colaboradores'));
     await tester.pumpAndSettle();
 
     final context = tester.element(find.byType(AppShell));

@@ -49,7 +49,7 @@ class TeamCategoryDistribution extends StatelessWidget {
                   Tooltip(
                     message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
-                        : 'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
+                        : 'Horas válidas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
                     child: Icon(
                       Icons.info_outline,
                       size: 16,
@@ -69,9 +69,9 @@ class TeamCategoryDistribution extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
                 child: LegendDonutChart(
-                  centerValue: total.toStringAsFixed(1),
+                  centerValue: '${total.round()}',
                   centerLabel: 'HORAS',
-                  valueSuffix: ' h',
+                  valueSuffix: ' hs',
                   slices: [
                     DonutSlice(
                       label: CourseCategory.businessSkills.shortLabel,
@@ -97,7 +97,7 @@ class TeamCategoryDistribution extends StatelessWidget {
                     DonutSlice(
                       label: CourseCategory.teaching.shortLabel,
                       help:
-                          'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
+                          'Horas declaradas como dictado de capacitaciones por integrantes del equipo.',
                       value: teachingHours,
                       color: context.colors.teaching.text,
                     ),

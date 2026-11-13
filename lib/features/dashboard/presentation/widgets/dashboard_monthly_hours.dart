@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
@@ -19,7 +21,10 @@ class DashboardMonthlyHours extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return evolutionAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
@@ -57,7 +62,7 @@ class _MonthlyHoursSummary {
     final points = [
       for (final item in months)
         _MonthlyHoursPoint(
-          label: _monthLabel(item.month.month),
+          label: monthName(item.month.month),
           hours: item.hours,
         ),
     ];
@@ -97,8 +102,8 @@ class _MonthlyHoursCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Horas válidas promedio por colaborador vs meta '
-                      '(${summary.target.toStringAsFixed(1).replaceAll('.', ',')} h)',
+                      'Horas válidas promedio por colaborador vs objetivo '
+                      '(${formatHoursPrecise(summary.target)} hs)',
                       style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
                       ),
@@ -113,7 +118,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Meta: ${summary.target.toStringAsFixed(1)} h',
+                  'Objetivo: ${formatHoursPrecise(summary.target)} hs',
                   style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colorScheme.primary,
@@ -139,7 +144,7 @@ class _MonthlyHoursCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${current.toStringAsFixed(1)} h promedio',
+                '${formatHoursPrecise(current)} hs promedio',
                 style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: context.colorScheme.primary,
@@ -230,8 +235,8 @@ class _MonthlyHoursPainter extends CustomPainter {
     );
     _drawText(
       canvas,
-      'Meta ${target.toStringAsFixed(1)} h',
-      Offset(size.width - 66, targetY - 14),
+      'Objetivo ${formatHoursPrecise(target)} hs',
+      Offset(size.width - 92, targetY - 14),
       textTheme.labelSmall!.copyWith(color: cs.onSurfaceVariant),
     );
 
@@ -249,7 +254,7 @@ class _MonthlyHoursPainter extends CustomPainter {
       canvas.drawRRect(rect, Paint()..color = color);
       _drawCenteredText(
         canvas,
-        '${point.hours.toStringAsFixed(1)} h',
+        '${formatHoursPrecise(point.hours)} hs',
         Offset(centerX, barTop - 14),
         textTheme.labelSmall!.copyWith(
           fontWeight: FontWeight.w600,
@@ -297,22 +302,4 @@ class _MonthlyHoursPainter extends CustomPainter {
       oldDelegate.target != target ||
       oldDelegate.cs != cs ||
       oldDelegate.colors != colors;
-}
-
-String _monthLabel(int month) {
-  const labels = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ];
-  return labels[month - 1];
 }

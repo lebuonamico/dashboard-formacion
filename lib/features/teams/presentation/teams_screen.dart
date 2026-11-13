@@ -1,4 +1,4 @@
-
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
@@ -36,6 +36,7 @@ class TeamsScreen extends ConsumerWidget {
           Expanded(
             child: summaryAsync.when(
               skipLoadingOnRefresh: false,
+              skipLoadingOnReload: true,
               loading: () => Center(
                 child: CircularProgressIndicator(
                   color: context.colorScheme.primary,
@@ -91,7 +92,8 @@ class _TeamsOverviewContent extends ConsumerWidget {
         const SizedBox(height: 5),
         Text(
           summary.hasData
-              ? 'Seguimiento del avance de ${teams.length} equipos de formación.'
+              ? 'Seguimiento del cumplimiento de '
+                    '${countLabel(teams.length, 'equipo', 'equipos')}.'
               : 'Seleccioná un período con datos cargados.',
           style: context.textTheme.bodyMedium?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
@@ -111,7 +113,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
             title:
                 'No hay equipos con colaboradores elegibles en este período.',
             message:
-                'Verificá la nómina elegible para el período seleccionado.',
+                'Verificá los colaboradores elegibles del período seleccionado.',
           )
         else ...[
           TeamsKpiSection(

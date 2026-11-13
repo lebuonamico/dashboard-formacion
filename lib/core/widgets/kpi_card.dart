@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -47,12 +48,21 @@ class VariationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final improved = value >= 0;
+    // The sign follows the shown tenth, so -0.04 never reads "▼ -0,0".
+    final tenths = (value * 10).round();
+    final shown = formatDecimal(tenths.abs() / 10);
     return DashboardKpiBadge(
       text:
-          '${improved ? '▲ +' : '▼ '}${value.toStringAsFixed(1)} $unit '
-          'vs mes anterior',
-      colors: improved ? context.colors.success : context.colors.danger,
+          '${switch (tenths.sign) {
+            1 => '▲ +',
+            -1 => '▼ -',
+            _ => '= ',
+          }}$shown $unit vs mes anterior',
+      colors: switch (tenths.sign) {
+        1 => context.colors.success,
+        -1 => context.colors.danger,
+        _ => context.colors.neutral,
+      },
     );
   }
 }
@@ -270,14 +280,14 @@ const eligiblePayrollHelp =
 const monthCreditedHoursHelp =
     'Horas que cuentan para el objetivo del mes: cursos de Negocio y Blandas '
     'finalizados en el LMS, con la carga horaria del catálogo, y horas de '
-    'Libres y Dictado cargadas en el CRM. Cada persona suma como máximo su '
-    'objetivo en cada categoría.';
+    'Libres y Dictado declaradas en el CRM. Cada colaborador suma como máximo '
+    'su objetivo en cada categoría.';
 
 const annualCreditedHoursHelp =
     'Suma de las horas válidas de los meses con datos del año: cursos de '
     'Negocio y Blandas finalizados en el LMS y horas de Libres y Dictado del '
-    'CRM. Un mes fuerte compensa uno flojo; cada persona suma como máximo su '
-    'objetivo anual en cada categoría.';
+    'CRM. Un mes fuerte compensa uno flojo; cada colaborador suma como máximo '
+    'su objetivo anual en cada categoría.';
 
 /// Members of an area or team and how many met the target.
 String membersHelp(String section) =>

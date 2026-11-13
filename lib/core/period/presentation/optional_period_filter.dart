@@ -32,7 +32,7 @@ class OptionalYearFilter extends ConsumerWidget {
     super.key,
     required this.provider,
     required this.availableYears,
-    this.hint = 'Todos los años',
+    this.hint = 'Año',
     this.width = 260,
   });
 
@@ -67,7 +67,7 @@ class OptionalMonthFilter extends ConsumerWidget {
   const OptionalMonthFilter({
     super.key,
     required this.provider,
-    this.hint = 'Todos los meses',
+    this.hint = 'Mes',
     this.width = 260,
   });
 

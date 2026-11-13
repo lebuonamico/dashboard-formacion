@@ -98,7 +98,7 @@ class _StatusHeading extends StatelessWidget {
             const SizedBox(width: 6),
             Tooltip(
               message:
-                  'El estado del área sólo mira el porcentaje de horas: 100% o más está en objetivo, desde 70% en riesgo y debajo de 70% es crítico.',
+                  'El estado del área solo mira el porcentaje de horas: 100% o más está en objetivo, desde 70% en riesgo y debajo de 70% es crítico.',
               child: Icon(
                 Icons.info_outline,
                 size: 16,

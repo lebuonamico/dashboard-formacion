@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -88,7 +89,7 @@ class _TeamResultsState extends State<TeamResults> {
                 const Spacer(),
                 Text(
                   widget.teams.length == widget.teamCount
-                      ? '${widget.teamCount} equipos en el período'
+                      ? '${countLabel(widget.teamCount, 'equipo', 'equipos')} en el período'
                       : '${widget.teams.length} de ${widget.teamCount} equipos',
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
@@ -171,7 +172,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'No encontramos equipos con esos filtros.',
+            'Ningún equipo coincide con los filtros.',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: context.colorScheme.onSurface,
@@ -179,7 +180,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Probá con otra búsqueda, área o estado.',
+            'Probá con otros filtros.',
             style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),

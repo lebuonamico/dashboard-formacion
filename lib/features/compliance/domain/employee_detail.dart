@@ -10,6 +10,10 @@ class EmployeeDetail {
   final EmployeeCompliance compliance;
   final bool hasPeriodData;
 
+  /// Whether the employee has data in the period: the period has data and
+  /// reaches their hire month. Before joining there is no data, not 0.
+  final bool hasEmployeeData;
+
   /// The period's CRM entries grouped by course, sorted by course name.
   final List<CourseTimeEntries> timeEntryGroups;
 
@@ -25,6 +29,7 @@ class EmployeeDetail {
     required this.employee,
     required this.compliance,
     required this.hasPeriodData,
+    required this.hasEmployeeData,
     required this.timeEntryGroups,
     required this.certifications,
     required this.taughtCourses,

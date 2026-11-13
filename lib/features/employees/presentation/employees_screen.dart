@@ -28,7 +28,7 @@ class EmployeesScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const AppTopBar(title: 'Directorio de empleados'),
+          const AppTopBar(title: 'Directorio de colaboradores'),
           Expanded(
             child: Padding(
               padding: screenPadding,
@@ -39,10 +39,11 @@ class EmployeesScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   Expanded(
                     child: filteredEmployees.when(
+                      skipLoadingOnReload: true,
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
-                        title: 'No pudimos cargar los empleados',
+                        title: 'No pudimos cargar los colaboradores',
                         error: err,
                         onRetry: () =>
                             ref.invalidate(filteredEmployeesProvider),
@@ -85,12 +86,12 @@ class _EmployeesResults extends ConsumerWidget {
         child: hasPayroll
             ? const EmptyDataState(
                 icon: Icons.search_off_outlined,
-                title: 'Ningún empleado coincide con los filtros.',
-                message: 'Probá con otra búsqueda o seniority.',
+                title: 'Ningún colaborador coincide con los filtros.',
+                message: 'Probá con otros filtros.',
               )
             : const EmptyDataState(
                 icon: Icons.people_outline,
-                title: 'No hay empleados cargados.',
+                title: 'No hay colaboradores cargados.',
                 message: 'Importá la nómina para ver el directorio.',
               ),
       );
@@ -133,7 +134,7 @@ class _PaginatedEmployeesTable extends StatelessWidget {
     rowHeight: _EmployeesTable.rowHeight,
     headerHeight: _EmployeesTable.headerHeight,
     minimumWidth: _minimumWidth,
-    resultsLabel: 'empleados',
+    resultsLabel: 'colaboradores',
     icon: Icons.people_outline,
     tableBuilder: (visible) => _EmployeesTable(
       employees: visible,
@@ -169,7 +170,7 @@ class _EmployeesTable extends StatelessWidget {
       dataRowMaxHeight: rowHeight,
       columns: const [
         DataColumn(columnWidth: FlexColumnWidth(1), label: Text('Legajo')),
-        DataColumn(columnWidth: FlexColumnWidth(3), label: Text('Empleado')),
+        DataColumn(columnWidth: FlexColumnWidth(3), label: Text('Colaborador')),
         DataColumn(
           columnWidth: FlexColumnWidth(2.5),
           label: Text('Área / Equipo'),
@@ -183,8 +184,9 @@ class _EmployeesTable extends StatelessWidget {
       rows: [
         for (final employee in employees)
           DataRow(
-            onSelectChanged: (_) =>
-                context.push('/empleados/${employee.employeeId}'),
+            onSelectChanged: (_) => context.push(
+              '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+            ),
             cells: [
               DataCell(
                 Text(

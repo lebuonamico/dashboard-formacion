@@ -17,7 +17,7 @@ class PeriodFilterPanel extends ConsumerWidget {
 
   const PeriodFilterPanel({
     super.key,
-    this.included = 'todos los equipos',
+    this.included = 'todos los equipos con colaboradores elegibles',
     this.action,
   });
 
@@ -129,7 +129,7 @@ class _PeriodTitle extends StatelessWidget {
         Tooltip(
           message: isAnnual
               ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
-              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $included con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
+              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $included al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
           child: Icon(
             Icons.info_outline,
             size: 16,

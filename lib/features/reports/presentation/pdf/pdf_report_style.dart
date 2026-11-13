@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_colors.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:flutter/services.dart';
@@ -57,14 +58,14 @@ extension PdfLevelColors on ReportLevel {
 
 const bold = pw.FontWeight.bold;
 
-String pdfHours(double hours) => '${hours.toStringAsFixed(1)} h';
+String pdfHours(double hours) => '${formatHours(hours)} hs';
 
-String pdfWholeHours(double hours) => '${hours.toStringAsFixed(0)} h';
+/// Achieved hours towards [target]; see `formatAchievedHours`.
+String pdfAchievedHours(double hours, {required double target}) =>
+    '${formatAchievedHours(hours, target: target)} hs';
 
-String hoursDifferencePdf(double value) {
-  if (value.abs() < 0.05) return '0.0 h';
-  return '${value > 0 ? '+' : '-'}${value.abs().toStringAsFixed(1)} h';
-}
+/// With one decimal: only the monthly evolution keeps decimals.
+String pdfPreciseHours(double hours) => '${formatHoursPrecise(hours)} hs';
 
 String pdfDateTime(DateTime date) {
   String two(int n) => n.toString().padLeft(2, '0');

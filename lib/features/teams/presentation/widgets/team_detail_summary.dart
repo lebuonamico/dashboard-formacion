@@ -160,7 +160,7 @@ class _TeamProgressPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Avance del equipo',
+            'Cumplimiento del equipo',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: context.colorScheme.onSurface,
@@ -178,7 +178,7 @@ class _TeamProgressPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${team.completedHours.toStringAsFixed(1)} de ${team.targetHours.toStringAsFixed(1)} h',
+                '${formatAchievedHours(team.completedHours, target: team.targetHours)} de ${formatHours(team.targetHours)} hs',
                 style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.onSurfaceVariant,
@@ -214,12 +214,12 @@ class _TeamProgressPanel extends StatelessWidget {
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',
-            value: '${team.averageHoursPerMember.toStringAsFixed(1)} h',
+            value: '${formatHours(team.averageHoursPerMember)} hs',
           ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: formatHoursDeviation(team.hoursDeviation, unit: 'h'),
+            value: formatHoursDeviation(team.hoursDeviation),
           ),
         ],
       ),

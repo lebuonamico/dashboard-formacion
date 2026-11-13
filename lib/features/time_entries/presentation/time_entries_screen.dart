@@ -1,6 +1,7 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -15,6 +16,7 @@ import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class TimeEntriesScreen extends ConsumerWidget {
   const TimeEntriesScreen({super.key});
@@ -37,6 +39,7 @@ class TimeEntriesScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   Expanded(
                     child: timeEntriesAsync.when(
+                      skipLoadingOnReload: true,
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
@@ -83,7 +86,7 @@ class _NoTimeEntries extends ConsumerWidget {
           ? const EmptyDataState(
               icon: Icons.search_off_outlined,
               title: 'Ninguna carga de horas coincide con los filtros.',
-              message: 'Probá con otra búsqueda, período o área.',
+              message: 'Probá con otros filtros.',
             )
           : const EmptyDataState(
               icon: Icons.schedule_outlined,
@@ -134,6 +137,7 @@ class _TimeEntriesTable extends StatelessWidget {
       color: cs.onSurfaceVariant,
     );
     return DataTable(
+      showCheckboxColumn: false,
       columnSpacing: 24,
       headingRowHeight: headerHeight,
       dataRowMinHeight: rowHeight,
@@ -156,6 +160,13 @@ class _TimeEntriesTable extends StatelessWidget {
       rows: [
         for (final record in timeEntries)
           DataRow(
+            // An employee ID outside the payroll has no profile to open.
+            onSelectChanged: record.employee == null
+                ? null
+                : (_) => context.push(
+                    '/empleados/${Uri.encodeComponent(record.timeEntry.employeeId)}'
+                    '?origen=cursadas',
+                  ),
             cells: [
               DataCell(
                 Text(
@@ -169,7 +180,7 @@ class _TimeEntriesTable extends StatelessWidget {
               DataCell(_AreaTeamCell(record)),
               DataCell(
                 record.employee == null
-                    ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
+                    ? Text('—', style: TextStyle(color: cs.onSurfaceVariant))
                     : SeniorityChip(seniority: record.employee!.seniority),
               ),
               DataCell(_CourseCell(record)),
@@ -260,7 +271,7 @@ class _AreaTeamCell extends StatelessWidget {
     final cs = context.colorScheme;
     final employee = record.employee;
     if (employee == null) {
-      return Text('-', style: TextStyle(color: cs.onSurfaceVariant));
+      return Text('—', style: TextStyle(color: cs.onSurfaceVariant));
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -325,7 +336,7 @@ class _HoursCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        '${record.timeEntry.hours.toStringAsFixed(2)} hs'
+        '${formatDecimal(record.timeEntry.hours, digits: 2)} hs'
         '${record.isTaught ? ' (dictadas)' : ' (tomadas)'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

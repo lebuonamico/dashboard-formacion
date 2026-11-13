@@ -192,7 +192,10 @@ void main() {
         '¿Cómo viene el colaborador seleccionado?',
       );
 
-      expect(assistantContextLabel(context), 'Personas · datos del proyecto');
+      expect(
+        assistantContextLabel(context),
+        'Colaboradores · datos del proyecto',
+      );
       expect(context.data, {
         'origen': origin,
         'pantalla': 'Personas',

@@ -46,6 +46,7 @@ class TeamCard extends StatelessWidget {
         SummaryInfoRow(
           icon: Icons.person_outline,
           text: 'Líder: ${team.leader}',
+          withTooltip: true,
         ),
       ],
       progress: SummaryProgress(
@@ -54,7 +55,7 @@ class TeamCard extends StatelessWidget {
         colors: colors,
         help: isAnnual
             ? 'Colaboradores que tuvieron objetivo en este equipo durante al menos uno de los meses con datos del año.'
-            : 'Personas que cumplen su plan por categoría. El porcentaje de la derecha compara horas realizadas contra objetivo.',
+            : 'Colaboradores que cumplen su plan por categoría. El porcentaje de la derecha compara horas válidas contra objetivo.',
       ),
       footer: SummaryCardFooter(
         completedHours: team.completedHours,

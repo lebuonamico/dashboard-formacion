@@ -36,6 +36,7 @@ class CoursesScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   Expanded(
                     child: coursesAsync.when(
+                      skipLoadingOnReload: true,
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (err, _) => ErrorDataState(
@@ -79,13 +80,12 @@ class _NoCourses extends ConsumerWidget {
           ? const EmptyDataState(
               icon: Icons.search_off_outlined,
               title: 'No se encontraron cursos con los filtros aplicados.',
-              message: 'Probá con otra búsqueda o tipo de curso.',
+              message: 'Probá con otros filtros.',
             )
           : const EmptyDataState(
               icon: Icons.menu_book_outlined,
               title: 'No hay cursos cargados.',
-              message:
-                  'Importá el catálogo de cursos o sincronizalo desde Moodle.',
+              message: 'Importá el catálogo de cursos.',
             ),
     );
   }
@@ -141,20 +141,20 @@ class _CoursesTable extends StatelessWidget {
         DataColumn(label: Text('Carga horaria')),
         DataColumn(
           numeric: true,
-          label: Text('Personas'),
+          label: Text('Colaboradores'),
           tooltip:
-              'Colaboradores distintos que cargaron horas en el CRM '
+              'Colaboradores distintos que declararon horas en el CRM '
               '(en los cursos de dictado, quienes lo dictaron)',
         ),
         DataColumn(
           numeric: true,
           label: Text('Horas CRM'),
-          tooltip: 'Horas cargadas en el CRM para el curso',
+          tooltip: 'Horas declaradas en el CRM para el curso',
         ),
         DataColumn(
           numeric: true,
-          label: Text('Promedio por persona'),
-          tooltip: 'Horas CRM / personas. Comparalo con la carga horaria',
+          label: Text('Promedio por colaborador'),
+          tooltip: 'Horas CRM / colaboradores. Comparalo con la carga horaria',
         ),
         DataColumn(
           numeric: true,
@@ -186,12 +186,12 @@ class _CoursesTable extends StatelessWidget {
               ),
               DataCell(
                 stats.lmsCategory == null
-                    ? const Text('-')
+                    ? Text('—', style: TextStyle(color: cs.onSurfaceVariant))
                     : CourseCategoryChip(type: stats.lmsCategory!),
               ),
               DataCell(
                 Text(
-                  '${stats.course.workloadHours.toStringAsFixed(0)} hs',
+                  '${formatHours(stats.course.workloadHours)} hs',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
@@ -209,7 +209,7 @@ class _CoursesTable extends StatelessWidget {
                 _MetricCell(
                   stats.averageHoursPerPerson == null
                       ? '—'
-                      : '${formatHours(stats.averageHoursPerPerson!)} hs',
+                      : '${formatHoursPrecise(stats.averageHoursPerPerson!)} hs',
                   stats.averageHoursPerPerson == null,
                 ),
               ),

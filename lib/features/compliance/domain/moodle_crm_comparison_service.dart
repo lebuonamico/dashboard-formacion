@@ -40,7 +40,7 @@ class MoodleCrmComparisonService {
       percentageDifference: moodleComparable == 0
           ? null
           : difference / moodleComparable * 100,
-      match: difference.abs() < 0.05,
+      match: difference.abs() < 0.5,
     );
   }
 }

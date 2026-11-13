@@ -23,7 +23,7 @@ class NotifyPendingButton extends ConsumerWidget {
         context,
         plan.skipped.isEmpty
             ? noPendingReminders
-            : 'Ninguna persona con pendientes tiene un mail válido en la '
+            : 'Ningún colaborador con pendientes tiene un mail válido en la '
                   'nómina.',
       );
       return;
@@ -47,7 +47,7 @@ class NotifyPendingButton extends ConsumerWidget {
       AsyncValue(isLoading: true) => 'Cargando datos…',
       AsyncValue(hasError: true) => 'No se pudieron cargar los datos',
       _ =>
-        'Envía un mail a cada persona de los filtros con sus cursos '
+        'Envía un mail a cada colaborador de los filtros con sus cursos '
             'pendientes',
     };
     final cs = context.colorScheme;

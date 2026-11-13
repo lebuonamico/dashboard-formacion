@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/projection/presentation/projection_status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
@@ -67,8 +68,8 @@ class EmployeeProjectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${projection.projection.toStringAsFixed(0)} / '
-            '${projection.goal.toStringAsFixed(0)} h proyectadas a diciembre',
+            '${formatAchievedHours(projection.projection, target: projection.goal)} / '
+            '${formatHours(projection.goal)} hs proyectadas a diciembre',
             style: context.textTheme.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
             ),
@@ -129,8 +130,8 @@ class EmployeeProjectionCard extends StatelessWidget {
                       child: Text(
                         '${category.type.label} · '
                         '${closed ? 'faltaron' : 'faltan'} '
-                        '${category.missing.toStringAsFixed(1)} h'
-                        '${closed ? '' : ' (+${(category.missing / projection.remainingMonths).toStringAsFixed(1)} h/mes)'}',
+                        '${formatMissingHours(category.missing)} hs'
+                        '${closed ? '' : ' (+${formatMissingHours(category.missing / projection.remainingMonths)} hs/mes)'}',
                         key: Key('proyeccion_falta_${category.type.name}'),
                         style: context.textTheme.bodyMedium?.copyWith(
                           color: cs.onSurface,
@@ -151,9 +152,9 @@ class EmployeeProjectionCard extends StatelessWidget {
               for (final category in projection.categories)
                 Text(
                   '${category.type.label}: '
-                  '${category.accumulated.toStringAsFixed(1)} / '
-                  '${category.goal.toStringAsFixed(0)} h · proyecta '
-                  '${category.projected.toStringAsFixed(1)} h '
+                  '${formatAchievedHours(category.accumulated, target: category.goal)} / '
+                  '${formatHours(category.goal)} hs · proyecta '
+                  '${formatAchievedHours(category.projected, target: category.goal)} hs '
                   '${category.arrives ? '✓' : ''}',
                   style: context.textTheme.labelMedium?.copyWith(
                     color: category.arrives

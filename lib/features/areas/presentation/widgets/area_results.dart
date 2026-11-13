@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -84,7 +85,7 @@ class _AreasResultsState extends State<AreasResults> {
                 const Spacer(),
                 Text(
                   widget.areas.length == widget.totalAreas
-                      ? '${widget.totalAreas} áreas en el período'
+                      ? '${countLabel(widget.totalAreas, 'área', 'áreas')} en el período'
                       : '${widget.areas.length} de ${widget.totalAreas} áreas',
                   style: context.textTheme.bodySmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
@@ -165,7 +166,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'No hay áreas que coincidan con la búsqueda.',
+            'Ninguna área coincide con los filtros.',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: context.colorScheme.onSurface,
@@ -173,7 +174,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Probá con otra búsqueda o estado.',
+            'Probá con otros filtros.',
             style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),

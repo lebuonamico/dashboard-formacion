@@ -103,19 +103,20 @@ String? _selectedLabel(WidgetTester tester) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Ver nómina reemplaza el Dashboard y marca Empleados', (
-    tester,
-  ) async {
-    final router = await _showDashboard(tester);
+  testWidgets(
+    'Ver colaboradores reemplaza el Dashboard y marca Colaboradores',
+    (tester) async {
+      final router = await _showDashboard(tester);
 
-    await tester.tap(find.text('Ver nómina'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Ver colaboradores'));
+      await tester.pumpAndSettle();
 
-    expect(router.state.uri.toString(), '/empleados');
-    expect(find.text('Nómina'), findsOneWidget);
-    expect(router.canPop(), isFalse);
-    expect(_selectedLabel(tester), 'Empleados');
-  });
+      expect(router.state.uri.toString(), '/empleados');
+      expect(find.text('Nómina'), findsOneWidget);
+      expect(router.canPop(), isFalse);
+      expect(_selectedLabel(tester), 'Colaboradores');
+    },
+  );
 
   testWidgets('Ver cursos reemplaza el Dashboard y marca Cursos', (
     tester,

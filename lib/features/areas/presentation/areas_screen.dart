@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -36,6 +37,7 @@ class AreasScreen extends ConsumerWidget {
           Expanded(
             child: summaryAsync.when(
               skipLoadingOnRefresh: false,
+              skipLoadingOnReload: true,
               loading: () => Center(
                 child: CircularProgressIndicator(
                   color: context.colorScheme.primary,
@@ -90,14 +92,17 @@ class _AreasContent extends ConsumerWidget {
         const SizedBox(height: 5),
         Text(
           summary.hasData
-              ? 'Seguimiento del avance de ${areas.length} áreas de formación.'
+              ? 'Seguimiento del cumplimiento de '
+                    '${countLabel(areas.length, 'área', 'áreas')}.'
               : 'Seleccioná un período con datos cargados.',
           style: context.textTheme.bodyMedium?.copyWith(
             color: context.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 18),
-        const PeriodFilterPanel(included: 'todas las áreas'),
+        const PeriodFilterPanel(
+          included: 'todas las áreas con colaboradores elegibles',
+        ),
         const SizedBox(height: 22),
         if (!summary.hasData)
           EmptyDataState.periodWithoutData(
@@ -109,7 +114,7 @@ class _AreasContent extends ConsumerWidget {
             icon: Icons.apartment_outlined,
             title: 'No hay áreas con colaboradores elegibles en este período.',
             message:
-                'Verificá la nómina elegible para el período seleccionado.',
+                'Verificá los colaboradores elegibles del período seleccionado.',
           )
         else ...[
           AreasKpiSection(
@@ -117,7 +122,6 @@ class _AreasContent extends ConsumerWidget {
             totalEmployees: summary.employeeCount,
             completedHours: summary.completedHours,
             targetHours: summary.targetHours,
-            hoursDeviation: summary.hoursDeviation,
             complianceGlobal: summary.overallCompletion,
             isAnnual: isAnnual,
             year: selectedYear,

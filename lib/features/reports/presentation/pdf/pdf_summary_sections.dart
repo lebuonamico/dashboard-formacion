@@ -6,6 +6,7 @@ import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -35,8 +36,9 @@ class KpisPdf extends pw.StatelessWidget {
       ),
       _CardKpiPdf(
         title: 'HORAS VÁLIDAS',
-        value: pdfHours(r.hours),
-        detail: 'de ${pdfWholeHours(r.target)} · faltan ${pdfHours(missing)}',
+        value: pdfAchievedHours(r.hours, target: r.target),
+        detail:
+            'de ${pdfHours(r.target)} · faltan ${formatMissingHours(missing)} hs',
         progress: r.target == 0 ? 0 : r.hours / r.target,
         color: PdfReportColors.brand,
       ),
@@ -142,10 +144,10 @@ class PdfPeopleStatus extends pw.StatelessWidget {
 
   PdfPeopleStatus(this.report);
 
-  static const _labels = {
-    ReportLevel.ok: 'Cumple (100%)',
-    ReportLevel.attention: 'Atención (70 a 99%)',
-    ReportLevel.critical: 'No cumple (menos de 70%)',
+  static final _labels = {
+    ReportLevel.ok: '${ReportLevel.ok.label} (100% o más)',
+    ReportLevel.attention: '${ReportLevel.attention.label} (70 a 99%)',
+    ReportLevel.critical: '${ReportLevel.critical.label} (menos de 70%)',
   };
 
   @override
@@ -161,7 +163,7 @@ class PdfPeopleStatus extends pw.StatelessWidget {
         PdfSectionTitle(
           'Estado de cumplimiento',
           lowered:
-              'Cómo se reparten las $total personas evaluadas en el semáforo',
+              'Cómo se reparten los $total colaboradores evaluados en el semáforo',
         ),
         // Stacked bar: a quick read of the proportion.
         pw.ClipRRect(
@@ -231,7 +233,7 @@ class PdfCategories extends pw.StatelessWidget {
         PdfSectionTitle(
           'Horas por categoría',
           lowered:
-              'Horas válidas para la meta: cada persona suma hasta su objetivo en cada categoría.',
+              'Horas válidas para el objetivo: cada colaborador suma hasta su objetivo en cada categoría.',
         ),
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
@@ -246,7 +248,7 @@ class PdfCategories extends pw.StatelessWidget {
               _header('VÁLIDAS', width: 70, right: true),
               _header('OBJETIVO', width: 70, right: true),
               pw.SizedBox(width: 16),
-              _header('AVANCE'),
+              _header('CUMPLIMIENTO'),
               _header('%', width: 40, right: true),
             ],
           ),
@@ -363,7 +365,7 @@ class PdfSources extends pw.StatelessWidget {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         PdfSectionTitle(
-          'Moodle vs CRM',
+          'LMS vs CRM',
           lowered:
               'Horas registradas en cada fuente, sin tope. Libres y Dictado solo existen en CRM.',
         ),
@@ -387,7 +389,7 @@ class PdfSources extends pw.StatelessWidget {
               ),
               children: [
                 _header('CATEGORÍA', right: false),
-                _header('MOODLE (LMS)'),
+                _header('LMS'),
                 _header('CRM'),
                 _header('DIFERENCIA'),
               ],
@@ -402,7 +404,7 @@ class PdfSources extends pw.StatelessWidget {
                   _cell(pdfHours(c.crm[type] ?? 0)),
                   _cell(
                     comparables.contains(type)
-                        ? hoursDifferencePdf(
+                        ? formatHoursDeviation(
                             (c.crm[type] ?? 0) - (c.moodle[type] ?? 0),
                           )
                         : '-',
@@ -448,7 +450,7 @@ class PdfSources extends pw.StatelessWidget {
       null => '',
     };
     return 'En Negocio y Blandas, CRM registra ${pdfHours(difference.abs())} '
-        '${difference > 0 ? 'más' : 'menos'} que Moodle$percentage.';
+        '${difference > 0 ? 'más' : 'menos'} que el LMS$percentage.';
   }
 
   static const _padding = pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8);
@@ -527,7 +529,7 @@ class PdfEvolution extends pw.StatelessWidget {
                   child: pw.Column(
                     children: [
                       pw.Text(
-                        pdfHours(point.hours),
+                        pdfPreciseHours(point.hours),
                         style: pw.TextStyle(fontWeight: bold, fontSize: 8),
                       ),
                       pw.SizedBox(height: 3),

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/core/period/presentation/period_filter_provider.dart';
@@ -32,7 +33,9 @@ class TeamDetailKpiSection extends ConsumerWidget {
         DashboardKpiCard(
           title: 'INTEGRANTES',
           value: '${team.memberCount}',
-          suffix: 'nómina del equipo',
+          suffix: team.memberCount == 1
+              ? 'colaborador del equipo'
+              : 'colaboradores del equipo',
           progress: team.memberCount == 0
               ? 0
               : team.membersOnTarget / team.memberCount,
@@ -53,7 +56,7 @@ class TeamDetailKpiSection extends ConsumerWidget {
         ),
         DashboardKpiCard(
           title: 'OBJETIVO DEL PERÍODO',
-          value: _formatHours(team.targetHours),
+          value: '${formatHours(team.targetHours)} hs',
           suffix: 'según seniority',
           progress: 1,
           progressLabel: isAnnual
@@ -81,6 +84,4 @@ class TeamDetailKpiSection extends ConsumerWidget {
       ],
     );
   }
-
-  String _formatHours(double value) => '${value.toStringAsFixed(1)} h';
 }

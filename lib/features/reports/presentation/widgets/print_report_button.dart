@@ -23,7 +23,9 @@ class PrintReportButton extends ConsumerWidget {
   ) => runWithFeedback(
     context,
     action: () => ref.read(reportPrintProvider.notifier).printReport(report),
-    failure: (error) => 'No se pudo generar el reporte: $error',
+    failure: (error) => error is FormatException
+        ? error.message
+        : 'No se pudo generar el reporte. Intentá nuevamente.',
   );
 
   @override

@@ -9,5 +9,5 @@ String? hoursErrorText(
   HoursIssue.notANumber => 'Ingresá un número',
   HoursIssue.negative => 'No puede ser negativo',
   HoursIssue.aboveMax =>
-    'Máximo ${TrainingPlanService.maxHoursPerCategory.toStringAsFixed(0)} h',
+    'Máximo ${TrainingPlanService.maxHoursPerCategory.toStringAsFixed(0)} hs',
 };

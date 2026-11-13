@@ -49,7 +49,7 @@ class AreasCategoryDistribution extends StatelessWidget {
                   Tooltip(
                     message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
-                        : 'Horas validadas del período que aplican al objetivo de cada colaborador, agrupadas por categoría.',
+                        : 'Horas válidas del período que aplican al objetivo de cada colaborador, agrupadas por categoría.',
                     child: Icon(
                       Icons.info_outline,
                       size: 16,
@@ -69,9 +69,9 @@ class AreasCategoryDistribution extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
                 child: LegendDonutChart(
-                  centerValue: total.toStringAsFixed(1),
+                  centerValue: '${total.round()}',
                   centerLabel: 'HORAS',
-                  valueSuffix: ' h',
+                  valueSuffix: ' hs',
                   slices: [
                     DonutSlice(
                       label: CourseCategory.businessSkills.shortLabel,
@@ -90,14 +90,14 @@ class AreasCategoryDistribution extends StatelessWidget {
                     DonutSlice(
                       label: CourseCategory.exploration.shortLabel,
                       help:
-                          'Horas de formación libre o exploratoria realizadas por los colaboradores de las áreas.',
+                          'Horas de formación libre o exploratoria realizadas por los colaboradores.',
                       value: explorationHours,
                       color: context.colors.exploration.text,
                     ),
                     DonutSlice(
                       label: CourseCategory.teaching.shortLabel,
                       help:
-                          'Horas cargadas como dictado de capacitaciones por colaboradores de las áreas.',
+                          'Horas declaradas como dictado de capacitaciones por los colaboradores.',
                       value: teachingHours,
                       color: context.colors.teaching.text,
                     ),

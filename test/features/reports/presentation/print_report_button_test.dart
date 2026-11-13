@@ -136,7 +136,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text('No se pudo generar el reporte: Bad state: sin fuentes'),
+      find.text('No se pudo generar el reporte. Intentá nuevamente.'),
       findsOne,
     );
     expect(_button(tester).onPressed, isNotNull);

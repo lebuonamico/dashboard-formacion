@@ -12,6 +12,7 @@ import 'package:app_finnegans/features/certifications/presentation/certification
 import 'package:app_finnegans/features/time_entries/presentation/time_entries_screen.dart';
 import 'package:app_finnegans/features/courses/presentation/courses_screen.dart';
 import 'package:app_finnegans/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_detail_screen.dart';
 import 'package:app_finnegans/features/employees/presentation/employees_screen.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
@@ -235,7 +236,7 @@ void main() {
       );
       expect(hoursCard, findsOneWidget);
       expect(
-        find.descendant(of: hoursCard, matching: find.text('0.0 h')),
+        find.descendant(of: hoursCard, matching: find.text('0 hs')),
         findsOneWidget,
       );
     });
@@ -270,7 +271,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('No hay áreas que coincidan con la búsqueda.'),
+          find.text('Ninguna área coincide con los filtros.'),
           findsOneWidget,
         );
         expect(find.textContaining('No hay datos cargados'), findsNothing);
@@ -291,7 +292,7 @@ void main() {
       expect(find.text('Estado de las áreas'), findsOneWidget);
       expect(find.text('Tecnología'), findsOneWidget);
       expect(find.text('Equipos: Plataforma'), findsOneWidget);
-      expect(find.text('Ver área'), findsOneWidget);
+      expect(find.text('Ver detalle'), findsOneWidget);
     });
 
     testWidgets('el filtro por estado deja afuera las áreas que no coinciden', (
@@ -310,9 +311,9 @@ void main() {
           .select('Estado', {'En objetivo'});
       await tester.pumpAndSettle();
 
-      expect(find.text('Ver área'), findsNothing);
+      expect(find.text('Ver detalle'), findsNothing);
       expect(
-        find.text('No hay áreas que coincidan con la búsqueda.'),
+        find.text('Ninguna área coincide con los filtros.'),
         findsOneWidget,
       );
     });
@@ -346,7 +347,7 @@ void main() {
       );
 
       expect(find.text('OBJETIVO DEL PERÍODO'), findsOneWidget);
-      expect(find.text('Avance del área'), findsOneWidget);
+      expect(find.text('Cumplimiento del área'), findsOneWidget);
       expect(find.text('Equipos del área'), findsOneWidget);
       // Una vez en la tarjeta del equipo y otra en la columna Equipo.
       expect(find.text('Plataforma'), findsNWidgets(2));
@@ -395,7 +396,7 @@ void main() {
     },
   );
 
-  group('Empleados', () {
+  group('Colaboradores', () {
     testWidgets('sin nómina importada lo indica', (tester) async {
       await _show(
         tester,
@@ -404,7 +405,7 @@ void main() {
         employees: const [],
       );
 
-      expect(find.text('No hay empleados cargados.'), findsOneWidget);
+      expect(find.text('No hay colaboradores cargados.'), findsOneWidget);
     });
 
     testWidgets('con nómina y un filtro sin coincidencias lo distingue', (
@@ -422,13 +423,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Ningún empleado coincide con los filtros.'),
+        find.text('Ningún colaborador coincide con los filtros.'),
         findsOneWidget,
       );
-      expect(find.text('No hay empleados cargados.'), findsNothing);
+      expect(find.text('No hay colaboradores cargados.'), findsNothing);
     });
 
-    testWidgets('con muchos empleados pagina el directorio', (tester) async {
+    testWidgets('con muchos colaboradores pagina el directorio', (
+      tester,
+    ) async {
       final employees = [
         for (var i = 0; i < 80; i++)
           Employee(
@@ -449,7 +452,7 @@ void main() {
         employees: employees,
       );
 
-      expect(find.textContaining('de 80 empleados'), findsOneWidget);
+      expect(find.textContaining('de 80 colaboradores'), findsOneWidget);
       expect(find.textContaining('Página 1 de'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Página siguiente'));
@@ -518,7 +521,7 @@ void main() {
           .read(
             dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
           )
-          .select('Persona / Legajo', {'inexistente'});
+          .select('Colaborador / Legajo', {'inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -719,6 +722,90 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Fuera de la nómina'), findsOneWidget);
+    });
+  });
+
+  group('Perfil del colaborador', () {
+    final newcomer = Employee(
+      employeeId: '200',
+      firstName: 'Bruno',
+      lastName: 'Gómez',
+      seniority: Seniority.junior1,
+      area: 'Tecnología',
+      email: 'bruno@finnegans.com',
+      team: 'Plataforma',
+      hireDate: DateTime(_year, _month + 1, 1),
+    );
+
+    Future<void> showProfile(WidgetTester tester, String employeeId) => _show(
+      tester,
+      route: '/empleados/$employeeId',
+      screen: (_) => EmployeeDetailScreen(employeeId: employeeId),
+      employees: [_employee, newcomer],
+      timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+    );
+
+    testWidgets('antes del ingreso avisa que no hay datos en lugar de 0', (
+      tester,
+    ) async {
+      await showProfile(tester, newcomer.employeeId);
+
+      expect(
+        find.text('No hay datos cargados del colaborador para Junio 2026.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Ingresó el 01/07/2026: sus datos se cuentan desde ese mes.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Desglose del plan'), findsNothing);
+      expect(find.textContaining('hs válidas'), findsNothing);
+    });
+
+    testWidgets('sin datos para proyectar la sección sigue y lo avisa', (
+      tester,
+    ) async {
+      await showProfile(tester, newcomer.employeeId);
+
+      expect(find.text('Proyección a fin de año'), findsOneWidget);
+      expect(find.byKey(const Key('proyeccion_sin_datos')), findsOneWidget);
+      expect(
+        find.textContaining(
+          'No hay datos cargados del colaborador hasta Junio',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('con datos muestra el desglose y la proyección', (
+      tester,
+    ) async {
+      await showProfile(tester, _employee.employeeId);
+
+      expect(find.textContaining('No hay datos cargados'), findsNothing);
+      expect(find.textContaining('Desglose del plan'), findsOneWidget);
+      expect(find.text('Proyección a fin de año'), findsOneWidget);
+      expect(
+        find.byKey(const Key('proyeccion_empleado_estado')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('un período sin datos de nadie muestra el aviso del período', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/empleados/${_employee.employeeId}',
+        screen: (_) => EmployeeDetailScreen(employeeId: _employee.employeeId),
+        timeEntries: [_timeEntry(DateTime(_year, 3, 10))],
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('proyeccion_sin_datos')), findsOneWidget);
     });
   });
 }

@@ -61,13 +61,13 @@ void main() {
             find.byKey(const Key('proyeccion_falta_businessSkills')),
           )
           .data,
-      'Habilidades de negocio · faltan 3.0 h (+1.0 h/mes)',
+      'Habilidades de negocio · faltan 3 hs (+1 hs/mes)',
     );
     expect(
       tester
           .widget<Text>(find.byKey(const Key('proyeccion_falta_softSkills')))
           .data,
-      'Habilidades blandas · faltan 2.0 h (+0.7 h/mes)',
+      'Habilidades blandas · faltan 2 hs (+1 hs/mes)',
     );
     // Libres llega: no se pide reforzarla.
     expect(find.byKey(const Key('proyeccion_falta_exploration')), findsNothing);

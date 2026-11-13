@@ -21,26 +21,26 @@ Future<void> _show(WidgetTester tester, List<MonthlyHours> points) =>
     );
 
 void main() {
-  testWidgets('La meta es la del último mes, no 8 h fijas', (tester) async {
+  testWidgets('El objetivo es el del último mes, no 8 h fijas', (tester) async {
     await _show(tester, [
       MonthlyHours(month: DateTime(2026, 8), hours: 5, target: 8),
       MonthlyHours(month: DateTime(2026, 9), hours: 4, target: 6.5),
     ]);
 
-    expect(find.text('Meta: 6.5 h'), findsOne);
+    expect(find.text('Objetivo: 6,5 hs'), findsOne);
     expect(
-      find.text('Horas válidas promedio por colaborador vs meta (6,5 h)'),
+      find.text('Horas válidas promedio por colaborador vs objetivo (6,5 hs)'),
       findsOne,
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Sin meta ni horas no rompe el gráfico', (tester) async {
+  testWidgets('Sin objetivo ni horas no rompe el gráfico', (tester) async {
     await _show(tester, [
       MonthlyHours(month: DateTime(2026, 9), hours: 0, target: 0),
     ]);
 
-    expect(find.text('Meta: 0.0 h'), findsOne);
+    expect(find.text('Objetivo: 0 hs'), findsOne);
     expect(tester.takeException(), isNull);
   });
 
@@ -88,6 +88,6 @@ void main() {
 
     expect(attempts, 2);
     expect(find.byType(ErrorDataState), findsNothing);
-    expect(find.text('Meta: 8.0 h'), findsOne);
+    expect(find.text('Objetivo: 8 hs'), findsOne);
   });
 }

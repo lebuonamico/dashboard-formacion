@@ -11,6 +11,8 @@ Future<({String email, UserRole role})?> showUserCreationDialog(
 ) {
   return showDialog<({String email, UserRole role})>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => const _UserCreationDialog(),
   );
 }
@@ -22,6 +24,8 @@ Future<UserRole?> showRoleChangeDialog(
 }) {
   return showDialog<UserRole>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => _RoleChangeDialog(email: email, currentRole: currentRole),
   );
 }
@@ -39,6 +43,8 @@ Future<Set<String>?> showLeadersDialog(
 }) {
   return showDialog<Set<String>>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => _LeadersDialog(
       title: title,
       subtitle: subtitle,

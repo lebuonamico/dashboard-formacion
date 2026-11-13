@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
@@ -10,7 +11,7 @@ import 'package:flutter/material.dart';
 
 /// Annual: the year-to-date compliance and its change in points against the
 /// previous month. Monthly: the month's compliance and the change in hours
-/// per person. [color] replaces the traffic-light color when the section has
+/// per employee. [color] replaces the traffic-light color when the section has
 /// its own status.
 class ComplianceKpiCard extends StatelessWidget {
   final bool isAnnual;
@@ -67,32 +68,39 @@ class ComplianceKpiCard extends StatelessWidget {
     }
 
     final previous = variation?.previousHoursPerPerson;
-    final hours = variation?.hours;
+    // The badge keeps one decimal, so the two figures it compares show one
+    // too, and it is their difference as shown: 4,2 and 4,4 read -0,2, not
+    // the -0,1 of the unrounded 4.24 and 4.35. Same tenths as
+    // `formatHoursPrecise`.
+    int tenths(double hours) => (hours * 10).round();
+    final shownChange = variation == null || previous == null
+        ? null
+        : (tenths(variation.hoursPerPerson) - tenths(previous)) / 10;
     return DashboardKpiCard(
-      title: 'CUMPLIMIENTO · ${monthName(month).toUpperCase()}',
+      title: 'CUMPLIMIENTO · ${monthName(month).toUpperCase()} $year',
       value: formatPercentage(percentage),
       suffix: 'del objetivo del mes',
       progress: (percentage / 100).clamp(0.0, 1.0),
       progressLabel: variation == null
           ? ''
-          : '${variation.hoursPerPerson.toStringAsFixed(1)} h por persona',
+          : '${formatHoursPrecise(variation.hoursPerPerson)} hs por colaborador',
       footer: previous == null
           ? 'Sin datos del mes anterior'
-          : 'Mes anterior: ${previous.toStringAsFixed(1)} h',
-      badge: hours == null
+          : 'Mes anterior: ${formatHoursPrecise(previous)} hs',
+      badge: shownChange == null
           ? null
           : VariationBadge(
               key: const Key('kpi_variacion_mes'),
-              value: hours,
-              unit: 'h',
+              value: shownChange,
+              unit: 'hs',
             ),
       icon: Icons.event_available_outlined,
       color: colorCard,
       help:
           'Horas válidas del mes sobre el objetivo del mes de los colaboradores '
-          'elegibles, según su seniority. Cada persona suma como máximo su '
+          'elegibles, según su seniority. Cada colaborador suma como máximo su '
           'objetivo en cada categoría. El recuadro compara las horas por '
-          'persona con el mes anterior.',
+          'colaborador con el mes anterior.',
     );
   }
 }
@@ -113,18 +121,18 @@ class ProjectionKpiCard extends StatelessWidget {
       title: 'PROYECCIÓN ANUAL',
       value: formatPercentage(projection.percentage),
       suffix:
-          '${projection.projection.toStringAsFixed(0)} / '
-          '${goal.toStringAsFixed(0)} h por persona',
+          '${formatAchievedHours(projection.projection, target: goal)} / '
+          '${formatHours(goal)} hs por colaborador',
       suffixBelow: true,
       progress: goal == 0 ? 1 : (projection.projection / goal).clamp(0.0, 1.0),
       progressLabel:
           '${projection.status.label} · ${projection.arrive} de '
           '${projection.employeeCount} ${closed ? 'cumplieron' : 'llegan'}',
       footer: closed
-          ? 'Año cerrado: ${formatPercentage(projection.percentage)} de la meta'
+          ? 'Año cerrado: ${formatPercentage(projection.percentage)} del objetivo'
           : projection.adjustment > 0
-          ? 'Ajuste: +${projection.adjustment.toStringAsFixed(1)} h/mes por persona'
-          : 'En camino a la meta',
+          ? 'Ajuste: +${formatMissingHours(projection.adjustment)} hs/mes por colaborador'
+          : 'En camino al objetivo',
       badge: variation == null
           ? null
           : VariationBadge(
@@ -140,10 +148,10 @@ class ProjectionKpiCard extends StatelessWidget {
       color: colors.text,
       help:
           'Estimación a diciembre: lo acumulado más la tendencia de cada '
-          'colaborador según sus meses con datos, sobre la meta del año. Las '
-          'horas de una persona no cubren a otra, ni las de una categoría a '
-          'otra. En camino: 100 % o más; Alcanzable: desde 85 %; En riesgo: '
-          'menos de 85 %. El ajuste son las horas por persona y por mes que '
+          'colaborador según sus meses con datos, sobre el objetivo del año. Las '
+          'horas de un colaborador no cubren a otro, ni las de una categoría a '
+          'otra. En camino: 100% o más; Alcanzable: desde 85%; En riesgo: '
+          'menos de 85%. El ajuste son las horas por colaborador y por mes que '
           'faltan para llegar.',
     );
   }

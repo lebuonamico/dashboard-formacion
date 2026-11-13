@@ -21,7 +21,8 @@ class MoodleCrmComparison {
   /// The difference as a percentage of Moodle; `null` without Moodle hours.
   final double? percentageDifference;
 
-  /// Less than 0.05 h apart counts as matching.
+  /// Less than half an hour apart counts as matching: the screens show whole
+  /// hours, so a smaller difference would read as 0.
   final bool match;
 
   const MoodleCrmComparison({

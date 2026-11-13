@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/imports/domain/import_file.dart';
 import 'package:app_finnegans/features/imports/presentation/providers/import_notifier.dart';
@@ -5,7 +6,7 @@ import 'package:flutter/material.dart';
 
 String importErrorMessage(Object error) => error is FormatException
     ? error.message
-    : 'No se pudo importar el archivo: $error';
+    : 'No se pudo importar el archivo. Intentá nuevamente.';
 
 extension ImportFileTypeLabels on ImportFileType {
   /// Suffix of the widget keys (`importar_nomina`, `loading_nomina`…).
@@ -17,7 +18,7 @@ extension ImportFileTypeLabels on ImportFileType {
   };
 
   String get sectionTitle => switch (this) {
-    ImportFileType.payroll => 'Carga de nómina de empleados',
+    ImportFileType.payroll => 'Carga de nómina de colaboradores',
     ImportFileType.courseCatalog => 'Carga de cursos',
     ImportFileType.timeEntries => 'Carga de horas CRM',
     ImportFileType.certifications => 'Certificaciones LMS',
@@ -25,7 +26,7 @@ extension ImportFileTypeLabels on ImportFileType {
 
   String get sectionSubtitle => switch (this) {
     ImportFileType.payroll =>
-      'Importá un archivo Excel o CSV con los datos de los empleados',
+      'Importá un archivo Excel o CSV con los datos de los colaboradores',
     ImportFileType.courseCatalog =>
       'Importá el catálogo de cursos desde Excel / CSV',
     ImportFileType.timeEntries =>
@@ -43,13 +44,13 @@ extension ImportFileTypeLabels on ImportFileType {
 
   String get subtitle => switch (this) {
     ImportFileType.payroll =>
-      'Cargá la nómina de empleados para actualizar el sistema',
+      'Cargá la nómina de colaboradores para actualizar el sistema',
     ImportFileType.courseCatalog =>
       'Tipos LMS: Habilidades de negocio y Habilidades blandas. El área y el instructor se completan desde las cursadas.',
     ImportFileType.timeEntries =>
       'Solo se consideran registros del proyecto 01 - Capacitación',
     ImportFileType.certifications =>
-      'ID empleado, nombre del curso, finalización y fecha',
+      'ID colaborador, nombre del curso, finalización y fecha',
   };
 
   String get buttonLabel => switch (this) {
@@ -109,15 +110,21 @@ extension ImportFileTypeLabels on ImportFileType {
 
   String successMessage(ImportOutcome outcome) {
     final count = outcome.result.processedRecords;
+    final one = count == 1;
+    final records = countLabel(count, 'registro', 'registros');
+    final from = 'desde ${outcome.fileName}.';
     return switch (this) {
       ImportFileType.payroll =>
-        'Se importaron $count registros desde ${outcome.fileName}.',
+        '${one ? 'Se importó' : 'Se importaron'} $records $from',
       ImportFileType.courseCatalog =>
-        'Se cargaron $count cursos desde ${outcome.fileName}.',
+        '${one ? 'Se cargó' : 'Se cargaron'} '
+            '${countLabel(count, 'curso', 'cursos')} $from',
       ImportFileType.timeEntries =>
-        'Se cargaron $count registros desde ${outcome.fileName}.',
+        '${one ? 'Se cargó' : 'Se cargaron'} $records $from',
       ImportFileType.certifications =>
-        'Se importaron $count certificaciones LMS.',
+        '${one ? 'Se importó' : 'Se importaron'} '
+            '${countLabel(count, 'certificación LMS', 'certificaciones LMS')} '
+            '$from',
     };
   }
 }

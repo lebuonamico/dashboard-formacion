@@ -1,13 +1,17 @@
 import 'package:app_finnegans/core/widgets/page_window.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/member_order.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +23,7 @@ const _columns = <(String, MemberSort?)>[
   ('Legajo', MemberSort.employeeId),
   ('Colaborador', MemberSort.employee),
   ('Seniority', MemberSort.seniority),
-  ('Horas realizadas / objetivo', MemberSort.hours),
+  ('Horas válidas / objetivo', MemberSort.hours),
   ('Cumplimiento', MemberSort.compliance),
   ('Por categoría', null),
 ];
@@ -175,7 +179,7 @@ class _MembersPage extends ConsumerWidget {
 
     return DataRow(
       onSelectChanged: (_) => context.push(
-        '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+        '/empleados/${Uri.encodeComponent(employee.employeeId)}?origen=equipos',
       ),
       cells: [
         DataCell(Text(employee.employeeId)),
@@ -185,10 +189,10 @@ class _MembersPage extends ConsumerWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
-        DataCell(Text(employee.seniority.label)),
+        DataCell(SeniorityChip(seniority: employee.seniority)),
         DataCell(
           Text(
-            '${member.totalCreditedHours.toStringAsFixed(1)} / ${member.totalRequiredHours.toStringAsFixed(1)} h',
+            '${formatAchievedHours(member.totalCreditedHours, target: member.totalRequiredHours)} / ${formatHours(member.totalRequiredHours)} hs',
           ),
         ),
         DataCell(
@@ -196,9 +200,10 @@ class _MembersPage extends ConsumerWidget {
             formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: member.meetsTarget
-                  ? context.colors.success.text
-                  : context.colors.warning.text,
+              color: const ComplianceLevelService()
+                  .fromPercentage(member.totalPercentage)
+                  .colors(context)
+                  .text,
             ),
           ),
         ),

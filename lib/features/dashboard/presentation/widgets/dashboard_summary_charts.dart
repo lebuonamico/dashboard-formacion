@@ -1,4 +1,9 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/widgets/donut_chart.dart';
@@ -23,7 +28,10 @@ class DashboardSummaryCharts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return distributionAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
@@ -80,19 +88,19 @@ class _ComplianceChartCard extends StatelessWidget {
         context.colors.danger;
     final legend = [
       _ChartLegendItem(
-        label: 'Cumple (>=100%)',
+        label: '${ComplianceLevel.onTarget.label} (≥100%)',
         count: summary.onTarget,
         color: green,
         backgroundColor: greenBackground,
       ),
       _ChartLegendItem(
-        label: 'Atención (70-84%)',
+        label: '${ComplianceLevel.atRisk.label} (70-99%)',
         count: summary.atRisk,
         color: amber,
         backgroundColor: amberBackground,
       ),
       _ChartLegendItem(
-        label: 'No cumple (<70%)',
+        label: '${ComplianceLevel.critical.label} (<70%)',
         count: summary.critical,
         color: red,
         backgroundColor: redBackground,
@@ -101,10 +109,14 @@ class _ComplianceChartCard extends StatelessWidget {
 
     return _SummaryCard(
       title: 'Estado de cumplimiento',
-      subtitle: 'Distribución semáforo de las ${summary.total} personas',
-      trailing: 'Meta según seniority',
-      footer: '${summary.onTarget} personas alcanzaron el 100% de la meta',
-      action: 'Ver nómina',
+      subtitle:
+          'Distribución del semáforo de '
+          '${countLabel(summary.total, 'colaborador', 'colaboradores')}',
+      trailing: 'Objetivo según seniority',
+      footer:
+          '${countLabel(summary.onTarget, 'colaborador', 'colaboradores')} '
+          '${summary.onTarget == 1 ? 'alcanzó' : 'alcanzaron'} el 100% del objetivo',
+      action: 'Ver colaboradores',
       onAction: () => context.go('/empleados'),
       child: Row(
         children: [
@@ -117,8 +129,8 @@ class _ComplianceChartCard extends StatelessWidget {
               DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
               DonutChartSegment(value: summary.critical.toDouble(), color: red),
             ],
-            centerText: '${(summary.onTargetShare * 100).toStringAsFixed(0)}%',
-            centerSubtitle: 'EN META',
+            centerText: formatPercentage(summary.onTargetShare * 100),
+            centerSubtitle: 'EN OBJETIVO',
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -152,10 +164,10 @@ class _CategoryChartCard extends StatelessWidget {
     return _SummaryCard(
       title: 'Distribución por categorías',
       subtitle:
-          '${summary.totalHours.toStringAsFixed(0)} de '
-          '${summary.totalTarget.toStringAsFixed(0)} h válidas',
-      trailing: '4 Pilares',
-      footer: 'Capacitaciones distribuidas entre los 4 pilares',
+          '${formatAchievedHours(summary.totalHours, target: summary.totalTarget)} de '
+          '${formatHours(summary.totalTarget)} hs válidas',
+      trailing: '4 categorías',
+      footer: 'Horas válidas repartidas entre las 4 categorías',
       action: 'Ver cursos',
       onAction: () => context.go('/cursos'),
       child: summary.totalHours == 0
@@ -171,11 +183,11 @@ class _CategoryChartCard extends StatelessWidget {
                       ),
                   ],
                   centerText:
-                      '${summary.averageHours.toStringAsFixed(1)} / '
-                      '${summary.averageTarget.toStringAsFixed(0)} h',
-                  // Smaller than the default so "x / y h" fits.
+                      '${formatAchievedHours(summary.averageHours, target: summary.averageTarget)} / '
+                      '${formatHours(summary.averageTarget)} hs',
+                  // Smaller than the default so "x / y hs" fits.
                   centerTextStyle: context.textTheme.bodyLarge,
-                  centerSubtitle: 'POR PERSONA',
+                  centerSubtitle: 'POR COLABORADOR',
                 ),
                 const SizedBox(width: 18),
                 Expanded(
@@ -398,8 +410,8 @@ class _LegendList extends StatelessWidget {
                 ),
                 Text(
                   showPercentages
-                      ? '${item.value!.toStringAsFixed(1)} h (${((item.value! / total) * 100).toStringAsFixed(0)}%)'
-                      : '${item.count} (${((item.count! / total) * 100).toStringAsFixed(0)}%)',
+                      ? '${formatHours(item.value!)} hs (${formatPercentage(item.value! / total * 100)})'
+                      : '${item.count} (${formatPercentage(item.count! / total * 100)})',
                   style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colors.intermediateText,

@@ -9,23 +9,25 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const _LoginCard(),
-              const SizedBox(height: 24),
+              _LoginCard(),
+              SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _FooterLink('Soporte', () {}),
-                  const _FooterDivider(),
-                  _FooterLink('Política de privacidad', () {}),
-                  const _FooterDivider(),
-                  _FooterLink('Términos de servicio', () {}),
+                  // Plain text until the pages exist: a link that does
+                  // nothing reads as broken.
+                  _FooterText('Soporte'),
+                  _FooterDivider(),
+                  _FooterText('Política de privacidad'),
+                  _FooterDivider(),
+                  _FooterText('Términos de servicio'),
                 ],
               ),
             ],
@@ -128,7 +130,7 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Inicia sesión con tu cuenta corporativa\npara acceder al sistema.',
+          'Iniciá sesión con tu cuenta corporativa\npara acceder al sistema.',
           textAlign: TextAlign.center,
           style: context.textTheme.bodySmall?.copyWith(
             color: cs.onSurfaceVariant,
@@ -171,10 +173,10 @@ class _GoogleSignInButton extends ConsumerWidget {
               dimension: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          const SizedBox(width: 12),
+          if (busy) const SizedBox(width: 12),
           Text(
             auth.isValidatingAuthorization
-                ? 'Validando autorización...'
+                ? 'Validando autorización…'
                 : 'Iniciar sesión con Google',
             style: context.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
@@ -232,21 +234,17 @@ class _SecureConnection extends StatelessWidget {
   }
 }
 
-class _FooterLink extends StatelessWidget {
+class _FooterText extends StatelessWidget {
   final String text;
-  final VoidCallback onTap;
 
-  const _FooterLink(this.text, this.onTap);
+  const _FooterText(this.text);
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Text(
-      text,
-      style: context.textTheme.labelMedium?.copyWith(
-        color: context.colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w400,
-      ),
+  Widget build(BuildContext context) => Text(
+    text,
+    style: context.textTheme.labelMedium?.copyWith(
+      color: context.colorScheme.onSurfaceVariant,
+      fontWeight: FontWeight.w400,
     ),
   );
 }

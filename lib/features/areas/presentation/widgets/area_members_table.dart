@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
@@ -8,6 +9,7 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/member_order.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
@@ -25,7 +27,7 @@ const _columns = <(String, MemberSort?)>[
   ('Colaborador', MemberSort.employee),
   ('Equipo', MemberSort.team),
   ('Seniority', MemberSort.seniority),
-  ('Horas realizadas / objetivo', MemberSort.hours),
+  ('Horas válidas / objetivo', MemberSort.hours),
   ('Cumplimiento', MemberSort.compliance),
   ('Por categoría', null),
 ];
@@ -215,7 +217,7 @@ class _MembersPage extends ConsumerWidget {
 
     return DataRow(
       onSelectChanged: (_) => context.push(
-        '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+        '/empleados/${Uri.encodeComponent(employee.employeeId)}?origen=areas',
       ),
       cells: [
         DataCell(Text(employee.employeeId)),
@@ -236,7 +238,7 @@ class _MembersPage extends ConsumerWidget {
         DataCell(SeniorityChip(seniority: employee.seniority)),
         DataCell(
           Text(
-            '${member.totalCreditedHours.toStringAsFixed(1)} / ${member.totalRequiredHours.toStringAsFixed(1)} h',
+            '${formatAchievedHours(member.totalCreditedHours, target: member.totalRequiredHours)} / ${formatHours(member.totalRequiredHours)} hs',
           ),
         ),
         DataCell(
@@ -244,9 +246,10 @@ class _MembersPage extends ConsumerWidget {
             formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: member.meetsTarget
-                  ? context.colors.success.text
-                  : context.colors.warning.text,
+              color: const ComplianceLevelService()
+                  .fromPercentage(member.totalPercentage)
+                  .colors(context)
+                  .text,
             ),
           ),
         ),

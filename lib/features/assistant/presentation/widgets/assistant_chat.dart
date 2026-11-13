@@ -865,7 +865,7 @@ class _EditorField extends StatelessWidget {
                 // The container draws the box: the field goes without the
                 // theme's fill and borders.
                 decoration: const InputDecoration(
-                  hintText: 'Preguntale algo sobre la formación...',
+                  hintText: 'Preguntale algo sobre la formación…',
                   hintMaxLines: 2,
                   constraints: BoxConstraints(minHeight: 56),
                   counterText: '',
@@ -1232,7 +1232,7 @@ class _AnalyzingQueryState extends State<_AnalyzingQuery>
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Analizando tu consulta...',
+                'Analizando tu consulta…',
                 style: context.textTheme.bodySmall?.copyWith(
                   color: context.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,

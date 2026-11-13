@@ -106,7 +106,7 @@ void main() {
     final repository = _PlanFake();
     final container = await _showEditor(tester, repository);
 
-    expect(_total(tester, Seniority.junior1), '8 h');
+    expect(_total(tester, Seniority.junior1), '8 hs');
     expect(_canSave(tester), isFalse);
 
     await tester.enterText(
@@ -119,7 +119,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(_total(tester, Seniority.junior1), '8 h');
+    expect(_total(tester, Seniority.junior1), '8 hs');
     expect(_canSave(tester), isTrue);
 
     await tester.tap(find.byKey(const Key('plan_guardar')));
@@ -171,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No se pudo cargar el plan de formación'), findsNothing);
-    expect(_total(tester, Seniority.junior1), '8 h');
+    expect(_total(tester, Seniority.junior1), '8 hs');
   });
 
   testWidgets('Si guardar falla, avisa sin el texto de la excepción', (
@@ -268,7 +268,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(_total(tester, Seniority.trainee), '9,5 h');
+    expect(_total(tester, Seniority.trainee), '9,5 hs');
     expect(_canSave(tester), isTrue);
   });
 
@@ -354,7 +354,10 @@ void main() {
     expect(repository.saved, isEmpty);
 
     await tester.tap(find.byKey(const Key('plan_descartar')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(_canSave(tester), isTrue, reason: 'pide confirmación primero');
+    await tester.tap(find.byKey(const Key('plan_confirmar_descarte')));
+    await tester.pumpAndSettle();
     expect(_canSave(tester), isFalse);
   });
 }

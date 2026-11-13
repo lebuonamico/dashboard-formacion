@@ -1,6 +1,8 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/formatting/date_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
@@ -117,7 +119,7 @@ class _CertificationsContent extends ConsumerWidget {
                           icon: Icons.search_off_outlined,
                           title:
                               'Ninguna certificación coincide con los filtros.',
-                          message: 'Probá con otra búsqueda o estado.',
+                          message: 'Probá con otros filtros.',
                         ),
                       )
                     : PaginatedTable(
@@ -167,7 +169,7 @@ class _CertificationsContent extends ConsumerWidget {
       KpiData(
         title: 'Finalizadas',
         value: '$completed',
-        detail: '${completedPercentage.toStringAsFixed(0)}% del total',
+        detail: '${formatPercentage(completedPercentage)} del total',
         help: 'Certificaciones con el curso finalizado en el LMS.',
         icon: Icons.task_alt,
         color: colors.success.text,
@@ -256,14 +258,14 @@ class _CertificationsTable extends StatelessWidget {
               DataCell(_CourseCell(record)),
               DataCell(
                 record.lmsCategory == null
-                    ? Text('-', style: TextStyle(color: cs.onSurfaceVariant))
+                    ? Text('—', style: TextStyle(color: cs.onSurfaceVariant))
                     : CourseCategoryChip(type: record.lmsCategory!),
               ),
               DataCell(
                 Text(
                   record.course == null
-                      ? '-'
-                      : '${record.course!.workloadHours.toStringAsFixed(0)} hs',
+                      ? '—'
+                      : '${formatHours(record.course!.workloadHours)} hs',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: record.course == null
@@ -365,7 +367,7 @@ class _AreaTeamCell extends StatelessWidget {
     final cs = context.colorScheme;
     final employee = record.employee;
     if (employee == null) {
-      return Text('-', style: TextStyle(color: cs.onSurfaceVariant));
+      return Text('—', style: TextStyle(color: cs.onSurfaceVariant));
     }
     return Column(
       mainAxisSize: MainAxisSize.min,

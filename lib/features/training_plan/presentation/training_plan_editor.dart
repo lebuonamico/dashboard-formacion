@@ -71,11 +71,25 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
         title: 'Descartar cambios',
         message: 'Hay cambios sin guardar en el plan. ¿Querés descartarlos?',
         confirmLabel: 'Descartar',
+        confirmColor: context.colorScheme.error,
         confirmKey: const Key('plan_confirmar_descarte'),
       );
       if (!discard || !mounted) return;
     }
     ref.read(trainingPlanEditorMonthProvider.notifier).select(year, month);
+  }
+
+  Future<void> _discard() async {
+    final discard = await showConfirmationDialog(
+      context,
+      title: 'Descartar cambios',
+      message:
+          'Se pierden los cambios sin guardar del plan. ¿Querés descartarlos?',
+      confirmLabel: 'Descartar',
+      confirmColor: context.colorScheme.error,
+      confirmKey: const Key('plan_confirmar_descarte'),
+    );
+    if (discard && mounted) _editor.discard();
   }
 
   Future<void> _save(TrainingPlanDraft draft) async {
@@ -130,6 +144,27 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
           ),
           data: (draft) {
             final saving = draft.isSaving;
+            final saveButton = FilledButton.icon(
+              key: const Key('plan_guardar'),
+              onPressed: draft.editedPlan != null && draft.hasChanges && !saving
+                  ? () => _save(draft)
+                  : null,
+              icon: saving
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined, size: 18),
+              label: const Text('Guardar plan'),
+            );
+            // A disabled button says nothing on its own.
+            final saveHint = saving
+                ? null
+                : !draft.hasChanges
+                ? 'No hay cambios para guardar'
+                : draft.editedPlan == null
+                ? 'Corregí los valores marcados para guardar'
+                : null;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -164,27 +199,13 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
                     ),
                     TextButton(
                       key: const Key('plan_descartar'),
-                      onPressed: draft.hasChanges && !saving
-                          ? _editor.discard
-                          : null,
+                      onPressed: draft.hasChanges && !saving ? _discard : null,
                       child: const Text('Descartar cambios'),
                     ),
-                    FilledButton.icon(
-                      key: const Key('plan_guardar'),
-                      onPressed:
-                          draft.editedPlan != null &&
-                              draft.hasChanges &&
-                              !saving
-                          ? () => _save(draft)
-                          : null,
-                      icon: saving
-                          ? const SizedBox.square(
-                              dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined, size: 18),
-                      label: const Text('Guardar plan'),
-                    ),
+                    if (saveHint == null)
+                      saveButton
+                    else
+                      Tooltip(message: saveHint, child: saveButton),
                   ],
                 ),
               ],
@@ -453,7 +474,7 @@ class _PlanTable extends StatelessWidget {
               ),
             const SizedBox(width: 4),
             Text(
-              total == null ? '—' : '${formatPlanHours(total)} h',
+              total == null ? '—' : '${formatPlanHours(total)} hs',
               key: Key('plan_total_${seniority.name}'),
               style: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -496,7 +517,7 @@ class _HoursField extends StatelessWidget {
         onChanged: onChanged,
         decoration: InputDecoration(
           isDense: true,
-          suffixText: 'h',
+          suffixText: 'hs',
           errorText: error,
           errorMaxLines: 2,
           filled: error == null && modified,

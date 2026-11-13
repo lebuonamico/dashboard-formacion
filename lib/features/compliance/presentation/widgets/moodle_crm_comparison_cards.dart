@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
@@ -68,7 +69,7 @@ class _ComparisonCard extends StatelessWidget {
     final crm = comparison.crmComparable;
 
     return _Panel(
-      title: 'Moodle vs CRM · Comparables',
+      title: 'LMS vs CRM · Comparables',
       subtitle:
           'Negocio y Blandas, las categorías que existen en las dos fuentes',
       children: [
@@ -76,11 +77,7 @@ class _ComparisonCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: _Total(
-                source: 'MOODLE (LMS)',
-                hours: moodle,
-                color: colorMoodle,
-              ),
+              child: _Total(source: 'LMS', hours: moodle, color: colorMoodle),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -129,8 +126,8 @@ class _ComparisonCard extends StatelessWidget {
       final p? => ' (${p > 0 ? '+' : ''}${p.toStringAsFixed(0)}%)',
       null => '',
     };
-    return 'CRM registra ${difference.abs().toStringAsFixed(1)} h '
-        '${difference > 0 ? 'más' : 'menos'} que Moodle$percentage';
+    return 'CRM registra ${formatHours(difference.abs())} hs '
+        '${difference > 0 ? 'más' : 'menos'} que el LMS$percentage.';
   }
 }
 
@@ -164,7 +161,7 @@ class _Total extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '${hours.toStringAsFixed(1)} h',
+          '${formatHours(hours)} hs',
           style: context.textTheme.displaySmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.colorScheme.onSurface,
@@ -333,7 +330,7 @@ class _ColumnsChart extends StatelessWidget {
                 maximum: maximum,
                 height: _maximumHeight,
                 color: colorMoodle,
-                source: 'Moodle',
+                source: 'LMS',
               ),
               const SizedBox(width: 16),
               _Column(
@@ -428,7 +425,7 @@ class _Column extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                '${hours.toStringAsFixed(0)} h',
+                '${formatHours(hours)} hs',
                 style: context.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,

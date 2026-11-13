@@ -27,7 +27,7 @@ class SummaryCardFooter extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '${completedHours.toStringAsFixed(1)} de ${targetHours.toStringAsFixed(1)} hs',
+                  '${formatAchievedHours(completedHours, target: targetHours)} de ${formatHours(targetHours)} hs',
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
@@ -41,7 +41,7 @@ class SummaryCardFooter extends StatelessWidget {
                   formatHoursDeviation(deviation),
                   style: context.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: deviation >= 0
+                    color: deviation.round() >= 0
                         ? context.colors.success.text
                         : context.colors.danger.text,
                   ),

@@ -74,9 +74,9 @@ class _CategoryChip extends StatelessWidget {
 
     return Tooltip(
       message: required
-          ? '${type.label}: ${formatHours(completedHours)} de ${formatHours(requiredHours)} horas'
+          ? '${type.label}: ${formatHoursPrecise(completedHours)} de ${formatHoursPrecise(requiredHours)} horas'
           : registeredHours > 0
-          ? '${type.label}: no requerida; ${formatHours(registeredHours)} h registradas no suman al cumplimiento'
+          ? '${type.label}: no requerida; sus ${formatHoursPrecise(registeredHours)} hs no suman al cumplimiento'
           : '${type.label}: no requerida; no suma al cumplimiento',
       child: Container(
         width: 125,
@@ -101,7 +101,7 @@ class _CategoryChip extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              '${formatHours(completedHours)}/${formatHours(requiredHours)} h',
+              '${formatHoursPrecise(completedHours)}/${formatHoursPrecise(requiredHours)} hs',
               style: context.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,

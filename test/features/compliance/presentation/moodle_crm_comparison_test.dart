@@ -73,21 +73,32 @@ void main() {
     expect(comparison.match, isFalse);
   });
 
-  test('Sin horas en Moodle no hay porcentaje, y menos de 0.05 h coincide', () {
-    final crmOnly = const MoodleCrmComparisonService().compare([
-      _c(moodle: const {}, crm: {CourseCategory.softSkills: 3}),
-    ]);
-    expect(crmOnly.percentageDifference, isNull);
-    expect(crmOnly.match, isFalse);
+  test(
+    'Sin horas en Moodle no hay porcentaje, y menos de media hora coincide',
+    () {
+      final crmOnly = const MoodleCrmComparisonService().compare([
+        _c(moodle: const {}, crm: {CourseCategory.softSkills: 3}),
+      ]);
+      expect(crmOnly.percentageDifference, isNull);
+      expect(crmOnly.match, isFalse);
 
-    final equal = const MoodleCrmComparisonService().compare([
-      _c(
-        moodle: {CourseCategory.businessSkills: 4},
-        crm: {CourseCategory.businessSkills: 4.04},
-      ),
-    ]);
-    expect(equal.match, isTrue);
-  });
+      final equal = const MoodleCrmComparisonService().compare([
+        _c(
+          moodle: {CourseCategory.businessSkills: 4},
+          crm: {CourseCategory.businessSkills: 4.4},
+        ),
+      ]);
+      expect(equal.match, isTrue);
+
+      final different = const MoodleCrmComparisonService().compare([
+        _c(
+          moodle: {CourseCategory.businessSkills: 4},
+          crm: {CourseCategory.businessSkills: 4.6},
+        ),
+      ]);
+      expect(different.match, isFalse);
+    },
+  );
 
   for (final width in [1200.0, 500.0]) {
     testWidgets('Las cards se muestran sin desbordes a $width px', (
@@ -111,12 +122,12 @@ void main() {
       expect(find.byKey(const Key('comparacion_comparables')), findsOne);
       expect(find.byKey(const Key('comparacion_total')), findsOne);
       // Moodle solo aparece en la comparación; la otra card es solo CRM.
-      expect(find.text('14.0 h'), findsOne);
+      expect(find.text('14 hs'), findsOne);
       // Negocio es 12 de las 24 h de CRM.
       expect(find.text('Negocio\n50%'), findsOne);
-      expect(find.text('16.0 h'), findsOne);
-      expect(find.text('24.0 h'), findsOne);
-      expect(find.textContaining('CRM registra 2.0 h más'), findsOne);
+      expect(find.text('16 hs'), findsOne);
+      expect(find.text('24 hs'), findsOne);
+      expect(find.textContaining('CRM registra 2 hs más que el LMS'), findsOne);
       expect(tester.takeException(), isNull);
     });
   }

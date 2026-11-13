@@ -14,6 +14,7 @@ import 'package:app_finnegans/features/teams/presentation/widgets/team_detail_kp
 import 'package:app_finnegans/features/teams/presentation/widgets/team_detail_summary.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_members_table.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class TeamDetailScreen extends ConsumerWidget {
@@ -27,6 +28,7 @@ class TeamDetailScreen extends ConsumerWidget {
     final section = (area: area, team: team);
     final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
+      included: 'los integrantes del equipo elegibles',
       action: PrintReportButton(report: teamReportProvider(section)),
     );
 
@@ -34,11 +36,22 @@ class TeamDetailScreen extends ConsumerWidget {
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          const AppTopBar(title: 'Detalle de equipo', backTo: '/equipos'),
+          AppTopBar(
+            title: 'Detalle de equipo',
+            // Opened from an area (or from the home screen through one), it
+            // goes back to that area.
+            backTo: switch (GoRouterState.of(
+              context,
+            ).uri.queryParameters['origen']) {
+              'areas' || 'dashboard' => '/areas/${Uri.encodeComponent(area)}',
+              _ => '/equipos',
+            },
+          ),
           Expanded(
             child: ref
                 .watch(hasTeamPeriodDataProvider)
                 .when(
+                  skipLoadingOnReload: true,
                   loading: () => const _Loading(),
                   error: (error, _) => ErrorDataState(
                     title: 'No pudimos cargar el equipo',
@@ -93,6 +106,7 @@ class _TeamDetailBody extends ConsumerWidget {
     return ref
         .watch(teamDetailProvider(section))
         .when(
+          skipLoadingOnReload: true,
           loading: () => const _Loading(),
           error: (error, _) => ErrorDataState(
             title: 'No pudimos cargar el equipo',
@@ -108,7 +122,7 @@ class _TeamDetailBody extends ConsumerWidget {
                       title:
                           'El equipo ${section.team} no tiene colaboradores elegibles en ${periodLabel(period.scope, period.month, period.year)}.',
                       message:
-                          'Probá otro período o verificá la nómina del equipo.',
+                          'Probá otro período o verificá los colaboradores del equipo.',
                     ),
                   )
                 : _TeamDetailContent(
