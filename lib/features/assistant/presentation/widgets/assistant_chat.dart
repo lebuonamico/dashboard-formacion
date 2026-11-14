@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/assistant/domain/chat_message.dart';
@@ -71,11 +72,28 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
   double _savedOffset = 0;
   ChatMessage? _lastOnMinimize;
   String? _errorOnMinimize;
+  Uri? _location;
 
   @override
   void initState() {
     super.initState();
     _scroll.addListener(() => _savedOffset = _scroll.offset);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final location = GoRouterState.of(context).uri;
+    final previous = _location;
+    _location = location;
+    if (previous == null || previous == location) return;
+    // Full screen the chat hides the screen, so the browser's back button
+    // minimizes it instead of changing the screen unseen. The conversation is
+    // kept. Changing the provider cannot happen during a build.
+    if (context.windowSize != WindowSize.compact) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(assistantChatProvider).open) _minimize();
+    });
   }
 
   @override
@@ -107,6 +125,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
         event.logicalKey != LogicalKeyboardKey.numpadEnter) {
       return KeyEventResult.ignored;
     }
+    // The on-screen keyboard's Enter writes a new line; the button sends.
+    if (usesSoftKeyboard) return KeyEventResult.ignored;
     final keyboard = HardwareKeyboard.instance;
     if (keyboard.isShiftPressed ||
         keyboard.isControlPressed ||
@@ -251,19 +271,25 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
       }
     });
     final duration = assistantMotion(context, 220);
+    // On phones the open chat takes the whole screen.
+    final fullScreen = context.windowSize == WindowSize.compact;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final layout = AssistantLayout.forSize(constraints.biggest);
         final margin = layout.margin;
-        final width = math.max(
-          0.0,
-          math.min(480.0, constraints.maxWidth - margin * 2),
-        );
-        final height = math.max(
-          0.0,
-          math.min(740.0, constraints.maxHeight - layout.basePanel - margin),
-        );
+        final width = fullScreen
+            ? constraints.maxWidth
+            : math.max(0.0, math.min(480.0, constraints.maxWidth - margin * 2));
+        final height = fullScreen
+            ? constraints.maxHeight
+            : math.max(
+                0.0,
+                math.min(
+                  740.0,
+                  constraints.maxHeight - layout.basePanel - margin,
+                ),
+              );
         final compact = height < 430;
         return Stack(
           clipBehavior: Clip.none,
@@ -271,8 +297,8 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
             // A single mounted panel avoids reattaching controllers when it
             // is minimized.
             Positioned(
-              right: margin,
-              bottom: layout.basePanel,
+              right: fullScreen ? 0 : margin,
+              bottom: fullScreen ? 0 : layout.basePanel,
               width: width,
               height: height,
               child: _Showing(
@@ -294,9 +320,11 @@ class _AssistantChatState extends ConsumerState<AssistantChat> {
                         enabled: status.open,
                         child: AssistantChatPanel(
                           height: height,
+                          fullScreen: fullScreen,
                           header: AssistantChatHeader(
                             width: width,
                             compact: compact,
+                            fullScreen: fullScreen,
                             onCopy: status.messages.isEmpty
                                 ? null
                                 : _copyConversation,

@@ -2,7 +2,16 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/assistant/domain/assistant_query_planner.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_chat_notifier.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_motion.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+/// Phones and tablets type on an on-screen keyboard, where Enter is the only
+/// way to start a new line, so it does not send. On the web Flutter takes the
+/// platform from the browser's user agent.
+bool get usesSoftKeyboard => switch (defaultTargetPlatform) {
+  TargetPlatform.android || TargetPlatform.iOS => true,
+  _ => false,
+};
 
 class AssistantEditor extends StatelessWidget {
   final ChatState status;
@@ -203,30 +212,30 @@ class _EditorNotes extends StatelessWidget {
       color: context.colorScheme.onSurfaceVariant,
       height: 1.4,
     );
+    final hint = sending
+        ? 'Podés preparar tu próxima pregunta'
+        : usesSoftKeyboard
+        ? null
+        : 'Enter para enviar · Shift + Enter para otra línea';
+    final notes = [
+      if (hint != null)
+        Text(hint, textAlign: TextAlign.center, style: noteStyle),
+      if (length > 1000)
+        Text('$length/${AssistantQueryPlanner.maxQuestion}', style: noteStyle),
+    ];
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 10,
-          runSpacing: 4,
-          children: [
-            Text(
-              sending
-                  ? 'Podés preparar tu próxima pregunta'
-                  : 'Enter para enviar · Shift + Enter para otra línea',
-              textAlign: TextAlign.center,
-              style: noteStyle,
-            ),
-            if (length > 1000)
-              Text(
-                '$length/${AssistantQueryPlanner.maxQuestion}',
-                style: noteStyle,
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
+        if (notes.isNotEmpty) ...[
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 4,
+            children: notes,
+          ),
+          const SizedBox(height: 4),
+        ],
         Text(
           'Consultas independientes. No compartas credenciales.',
           textAlign: TextAlign.center,

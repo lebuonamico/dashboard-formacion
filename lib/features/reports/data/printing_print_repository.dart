@@ -15,4 +15,9 @@ class PrintingPrintRepository implements PrintRepository {
       onLayout: (_) async => bytes,
     );
   }
+
+  @override
+  Future<void> downloadPdf(Uint8List bytes, {required String fileName}) async {
+    await Printing.sharePdf(bytes: bytes, filename: fileName);
+  }
 }

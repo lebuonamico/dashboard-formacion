@@ -4,8 +4,10 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_message.dart';
 import 'package:flutter/material.dart';
 
+/// The chat's frame: a floating card, or the whole screen on phones.
 class AssistantChatPanel extends StatelessWidget {
   final double height;
+  final bool fullScreen;
   final Widget header;
   final Widget conversation;
   final Widget editor;
@@ -13,6 +15,7 @@ class AssistantChatPanel extends StatelessWidget {
   const AssistantChatPanel({
     super.key,
     required this.height,
+    this.fullScreen = false,
     required this.header,
     required this.conversation,
     required this.editor,
@@ -24,25 +27,27 @@ class AssistantChatPanel extends StatelessWidget {
     final cs = context.colorScheme;
     return Container(
       key: const Key('asistente_panel'),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: cs.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: .15),
-            blurRadius: 44,
-            offset: const Offset(0, 18),
-          ),
-          BoxShadow(
-            color: context.colors.ai.text.withValues(alpha: .08),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+      decoration: fullScreen
+          ? null
+          : BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: cs.outlineVariant),
+              boxShadow: [
+                BoxShadow(
+                  color: cs.shadow.withValues(alpha: .15),
+                  blurRadius: 44,
+                  offset: const Offset(0, 18),
+                ),
+                BoxShadow(
+                  color: context.colors.ai.text.withValues(alpha: .08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
       child: Material(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: fullScreen ? null : BorderRadius.circular(25),
         clipBehavior: Clip.antiAlias,
         child: height < 270 * scale
             // With the keyboard up and very little height, the whole panel
@@ -75,6 +80,7 @@ class AssistantChatPanel extends StatelessWidget {
 class AssistantChatHeader extends StatelessWidget {
   final double width;
   final bool compact;
+  final bool fullScreen;
   final VoidCallback? onCopy;
   final VoidCallback onClear;
   final VoidCallback onMinimize;
@@ -83,6 +89,7 @@ class AssistantChatHeader extends StatelessWidget {
     super.key,
     required this.width,
     required this.compact,
+    this.fullScreen = false,
     required this.onCopy,
     required this.onClear,
     required this.onMinimize,
@@ -90,25 +97,32 @@ class AssistantChatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Full screen the title wraps next to the actions: a second row would
+    // only take height from the conversation.
     final twoRows =
         !compact &&
-        (width < 430 || MediaQuery.textScalerOf(context).scale(16) > 20);
+        ((!fullScreen && width < 430) ||
+            MediaQuery.textScalerOf(context).scale(16) > 20);
+    final actionSize = fullScreen ? 48.0 : 44.0;
     final actions = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _HeaderAction(
           icon: Icons.copy_outlined,
           tooltip: 'Copiar conversación',
+          size: actionSize,
           onPressed: onCopy,
         ),
         _HeaderAction(
           icon: Icons.delete_outline_rounded,
           tooltip: 'Limpiar conversación',
+          size: actionSize,
           onPressed: onClear,
         ),
         _HeaderAction(
           icon: Icons.remove_rounded,
           tooltip: 'Minimizar asistente',
+          size: actionSize,
           onPressed: onMinimize,
         ),
       ],
@@ -182,11 +196,13 @@ class AssistantChatHeader extends StatelessWidget {
 class _HeaderAction extends StatelessWidget {
   final IconData icon;
   final String tooltip;
+  final double size;
   final VoidCallback? onPressed;
 
   const _HeaderAction({
     required this.icon,
     required this.tooltip,
+    required this.size,
     required this.onPressed,
   });
 
@@ -201,7 +217,7 @@ class _HeaderAction extends StatelessWidget {
         disabledForegroundColor: overGradient.withValues(alpha: .45),
         hoverColor: overGradient.withValues(alpha: .13),
         focusColor: overGradient.withValues(alpha: .2),
-        minimumSize: const Size(44, 44),
+        minimumSize: Size.square(size),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       icon: Icon(icon, size: 20),

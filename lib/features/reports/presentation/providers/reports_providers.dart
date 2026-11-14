@@ -1,3 +1,4 @@
+import 'package:app_finnegans/features/reports/domain/report_output.dart';
 import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/reports/presentation/providers/print_repository_provider.dart';
@@ -79,14 +80,20 @@ final teamReportProvider =
 
 typedef PrintReport = Future<void> Function(TrainingReport report);
 
-/// Lays out the PDF and opens the print dialog. Tests replace it so they
-/// do not depend on the fonts or the system dialog.
+/// Lays out the PDF and opens the print dialog, or downloads it on phones
+/// ([reportOutputProvider]). Tests replace it so they do not depend on the
+/// fonts or the system dialog.
 final printReportProvider = Provider<PrintReport>((ref) {
   final print = ref.watch(printRepositoryProvider);
+  final output = ref.watch(reportOutputProvider);
   return (report) async {
     // Generated before opening the dialog, so an error reaches the caller.
     final bytes = await generateReportPdf(report);
-    await print.printPdf(bytes, fileName: reportFileName(report));
+    final fileName = reportFileName(report);
+    await switch (output) {
+      ReportOutput.print => print.printPdf(bytes, fileName: fileName),
+      ReportOutput.download => print.downloadPdf(bytes, fileName: fileName),
+    };
   };
 });
 
