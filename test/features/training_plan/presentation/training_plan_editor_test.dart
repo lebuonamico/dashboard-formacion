@@ -43,8 +43,9 @@ Future<ProviderContainer> _showEditor(
   WidgetTester tester,
   _PlanFake repository, {
   DateTime? today,
+  Size size = const Size(1400, 1400),
 }) async {
-  tester.view.physicalSize = const Size(1400, 1400);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -359,5 +360,151 @@ void main() {
     await tester.tap(find.byKey(const Key('plan_confirmar_descarte')));
     await tester.pumpAndSettle();
     expect(_canSave(tester), isFalse);
+  });
+
+  group('En el teléfono (390 px)', () {
+    const phone = Size(390, 844);
+
+    Future<void> open(WidgetTester tester, Seniority seniority) async {
+      final tile = find.byKey(Key('plan_seniority_${seniority.name}'));
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+    }
+
+    Finder status(Seniority seniority, String text) => find.descendant(
+      of: find.byKey(Key('plan_seniority_${seniority.name}')),
+      matching: find.text(text),
+    );
+
+    testWidgets('Una fila por seniority con su total, sin tabla', (
+      tester,
+    ) async {
+      await _showEditor(tester, _PlanFake(), size: phone);
+
+      expect(find.byType(Table), findsNothing);
+      expect(
+        find.byType(ExpansionTile),
+        findsNWidgets(Seniority.values.length),
+      );
+      expect(_total(tester, Seniority.junior1), '8 hs');
+      expect(_total(tester, Seniority.manager), '8 hs');
+      // Closed: the fields appear when the row opens.
+      expect(
+        _field(Seniority.junior1, CourseCategory.businessSkills),
+        findsNothing,
+      );
+      // The disabled save says why, as text.
+      expect(_canSave(tester), isFalse);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('plan_guardar_motivo'))).data,
+        'No hay cambios para guardar',
+      );
+      final save = tester.getSize(find.byKey(const Key('plan_guardar')));
+      expect(save.height, greaterThanOrEqualTo(48));
+      expect(save.width, greaterThan(300));
+
+      await open(tester, Seniority.junior1);
+      for (final category in CourseCategory.values) {
+        expect(_field(Seniority.junior1, category), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Editar, corregir y guardar desde la fila', (tester) async {
+      final repository = _PlanFake();
+      await _showEditor(tester, repository, size: phone);
+      await open(tester, Seniority.junior1);
+
+      await tester.enterText(
+        _field(Seniority.junior1, CourseCategory.businessSkills),
+        '6',
+      );
+      await tester.enterText(
+        _field(Seniority.junior1, CourseCategory.softSkills),
+        '2',
+      );
+      await tester.pump();
+      expect(_total(tester, Seniority.junior1), '8 hs');
+      expect(
+        status(Seniority.junior1, 'Con cambios sin guardar'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('plan_guardar_motivo')), findsNothing);
+
+      await tester.enterText(
+        _field(Seniority.junior1, CourseCategory.businessSkills),
+        'abc',
+      );
+      await tester.pump();
+      expect(_total(tester, Seniority.junior1), '—');
+      expect(_canSave(tester), isFalse);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('plan_guardar_motivo'))).data,
+        'Corregí los valores marcados para guardar',
+      );
+
+      // Closed, the row still says it has something to fix.
+      await open(tester, Seniority.junior1);
+      expect(
+        status(Seniority.junior1, 'Hay valores para corregir'),
+        findsOneWidget,
+      );
+
+      await open(tester, Seniority.junior1);
+      await tester.enterText(
+        _field(Seniority.junior1, CourseCategory.businessSkills),
+        '6',
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('plan_guardar')));
+      await tester.tap(find.byKey(const Key('plan_guardar')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('plan_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(
+        repository.saved.single.plan.hours[Seniority.junior1]![CourseCategory
+            .businessSkills],
+        6,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Un seniority sin horas avisa que cuenta como cumplido', (
+      tester,
+    ) async {
+      await _showEditor(tester, _PlanFake(), size: phone);
+      await open(tester, Seniority.trainee);
+
+      await tester.enterText(
+        _field(Seniority.trainee, CourseCategory.businessSkills),
+        '0',
+      );
+      await tester.enterText(
+        _field(Seniority.trainee, CourseCategory.softSkills),
+        '0',
+      );
+      await tester.pump();
+
+      expect(_total(tester, Seniority.trainee), '0 hs');
+      expect(
+        status(Seniority.trainee, 'Sin objetivo: cuenta como cumplido'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('El mes y el año van a lo ancho debajo de "Rige desde"', (
+      tester,
+    ) async {
+      await _showEditor(tester, _PlanFake(), size: phone);
+
+      final label = tester.getBottomLeft(find.text('Rige desde'));
+      final month = tester.getRect(find.byKey(const Key('plan_mes')));
+      final year = tester.getRect(find.byKey(const Key('plan_anio')));
+      expect(month.top, greaterThanOrEqualTo(label.dy));
+      expect(year.top, month.top);
+      expect(year.right - month.left, greaterThan(300));
+    });
   });
 }

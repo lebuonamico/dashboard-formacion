@@ -31,4 +31,10 @@ extension WindowSizeContext on BuildContext {
       WindowSize.fromWidth(MediaQuery.sizeOf(this).width);
 
   bool get usesModalNavigation => windowSize.usesModalNavigation;
+
+  /// A dialog's margins: on a phone the default 40 px leave little room.
+  /// `null` keeps the default.
+  EdgeInsets? get dialogInsetPadding => windowSize == WindowSize.compact
+      ? const EdgeInsets.symmetric(horizontal: 16, vertical: 24)
+      : null;
 }

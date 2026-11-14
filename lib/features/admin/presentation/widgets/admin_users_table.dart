@@ -221,8 +221,8 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
                 )
               : ColorLabel(text: role.label, colors: brand),
         ),
-        DataCell(_ScopeCell(user: user, structure: widget.structure)),
-        DataCell(_MembershipCell(user: user, payroll: widget.payroll)),
+        DataCell(_TextCell(userScope(user, widget.structure))),
+        DataCell(_TextCell(userMembership(user, widget.payroll))),
         DataCell(
           ColorLabel(
             text: _users.status(user).label,
@@ -237,57 +237,45 @@ class _AdminUsersTableState extends State<AdminUsersTable> {
   }
 }
 
+/// A user's "Lidera" or "Pertenece a": the text and whether it needs
+/// attention.
+typedef UserFact = ({String text, bool warning});
+
 /// What the user sees: the whole company, or the areas or teams they lead
-/// according to their role.
-class _ScopeCell extends StatelessWidget {
-  final AuthorizedUser user;
-  final OrgStructure? structure;
-
-  const _ScopeCell({required this.user, required this.structure});
-
-  @override
-  Widget build(BuildContext context) {
-    final role = _users.knownRole(user);
-    // Managers see everything even before the structure loads.
-    final text = role != null && role.canManage
-        ? 'Toda la empresa'
-        : structure?.leads(role: role, email: user.email) ?? '—';
-    return _TextCell(text, warning: text.startsWith('Sin '));
-  }
+/// according to their role. A dash while the structure loads.
+UserFact userScope(AuthorizedUser user, OrgStructure? structure) {
+  final role = _users.knownRole(user);
+  // Managers see everything even before the structure loads.
+  final text = role != null && role.canManage
+      ? 'Toda la empresa'
+      : structure?.leads(role: role, email: user.email) ?? '—';
+  return (text: text, warning: text.startsWith('Sin '));
 }
 
 /// Team and area of the user's payroll row, looked up by email. Only for
-/// leaders: it may differ from what they lead.
-class _MembershipCell extends StatelessWidget {
-  final AuthorizedUser user;
-  final List<Employee>? payroll;
-
-  const _MembershipCell({required this.user, required this.payroll});
-
-  @override
-  Widget build(BuildContext context) {
-    final role = _users.knownRole(user);
-    final payroll = this.payroll;
-    if (payroll == null ||
-        (role != UserRole.teamLead && role != UserRole.areaLead)) {
-      return const _TextCell('—');
-    }
-    final employee = const EmployeeLookupService().findByEmail(
-      payroll,
-      user.email,
-    );
-    return _TextCell(
-      OrgStructureLabels.membership(employee),
-      warning: employee == null,
-    );
+/// leaders: it may differ from what they lead. A dash while the payroll
+/// loads.
+UserFact userMembership(AuthorizedUser user, List<Employee>? payroll) {
+  final role = _users.knownRole(user);
+  if (payroll == null ||
+      (role != UserRole.teamLead && role != UserRole.areaLead)) {
+    return (text: '—', warning: false);
   }
+  final employee = const EmployeeLookupService().findByEmail(
+    payroll,
+    user.email,
+  );
+  return (
+    text: OrgStructureLabels.membership(employee),
+    warning: employee == null,
+  );
 }
 
 class _TextCell extends StatelessWidget {
   final String text;
   final bool warning;
 
-  const _TextCell(this.text, {this.warning = false});
+  _TextCell(UserFact fact) : text = fact.text, warning = fact.warning;
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(

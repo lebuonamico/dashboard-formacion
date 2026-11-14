@@ -47,12 +47,52 @@ class _Screen extends ConsumerWidget {
   );
 }
 
-Future<ProviderContainer> _show(WidgetTester tester, Size size) async {
+/// A record without `==`, like the ones read again after every change.
+class _Entry {
+  final String id;
+
+  _Entry(this.id);
+}
+
+final _entriesProvider = NotifierProvider<_EntriesNotifier, List<_Entry>>(
+  _EntriesNotifier.new,
+);
+
+class _EntriesNotifier extends Notifier<List<_Entry>> {
+  @override
+  List<_Entry> build() => _items(23).map(_Entry.new).toList();
+
+  void replace(List<String> ids) => state = ids.map(_Entry.new).toList();
+}
+
+class _EntriesScreen extends ConsumerWidget {
+  const _EntriesScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+    body: SingleChildScrollView(
+      child: AdaptiveRecordList<_Entry>(
+        items: ref.watch(_entriesProvider),
+        itemId: (entry) => entry.id,
+        resultsLabel: 'registros',
+        icon: Icons.list,
+        table: (items) => Text('Tabla con ${items.length}'),
+        card: (entry) => RecordCard(title: entry.id),
+      ),
+    ),
+  );
+}
+
+Future<ProviderContainer> _show(
+  WidgetTester tester,
+  Size size, {
+  Widget screen = const _Screen(),
+}) async {
   final (router: _, :container) = await pumpScreen(
     tester,
     initialLocation: '/',
     size: size,
-    routes: [GoRoute(path: '/', builder: (context, state) => const _Screen())],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return container;
 }
@@ -123,5 +163,30 @@ void main() {
     final second = tester.getTopLeft(find.text('Ítem 2'));
     expect(second.dy, first.dy);
     expect(second.dx, greaterThan(first.dx));
+  });
+
+  testWidgets('Con itemId, los mismos ítems releídos conservan la página', (
+    tester,
+  ) async {
+    final container = await _show(
+      tester,
+      compactSize,
+      screen: const _EntriesScreen(),
+    );
+    await tester.ensureVisible(find.byTooltip('Página siguiente'));
+    await tester.tap(find.byTooltip('Página siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text('Página 2 de 3'), findsOneWidget);
+
+    // New objects, same ids: the page stays.
+    container.read(_entriesProvider.notifier).replace(_items(23));
+    await tester.pumpAndSettle();
+    expect(find.text('Página 2 de 3'), findsOneWidget);
+
+    container
+        .read(_entriesProvider.notifier)
+        .replace(_items(23, prefix: 'Otro'));
+    await tester.pumpAndSettle();
+    expect(find.text('Página 1 de 3'), findsOneWidget);
   });
 }

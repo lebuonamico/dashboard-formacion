@@ -9,7 +9,15 @@ class RecordMetric {
   /// Greys out an empty value (a zero or a dash), as the tables do.
   final bool muted;
 
-  const RecordMetric(this.label, this.value, {this.muted = false});
+  /// A value that needs attention, such as a leader without teams.
+  final bool warning;
+
+  const RecordMetric(
+    this.label,
+    this.value, {
+    this.muted = false,
+    this.warning = false,
+  });
 }
 
 /// One row of a list, as a card: what a table row shows on wide screens. The
@@ -21,6 +29,7 @@ class RecordCard extends StatelessWidget {
 
   /// By default, the variant text color.
   final Color? subtitleColor;
+  final int subtitleMaxLines;
 
   /// Beside the title: a status or a chip.
   final Widget? trailing;
@@ -36,6 +45,7 @@ class RecordCard extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.subtitleColor,
+    this.subtitleMaxLines = 1,
     this.trailing,
     this.metrics = const [],
     this.footer,
@@ -80,7 +90,7 @@ class RecordCard extends StatelessWidget {
                           if (subtitle case final subtitle?)
                             Text(
                               subtitle,
-                              maxLines: 1,
+                              maxLines: subtitleMaxLines,
                               overflow: TextOverflow.ellipsis,
                               style: context.textTheme.labelMedium?.copyWith(
                                 color: subtitleColor ?? cs.onSurfaceVariant,
@@ -142,7 +152,9 @@ class _Metric extends StatelessWidget {
         metric.value,
         style: context.textTheme.bodySmall?.copyWith(
           fontWeight: metric.muted ? FontWeight.w400 : FontWeight.w600,
-          color: metric.muted
+          color: metric.warning
+              ? context.colors.warning.text
+              : metric.muted
               ? context.colorScheme.onSurfaceVariant
               : context.colors.intermediateText,
         ),

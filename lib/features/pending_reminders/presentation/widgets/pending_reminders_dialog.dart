@@ -16,10 +16,7 @@ Future<bool> showPendingRemindersDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
-      // On a phone the default 40 px margins leave little room for the list.
-      insetPadding: dialogContext.windowSize == WindowSize.compact
-          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 24)
-          : null,
+      insetPadding: dialogContext.dialogInsetPadding,
       title: const Text('Notificar cursos pendientes'),
       // A fixed width, not a maximum: the dialog sizes itself by its
       // intrinsic width, which a ListView cannot report. On narrow screens

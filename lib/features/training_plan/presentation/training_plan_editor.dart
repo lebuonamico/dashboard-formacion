@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/clock/clock_provider.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -165,49 +166,72 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
                 : draft.editedPlan == null
                 ? 'Corregí los valores marcados para guardar'
                 : null;
+            // Below 840 px the table does not fit: one row per seniority.
+            final compact = context.windowSize != WindowSize.expanded;
+            final service = ref.watch(trainingPlanServiceProvider);
+            final onChanged = saving ? null : _editor.setHours;
+            final restoreButton = TextButton.icon(
+              key: const Key('plan_restaurar'),
+              onPressed: saving ? null : _editor.restoreDefaults,
+              icon: const Icon(Icons.restart_alt, size: 18),
+              label: const Text('Restaurar valores por defecto'),
+            );
+            final discardButton = TextButton(
+              key: const Key('plan_descartar'),
+              onPressed: draft.hasChanges && !saving ? _discard : null,
+              child: const Text('Descartar cambios'),
+            );
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Validity(
                   draft: draft,
                   today: ref.watch(clockProvider)(),
+                  stacked: compact,
                   onChooseMonth: saving
                       ? null
                       : (year, month) => _chooseMonth(draft, year, month),
                 ),
                 const SizedBox(height: 16),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: _PlanTable(
+                if (compact)
+                  _PlanList(
                     draft: draft,
                     controllers: _controllers,
-                    service: ref.watch(trainingPlanServiceProvider),
-                    onChanged: saving ? null : _editor.setHours,
+                    service: service,
+                    onChanged: onChanged,
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _PlanTable(
+                      draft: draft,
+                      controllers: _controllers,
+                      service: service,
+                      onChanged: onChanged,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      key: const Key('plan_restaurar'),
-                      onPressed: saving ? null : _editor.restoreDefaults,
-                      icon: const Icon(Icons.restart_alt, size: 18),
-                      label: const Text('Restaurar valores por defecto'),
-                    ),
-                    TextButton(
-                      key: const Key('plan_descartar'),
-                      onPressed: draft.hasChanges && !saving ? _discard : null,
-                      child: const Text('Descartar cambios'),
-                    ),
-                    if (saveHint == null)
-                      saveButton
-                    else
-                      Tooltip(message: saveHint, child: saveButton),
-                  ],
-                ),
+                if (compact)
+                  _CompactActions(
+                    saveButton: saveButton,
+                    saveHint: saveHint,
+                    restoreButton: restoreButton,
+                    discardButton: discardButton,
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      restoreButton,
+                      discardButton,
+                      if (saveHint == null)
+                        saveButton
+                      else
+                        Tooltip(message: saveHint, child: saveButton),
+                    ],
+                  ),
               ],
             );
           },
@@ -218,14 +242,84 @@ class _TrainingPlanEditorState extends ConsumerState<TrainingPlanEditor> {
 String _monthLabel(DateTime date) =>
     '${monthName(date.month).toLowerCase()} ${date.year}';
 
+double? _planValue(
+  TrainingPlanDraft draft,
+  Seniority seniority,
+  CourseCategory category,
+) => parsePlanHours(draft.texts[(seniority, category)] ?? '');
+
+/// The seniority's monthly hours, or `null` while a value is invalid.
+double? _seniorityTotal(
+  TrainingPlanDraft draft,
+  TrainingPlanService service,
+  Seniority seniority,
+) {
+  final values = [
+    for (final category in CourseCategory.values)
+      _planValue(draft, seniority, category),
+  ];
+  return values.every((value) => service.hoursIssue(value) == null)
+      ? values.fold<double>(0, (sum, value) => sum + value!)
+      : null;
+}
+
+/// Below 840 px: save across the card, with its disabled reason as text
+/// (touch screens have no hover), and the secondary actions below.
+class _CompactActions extends StatelessWidget {
+  final Widget saveButton;
+  final String? saveHint;
+  final Widget restoreButton;
+  final Widget discardButton;
+
+  const _CompactActions({
+    required this.saveButton,
+    required this.saveHint,
+    required this.restoreButton,
+    required this.discardButton,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hint = saveHint;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: 48, child: saveButton),
+        if (hint != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            key: const Key('plan_guardar_motivo'),
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          alignment: WrapAlignment.center,
+          children: [restoreButton, discardButton],
+        ),
+      ],
+    );
+  }
+}
+
 class _Validity extends StatelessWidget {
   final TrainingPlanDraft draft;
   final DateTime today;
+
+  /// "Rige desde" above, and the month and year across the width.
+  final bool stacked;
   final void Function(int year, int month)? onChooseMonth;
 
   const _Validity({
     required this.draft,
     required this.today,
+    required this.stacked,
     required this.onChooseMonth,
   });
 
@@ -247,45 +341,55 @@ class _Validity extends StatelessWidget {
       color: cs.onSurfaceVariant,
     );
 
+    final label = Text(
+      'Rige desde',
+      style: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+    );
+    final monthField = DropdownButton<int>(
+      key: const Key('plan_mes'),
+      value: month,
+      isExpanded: stacked,
+      items: [
+        for (var m = 1; m <= 12; m++)
+          DropdownMenuItem(value: m, child: Text(monthName(m))),
+      ],
+      onChanged: choose == null
+          ? null
+          : (value) => value == null ? null : choose(year, value),
+    );
+    final yearField = DropdownButton<int>(
+      key: const Key('plan_anio'),
+      value: year,
+      isExpanded: stacked,
+      items: [
+        for (final option in years)
+          DropdownMenuItem(value: option, child: Text('$option')),
+      ],
+      onChanged: choose == null
+          ? null
+          : (value) => value == null ? null : choose(value, month),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'Rige desde',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
-            ),
-            DropdownButton<int>(
-              key: const Key('plan_mes'),
-              value: month,
-              items: [
-                for (var m = 1; m <= 12; m++)
-                  DropdownMenuItem(value: m, child: Text(monthName(m))),
-              ],
-              onChanged: choose == null
-                  ? null
-                  : (value) => value == null ? null : choose(year, value),
-            ),
-            DropdownButton<int>(
-              key: const Key('plan_anio'),
-              value: year,
-              items: [
-                for (final option in years)
-                  DropdownMenuItem(value: option, child: Text('$option')),
-              ],
-              onChanged: choose == null
-                  ? null
-                  : (value) => value == null ? null : choose(value, month),
-            ),
-          ],
-        ),
+        if (stacked) ...[
+          label,
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(flex: 3, child: monthField),
+              const SizedBox(width: 16),
+              Expanded(flex: 2, child: yearField),
+            ],
+          ),
+        ] else
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [label, monthField, yearField],
+          ),
         const SizedBox(height: 8),
         Text(
           current == null
@@ -368,12 +472,11 @@ class _PlanTable extends StatelessWidget {
   });
 
   double? _value(Seniority seniority, CourseCategory category) =>
-      parsePlanHours(draft.texts[(seniority, category)] ?? '');
+      _planValue(draft, seniority, category);
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
-    final colors = context.colors;
     final headerStyle = context.textTheme.labelMedium!.copyWith(
       fontWeight: FontWeight.w600,
       color: cs.onSurfaceVariant,
@@ -399,20 +502,7 @@ class _PlanTable extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 8, right: 12),
                 child: Tooltip(
                   message: category.label,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: colors.category(category).text,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(category.shortLabel, style: headerStyle),
-                    ],
-                  ),
+                  child: _CategoryLabel(category: category, style: headerStyle),
                 ),
               ),
             Padding(
@@ -431,13 +521,7 @@ class _PlanTable extends StatelessWidget {
   }
 
   TableRow _row(BuildContext context, Seniority seniority) {
-    final cs = context.colorScheme;
-    final values = [
-      for (final category in CourseCategory.values) _value(seniority, category),
-    ];
-    final total = values.every((value) => service.hoursIssue(value) == null)
-        ? values.fold<double>(0, (sum, value) => sum + value!)
-        : null;
+    final total = _seniorityTotal(draft, service, seniority);
 
     return TableRow(
       children: [
@@ -473,16 +557,196 @@ class _PlanTable extends StatelessWidget {
                 ),
               ),
             const SizedBox(width: 4),
-            Text(
-              total == null ? '—' : '${formatPlanHours(total)} hs',
-              key: Key('plan_total_${seniority.name}'),
-              style: context.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
-            ),
+            _TotalText(seniority: seniority, total: total),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _CategoryLabel extends StatelessWidget {
+  final CourseCategory category;
+  final TextStyle style;
+
+  const _CategoryLabel({required this.category, required this.style});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: context.colors.category(category).text,
+          shape: BoxShape.circle,
+        ),
+      ),
+      const SizedBox(width: 6),
+      Flexible(child: Text(category.shortLabel, style: style)),
+    ],
+  );
+}
+
+class _TotalText extends StatelessWidget {
+  final Seniority seniority;
+  final double? total;
+
+  const _TotalText({required this.seniority, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = this.total;
+    return Text(
+      total == null ? '—' : '${formatPlanHours(total)} hs',
+      key: Key('plan_total_${seniority.name}'),
+      style: context.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: context.colorScheme.onSurface,
+      ),
+    );
+  }
+}
+
+/// The plan below 840 px: one expandable row per seniority with its total,
+/// and the four categories two by two when it opens.
+class _PlanList extends StatelessWidget {
+  final TrainingPlanDraft draft;
+  final Map<PlanCell, TextEditingController> controllers;
+  final TrainingPlanService service;
+  final void Function(Seniority, CourseCategory, String)? onChanged;
+
+  const _PlanList({
+    required this.draft,
+    required this.controllers,
+    required this.service,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final seniority in Seniority.values) ...[
+        if (seniority != Seniority.values.first) const SizedBox(height: 8),
+        _SeniorityTile(
+          seniority: seniority,
+          draft: draft,
+          controllers: controllers,
+          service: service,
+          onChanged: onChanged,
+        ),
+      ],
+    ],
+  );
+}
+
+class _SeniorityTile extends StatelessWidget {
+  final Seniority seniority;
+  final TrainingPlanDraft draft;
+  final Map<PlanCell, TextEditingController> controllers;
+  final TrainingPlanService service;
+  final void Function(Seniority, CourseCategory, String)? onChanged;
+
+  const _SeniorityTile({
+    required this.seniority,
+    required this.draft,
+    required this.controllers,
+    required this.service,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    const categories = CourseCategory.values;
+    final values = {
+      for (final category in categories)
+        category: _planValue(draft, seniority, category),
+    };
+    final base = draft.base.hours[seniority]!;
+    final total = _seniorityTotal(draft, service, seniority);
+    final hasErrors = values.values.any(
+      (value) => hoursErrorText(service, value) != null,
+    );
+    final modified = categories.any(
+      (category) => values[category] != base[category],
+    );
+    // A closed row still says what needs attention.
+    final (String, Color)? status = hasErrors
+        ? ('Hay valores para corregir', cs.error)
+        : total == 0
+        ? ('Sin objetivo: cuenta como cumplido', context.colors.warning.text)
+        : modified
+        ? ('Con cambios sin guardar', cs.primary)
+        : null;
+    final shape = RoundedRectangleBorder(
+      side: BorderSide(color: hasErrors ? cs.error : cs.outlineVariant),
+      borderRadius: BorderRadius.circular(8),
+    );
+    final labelStyle = context.textTheme.labelMedium!.copyWith(
+      fontWeight: FontWeight.w600,
+      color: cs.onSurfaceVariant,
+    );
+    final onChanged = this.onChanged;
+
+    return ExpansionTile(
+      key: Key('plan_seniority_${seniority.name}'),
+      shape: shape,
+      collapsedShape: shape,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+      childrenPadding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      title: Row(
+        children: [
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SeniorityChip(seniority: seniority),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _TotalText(seniority: seniority, total: total),
+        ],
+      ),
+      subtitle: status == null
+          ? null
+          : Text(
+              status.$1,
+              style: context.textTheme.labelMedium?.copyWith(color: status.$2),
+            ),
+      children: [
+        for (var i = 0; i < categories.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final category in categories.skip(i).take(2)) ...[
+                if (category != categories[i]) const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CategoryLabel(category: category, style: labelStyle),
+                      const SizedBox(height: 6),
+                      _HoursField(
+                        fieldKey: Key(
+                          'plan_${seniority.name}_${category.name}',
+                        ),
+                        controller: controllers[(seniority, category)]!,
+                        error: hoursErrorText(service, values[category]),
+                        modified: values[category] != base[category],
+                        padding: EdgeInsets.zero,
+                        onChanged: onChanged == null
+                            ? null
+                            : (text) => onChanged(seniority, category, text),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -493,6 +757,7 @@ class _HoursField extends StatelessWidget {
   final TextEditingController controller;
   final String? error;
   final bool modified;
+  final EdgeInsets padding;
   final ValueChanged<String>? onChanged;
 
   const _HoursField({
@@ -500,6 +765,7 @@ class _HoursField extends StatelessWidget {
     required this.controller,
     required this.error,
     required this.modified,
+    this.padding = const EdgeInsets.only(right: 12, top: 4, bottom: 4),
     required this.onChanged,
   });
 
@@ -507,7 +773,7 @@ class _HoursField extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+      padding: padding,
       child: TextField(
         key: fieldKey,
         controller: controller,

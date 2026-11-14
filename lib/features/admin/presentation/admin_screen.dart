@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
@@ -10,7 +12,9 @@ import 'package:app_finnegans/core/data_filters/presentation/data_filter_selecti
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
+import 'package:app_finnegans/features/admin/domain/authorized_user.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_actions_bar.dart';
+import 'package:app_finnegans/features/admin/presentation/widgets/admin_user_card.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_dialogs.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_structure_tab.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_users_table.dart';
@@ -92,11 +96,16 @@ class _UsersTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredUsers = ref.watch(filteredAdminUsersProvider);
     final selected = ref.watch(selectedAdminUserProvider);
+    final selectedEmail = ref.watch(selectedAdminEmailProvider);
     final pendingAction = ref.watch(
       adminUsersProvider.select((users) => users.value?.pendingAction),
     );
     final auth = ref.watch(authProvider);
+    final structure = ref.watch(orgStructureProvider).value;
+    final payroll = ref.watch(employeesProvider).value;
     final cs = context.colorScheme;
+    // Below 840 px each card has its own menu instead of the selection bar.
+    final cards = context.windowSize != WindowSize.expanded;
 
     return ListView(
       padding: screenPaddingOf(context),
@@ -119,18 +128,24 @@ class _UsersTab extends ConsumerWidget {
         const SizedBox(height: 20),
         const AdminFilters(),
         const SizedBox(height: 16),
-        AdminActionsBar(
-          selected: selected,
-          outsideFilter: ref.watch(adminSelectionOutsideFilterProvider),
-          pendingAction: pendingAction,
-          ownEmail: auth.email,
-          onCreate: () => _create(context, ref),
-          onRoleChange: () => _changeRole(context, ref),
-          onBlock: () => _block(context, ref),
-          onUnblock: () => _unblock(context, ref),
-          onDelete: () => _delete(context, ref),
-          onRestore: () => _restore(context, ref),
-        ),
+        if (cards)
+          _CreateUserButton(
+            pendingAction: pendingAction,
+            onCreate: () => _create(context, ref),
+          )
+        else
+          AdminActionsBar(
+            selected: selected,
+            outsideFilter: ref.watch(adminSelectionOutsideFilterProvider),
+            pendingAction: pendingAction,
+            ownEmail: auth.email,
+            onCreate: () => _create(context, ref),
+            onRoleChange: () => _changeRole(context, ref, selected),
+            onBlock: () => _block(context, ref, selected),
+            onUnblock: () => _unblock(context, ref, selected),
+            onDelete: () => _delete(context, ref, selected),
+            onRestore: () => _restore(context, ref, selected),
+          ),
         const SizedBox(height: 20),
         filteredUsers.when(
           loading: () => const Padding(
@@ -150,25 +165,62 @@ class _UsersTab extends ConsumerWidget {
                     message:
                         'Probá limpiar los filtros o dar de alta un usuario nuevo.',
                   )
-                : AdminUsersTable(
-                    users: users,
-                    structure: ref.watch(orgStructureProvider).value,
-                    payroll: ref.watch(employeesProvider).value,
-                    selectedEmail: ref.watch(selectedAdminEmailProvider),
-                    ownEmail: auth.email,
-                    onSelect: (email) {
-                      final selection = ref.read(
-                        selectedAdminEmailProvider.notifier,
-                      );
-                      email == null
-                          ? selection.clear()
-                          : selection.select(email);
-                    },
+                : AdaptiveRecordList<AuthorizedUser>(
+                    items: users,
+                    // Every action reads the users again as new objects.
+                    itemId: (user) => user.email,
+                    pageSize: AdminUsersTable.usersPerPage,
+                    resultsLabel: 'usuarios',
+                    icon: Icons.manage_accounts_outlined,
+                    table: (users) => AdminUsersTable(
+                      users: users,
+                      structure: structure,
+                      payroll: payroll,
+                      selectedEmail: selectedEmail,
+                      ownEmail: auth.email,
+                      onSelect: (email) {
+                        final selection = ref.read(
+                          selectedAdminEmailProvider.notifier,
+                        );
+                        email == null
+                            ? selection.clear()
+                            : selection.select(email);
+                      },
+                    ),
+                    card: (user) => AdminUserCard(
+                      user: user,
+                      structure: structure,
+                      payroll: payroll,
+                      ownEmail: auth.email,
+                      pendingAction: pendingAction,
+                      selectedEmail: selectedEmail,
+                      onAction: (action) =>
+                          _runFromMenu(context, ref, user, action),
+                    ),
                   ),
           ),
         ),
       ],
     );
+  }
+
+  /// The card's menu selects the user first, as a click on its row does, so
+  /// the progress and the desktop bar agree if the window grows.
+  Future<void> _runFromMenu(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser user,
+    AdminUserAction action,
+  ) {
+    ref.read(selectedAdminEmailProvider.notifier).select(user.email);
+    return switch (action) {
+      AdminUserAction.create => _create(context, ref),
+      AdminUserAction.changeRole => _changeRole(context, ref, user),
+      AdminUserAction.block => _block(context, ref, user),
+      AdminUserAction.unblock => _unblock(context, ref, user),
+      AdminUserAction.delete => _delete(context, ref, user),
+      AdminUserAction.restore => _restore(context, ref, user),
+    };
   }
 
   AdminUsersNotifier _users(WidgetRef ref) =>
@@ -189,8 +241,11 @@ class _UsersTab extends ConsumerWidget {
     ref.read(selectedAdminEmailProvider.notifier).select(data.email);
   }
 
-  Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(selectedAdminUserProvider);
+  Future<void> _changeRole(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser? user,
+  ) async {
     if (user == null) return;
     final role = await showRoleChangeDialog(
       context,
@@ -205,8 +260,11 @@ class _UsersTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _block(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(selectedAdminUserProvider);
+  Future<void> _block(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser? user,
+  ) async {
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
       context,
@@ -226,8 +284,11 @@ class _UsersTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _unblock(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(selectedAdminUserProvider);
+  Future<void> _unblock(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser? user,
+  ) async {
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
       context,
@@ -244,8 +305,11 @@ class _UsersTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(selectedAdminUserProvider);
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser? user,
+  ) async {
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
       context,
@@ -265,8 +329,11 @@ class _UsersTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _restore(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(selectedAdminUserProvider);
+  Future<void> _restore(
+    BuildContext context,
+    WidgetRef ref,
+    AuthorizedUser? user,
+  ) async {
     if (user == null) return;
     final confirmed = await showConfirmationDialog(
       context,
@@ -281,6 +348,57 @@ class _UsersTab extends ConsumerWidget {
       context,
       action: () => _users(ref).restore(user),
       success: 'Se restauró a ${user.email}.',
+    );
+  }
+}
+
+/// "Nuevo usuario" across the width, for the cards layout.
+class _CreateUserButton extends StatelessWidget {
+  final AdminUserAction? pendingAction;
+  final VoidCallback onCreate;
+
+  const _CreateUserButton({
+    required this.pendingAction,
+    required this.onCreate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final pending = pendingAction;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          key: const Key('admin_crear'),
+          onPressed: pending == null ? onCreate : null,
+          style: FilledButton.styleFrom(minimumSize: const Size(64, 48)),
+          icon: pending == AdminUserAction.create
+              ? const SizedBox.square(
+                  key: Key('loading_admin_crear'),
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.person_add_alt_1_outlined, size: 18),
+          label: const Text('Nuevo usuario'),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.more_vert, size: 18, color: cs.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Tocá el menú de un usuario para cambiar su rol, '
+                'bloquearlo o eliminarlo.',
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

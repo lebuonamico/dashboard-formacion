@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -329,61 +330,76 @@ class _TeamRow extends StatelessWidget {
     required this.onLeaders,
   });
 
+  /// Below this width the leaders go under the team's name.
+  static const _stackedBelow = 560.0;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
+    final name = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          team.name,
+          style: context.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: cs.onSurface,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          employees == 0
+              ? 'Sin colaboradores activos en la nómina'
+              : _employees(employees),
+          style: context.textTheme.labelMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    final leaders = _Leaders(
+      itemKey: 'estructura_lideres_equipo_${team.id}',
+      label: 'Líderes',
+      emails: team.leaders,
+      nameByEmail: nameByEmail,
+      enabled: enabled,
+      onEdit: onLeaders,
+    );
 
     return Padding(
       key: Key('estructura_equipo_${team.id}'),
       padding: const EdgeInsets.only(top: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 30, top: 2),
-            child: Icon(
-              Icons.groups_outlined,
-              size: 18,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 260,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  team.name,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < _stackedBelow;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                // On a phone the area's 30 px indent leaves less room.
+                padding: EdgeInsets.only(left: stacked ? 8 : 30, top: 2),
+                child: Icon(
+                  Icons.groups_outlined,
+                  size: 18,
+                  color: cs.onSurfaceVariant,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  employees == 0
-                      ? 'Sin colaboradores activos en la nómina'
-                      : _employees(employees),
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              if (stacked)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [name, const SizedBox(height: 4), leaders],
                   ),
-                ),
+                )
+              else ...[
+                SizedBox(width: 260, child: name),
+                const SizedBox(width: 12),
+                Expanded(child: leaders),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _Leaders(
-              itemKey: 'estructura_lideres_equipo_${team.id}',
-              label: 'Líderes',
-              emails: team.leaders,
-              nameByEmail: nameByEmail,
-              enabled: enabled,
-              onEdit: onLeaders,
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -445,7 +461,11 @@ class _Leaders extends StatelessWidget {
           onPressed: enabled ? onEdit : null,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            minimumSize: const Size(0, 30),
+            // A finger needs 48 px; the desktop keeps the compact row.
+            minimumSize: Size(
+              context.windowSize == WindowSize.expanded ? 0 : 48,
+              context.windowSize == WindowSize.expanded ? 30 : 48,
+            ),
           ),
           child: Text(sorted.isEmpty ? 'Asignar' : 'Editar'),
         ),

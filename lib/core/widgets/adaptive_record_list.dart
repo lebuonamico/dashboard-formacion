@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 /// needs no bounded height, so the screen can scroll as a whole. From 600 px
 /// the cards go two per row, each row as tall as its tallest card (see
 /// [CardRows]). Like the tables, it goes back to the first page
-/// when [items] changes.
+/// when [items] changes: by content, or by [itemId] when the items are
+/// rebuilt as new objects without `==`.
 class AdaptiveRecordList<T> extends StatefulWidget {
   final List<T> items;
   final Widget Function(List<T> items) table;
@@ -20,6 +21,7 @@ class AdaptiveRecordList<T> extends StatefulWidget {
   final String resultsLabel;
   final IconData icon;
   final int pageSize;
+  final Object? Function(T item)? itemId;
 
   const AdaptiveRecordList({
     super.key,
@@ -29,6 +31,7 @@ class AdaptiveRecordList<T> extends StatefulWidget {
     required this.resultsLabel,
     required this.icon,
     this.pageSize = 10,
+    this.itemId,
   });
 
   @override
@@ -46,9 +49,14 @@ class _AdaptiveRecordListState<T> extends State<AdaptiveRecordList<T>> {
   void didUpdateWidget(covariant AdaptiveRecordList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     // By content: a screen that rebuilds the same list keeps its page.
-    if (!const ListEquality<Object?>().equals(oldWidget.items, widget.items)) {
-      _page = 0;
-    }
+    final id = widget.itemId;
+    final same = id == null
+        ? const ListEquality<Object?>().equals(oldWidget.items, widget.items)
+        : const IterableEquality<Object?>().equals(
+            oldWidget.items.map(id),
+            widget.items.map(id),
+          );
+    if (!same) _page = 0;
   }
 
   void _goTo(int page) {

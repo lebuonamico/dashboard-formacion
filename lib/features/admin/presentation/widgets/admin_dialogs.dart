@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
@@ -389,6 +390,7 @@ class _DialogFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: context.dialogInsetPadding,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
