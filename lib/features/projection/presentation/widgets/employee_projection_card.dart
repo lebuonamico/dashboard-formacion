@@ -37,18 +37,27 @@ class EmployeeProjectionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                formatPercentage(projection.percentage),
-                style: context.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
+              // On a phone the variation goes under the percentage instead
+              // of pushing the status out of the card.
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      formatPercentage(projection.percentage),
+                      style: context.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    if (projection.variation case final variation?)
+                      VariationBadge(value: variation, unit: 'pts'),
+                  ],
                 ),
               ),
-              if (projection.variation case final variation?) ...[
-                const SizedBox(width: 8),
-                VariationBadge(value: variation, unit: 'pts'),
-              ],
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 key: const Key('proyeccion_empleado_estado'),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

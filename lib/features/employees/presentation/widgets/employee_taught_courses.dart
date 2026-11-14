@@ -1,8 +1,13 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/record_card.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_detail.dart';
 import 'package:flutter/material.dart';
 
+/// The courses the employee taught: a table on desktop, a list of cards below
+/// 840 px.
 class EmployeeTaughtCourses extends StatelessWidget {
   final List<TaughtCourse> taught;
 
@@ -17,6 +22,14 @@ class EmployeeTaughtCourses extends StatelessWidget {
         child: const Center(
           child: Text('No registra cursos dictados como instructor.'),
         ),
+      );
+    }
+
+    if (context.windowSize != WindowSize.expanded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 8,
+        children: taught.map(_TaughtCourseCard.new).toList(),
       );
     }
 
@@ -94,4 +107,26 @@ class EmployeeTaughtCourses extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TaughtCourseCard extends StatelessWidget {
+  final TaughtCourse course;
+
+  const _TaughtCourseCard(this.course);
+
+  @override
+  Widget build(BuildContext context) => RecordCard(
+    key: ValueKey('dictado_${course.code}'),
+    leading: Icon(
+      Icons.co_present_outlined,
+      color: context.colors.teaching.text,
+      size: 20,
+    ),
+    title: course.name,
+    subtitle: 'ID ${course.code}',
+    metrics: [
+      RecordMetric('Área temática', orDash(course.area)),
+      RecordMetric('Horas sumadas al plan', '${formatHours(course.hours)} hs'),
+    ],
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/formatting/date_formatter.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:app_finnegans/features/certifications/domain/lms_certification.dart';
@@ -194,7 +195,7 @@ class _CourseTimeEntriesTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   group.courseName,
-                  maxLines: 1,
+                  maxLines: context.windowSize == WindowSize.expanded ? 1 : 2,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
@@ -305,7 +306,9 @@ class _LmsCertificationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         courseName,
-                        maxLines: 1,
+                        maxLines: context.windowSize == WindowSize.expanded
+                            ? 1
+                            : 2,
                         overflow: TextOverflow.ellipsis,
                         style: context.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,

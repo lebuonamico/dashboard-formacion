@@ -1,10 +1,14 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 import 'package:flutter/material.dart';
 
+/// The four categories of the plan: in a row on desktop, 2 × 2 below 840 px
+/// and one per row on the narrowest phones.
 class EmployeeCategoriesGrid extends StatelessWidget {
   final EmployeeCompliance compliance;
 
@@ -12,6 +16,18 @@ class EmployeeCategoriesGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (context.windowSize != WindowSize.expanded) {
+      return CardRows(
+        columns: MediaQuery.sizeOf(context).width < 360 ? 1 : 2,
+        spacing: 12,
+        children: CourseCategory.values
+            .map(
+              (type) =>
+                  _CategoryCard(type: type, compliance: compliance, fill: true),
+            )
+            .toList(),
+      );
+    }
     return Row(
       spacing: 12,
       children: CourseCategory.values
@@ -29,7 +45,15 @@ class _CategoryCard extends StatelessWidget {
   final CourseCategory type;
   final EmployeeCompliance compliance;
 
-  const _CategoryCard({required this.type, required this.compliance});
+  /// As tall as its row (in `CardRows`): the label takes two lines and the
+  /// bar goes to the bottom, so the bars of a row line up.
+  final bool fill;
+
+  const _CategoryCard({
+    required this.type,
+    required this.compliance,
+    this.fill = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +80,7 @@ class _CategoryCard extends StatelessWidget {
               color: context.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
-            maxLines: 1,
+            maxLines: fill ? 2 : 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
@@ -81,6 +105,7 @@ class _CategoryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          if (fill) const Spacer(),
           ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(

@@ -929,6 +929,71 @@ void main() {
       );
     });
 
+    group('Perfil', () {
+      final newcomer = Employee(
+        employeeId: '200',
+        firstName: 'Bruno',
+        lastName: 'Gómez',
+        seniority: Seniority.junior1,
+        area: 'Tecnología',
+        email: 'bruno@finnegans.com',
+        team: 'Plataforma',
+        hireDate: DateTime(_year, _month + 1, 1),
+      );
+
+      Future<void> showProfile(WidgetTester tester, String employeeId) => _show(
+        tester,
+        route: '/empleados/$employeeId',
+        screen: (_) => EmployeeDetailScreen(employeeId: employeeId),
+        employees: [_employee, newcomer],
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      testWidgets('con datos: horas debajo, categorías de a dos', (
+        tester,
+      ) async {
+        await showProfile(tester, _employee.employeeId);
+
+        final hours = find.byKey(const Key('perfil_horas_validas'));
+        expect(hours, findsOneWidget);
+        expect(
+          tester.getRect(hours).top,
+          greaterThan(tester.getRect(find.text('Líder')).bottom),
+        );
+        expect(find.textContaining('Desglose del plan'), findsOneWidget);
+        expect(find.byType(CardRows), findsOneWidget);
+        expect(
+          tester.getRect(find.text('Habilidades blandas')).top,
+          tester.getRect(find.text('Habilidades de negocio')).top,
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('proyeccion_empleado_estado')),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('antes del ingreso: aviso sin datos y proyección que avisa', (
+        tester,
+      ) async {
+        await showProfile(tester, newcomer.employeeId);
+
+        expect(find.byKey(const Key('perfil_horas_validas')), findsNothing);
+        expect(
+          find.text('No hay datos cargados del colaborador para Junio 2026.'),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('proyeccion_sin_datos')),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets('Equipos con registros muestra KPIs y tarjetas', (
       tester,
     ) async {
