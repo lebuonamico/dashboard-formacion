@@ -112,7 +112,7 @@ class _CoursesFilterBar extends ConsumerWidget {
           hint: 'Mes (métricas)',
         ),
       ],
-      hasActiveExtraFilters: period.year != null || period.month != null,
+      activeExtraFilters: [period.year, period.month].nonNulls.length,
       onClearExtraFilters: ref.read(courseStatsPeriodProvider.notifier).clear,
     );
   }

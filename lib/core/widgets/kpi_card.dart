@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 /// Row of KPI cards, the same on the home, areas and teams screens and
@@ -160,17 +161,7 @@ class DashboardKpiCard extends StatelessWidget {
                 ),
               ),
               if (help case final help?) ...[
-                Tooltip(
-                  message: help,
-                  triggerMode: TooltipTriggerMode.tap,
-                  showDuration: const Duration(seconds: 8),
-                  constraints: const BoxConstraints(maxWidth: 320),
-                  child: Icon(
-                    Icons.info_outline,
-                    size: 15,
-                    color: context.colors.faintText,
-                  ),
-                ),
+                InfoHint(message: help),
                 const SizedBox(width: 6),
               ],
               Icon(icon, size: 18, color: color),

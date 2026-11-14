@@ -115,7 +115,7 @@ class _BarFiltersCrm extends ConsumerWidget {
         ),
         OptionalMonthFilter(provider: timeEntriesPeriodProvider, width: 240),
       ],
-      hasActiveExtraFilters: period.year != null || period.month != null,
+      activeExtraFilters: [period.year, period.month].nonNulls.length,
       onClearExtraFilters: ref.read(timeEntriesPeriodProvider.notifier).clear,
     );
   }

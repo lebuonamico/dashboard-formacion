@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 class KpiData {
@@ -99,16 +100,9 @@ class _KpiCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (data.help != null) ...[
+                    if (data.help case final help?) ...[
                       const SizedBox(width: 4),
-                      Tooltip(
-                        message: data.help!,
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 15,
-                          color: context.colors.faintText,
-                        ),
-                      ),
+                      InfoHint(message: help),
                     ],
                   ],
                 ),
