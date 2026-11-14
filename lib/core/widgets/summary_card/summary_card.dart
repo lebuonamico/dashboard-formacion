@@ -51,6 +51,9 @@ class SummaryCard extends StatelessWidget {
                       header,
                       const SizedBox(height: 13),
                       ...details,
+                      // When the card is as tall as its content (narrow
+                      // windows), the spacer is empty: keep a gap anyway.
+                      const SizedBox(height: 12),
                       const Spacer(),
                       progress,
                       const SizedBox(height: 9),

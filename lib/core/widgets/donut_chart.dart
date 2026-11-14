@@ -17,6 +17,9 @@ class DonutChart extends StatelessWidget {
   final TextStyle? centerTextStyle;
   final TextStyle? centerSubtitleStyle;
 
+  /// Width and height. Larger when it has the card's width to itself.
+  final double size;
+
   const DonutChart({
     super.key,
     required this.segments,
@@ -24,14 +27,15 @@ class DonutChart extends StatelessWidget {
     required this.centerSubtitle,
     this.centerTextStyle,
     this.centerSubtitleStyle,
+    this.size = 132,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
     return SizedBox(
-      width: 132,
-      height: 132,
+      width: size,
+      height: size,
       child: CustomPaint(
         painter: _DonutPainter(segments, context.colors.chartTrack),
         child: Center(

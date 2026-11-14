@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:collection/collection.dart';
@@ -9,7 +10,8 @@ import 'package:flutter/material.dart';
 /// From 840 px it returns [table] as is: usually a `PaginatedTable`, which
 /// needs a bounded height. Below, it shows [pageSize] cards per page and
 /// needs no bounded height, so the screen can scroll as a whole. From 600 px
-/// the cards go two per row. Like the tables, it goes back to the first page
+/// the cards go two per row, each row as tall as its tallest card (see
+/// [CardRows]). Like the tables, it goes back to the first page
 /// when [items] changes.
 class AdaptiveRecordList<T> extends StatefulWidget {
   final List<T> items;
@@ -43,7 +45,10 @@ class _AdaptiveRecordListState<T> extends State<AdaptiveRecordList<T>> {
   @override
   void didUpdateWidget(covariant AdaptiveRecordList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.items != widget.items) _page = 0;
+    // By content: a screen that rebuilds the same list keeps its page.
+    if (!const ListEquality<Object?>().equals(oldWidget.items, widget.items)) {
+      _page = 0;
+    }
   }
 
   void _goTo(int page) {
@@ -76,28 +81,15 @@ class _AdaptiveRecordListState<T> extends State<AdaptiveRecordList<T>> {
     final cards = [
       for (final item in widget.items.sublist(start, end)) widget.card(item),
     ];
-    final columns = windowSize == WindowSize.medium ? 2 : 1;
-
     return Column(
       key: _top,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (index, row) in cards.slices(columns).indexed) ...[
-          if (index > 0) const SizedBox(height: _spacing),
-          if (columns == 1)
-            row.single
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: row.first),
-                const SizedBox(width: _spacing),
-                Expanded(
-                  child: row.length > 1 ? row.last : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-        ],
+        CardRows(
+          columns: windowSize == WindowSize.medium ? 2 : 1,
+          spacing: _spacing,
+          children: cards,
+        ),
         if (pageCount > 1) ...[
           const SizedBox(height: _spacing),
           ResultsPagination(

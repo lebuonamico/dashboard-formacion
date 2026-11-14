@@ -21,6 +21,8 @@ import 'package:app_finnegans/features/dashboard/presentation/providers/dashboar
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/team_detail_screen.dart';
+import 'package:app_finnegans/features/teams/presentation/teams_screen.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,8 +71,9 @@ Future<ProviderContainer> _show(
   List<Course>? courses,
   List<CrmTimeEntry> timeEntries = const [],
   List<LmsCertification> certifications = const [],
+  Size size = const Size(2400, 2000),
 }) async {
-  tester.view.physicalSize = const Size(2400, 2000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -837,6 +840,115 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('proyeccion_sin_datos')), findsOneWidget);
+    });
+  });
+
+  group('En el teléfono (390 px)', () {
+    const phone = Size(390, 844);
+
+    testWidgets('Dashboard sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Dashboard con registros: KPIs y resúmenes por contenido', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('COLABORADORES'), findsOneWidget);
+      expect(find.text('Estado de cumplimiento'), findsOneWidget);
+      expect(find.text('Evolución de horas mensuales'), findsOneWidget);
+      expect(find.text('Tecnología'), findsOneWidget);
+      // Sin alturas fijas: las tarjetas van en filas que se ajustan.
+      expect(find.byType(CardRows), findsWidgets);
+      expect(find.byType(GridView), findsNothing);
+    });
+
+    testWidgets('Áreas sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Áreas con registros muestra KPIs y tarjetas', (tester) async {
+      await _show(
+        tester,
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('ÁREAS ACTIVAS'), findsOneWidget);
+      // The screen is a lazy list: the cards are built once in view.
+      await tester.scrollUntilVisible(
+        find.text('Ver detalle'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Tecnología'), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Equipos sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/equipos',
+        screen: (_) => const TeamsScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Equipos con registros muestra KPIs y tarjetas', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/equipos',
+        screen: (_) => const TeamsScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('EQUIPOS ACTIVOS'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Ver detalle'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Plataforma'), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 }

@@ -1,10 +1,15 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 /// Row of KPI cards, the same on the home, areas and teams screens and
 /// their details: 5 columns on wide screens, then 3 + 2, 2 or 1.
+///
+/// From 840 px every card has the same fixed height. Below, each row is as
+/// tall as its content, so the texts the cards let wrap there fit.
 class KpiCardRow extends StatelessWidget {
   final List<Widget> cards;
 
@@ -12,6 +17,7 @@ class KpiCardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final expanded = context.windowSize == WindowSize.expanded;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -23,6 +29,7 @@ class KpiCardRow extends StatelessWidget {
             : width >= 680
             ? 2
             : 1;
+        if (!expanded) return CardRows(columns: columns, children: cards);
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -140,6 +147,36 @@ class DashboardKpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below 840 px the card grows with its content (see [KpiCardRow]): the
+    // badge may go to the next line and the footer goes below the progress
+    // label, instead of cutting them.
+    final wraps = context.windowSize != WindowSize.expanded;
+    final valueText = Text(
+      value,
+      style: context.textTheme.displaySmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: context.colorScheme.onSurface,
+      ),
+    );
+    final progressText = Text(
+      progressLabel,
+      maxLines: wraps ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      style: context.textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    );
+    final footerText = Text(
+      footer,
+      maxLines: wraps ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: wraps ? TextAlign.start : TextAlign.end,
+      style: context.textTheme.labelSmall?.copyWith(
+        color: context.colorScheme.onSurfaceVariant,
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: context.panel(shadow: true),
@@ -180,28 +217,30 @@ class DashboardKpiCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: context.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: 5),
-              if (suffixBelow)
-                const Spacer()
-              else
-                Flexible(child: _Suffix(suffix)),
-              if (badge != null) ...[
-                const SizedBox(width: 6),
-                Flexible(child: badge!),
+          if (wraps)
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [valueText, if (!suffixBelow) _Suffix(suffix), ?badge],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                valueText,
+                const SizedBox(width: 5),
+                if (suffixBelow)
+                  const Spacer()
+                else
+                  Flexible(child: _Suffix(suffix)),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  Flexible(child: badge!),
+                ],
               ],
-            ],
-          ),
+            ),
           if (suffixBelow) ...[const SizedBox(height: 2), _Suffix(suffix)],
           const SizedBox(height: 8),
           ClipRRect(
@@ -214,32 +253,24 @@ class DashboardKpiCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  progressLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-              Flexible(
-                child: Text(
-                  footer,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          if (wraps)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                progressText,
+                if (footer.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  footerText,
+                ],
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(child: progressText),
+                Flexible(child: footerText),
+              ],
+            ),
         ],
       ),
     );

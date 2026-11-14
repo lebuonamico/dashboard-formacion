@@ -7,18 +7,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<void> _show(WidgetTester tester, List<MonthlyHours> points) =>
-    tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            child: DashboardMonthlyHours(evolutionAsync: AsyncData(points)),
-          ),
+Future<void> _show(
+  WidgetTester tester,
+  List<MonthlyHours> points, {
+  double width = 800,
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: AppTheme.light(),
+    home: Scaffold(
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: width,
+          child: DashboardMonthlyHours(evolutionAsync: AsyncData(points)),
         ),
       ),
-    );
+    ),
+  ),
+);
+
+/// A full year: January 1,5 hs, February 3 hs… December 18 hs.
+final _year = [
+  for (var month = 1; month <= 12; month++)
+    MonthlyHours(month: DateTime(2026, month), hours: month * 1.5, target: 8),
+];
+
+String _footer(WidgetTester tester) => tester
+    .widget<Text>(find.byKey(const Key('monthly_hours_footer')))
+    .textSpan!
+    .toPlainText();
+
+/// Taps the middle of the bar of [month] (1–12) in the twelve-month chart.
+Future<void> _tapBar(WidgetTester tester, int month) async {
+  final chart = tester.getRect(find.byKey(const Key('monthly_hours_chart')));
+  final slot = (chart.width - 16) / 12;
+  await tester.tapAt(
+    Offset(chart.left + 8 + slot * (month - 0.5), chart.center.dy),
+  );
+  await tester.pump();
+}
 
 void main() {
   testWidgets('El objetivo es el del último mes, no 8 h fijas', (tester) async {
@@ -42,6 +69,48 @@ void main() {
 
     expect(find.text('Objetivo: 0 hs'), findsOne);
     expect(tester.takeException(), isNull);
+  });
+
+  group('Con barras angostas (teléfono)', () {
+    testWidgets('Tocar una barra muestra su mes y sus horas con decimales', (
+      tester,
+    ) async {
+      await _show(tester, _year, width: 358);
+
+      expect(_footer(tester), 'Último mes: 18 hs promedio');
+      expect(find.text('Tocá una barra'), findsOneWidget);
+
+      await _tapBar(tester, 1);
+      expect(_footer(tester), 'Enero: 1,5 hs promedio');
+      expect(find.text('Tocá una barra'), findsNothing);
+
+      await _tapBar(tester, 7);
+      expect(_footer(tester), 'Julio: 10,5 hs promedio');
+
+      // Tocar la misma barra vuelve al último mes.
+      await _tapBar(tester, 7);
+      expect(_footer(tester), 'Último mes: 18 hs promedio');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Con barras anchas no se puede tocar, como en escritorio', (
+      tester,
+    ) async {
+      await _show(tester, _year.sublist(8), width: 358);
+
+      expect(find.byKey(const Key('monthly_hours_chart')), findsNothing);
+      expect(find.text('Tocá una barra'), findsNothing);
+      expect(_footer(tester), 'Último mes: 18 hs promedio');
+    });
+
+    testWidgets('En escritorio los doce meses no se pueden tocar', (
+      tester,
+    ) async {
+      await _show(tester, _year, width: 1100);
+
+      expect(find.byKey(const Key('monthly_hours_chart')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('Sin meses muestra el aviso', (tester) async {

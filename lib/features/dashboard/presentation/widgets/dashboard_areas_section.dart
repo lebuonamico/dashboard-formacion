@@ -1,4 +1,6 @@
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
@@ -103,6 +105,19 @@ class _FilteredAreasGrid extends ConsumerWidget {
                         : constraints.maxWidth >= 600
                         ? 2
                         : 1;
+                    // Below 840 px each row is as tall as its cards.
+                    if (context.windowSize != WindowSize.expanded) {
+                      return CardRows(
+                        columns: columns,
+                        children: [
+                          for (final item in areas)
+                            DashboardAreaCard(
+                              area: item.area,
+                              teamCount: item.teamCount,
+                            ),
+                        ],
+                      );
+                    }
 
                     return GridView.builder(
                       shrinkWrap: true,

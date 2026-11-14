@@ -1,6 +1,8 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
@@ -51,6 +53,14 @@ class DashboardSummaryCharts extends StatelessWidget {
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 850 ? 2 : 1;
             final cardHeight = columns == 2 ? 280.0 : 300.0;
+            final cards = [
+              _ComplianceChartCard(summary: distribution.compliance),
+              _CategoryChartCard(summary: distribution.categories),
+            ];
+            // Below 840 px each card is as tall as its content.
+            if (context.windowSize != WindowSize.expanded) {
+              return CardRows(columns: columns, children: cards);
+            }
 
             return GridView(
               shrinkWrap: true,
@@ -61,10 +71,7 @@ class DashboardSummaryCharts extends StatelessWidget {
                 mainAxisSpacing: 16,
                 mainAxisExtent: cardHeight,
               ),
-              children: [
-                _ComplianceChartCard(summary: distribution.compliance),
-                _CategoryChartCard(summary: distribution.categories),
-              ],
+              children: cards,
             );
           },
         );
@@ -118,25 +125,18 @@ class _ComplianceChartCard extends StatelessWidget {
           '${summary.onTarget == 1 ? 'alcanzó' : 'alcanzaron'} el 100% del objetivo',
       action: 'Ver colaboradores',
       onAction: () => context.go('/empleados'),
-      child: Row(
-        children: [
-          DonutChart(
-            segments: [
-              DonutChartSegment(
-                value: summary.onTarget.toDouble(),
-                color: green,
-              ),
-              DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
-              DonutChartSegment(value: summary.critical.toDouble(), color: red),
-            ],
-            centerText: formatPercentage(summary.onTargetShare * 100),
-            centerSubtitle: 'EN OBJETIVO',
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: _LegendList(items: legend, total: summary.total.toDouble()),
-          ),
-        ],
+      child: _ChartWithLegend(
+        chart: (size) => DonutChart(
+          size: size,
+          segments: [
+            DonutChartSegment(value: summary.onTarget.toDouble(), color: green),
+            DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
+            DonutChartSegment(value: summary.critical.toDouble(), color: red),
+          ],
+          centerText: formatPercentage(summary.onTargetShare * 100),
+          centerSubtitle: 'EN OBJETIVO',
+        ),
+        legend: _LegendList(items: legend, total: summary.total.toDouble()),
       ),
     );
   }
@@ -172,33 +172,58 @@ class _CategoryChartCard extends StatelessWidget {
       onAction: () => context.go('/cursos'),
       child: summary.totalHours == 0
           ? const _NoCategoryData()
-          : Row(
-              children: [
-                DonutChart(
-                  segments: [
-                    for (final type in CourseCategory.values)
-                      DonutChartSegment(
-                        value: summary.hours[type] ?? 0,
-                        color: context.colors.category(type).text,
-                      ),
-                  ],
-                  centerText:
-                      '${formatAchievedHours(summary.averageHours, target: summary.averageTarget)} / '
-                      '${formatHours(summary.averageTarget)} hs',
-                  // Smaller than the default so "x / y hs" fits.
-                  centerTextStyle: context.textTheme.bodyLarge,
-                  centerSubtitle: 'POR COLABORADOR',
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: _LegendList(
-                    items: legend,
-                    total: summary.totalHours,
-                    showPercentages: true,
-                  ),
-                ),
-              ],
+          : _ChartWithLegend(
+              chart: (size) => DonutChart(
+                size: size,
+                segments: [
+                  for (final type in CourseCategory.values)
+                    DonutChartSegment(
+                      value: summary.hours[type] ?? 0,
+                      color: context.colors.category(type).text,
+                    ),
+                ],
+                centerText:
+                    '${formatAchievedHours(summary.averageHours, target: summary.averageTarget)} / '
+                    '${formatHours(summary.averageTarget)} hs',
+                // Smaller than the default so "x / y hs" fits.
+                centerTextStyle: context.textTheme.bodyLarge,
+                centerSubtitle: 'POR COLABORADOR',
+              ),
+              legend: _LegendList(
+                items: legend,
+                total: summary.totalHours,
+                showPercentages: true,
+              ),
             ),
+    );
+  }
+}
+
+/// The donut with its legend beside it; on phones, the legend below and the
+/// donut larger, so its center text fits inside the ring.
+class _ChartWithLegend extends StatelessWidget {
+  final Widget Function(double size) chart;
+  final Widget legend;
+
+  const _ChartWithLegend({required this.chart, required this.legend});
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.windowSize == WindowSize.compact) {
+      return Column(
+        children: [
+          Center(child: chart(160)),
+          const SizedBox(height: 16),
+          legend,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        chart(132),
+        const SizedBox(width: 18),
+        Expanded(child: legend),
+      ],
     );
   }
 }
@@ -261,6 +286,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below 840 px the card grows with its content: the texts may wrap.
+    final lines = context.windowSize == WindowSize.expanded ? 1 : 2;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: context.panel(shadow: true),
@@ -283,7 +310,7 @@ class _SummaryCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      maxLines: 1,
+                      maxLines: lines,
                       overflow: TextOverflow.ellipsis,
                       style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
@@ -316,7 +343,7 @@ class _SummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   footer,
-                  maxLines: 1,
+                  maxLines: lines,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.labelSmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
