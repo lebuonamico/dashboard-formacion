@@ -39,7 +39,7 @@ class CertificationsScreen extends ConsumerWidget {
           const AppTopBar(title: 'Certificaciones LMS'),
           Expanded(
             child: Padding(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: completeAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => ErrorDataState(

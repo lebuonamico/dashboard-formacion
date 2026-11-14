@@ -16,7 +16,10 @@ import 'package:app_finnegans/features/auth/presentation/user_role_labels.dart';
 /// Without Supabase (local mode) there is no session, so it falls back to a
 /// generic 'U' and "Modo local".
 class UserAvatar extends ConsumerWidget {
-  const UserAvatar({super.key});
+  /// On phones the top bar shows only the photo; the menu is the same.
+  final bool showName;
+
+  const UserAvatar({super.key, this.showName = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,40 +64,42 @@ class UserAvatar extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _UserPhoto(data: data, radius: 18),
-            const SizedBox(width: 10),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 220),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  if (data.subtitle != null)
+            if (showName) ...[
+              const SizedBox(width: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      data.subtitle!,
+                      data.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.labelMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
                       ),
                     ),
-                ],
+                    if (data.subtitle != null)
+                      Text(
+                        data.subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 20,
-              color: cs.onSurfaceVariant,
-            ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: cs.onSurfaceVariant,
+              ),
+            ],
           ],
         ),
       ),

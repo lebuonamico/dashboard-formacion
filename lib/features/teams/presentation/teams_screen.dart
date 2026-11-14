@@ -80,7 +80,7 @@ class _TeamsOverviewContent extends ConsumerWidget {
     final items = ref.watch(teamComplianceProvider).value;
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         Text(
           'Vista general',

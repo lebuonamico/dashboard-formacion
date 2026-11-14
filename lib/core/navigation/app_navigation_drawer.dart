@@ -41,8 +41,45 @@ class AppNavigationDrawer extends ConsumerWidget {
   }
 }
 
+/// Below 840 px: the same menu as a modal drawer, opened from the top bar. It
+/// closes when a destination is chosen and when the location changes while it
+/// is open (the browser's back button).
+class ModalNavigationDrawer extends StatefulWidget {
+  const ModalNavigationDrawer({super.key});
+
+  @override
+  State<ModalNavigationDrawer> createState() => _ModalNavigationDrawerState();
+}
+
+class _ModalNavigationDrawerState extends State<ModalNavigationDrawer> {
+  /// Where the menu was opened. The drawer is only built while it is open.
+  Uri? _openedAt;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final location = GoRouterState.of(context).uri;
+    _openedAt ??= location;
+    if (location == _openedAt) return;
+    // Closing animates the drawer, which cannot start during a build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Scaffold.maybeOf(context)?.closeDrawer();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Drawer(
+    backgroundColor: context.colors.sidebarBackground,
+    child: const SafeArea(child: _ExpandedMenu(modal: true)),
+  );
+}
+
 class _ExpandedMenu extends ConsumerWidget {
-  const _ExpandedMenu();
+  /// Inside the modal drawer: the header closes it instead of folding it, and
+  /// choosing a destination closes it too.
+  final bool modal;
+
+  const _ExpandedMenu({this.modal = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,14 +95,16 @@ class _ExpandedMenu extends ConsumerWidget {
 
     return Column(
       children: [
-        const _DrawerHeader(),
+        _DrawerHeader(modal: modal),
         Expanded(
           child: NavigationDrawer(
             backgroundColor: Colors.transparent,
             elevation: 0,
             selectedIndex: selectedIndex,
-            onDestinationSelected: (index) =>
-                context.go(destinations[index].path),
+            onDestinationSelected: (index) {
+              if (modal) Scaffold.of(context).closeDrawer();
+              context.go(destinations[index].path);
+            },
             children: [
               const SizedBox(height: 12),
               for (final destination in destinations)
@@ -85,7 +124,9 @@ class _ExpandedMenu extends ConsumerWidget {
 }
 
 class _DrawerHeader extends ConsumerWidget {
-  const _DrawerHeader();
+  final bool modal;
+
+  const _DrawerHeader({required this.modal});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,13 +171,21 @@ class _DrawerHeader extends ConsumerWidget {
               ],
             ),
           ),
-          IconButton(
-            key: const Key('side_menu_toggle'),
-            tooltip: 'Ocultar menú',
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () =>
-                ref.read(sideMenuExpandedProvider.notifier).toggle(),
-          ),
+          if (modal)
+            IconButton(
+              key: const Key('modal_menu_close'),
+              tooltip: 'Cerrar menú',
+              icon: const Icon(Icons.close),
+              onPressed: () => Scaffold.of(context).closeDrawer(),
+            )
+          else
+            IconButton(
+              key: const Key('side_menu_toggle'),
+              tooltip: 'Ocultar menú',
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () =>
+                  ref.read(sideMenuExpandedProvider.notifier).toggle(),
+            ),
         ],
       ),
     );

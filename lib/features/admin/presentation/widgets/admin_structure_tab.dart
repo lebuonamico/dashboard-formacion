@@ -30,7 +30,7 @@ class AdminStructure extends ConsumerWidget {
     );
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         Text(
           'Áreas y equipos',

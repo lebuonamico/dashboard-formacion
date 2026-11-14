@@ -32,7 +32,7 @@ class EmployeesScreen extends ConsumerWidget {
           const AppTopBar(title: 'Directorio de colaboradores'),
           Expanded(
             child: Padding(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

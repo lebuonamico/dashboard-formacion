@@ -101,7 +101,7 @@ class _EmployeeDetailBody extends ConsumerWidget {
     );
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         _EmployeeHeader(
           employee: detail.employee,

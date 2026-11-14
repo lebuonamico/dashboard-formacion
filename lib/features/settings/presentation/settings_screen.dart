@@ -18,7 +18,7 @@ class SettingsScreen extends StatelessWidget {
           const AppTopBar(title: 'Configuración del sistema'),
           Expanded(
             child: ListView(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               children: [
                 for (final type in ImportFileType.values) ...[
                   _ConfigCard(

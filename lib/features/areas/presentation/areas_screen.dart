@@ -80,7 +80,7 @@ class _AreasContent extends ConsumerWidget {
     final isAnnual = selectedScope == PeriodScope.annual;
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         Text(
           'Vista general',

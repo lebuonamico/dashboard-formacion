@@ -59,7 +59,9 @@ class _Tabs extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: screenPadding.left),
+            padding: EdgeInsets.symmetric(
+              horizontal: screenPaddingOf(context).left,
+            ),
             decoration: BoxDecoration(
               color: cs.surface,
               border: Border(bottom: BorderSide(color: cs.outlineVariant)),
@@ -97,7 +99,7 @@ class _UsersTab extends ConsumerWidget {
     final cs = context.colorScheme;
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         Text(
           'Usuarios del sistema',

@@ -113,7 +113,7 @@ class _PeriodList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [periodControls, const SizedBox(height: 22), child],
     );
   }

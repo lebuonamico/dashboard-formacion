@@ -28,7 +28,7 @@ class CoursesScreen extends ConsumerWidget {
           const AppTopBar(title: 'Catálogo de cursos y formaciones'),
           Expanded(
             child: Padding(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

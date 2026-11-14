@@ -31,7 +31,7 @@ class DashboardScreen extends ConsumerWidget {
           const AppTopBar(title: 'Plan de formación interna'),
           Expanded(
             child: SingleChildScrollView(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

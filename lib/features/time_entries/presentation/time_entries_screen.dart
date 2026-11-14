@@ -31,7 +31,7 @@ class TimeEntriesScreen extends ConsumerWidget {
           const AppTopBar(title: 'Carga de horas CRM'),
           Expanded(
             child: Padding(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

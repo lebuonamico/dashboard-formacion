@@ -163,7 +163,7 @@ class _TeamDetailContent extends StatelessWidget {
     final team = detail.overview;
 
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [
         periodControls,
         const SizedBox(height: 22),
@@ -192,7 +192,7 @@ class _EmptyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [periodControls, const SizedBox(height: 22), child],
     );
   }

@@ -9,6 +9,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../support/pump_screen.dart';
+
+/// The modal menu alone, open, at phone width.
+Future<void> _showModalMenu(WidgetTester tester, {UserRole? role}) async {
+  await pumpScreen(
+    tester,
+    initialLocation: '/dashboard',
+    size: compactSize,
+    overrides: [
+      if (role != null)
+        authProvider.overrideWith(
+          () => AuthNotifier(
+            AuthState(
+              user: const AuthUser(
+                id: 'test-user',
+                email: 'usuario@finnegans.com',
+              ),
+              isAuthorized: true,
+              role: role.name,
+            ),
+          ),
+        ),
+    ],
+    routes: [
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const Scaffold(
+          drawer: ModalNavigationDrawer(),
+          body: Text('Pantalla Dashboard'),
+        ),
+      ),
+    ],
+  );
+  tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
+  await tester.pumpAndSettle();
+  expect(tester.takeException(), isNull);
+}
+
 Future<ProviderContainer> _showScreen(
   WidgetTester tester, {
   UserRole? role,
@@ -155,6 +193,40 @@ void main() {
 
     testWidgets('Un líder no ve Áreas ni lo administrativo', (tester) async {
       await _showScreen(tester, role: UserRole.teamLead);
+      expect(find.text(areas), findsNothing);
+      expect(find.text(settings), findsNothing);
+      expect(find.text(panel), findsNothing);
+      expect(find.text('Equipos'), findsOneWidget);
+      expect(find.text('Colaboradores'), findsOneWidget);
+    });
+  });
+
+  group('Menú modal en el teléfono (390 px)', () {
+    const areas = 'Áreas';
+    const settings = 'Configuración';
+    const panel = 'Panel de administrador';
+
+    testWidgets('Se cierra con su botón, no se pliega', (tester) async {
+      await _showModalMenu(tester);
+
+      expect(find.byTooltip('Cerrar menú'), findsOneWidget);
+      expect(find.byTooltip('Ocultar menú'), findsNothing);
+      expect(find.text('Cerrar sesión'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('modal_menu_close')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ModalNavigationDrawer), findsNothing);
+    });
+
+    testWidgets('Academia ve Configuración y el panel', (tester) async {
+      await _showModalMenu(tester, role: UserRole.academy);
+      for (final item in [areas, settings, panel]) {
+        expect(find.text(item), findsOneWidget, reason: item);
+      }
+    });
+
+    testWidgets('Un líder no ve Áreas ni lo administrativo', (tester) async {
+      await _showModalMenu(tester, role: UserRole.teamLead);
       expect(find.text(areas), findsNothing);
       expect(find.text(settings), findsNothing);
       expect(find.text(panel), findsNothing);
