@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
@@ -10,7 +12,9 @@ import 'package:app_finnegans/features/compliance/presentation/compliance_level_
 import 'package:app_finnegans/features/compliance/domain/member_order.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/member_order_menu.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/employees/presentation/widgets/member_card.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +32,7 @@ const _columns = <(String, MemberSort?)>[
   ('Por categoría', null),
 ];
 
+/// From 840 px a table; below, cards with the order in a menu.
 class TeamMembersTable extends ConsumerStatefulWidget {
   final ({String area, String team}) section;
 
@@ -67,12 +72,68 @@ class _TeamMembersTableState extends ConsumerState<TeamMembersTable> {
   }
 }
 
-class _MembersPage extends ConsumerWidget {
+class _MembersPage extends StatelessWidget {
   final List<EmployeeCompliance> members;
   final int currentPage;
   final ValueChanged<int> onPage;
 
   const _MembersPage({
+    required this.members,
+    required this.currentPage,
+    required this.onPage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Text(
+      'Integrantes (${members.length})',
+      style: context.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: context.colorScheme.onSurface,
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (context.windowSize == WindowSize.expanded)
+          title
+        else
+          Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 8),
+              MemberOrderMenu(
+                table: MemberTable.team,
+                columns: [for (final (_, column) in _columns) ?column],
+              ),
+            ],
+          ),
+        const SizedBox(height: 12),
+        AdaptiveRecordList(
+          items: members,
+          pageSize: _membersPerPage,
+          resultsLabel: 'integrantes',
+          icon: Icons.people_outline,
+          table: (members) => _MembersTable(
+            members: members,
+            currentPage: currentPage,
+            onPage: onPage,
+          ),
+          card: (member) => MemberCard(member: member, origin: 'equipos'),
+        ),
+      ],
+    );
+  }
+}
+
+/// From 840 px: the pagination above and headers that sort.
+class _MembersTable extends ConsumerWidget {
+  final List<EmployeeCompliance> members;
+  final int currentPage;
+  final ValueChanged<int> onPage;
+
+  const _MembersTable({
     required this.members,
     required this.currentPage,
     required this.onPage,
@@ -99,14 +160,6 @@ class _MembersPage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Integrantes ($memberCount)',
-          style: context.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: context.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 12),
         if (pageCount > 1) ...[
           ResultsPagination(
             currentPage: safePage,

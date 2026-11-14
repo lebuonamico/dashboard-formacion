@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/widgets/legend_donut_chart.dart';
 import 'package:flutter/material.dart';
@@ -46,16 +47,13 @@ class TeamCategoryDistribution extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Tooltip(
+                  InfoHint(
                     message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
                         : 'Horas válidas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: context.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.8,
-                      ),
+                    size: 16,
+                    color: context.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.8,
                     ),
                   ),
                 ],

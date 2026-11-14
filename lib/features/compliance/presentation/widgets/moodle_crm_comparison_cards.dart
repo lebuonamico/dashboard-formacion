@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/compliance/domain/moodle_crm_comparison.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
@@ -205,7 +206,8 @@ class _Panel extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtitle,
-            maxLines: 1,
+            // One line beside the other card; stacked, there is room for two.
+            maxLines: context.windowSize == WindowSize.expanded ? 1 : 2,
             overflow: TextOverflow.ellipsis,
             style: context.textTheme.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
