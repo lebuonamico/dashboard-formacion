@@ -5,12 +5,15 @@ import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
 import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/list_screen_body.dart';
 import 'package:app_finnegans/core/widgets/paginated_table.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
+import 'package:app_finnegans/core/widgets/record_card.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:app_finnegans/features/time_entries/domain/crm_time_entry_record.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
@@ -30,45 +33,101 @@ class TimeEntriesScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Carga de horas CRM'),
           Expanded(
-            child: Padding(
-              padding: screenPaddingOf(context),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _BarFiltersCrm(),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: timeEntriesAsync.when(
-                      skipLoadingOnReload: true,
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => ErrorDataState(
-                        title: 'No pudimos cargar las horas CRM',
-                        error: err,
-                        onRetry: () =>
-                            ref.invalidate(joinedTimeEntriesProvider),
-                      ),
-                      data: (items) => FadeIn(
-                        child: items.isEmpty
-                            ? const _NoTimeEntries()
-                            : PaginatedTable(
-                                items: items,
-                                rowHeight: _TimeEntriesTable.rowHeight,
-                                headerHeight: _TimeEntriesTable.headerHeight,
-                                minimumWidth: 1000,
-                                resultsLabel: 'registros',
-                                icon: Icons.schedule_outlined,
-                                tableBuilder: _TimeEntriesTable.new,
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
+            child: ListScreenBody(
+              header: const [_BarFiltersCrm(), SizedBox(height: 20)],
+              results: timeEntriesAsync.when(
+                skipLoadingOnReload: true,
+                loading: () => const ListLoading(),
+                error: (err, _) => ErrorDataState(
+                  title: 'No pudimos cargar las horas CRM',
+                  error: err,
+                  onRetry: () => ref.invalidate(joinedTimeEntriesProvider),
+                ),
+                data: (items) => FadeIn(
+                  child: items.isEmpty
+                      ? const _NoTimeEntries()
+                      : AdaptiveRecordList(
+                          items: items,
+                          resultsLabel: 'registros',
+                          icon: Icons.schedule_outlined,
+                          table: (items) => PaginatedTable(
+                            items: items,
+                            rowHeight: _TimeEntriesTable.rowHeight,
+                            headerHeight: _TimeEntriesTable.headerHeight,
+                            minimumWidth: 1000,
+                            resultsLabel: 'registros',
+                            icon: Icons.schedule_outlined,
+                            tableBuilder: _TimeEntriesTable.new,
+                          ),
+                          card: (record) => _TimeEntryCard(record),
+                        ),
+                ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// An employee ID outside the payroll has no profile to open.
+VoidCallback? _openProfile(BuildContext context, CrmTimeEntryRecord record) =>
+    record.employee == null
+    ? null
+    : () => context.push(
+        '/empleados/${Uri.encodeComponent(record.timeEntry.employeeId)}'
+        '?origen=cursadas',
+      );
+
+/// Below 840 px: what a row of the table shows.
+class _TimeEntryCard extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _TimeEntryCard(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final employee = record.employee;
+    final employeeId = record.timeEntry.employeeId;
+    return RecordCard(
+      key: ValueKey('time_entry_card_${record.timeEntry.id}'),
+      leading: _EmployeeInitial(record),
+      title: employee == null
+          ? 'Legajo $employeeId'
+          : '${employee.firstName} ${employee.lastName}',
+      subtitle: employee == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
+      subtitleColor: employee == null ? context.colors.warning.text : null,
+      trailing: _HoursCell(record),
+      metrics: [
+        RecordMetric('Fecha', formatDate(record.timeEntry.date)),
+        RecordMetric(
+          'Área',
+          orDash(employee?.area ?? ''),
+          muted: employee == null,
+        ),
+        RecordMetric(
+          'Equipo',
+          orDash(employee?.team ?? ''),
+          muted: employee == null,
+        ),
+        RecordMetric(
+          'Seniority',
+          employee?.seniority.label ?? '—',
+          muted: employee == null,
+        ),
+        RecordMetric('ID registro', record.timeEntry.id),
+      ],
+      footer: Text(
+        record.course?.name ?? record.timeEntry.courseName,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: context.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: context.colorScheme.onSurface,
+        ),
+      ),
+      onTap: _openProfile(context, record),
     );
   }
 }
@@ -81,7 +140,7 @@ class _NoTimeEntries extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasTimeEntries =
         ref.watch(crmTimeEntriesProvider).value?.isNotEmpty ?? false;
-    return SingleChildScrollView(
+    return ListEmptyState(
       child: hasTimeEntries
           ? const EmptyDataState(
               icon: Icons.search_off_outlined,
@@ -160,13 +219,10 @@ class _TimeEntriesTable extends StatelessWidget {
       rows: [
         for (final record in timeEntries)
           DataRow(
-            // An employee ID outside the payroll has no profile to open.
-            onSelectChanged: record.employee == null
-                ? null
-                : (_) => context.push(
-                    '/empleados/${Uri.encodeComponent(record.timeEntry.employeeId)}'
-                    '?origen=cursadas',
-                  ),
+            onSelectChanged: switch (_openProfile(context, record)) {
+              final open? => (_) => open(),
+              null => null,
+            },
             cells: [
               DataCell(
                 Text(
@@ -213,19 +269,7 @@ class _EmployeeCell extends StatelessWidget {
 
     return Row(
       children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: cs.outlineVariant,
-          child: Text(
-            employee == null || employee.firstName.isEmpty
-                ? '?'
-                : employee.firstName.substring(0, 1),
-            style: context.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
-            ),
-          ),
-        ),
+        _EmployeeInitial(record),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -257,6 +301,31 @@ class _EmployeeCell extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EmployeeInitial extends StatelessWidget {
+  final CrmTimeEntryRecord record;
+
+  const _EmployeeInitial(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final employee = record.employee;
+    return CircleAvatar(
+      radius: 14,
+      backgroundColor: cs.outlineVariant,
+      child: Text(
+        employee == null || employee.firstName.isEmpty
+            ? '?'
+            : employee.firstName.substring(0, 1),
+        style: context.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: cs.onSurface,
+        ),
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
@@ -51,6 +52,8 @@ class NotifyPendingButton extends ConsumerWidget {
             'pendientes',
     };
     final cs = context.colorScheme;
+    // Below 840 px it takes the whole width and a 48 px tap target.
+    final compact = context.windowSize != WindowSize.expanded;
 
     return Tooltip(
       message: help,
@@ -68,9 +71,11 @@ class NotifyPendingButton extends ConsumerWidget {
                 _ => showAppSnackBar(context, noPendingReminders),
               },
         style: OutlinedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
+          visualDensity: compact
+              ? VisualDensity.standard
+              : VisualDensity.compact,
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          minimumSize: const Size(0, 30),
+          minimumSize: compact ? const Size.fromHeight(48) : const Size(0, 30),
           foregroundColor: cs.primary,
           side: BorderSide(color: cs.outlineVariant),
           textStyle: context.textTheme.labelMedium?.copyWith(

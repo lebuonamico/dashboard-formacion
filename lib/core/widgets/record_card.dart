@@ -6,7 +6,10 @@ class RecordMetric {
   final String label;
   final String value;
 
-  const RecordMetric(this.label, this.value);
+  /// Greys out an empty value (a zero or a dash), as the tables do.
+  final bool muted;
+
+  const RecordMetric(this.label, this.value, {this.muted = false});
 }
 
 /// One row of a list, as a card: what a table row shows on wide screens. The
@@ -15,6 +18,9 @@ class RecordCard extends StatelessWidget {
   final Widget? leading;
   final String title;
   final String? subtitle;
+
+  /// By default, the variant text color.
+  final Color? subtitleColor;
 
   /// Beside the title: a status or a chip.
   final Widget? trailing;
@@ -29,6 +35,7 @@ class RecordCard extends StatelessWidget {
     this.leading,
     required this.title,
     this.subtitle,
+    this.subtitleColor,
     this.trailing,
     this.metrics = const [],
     this.footer,
@@ -76,7 +83,7 @@ class RecordCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.textTheme.labelMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
+                                color: subtitleColor ?? cs.onSurfaceVariant,
                               ),
                             ),
                         ],
@@ -134,10 +141,46 @@ class _Metric extends StatelessWidget {
       Text(
         metric.value,
         style: context.textTheme.bodySmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: context.colors.intermediateText,
+          fontWeight: metric.muted ? FontWeight.w400 : FontWeight.w600,
+          color: metric.muted
+              ? context.colorScheme.onSurfaceVariant
+              : context.colors.intermediateText,
         ),
       ),
     ],
   );
+}
+
+/// A warning shown as text in a card, where a table row shows it as an icon
+/// with a tooltip: touch screens have no hover.
+class RecordNotice extends StatelessWidget {
+  final String message;
+
+  const RecordNotice(this.message, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final warning = context.colors.warning;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: warning.background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 18, color: warning.text),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: context.textTheme.bodySmall?.copyWith(color: warning.text),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

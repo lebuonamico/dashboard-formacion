@@ -4,17 +4,22 @@ import 'package:app_finnegans/core/formatting/date_formatter.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/color_label.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/kpi_grid.dart';
+import 'package:app_finnegans/core/widgets/list_screen_body.dart';
 import 'package:app_finnegans/core/widgets/paginated_table.dart';
+import 'package:app_finnegans/core/widgets/record_card.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/certifications/domain/certification_record.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
+import 'package:app_finnegans/features/courses/presentation/course_category_labels.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
 import 'package:app_finnegans/features/pending_reminders/presentation/widgets/notify_pending_button.dart';
 import 'package:flutter/material.dart';
@@ -38,27 +43,30 @@ class CertificationsScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Certificaciones LMS'),
           Expanded(
-            child: Padding(
-              padding: screenPaddingOf(context),
-              child: completeAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => ErrorDataState(
+            child: completeAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Padding(
+                padding: screenPaddingOf(context),
+                child: ErrorDataState(
                   title: 'No pudimos cargar las certificaciones LMS',
                   error: error,
                   onRetry: () => ref.invalidate(joinedCertificationsProvider),
                 ),
-                data: (all) => FadeIn(
-                  child: all.isEmpty
-                      ? const SingleChildScrollView(
+              ),
+              data: (all) => FadeIn(
+                child: all.isEmpty
+                    ? Padding(
+                        padding: screenPaddingOf(context),
+                        child: const SingleChildScrollView(
                           child: EmptyDataState(
                             icon: Icons.menu_book_outlined,
                             title: 'No hay certificaciones LMS cargadas.',
                             message:
                                 'Importá el Excel de finalizaciones del LMS.',
                           ),
-                        )
-                      : const _CertificationsContent(),
-                ),
+                        ),
+                      )
+                    : const _CertificationsContent(),
               ),
             ),
           ),
@@ -73,9 +81,9 @@ class _CertificationsContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    final compact = context.windowSize != WindowSize.expanded;
+    return ListScreenBody(
+      header: [
         ref
             .watch(certificationKpiSummaryProvider)
             .when(
@@ -97,43 +105,50 @@ class _CertificationsContent extends ConsumerWidget {
         const SizedBox(height: 20),
         const _CertificationsFilterBar(),
         const SizedBox(height: 12),
-        const Align(
-          alignment: Alignment.centerRight,
-          child: NotifyPendingButton(),
-        ),
+        // Below 840 px, across the screen: a comfortable tap target.
+        if (compact)
+          const NotifyPendingButton()
+        else
+          const Align(
+            alignment: Alignment.centerRight,
+            child: NotifyPendingButton(),
+          ),
         const SizedBox(height: 12),
-        Expanded(
-          child: ref
-              .watch(filteredCertificationsProvider)
-              .when(
-                skipLoadingOnReload: true,
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => ErrorDataState(
-                  title: 'No pudimos filtrar las certificaciones LMS',
-                  error: error,
-                  onRetry: () => ref.invalidate(filteredCertificationsProvider),
-                ),
-                data: (filtered) => filtered.isEmpty
-                    ? const SingleChildScrollView(
-                        child: EmptyDataState(
-                          icon: Icons.search_off_outlined,
-                          title:
-                              'Ninguna certificación coincide con los filtros.',
-                          message: 'Probá con otros filtros.',
-                        ),
-                      )
-                    : PaginatedTable(
-                        items: filtered,
-                        rowHeight: _CertificationsTable.rowHeight,
-                        headerHeight: _CertificationsTable.headerHeight,
-                        minimumWidth: 1000,
-                        resultsLabel: 'certificaciones',
-                        icon: Icons.workspace_premium_outlined,
-                        tableBuilder: _CertificationsTable.new,
-                      ),
-              ),
-        ),
       ],
+      results: ref
+          .watch(filteredCertificationsProvider)
+          .when(
+            skipLoadingOnReload: true,
+            loading: () => const ListLoading(),
+            error: (error, _) => ErrorDataState(
+              title: 'No pudimos filtrar las certificaciones LMS',
+              error: error,
+              onRetry: () => ref.invalidate(filteredCertificationsProvider),
+            ),
+            data: (filtered) => filtered.isEmpty
+                ? const ListEmptyState(
+                    child: EmptyDataState(
+                      icon: Icons.search_off_outlined,
+                      title: 'Ninguna certificación coincide con los filtros.',
+                      message: 'Probá con otros filtros.',
+                    ),
+                  )
+                : AdaptiveRecordList(
+                    items: filtered,
+                    resultsLabel: 'certificaciones',
+                    icon: Icons.workspace_premium_outlined,
+                    table: (items) => PaginatedTable(
+                      items: items,
+                      rowHeight: _CertificationsTable.rowHeight,
+                      headerHeight: _CertificationsTable.headerHeight,
+                      minimumWidth: 1000,
+                      resultsLabel: 'certificaciones',
+                      icon: Icons.workspace_premium_outlined,
+                      tableBuilder: _CertificationsTable.new,
+                    ),
+                    card: (record) => _CertificationCard(record),
+                  ),
+          ),
     );
   }
 
@@ -206,6 +221,130 @@ class _CertificationsFilterBar extends ConsumerWidget {
   );
 }
 
+/// An employee ID outside the payroll has no profile to open.
+VoidCallback? _openProfile(BuildContext context, CertificationRecord record) =>
+    record.employeeIdOutsidePayroll
+    ? null
+    : () => context.push(
+        '/empleados/${Uri.encodeComponent(record.certification.employeeId)}'
+        '?origen=certificaciones',
+      );
+
+/// Below 840 px: what a row of the table shows, with the notices as text.
+class _CertificationCard extends StatelessWidget {
+  final CertificationRecord record;
+
+  const _CertificationCard(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final employee = record.employee;
+    final certification = record.certification;
+    final employeeId = certification.employeeId;
+    final category = record.lmsCategory;
+    final course = record.course;
+    final completedAt = certification.completedAt;
+    return RecordCard(
+      key: ValueKey(
+        'certification_card_${employeeId}_${certification.courseName}',
+      ),
+      leading: _EmployeeInitial(record),
+      title: employee == null
+          ? 'Legajo $employeeId'
+          : '${employee.firstName} ${employee.lastName}',
+      subtitle: employee == null ? 'Fuera de la nómina' : 'Legajo $employeeId',
+      subtitleColor: employee == null ? context.colors.warning.text : null,
+      trailing: _StatusLabel(record),
+      metrics: [
+        RecordMetric(
+          'Área',
+          orDash(employee?.area ?? ''),
+          muted: employee == null,
+        ),
+        RecordMetric(
+          'Equipo',
+          orDash(employee?.team ?? ''),
+          muted: employee == null,
+        ),
+        RecordMetric('Tipo', category?.label ?? '—', muted: category == null),
+        RecordMetric(
+          'Carga horaria',
+          course == null ? '—' : '${formatHours(course.workloadHours)} hs',
+          muted: course == null,
+        ),
+        RecordMetric(
+          'Finalización',
+          completedAt == null ? '—' : formatDate(completedAt),
+          muted: completedAt == null,
+        ),
+      ],
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            course?.name ?? certification.courseName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          if (record.courseOutsideCatalog) ...[
+            const SizedBox(height: 8),
+            const RecordNotice(_courseOutsideCatalogNotice),
+          ],
+          if (record.employeeIdOutsidePayroll) ...[
+            const SizedBox(height: 8),
+            const RecordNotice(_employeeOutsidePayrollNotice),
+          ],
+        ],
+      ),
+      onTap: _openProfile(context, record),
+    );
+  }
+}
+
+class _StatusLabel extends StatelessWidget {
+  final CertificationRecord record;
+
+  const _StatusLabel(this.record);
+
+  @override
+  Widget build(BuildContext context) => ColorLabel(
+    text: record.certification.isCompleted ? 'Finalizado' : 'Pendiente',
+    colors: record.certification.isCompleted
+        ? context.colors.success
+        : context.colors.warning,
+  );
+}
+
+class _EmployeeInitial extends StatelessWidget {
+  final CertificationRecord record;
+
+  const _EmployeeInitial(this.record);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final employee = record.employee;
+    return CircleAvatar(
+      radius: 14,
+      backgroundColor: cs.outlineVariant,
+      child: Text(
+        employee == null || employee.firstName.isEmpty
+            ? '?'
+            : employee.firstName.substring(0, 1),
+        style: context.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: cs.onSurface,
+        ),
+      ),
+    );
+  }
+}
+
 class _CertificationsTable extends StatelessWidget {
   /// Two-line rows: employee and ID, area and team.
   static const rowHeight = 56.0;
@@ -245,13 +384,10 @@ class _CertificationsTable extends StatelessWidget {
       rows: [
         for (final record in certifications)
           DataRow(
-            // An employee ID outside the payroll has no profile to open.
-            onSelectChanged: record.employeeIdOutsidePayroll
-                ? null
-                : (_) => context.push(
-                    '/empleados/${Uri.encodeComponent(record.certification.employeeId)}'
-                    '?origen=certificaciones',
-                  ),
+            onSelectChanged: switch (_openProfile(context, record)) {
+              final open? => (_) => open(),
+              null => null,
+            },
             cells: [
               DataCell(_EmployeeCell(record)),
               DataCell(_AreaTeamCell(record)),
@@ -275,16 +411,7 @@ class _CertificationsTable extends StatelessWidget {
                 ),
               ),
               DataCell(_DateCell(record.certification.completedAt)),
-              DataCell(
-                ColorLabel(
-                  text: record.certification.isCompleted
-                      ? 'Finalizado'
-                      : 'Pendiente',
-                  colors: record.certification.isCompleted
-                      ? context.colors.success
-                      : context.colors.warning,
-                ),
-              ),
+              DataCell(_StatusLabel(record)),
             ],
           ),
       ],
@@ -305,19 +432,7 @@ class _EmployeeCell extends StatelessWidget {
 
     return Row(
       children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: cs.outlineVariant,
-          child: Text(
-            employee == null || employee.firstName.isEmpty
-                ? '?'
-                : employee.firstName.substring(0, 1),
-            style: context.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
-            ),
-          ),
-        ),
+        _EmployeeInitial(record),
         const SizedBox(width: 10),
         // Flexible, not Expanded: keeps the notice next to the text, as in the
         // course column, instead of at the edge of the column.

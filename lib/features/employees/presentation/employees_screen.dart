@@ -1,16 +1,15 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/formatting/text_formatter.dart';
-import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
+import 'package:app_finnegans/core/widgets/list_screen_body.dart';
 import 'package:app_finnegans/core/widgets/record_card.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:app_finnegans/core/widgets/paginated_table.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/period_filter_panel.dart';
@@ -27,9 +26,6 @@ class EmployeesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // From 840 px the table fills the remaining height and paginates by it;
-    // below, the whole screen scrolls and the list shows cards.
-    final scrolls = context.windowSize != WindowSize.expanded;
     final header = [
       // The category progress is the selected period's, the same one the
       // profile opens with.
@@ -46,7 +42,7 @@ class EmployeesScreen extends ConsumerWidget {
         .watch(filteredEmployeesProvider)
         .when(
           skipLoadingOnReload: true,
-          loading: () => const _Loading(),
+          loading: () => const ListLoading(),
           error: (err, _) => ErrorDataState(
             title: 'No pudimos cargar los colaboradores',
             error: err,
@@ -60,43 +56,12 @@ class EmployeesScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Directorio de colaboradores'),
           Expanded(
-            child: scrolls
-                ? SingleChildScrollView(
-                    padding: screenPaddingOf(context),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [...header, results],
-                    ),
-                  )
-                : Padding(
-                    padding: screenPaddingOf(context),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...header,
-                        Expanded(child: results),
-                      ],
-                    ),
-                  ),
+            child: ListScreenBody(header: header, results: results),
           ),
         ],
       ),
     );
   }
-}
-
-/// Centered in the table's height; in the scrolling layout, with a margin.
-class _Loading extends StatelessWidget {
-  const _Loading();
-
-  @override
-  Widget build(BuildContext context) =>
-      context.windowSize == WindowSize.expanded
-      ? const Center(child: CircularProgressIndicator())
-      : const Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
-          child: Center(child: CircularProgressIndicator()),
-        );
 }
 
 class _EmployeesFiltersBar extends ConsumerWidget {
@@ -130,16 +95,13 @@ class _EmployeesResults extends ConsumerWidget {
               title: 'No hay colaboradores cargados.',
               message: 'Importá la nómina para ver el directorio.',
             );
-      // In the scrolling layout the screen already scrolls.
-      return context.windowSize == WindowSize.expanded
-          ? SingleChildScrollView(child: state)
-          : state;
+      return ListEmptyState(child: state);
     }
     return ref
         .watch(teamComplianceProvider)
         .when(
           skipLoadingOnReload: true,
-          loading: () => const _Loading(),
+          loading: () => const ListLoading(),
           error: (_, _) => _EmployeesList(
             employees: employees,
             complianceByEmployeeId: const {},

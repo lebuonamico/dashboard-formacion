@@ -929,6 +929,131 @@ void main() {
       );
     });
 
+    testWidgets('Cursos sin catálogo importado lo indica', (tester) async {
+      await _show(
+        tester,
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
+        courses: const [],
+        size: phone,
+      );
+      expect(find.text('No hay cursos cargados.'), findsOneWidget);
+    });
+
+    testWidgets('Cursos con filtros sin coincidencias lo distingue', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
+        size: phone,
+      );
+      expect(find.byKey(const ValueKey('course_card_1')), findsOneWidget);
+
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.courses).notifier)
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('No se encontraron cursos con los filtros aplicados.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Carga de horas CRM sin reporte importado lo indica', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        size: phone,
+      );
+      expect(find.text('No hay horas CRM cargadas.'), findsOneWidget);
+    });
+
+    testWidgets('Carga de horas CRM con filtros sin coincidencias', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+      expect(
+        find.byKey(const ValueKey('time_entry_card_tx-6')),
+        findsOneWidget,
+      );
+
+      container
+          .read(
+            dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
+          )
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna carga de horas coincide con los filtros.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Certificaciones sin finalizaciones importadas lo indica', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        size: phone,
+      );
+      expect(find.text('No hay certificaciones LMS cargadas.'), findsOneWidget);
+    });
+
+    testWidgets('Certificaciones con filtros sin coincidencias', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 20),
+          ),
+        ],
+        size: phone,
+      );
+      expect(
+        find.byKey(const ValueKey('certification_card_100_Negociación')),
+        findsOneWidget,
+      );
+
+      container
+          .read(
+            dataFilterSelectionProvider(
+              DataFilterScope.certifications,
+            ).notifier,
+          )
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna certificación coincide con los filtros.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     group('Perfil', () {
       final newcomer = Employee(
         employeeId: '200',

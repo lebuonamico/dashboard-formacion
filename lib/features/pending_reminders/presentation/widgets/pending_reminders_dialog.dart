@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/pending_reminders/domain/pending_reminder.dart';
 import 'package:app_finnegans/features/pending_reminders/presentation/pending_reminder_labels.dart';
@@ -15,7 +16,14 @@ Future<bool> showPendingRemindersDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
+      // On a phone the default 40 px margins leave little room for the list.
+      insetPadding: dialogContext.windowSize == WindowSize.compact
+          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 24)
+          : null,
       title: const Text('Notificar cursos pendientes'),
+      // A fixed width, not a maximum: the dialog sizes itself by its
+      // intrinsic width, which a ListView cannot report. On narrow screens
+      // it shrinks to the room available.
       content: SizedBox(width: 520, child: _PlanSummary(plan)),
       actions: [
         TextButton(
