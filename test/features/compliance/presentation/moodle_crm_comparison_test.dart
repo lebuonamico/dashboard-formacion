@@ -132,6 +132,49 @@ void main() {
     });
   }
 
+  // Horas como las reales (4 y 5 dígitos): con las columnas de escritorio
+  // de 64 px, los dos grupos de "Comparables" no entraban a 360 px.
+  for (final width in [390.0, 360.0]) {
+    testWidgets('En el teléfono, con horas reales, no desborda a $width px', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: MoodleCrmComparisonCards(
+                complianceList: [
+                  _c(
+                    moodle: {
+                      CourseCategory.businessSkills: 9672,
+                      CourseCategory.softSkills: 3756,
+                    },
+                    crm: {
+                      CourseCategory.businessSkills: 8331,
+                      CourseCategory.softSkills: 4231,
+                      CourseCategory.exploration: 1830,
+                      CourseCategory.teaching: 2007,
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('13428 hs'), findsOne);
+      expect(find.text('9672 hs'), findsOne);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('Una diferencia que redondea a 0% no muestra el porcentaje', (
     tester,
   ) async {

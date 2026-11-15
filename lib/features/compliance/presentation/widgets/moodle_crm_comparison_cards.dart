@@ -163,11 +163,17 @@ class _Total extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          '${formatHours(hours)} hs',
-          style: context.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: context.colorScheme.onSurface,
+        // On a phone, half a card cannot fit five digits at this size: the
+        // number shrinks instead of wrapping. With room it stays as is.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(
+            '${formatHours(hours)} hs',
+            style: context.textTheme.displaySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: context.colorScheme.onSurface,
+            ),
           ),
         ),
       ],
@@ -282,6 +288,7 @@ class _ChartCrm extends StatelessWidget {
                 hours: crm[type] ?? 0,
                 maximum: maximum,
                 height: _ColumnsChart._maximumHeight,
+                width: _ColumnsChart.barWidthOf(context),
                 color: context.colors.category(type).text,
                 source:
                     '${type.shortLabel}\n'
@@ -311,9 +318,15 @@ class _ColumnsChart extends StatelessWidget {
 
   static const _maximumHeight = 150.0;
 
+  /// On a phone the desktop's 64 px columns do not fit side by side.
+  static double barWidthOf(BuildContext context) =>
+      context.windowSize == WindowSize.compact ? 36 : 64;
+
   @override
   Widget build(BuildContext context) {
     final cs = context.colorScheme;
+    final barWidth = barWidthOf(context);
+    final gap = context.windowSize == WindowSize.compact ? 8.0 : 16.0;
     final maximum = [
       for (final type in types) ...[
         comparison.moodle[type] ?? 0,
@@ -328,21 +341,29 @@ class _ColumnsChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
+            // Flexible: with room each column keeps its width; without it,
+            // the hours above shrink instead of overflowing.
             children: [
-              _Column(
-                hours: comparison.moodle[type] ?? 0,
-                maximum: maximum,
-                height: _maximumHeight,
-                color: colorMoodle,
-                source: 'LMS',
+              Flexible(
+                child: _Column(
+                  hours: comparison.moodle[type] ?? 0,
+                  maximum: maximum,
+                  height: _maximumHeight,
+                  width: barWidth,
+                  color: colorMoodle,
+                  source: 'LMS',
+                ),
               ),
-              const SizedBox(width: 16),
-              _Column(
-                hours: comparison.crm[type] ?? 0,
-                maximum: maximum,
-                height: _maximumHeight,
-                color: colorCrm,
-                source: 'CRM',
+              SizedBox(width: gap),
+              Flexible(
+                child: _Column(
+                  hours: comparison.crm[type] ?? 0,
+                  maximum: maximum,
+                  height: _maximumHeight,
+                  width: barWidth,
+                  color: colorCrm,
+                  source: 'CRM',
+                ),
               ),
             ],
           ),
@@ -398,6 +419,7 @@ class _Column extends StatelessWidget {
   final double hours;
   final double maximum;
   final double height;
+  final double width;
   final Color color;
   final String source;
 
@@ -406,11 +428,10 @@ class _Column extends StatelessWidget {
     required this.hours,
     required this.maximum,
     required this.height,
+    this.width = 64,
     required this.color,
     required this.source,
   });
-
-  static const _width = 64.0;
 
   @override
   Widget build(BuildContext context) {
@@ -428,16 +449,20 @@ class _Column extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                '${formatHours(hours)} hs',
-                style: context.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
+              // Shrinks only when the column has less room than the text.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${formatHours(hours)} hs',
+                  style: context.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
               Container(
-                width: _width,
+                width: width,
                 height: barHeight,
                 decoration: BoxDecoration(
                   color: color,
