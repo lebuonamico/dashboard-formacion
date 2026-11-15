@@ -75,8 +75,9 @@ class _ModalNavigationDrawerState extends State<ModalNavigationDrawer> {
 }
 
 class _ExpandedMenu extends ConsumerWidget {
-  /// Inside the modal drawer: the header closes it instead of folding it, and
-  /// choosing a destination closes it too.
+  /// Inside the modal drawer: the header's menu button closes it instead of
+  /// folding it, the brand goes to the right, and choosing a destination
+  /// closes it too.
   final bool modal;
 
   const _ExpandedMenu({this.modal = false});
@@ -131,62 +132,74 @@ class _DrawerHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.colorScheme;
+    final logo = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        'assets/images/logo_finnegans.png',
+        width: 36,
+        height: 36,
+      ),
+    );
+    final align = modal ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final brand = Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: align,
+        children: [
+          Text(
+            'Finnegans',
+            style: context.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: cs.primary,
+            ),
+          ),
+          Text(
+            'Portal de formación interna',
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
     return Container(
       height: drawerHeaderHeight,
-      padding: const EdgeInsets.only(left: 20, right: 8),
+      // Modal: the menu button sits where the top bar's is (8 px from the
+      // edge), so the same button opens and closes the menu.
+      padding: modal
+          ? const EdgeInsets.only(left: 8, right: 20)
+          : const EdgeInsets.only(left: 20, right: 8),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: context.colors.sidebarBorder)),
       ),
       child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              'assets/images/logo_finnegans.png',
-              width: 36,
-              height: 36,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Finnegans',
-                  style: context.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: cs.primary,
-                  ),
+        children: modal
+            ? [
+                IconButton(
+                  key: const Key('modal_menu_close'),
+                  tooltip: 'Cerrar menú',
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).closeDrawer(),
                 ),
-                Text(
-                  'Portal de formación interna',
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  ),
+                const SizedBox(width: 12),
+                brand,
+                const SizedBox(width: 12),
+                logo,
+              ]
+            : [
+                logo,
+                const SizedBox(width: 12),
+                brand,
+                IconButton(
+                  key: const Key('side_menu_toggle'),
+                  tooltip: 'Ocultar menú',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () =>
+                      ref.read(sideMenuExpandedProvider.notifier).toggle(),
                 ),
               ],
-            ),
-          ),
-          if (modal)
-            IconButton(
-              key: const Key('modal_menu_close'),
-              tooltip: 'Cerrar menú',
-              icon: const Icon(Icons.close),
-              onPressed: () => Scaffold.of(context).closeDrawer(),
-            )
-          else
-            IconButton(
-              key: const Key('side_menu_toggle'),
-              tooltip: 'Ocultar menú',
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () =>
-                  ref.read(sideMenuExpandedProvider.notifier).toggle(),
-            ),
-        ],
       ),
     );
   }

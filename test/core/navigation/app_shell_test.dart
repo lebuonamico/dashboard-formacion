@@ -293,6 +293,44 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('Las mismas rayitas abren y cierran el menú, sin X, y el '
+        'logo va a la derecha', (tester) async {
+      await pumpScreen(
+        tester,
+        initialLocation: '/dashboard',
+        routes: _sectionRoutes,
+        size: compactSize,
+      );
+      final openAt = tester.getCenter(_openMenu);
+
+      await tester.tap(_openMenu);
+      await tester.pumpAndSettle();
+
+      final close = find.byKey(const Key('modal_menu_close'));
+      expect(
+        find.descendant(of: close, matching: find.byIcon(Icons.menu)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: _modalMenu, matching: find.byIcon(Icons.close)),
+        findsNothing,
+      );
+      // En el mismo lugar que la hamburguesa de la barra de arriba.
+      expect(tester.getCenter(close), openAt);
+      final logo = find.descendant(
+        of: _modalMenu,
+        matching: find.byType(Image),
+      );
+      expect(
+        tester.getRect(logo).left,
+        greaterThan(tester.getRect(find.text('Finnegans')).right),
+      );
+
+      await tester.tapAt(openAt);
+      await tester.pumpAndSettle();
+      expect(_modalMenu, findsNothing);
+    });
+
     testWidgets('Un detalle muestra volver en lugar de la hamburguesa', (
       tester,
     ) async {
