@@ -129,5 +129,38 @@ void main() {
       expect(segments, findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('En la tablet (768 px): alcance, mes y año en una fila', (
+      tester,
+    ) async {
+      final container = await show(tester, const Size(768, 1024));
+
+      expect(find.byKey(const Key('period_single_row')), findsOneWidget);
+      final fields = find.byType(FilterDropdown<int>);
+      expect(fields, findsNWidgets(2));
+      final scopeY = tester.getCenter(find.text('Mensual')).dy;
+      expect(tester.getCenter(fields.first).dy, closeTo(scopeY, 1));
+      expect(tester.getCenter(fields.last).dy, closeTo(scopeY, 1));
+
+      container
+          .read(periodFilterProvider.notifier)
+          .setScope(PeriodScope.annual);
+      await tester.pumpAndSettle();
+      expect(fields, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Una ventana de escritorio angosta conserva el apilado', (
+      tester,
+    ) async {
+      await show(tester, const Size(850, 800));
+      // 850 - 64 de márgenes: menos de 820, pero la ventana es de escritorio.
+      expect(find.byKey(const Key('period_single_row')), findsNothing);
+      final fields = find.byType(FilterDropdown<int>);
+      expect(
+        tester.getCenter(fields.last).dy,
+        greaterThan(tester.getCenter(fields.first).dy),
+      );
+    });
   });
 }

@@ -72,6 +72,9 @@ Future<ProviderContainer> _show(
   List<CrmTimeEntry> timeEntries = const [],
   List<LmsCertification> certifications = const [],
   Size size = const Size(2400, 2000),
+  // 0.5 with the test font is about Roboto at 1.0 in the browser; 0.65 is
+  // about the 1.3 of a phone with large text.
+  double textScale = 0.5,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -126,7 +129,7 @@ Future<ProviderContainer> _show(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
-          ).copyWith(textScaler: const TextScaler.linear(0.5)),
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
       ),
@@ -135,6 +138,19 @@ Future<ProviderContainer> _show(
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
   return container;
+}
+
+/// Scrolls the screen to its end, so the lazy parts get built (and their
+/// overflows reported) too.
+Future<void> _scrollThrough(WidgetTester tester) async {
+  final scrollable = find.byType(Scrollable).first;
+  for (var i = 0; i < 12; i++) {
+    final position = tester.state<ScrollableState>(scrollable).position;
+    if (position.pixels >= position.maxScrollExtent) break;
+    await tester.drag(scrollable, const Offset(0, -500));
+    await tester.pumpAndSettle();
+  }
+  expect(tester.takeException(), isNull);
 }
 
 void main() {
@@ -1119,6 +1135,113 @@ void main() {
       });
     });
 
+    group('Colaboradores', () {
+      testWidgets('sin nómina importada lo indica', (tester) async {
+        await _show(
+          tester,
+          route: '/empleados',
+          screen: (_) => const EmployeesScreen(),
+          employees: const [],
+          size: phone,
+        );
+        expect(find.text('No hay colaboradores cargados.'), findsOneWidget);
+      });
+
+      testWidgets('con nómina muestra tarjetas y un filtro sin coincidencias '
+          'lo distingue', (tester) async {
+        final container = await _show(
+          tester,
+          route: '/empleados',
+          screen: (_) => const EmployeesScreen(),
+          size: phone,
+        );
+        expect(find.text('Ana Pérez'), findsOneWidget);
+        expect(find.byType(DataTable), findsNothing);
+
+        container
+            .read(
+              dataFilterSelectionProvider(DataFilterScope.employees).notifier,
+            )
+            .select('Área', {'Inexistente'});
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Ningún colaborador coincide con los filtros.'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Detalle de área', () {
+      testWidgets('sin registros muestra el aviso del período', (tester) async {
+        await _show(
+          tester,
+          route: '/area',
+          screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+          size: phone,
+        );
+        expect(
+          find.text('No hay datos cargados para Junio 2026.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('con registros: equipos e integrantes en tarjetas', (
+        tester,
+      ) async {
+        await _show(
+          tester,
+          route: '/area',
+          screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+          timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+          size: phone,
+        );
+        expect(find.text('Cumplimiento del área'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('Ana Pérez'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.byType(DataTable), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Detalle de equipo', () {
+      testWidgets('sin registros muestra el aviso del período', (tester) async {
+        await _show(
+          tester,
+          route: '/equipo',
+          screen: (_) =>
+              const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+          size: phone,
+        );
+        expect(
+          find.text('No hay datos cargados para Junio 2026.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('con registros: integrantes en tarjetas', (tester) async {
+        await _show(
+          tester,
+          route: '/equipo',
+          screen: (_) =>
+              const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+          timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+          size: phone,
+        );
+        await tester.scrollUntilVisible(
+          find.text('Ana Pérez'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.byType(DataTable), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets('Equipos con registros muestra KPIs y tarjetas', (
       tester,
     ) async {
@@ -1139,6 +1262,58 @@ void main() {
       expect(find.text('Plataforma'), findsOneWidget);
       expect(find.byType(GridView), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Texto grande en el teléfono (390 px, ≈1.3)', () {
+    const phone = Size(390, 844);
+    final timeEntries = [_timeEntry(DateTime(_year, _month, 10))];
+    final certifications = [
+      LmsCertification(
+        employeeId: _employee.employeeId,
+        courseName: _course.name,
+        isCompleted: true,
+        completedAt: DateTime(_year, _month, 20),
+      ),
+    ];
+    final screens = <String, (String, Widget Function(GoRouterState))>{
+      'Dashboard': ('/dashboard', (_) => const DashboardScreen()),
+      'Áreas': ('/areas', (_) => const AreasScreen()),
+      'Equipos': ('/equipos', (_) => const TeamsScreen()),
+      'Detalle de área': (
+        '/area',
+        (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+      ),
+      'Detalle de equipo': (
+        '/equipo',
+        (_) => const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+      ),
+      'Colaboradores': ('/empleados', (_) => const EmployeesScreen()),
+      'Perfil': (
+        '/empleados/100',
+        (_) => const EmployeeDetailScreen(employeeId: '100'),
+      ),
+      'Cursos': ('/cursos', (_) => const CoursesScreen()),
+      'Carga de horas CRM': ('/cursadas', (_) => const TimeEntriesScreen()),
+      'Certificaciones': (
+        '/certificaciones',
+        (_) => const CertificationsScreen(),
+      ),
+    };
+
+    screens.forEach((name, screen) {
+      testWidgets('$name entra sin desbordes', (tester) async {
+        await _show(
+          tester,
+          route: screen.$1,
+          screen: screen.$2,
+          timeEntries: timeEntries,
+          certifications: certifications,
+          size: phone,
+          textScale: 0.65,
+        );
+        await _scrollThrough(tester);
+      });
     });
   });
 }

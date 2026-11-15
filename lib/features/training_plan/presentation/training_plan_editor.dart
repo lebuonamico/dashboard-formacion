@@ -345,30 +345,52 @@ class _Validity extends StatelessWidget {
       'Rige desde',
       style: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
     );
-    final monthField = DropdownButton<int>(
-      key: const Key('plan_mes'),
-      value: month,
-      isExpanded: stacked,
-      items: [
-        for (var m = 1; m <= 12; m++)
-          DropdownMenuItem(value: m, child: Text(monthName(m))),
-      ],
-      onChanged: choose == null
-          ? null
-          : (value) => value == null ? null : choose(year, value),
-    );
-    final yearField = DropdownButton<int>(
-      key: const Key('plan_anio'),
-      value: year,
-      isExpanded: stacked,
-      items: [
-        for (final option in years)
-          DropdownMenuItem(value: option, child: Text('$option')),
-      ],
-      onChanged: choose == null
-          ? null
-          : (value) => value == null ? null : choose(value, month),
-    );
+    final monthOptions = [for (var m = 1; m <= 12; m++) (m, monthName(m))];
+    final yearOptions = [for (final option in years) (option, '$option')];
+    final ValueChanged<int>? onMonth = choose == null
+        ? null
+        : (value) => choose(year, value);
+    final ValueChanged<int>? onYear = choose == null
+        ? null
+        : (value) => choose(value, month);
+    final Widget monthField = stacked
+        ? _CompactPicker(
+            key: const Key('plan_mes'),
+            tooltip: 'Mes',
+            value: month,
+            options: monthOptions,
+            onChanged: onMonth,
+          )
+        : DropdownButton<int>(
+            key: const Key('plan_mes'),
+            value: month,
+            items: [
+              for (final (value, label) in monthOptions)
+                DropdownMenuItem(value: value, child: Text(label)),
+            ],
+            onChanged: onMonth == null
+                ? null
+                : (value) => value == null ? null : onMonth(value),
+          );
+    final Widget yearField = stacked
+        ? _CompactPicker(
+            key: const Key('plan_anio'),
+            tooltip: 'Año',
+            value: year,
+            options: yearOptions,
+            onChanged: onYear,
+          )
+        : DropdownButton<int>(
+            key: const Key('plan_anio'),
+            value: year,
+            items: [
+              for (final (value, label) in yearOptions)
+                DropdownMenuItem(value: value, child: Text(label)),
+            ],
+            onChanged: onYear == null
+                ? null
+                : (value) => value == null ? null : onYear(value),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,6 +472,76 @@ class _Validity extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// A dropdown look-alike for phones. Its menu opens in the root navigator:
+/// a `DropdownButton` opens in the shell's, under the assistant's button,
+/// which then covered the last month.
+class _CompactPicker extends StatelessWidget {
+  final String tooltip;
+  final int value;
+  final List<(int, String)> options;
+  final ValueChanged<int>? onChanged;
+
+  const _CompactPicker({
+    super.key,
+    required this.tooltip,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colorScheme;
+    final enabled = onChanged != null;
+    final label = options
+        .firstWhere(
+          (option) => option.$1 == value,
+          orElse: () => (value, '$value'),
+        )
+        .$2;
+    return LayoutBuilder(
+      builder: (context, constraints) => PopupMenuButton<int>(
+        tooltip: tooltip,
+        enabled: enabled,
+        useRootNavigator: true,
+        initialValue: value,
+        // As wide as the field, like a dropdown's menu.
+        constraints: BoxConstraints(minWidth: constraints.maxWidth),
+        onSelected: (selected) => onChanged?.call(selected),
+        itemBuilder: (context) => [
+          for (final (option, text) in options)
+            PopupMenuItem(value: option, child: Text(text)),
+        ],
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: enabled ? cs.onSurface : cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: enabled ? cs.onSurfaceVariant : cs.outline,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

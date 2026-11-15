@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
@@ -65,9 +66,16 @@ class PeriodFilterPanel extends ConsumerWidget {
           final isMonthly = selectedScope == PeriodScope.monthly;
           // On phones the fields go without their icon, so the value fits.
           final narrow = constraints.maxWidth < compactWidth;
+          // A tablet: everything below the title in one row. A narrow desktop
+          // window keeps the stacked layout.
+          final singleRow =
+              !narrow &&
+              constraints.maxWidth < 820 &&
+              context.windowSize != WindowSize.expanded;
+          final showIcon = !narrow && !singleRow;
           final monthField = _MonthField(
             selectedMonth: month,
-            showIcon: !narrow,
+            showIcon: showIcon,
             onChanged: (value) {
               if (value == null) return;
               ref.read(periodFilterProvider.notifier).setMonth(value);
@@ -76,7 +84,7 @@ class PeriodFilterPanel extends ConsumerWidget {
           final yearField = _YearField(
             selectedYear: year,
             yearOptions: yearOptions,
-            showIcon: !narrow,
+            showIcon: showIcon,
             onChanged: (value) {
               if (value == null) return;
               ref.read(periodFilterProvider.notifier).setYear(value);
@@ -108,6 +116,27 @@ class PeriodFilterPanel extends ConsumerWidget {
                       Expanded(flex: 3, child: monthField),
                       const SizedBox(width: 12),
                     ],
+                    Expanded(flex: 2, child: yearField),
+                  ],
+                ),
+              ],
+            );
+          }
+          if (singleRow) {
+            return Column(
+              key: const Key('period_single_row'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    scopeControl,
+                    if (isMonthly) ...[
+                      const SizedBox(width: 12),
+                      Expanded(flex: 3, child: monthField),
+                    ],
+                    const SizedBox(width: 12),
                     Expanded(flex: 2, child: yearField),
                   ],
                 ),

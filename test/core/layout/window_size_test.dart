@@ -83,4 +83,27 @@ void main() {
     expect(read.modal, isFalse);
     expect(read.padding, screenPadding);
   });
+
+  group('Teléfono en horizontal', () {
+    test('ancho de escritorio pero bajo es mediano', () {
+      expect(WindowSize.fromSize(const Size(844, 390)), WindowSize.medium);
+      expect(WindowSize.fromSize(const Size(1024, 479)), WindowSize.medium);
+    });
+
+    test('desde 480 de alto vuelve a ser escritorio', () {
+      expect(WindowSize.fromSize(const Size(1024, 480)), WindowSize.expanded);
+      expect(WindowSize.fromSize(desktopSize), WindowSize.expanded);
+    });
+
+    test('los anchos chicos no cambian por la altura', () {
+      expect(WindowSize.fromSize(const Size(390, 300)), WindowSize.compact);
+      expect(WindowSize.fromSize(const Size(700, 300)), WindowSize.medium);
+    });
+
+    testWidgets('844×390 usa el menú modal', (tester) async {
+      final read = await _readAt(tester, const Size(844, 390));
+      expect(read.size, WindowSize.medium);
+      expect(read.modal, isTrue);
+    });
+  });
 }

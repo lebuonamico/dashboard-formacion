@@ -16,10 +16,25 @@ enum WindowSize {
   static const double mediumMinWidth = 600;
   static const double expandedMinWidth = 840;
 
+  /// Shorter than this (Material's compact height), a wide window is a phone
+  /// on its side.
+  static const double expandedMinHeight = 480;
+
   static WindowSize fromWidth(double width) {
     if (width < mediumMinWidth) return WindowSize.compact;
     if (width < expandedMinWidth) return WindowSize.medium;
     return WindowSize.expanded;
+  }
+
+  /// Like [fromWidth], but a wide and short window (a phone in landscape,
+  /// about 844×390) is [medium]: the fixed menu would take a third of the
+  /// width, and the tables that fill the height would get no room.
+  static WindowSize fromSize(Size size) {
+    final byWidth = fromWidth(size.width);
+    if (byWidth == WindowSize.expanded && size.height < expandedMinHeight) {
+      return WindowSize.medium;
+    }
+    return byWidth;
   }
 
   /// Below [expandedMinWidth] the drawer opens as a modal from the top bar.
@@ -27,8 +42,7 @@ enum WindowSize {
 }
 
 extension WindowSizeContext on BuildContext {
-  WindowSize get windowSize =>
-      WindowSize.fromWidth(MediaQuery.sizeOf(this).width);
+  WindowSize get windowSize => WindowSize.fromSize(MediaQuery.sizeOf(this));
 
   bool get usesModalNavigation => windowSize.usesModalNavigation;
 

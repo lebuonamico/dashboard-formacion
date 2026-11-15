@@ -1,6 +1,10 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/features/auth/presentation/providers/auth_provider.dart';
+import 'package:app_finnegans/features/auth/presentation/providers/embedded_browser_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,17 +13,21 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final compact = context.windowSize == WindowSize.compact;
+    return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
+          padding: EdgeInsets.all(compact ? 16 : 24),
+          child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _LoginCard(),
               SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              // On a phone the three texts do not fit in one line.
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
                 children: [
                   // Plain text until the pages exist: a link that does
                   // nothing reads as broken.
@@ -44,11 +52,16 @@ class _LoginCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loginMessage = ref.watch(authProvider.select((auth) => auth.error));
+    final enabled = ref.watch(authProvider.select((auth) => auth.enabled));
+    final embedded = enabled && ref.watch(embeddedBrowserProvider);
+    final compact = context.windowSize == WindowSize.compact;
     final cs = context.colorScheme;
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 440),
-      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
+      padding: compact
+          ? const EdgeInsets.symmetric(horizontal: 20, vertical: 28)
+          : const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(16),
@@ -66,6 +79,10 @@ class _LoginCard extends ConsumerWidget {
         children: [
           const _BrandHeader(),
           const SizedBox(height: 32),
+          if (embedded) ...[
+            const _EmbeddedBrowserNotice(),
+            const SizedBox(height: 16),
+          ],
           const _GoogleSignInButton(),
           if (loginMessage != null) ...[
             const SizedBox(height: 12),
@@ -138,6 +155,69 @@ class _BrandHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The portal's address, without the route: pasted in another browser, it
+/// opens the login.
+String portalLink() => Uri.base.removeFragment().toString();
+
+/// Google refuses to sign in from an app's own browser: this says where to
+/// open the portal instead. The sign-in button stays, in case the detection is
+/// wrong.
+class _EmbeddedBrowserNotice extends StatelessWidget {
+  const _EmbeddedBrowserNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final warning = context.colors.warning;
+    return Container(
+      key: const Key('login_navegador_embebido'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: warning.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.open_in_browser, size: 20, color: warning.text),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Abrí el portal en Chrome o Safari: Google no permite '
+                  'iniciar sesión desde el navegador de esta app.',
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: warning.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('login_copiar_enlace'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: portalLink()));
+              if (context.mounted) {
+                showAppSnackBar(
+                  context,
+                  'Enlace copiado. Pegalo en Chrome o Safari.',
+                );
+              }
+            },
+            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+            icon: const Icon(Icons.link),
+            label: const Text('Copiar enlace'),
+          ),
+        ],
+      ),
     );
   }
 }

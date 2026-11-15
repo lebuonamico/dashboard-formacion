@@ -45,13 +45,18 @@ class TeamResults extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             CountBadge(count: teams.length),
-            const Spacer(),
-            Text(
-              teams.length == teamCount
-                  ? '${countLabel(teamCount, 'equipo', 'equipos')} en el período'
-                  : '${teams.length} de $teamCount equipos',
-              style: context.textTheme.bodySmall?.copyWith(
-                color: context.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                teams.length == teamCount
+                    ? '${countLabel(teamCount, 'equipo', 'equipos')} en el período'
+                    : '${teams.length} de $teamCount equipos',
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

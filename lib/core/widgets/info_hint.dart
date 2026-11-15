@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -17,16 +18,33 @@ class InfoHint extends StatelessWidget {
     this.color,
   });
 
+  /// The tap area on touch screens, below the desktop width: as wide as a
+  /// button, but not as tall, so the label rows it sits in (some in cards of
+  /// fixed height) keep their height.
+  static const touchTarget = Size(48, 32);
+
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: message,
-    triggerMode: TooltipTriggerMode.tap,
-    showDuration: const Duration(seconds: 8),
-    constraints: const BoxConstraints(maxWidth: 320),
-    child: Icon(
+  Widget build(BuildContext context) {
+    final icon = Icon(
       Icons.info_outline,
       size: size,
       color: color ?? context.colors.faintText,
-    ),
-  );
+    );
+    return Tooltip(
+      message: message,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 8),
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: context.usesModalNavigation
+          // The icon keeps its size; the transparent box takes the taps around it.
+          ? ColoredBox(
+              color: Colors.transparent,
+              child: SizedBox.fromSize(
+                size: touchTarget,
+                child: Center(child: icon),
+              ),
+            )
+          : icon,
+    );
+  }
 }

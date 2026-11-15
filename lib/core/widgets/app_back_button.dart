@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -33,7 +34,7 @@ class _AppBackButtonState extends State<AppBackButton> {
         ? cs.onSurface.withValues(alpha: 0.06)
         : Colors.transparent;
 
-    return Tooltip(
+    final button = Tooltip(
       message: widget.tooltip,
       child: AnimatedScale(
         scale: _pressed ? 0.92 : 1,
@@ -78,6 +79,15 @@ class _AppBackButtonState extends State<AppBackButton> {
           ),
         ),
       ),
+    );
+    if (!context.usesModalNavigation) return button;
+    // On touch screens the 40 px square keeps its look, but a tap counts in
+    // the 48 px around it.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: widget.onPressed,
+      child: SizedBox.square(dimension: 48, child: Center(child: button)),
     );
   }
 }

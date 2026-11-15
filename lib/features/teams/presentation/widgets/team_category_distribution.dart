@@ -39,11 +39,17 @@ class TeamCategoryDistribution extends StatelessWidget {
               alignment: Alignment.topLeft,
               child: Row(
                 children: [
-                  Text(
-                    'Distribución por categoría',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: context.colorScheme.onSurface,
+                  // With large text on a phone it shortens instead of
+                  // pushing the help icon out.
+                  Flexible(
+                    child: Text(
+                      'Distribución por categoría',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: context.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),

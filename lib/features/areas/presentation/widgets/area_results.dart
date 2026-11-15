@@ -44,13 +44,18 @@ class AreasResults extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             CountBadge(count: areas.length),
-            const Spacer(),
-            Text(
-              areas.length == totalAreas
-                  ? '${countLabel(totalAreas, 'área', 'áreas')} en el período'
-                  : '${areas.length} de $totalAreas áreas',
-              style: context.textTheme.bodySmall?.copyWith(
-                color: context.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                areas.length == totalAreas
+                    ? '${countLabel(totalAreas, 'área', 'áreas')} en el período'
+                    : '${areas.length} de $totalAreas áreas',
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

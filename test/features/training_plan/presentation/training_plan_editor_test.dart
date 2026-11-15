@@ -506,5 +506,78 @@ void main() {
       expect(year.top, month.top);
       expect(year.right - month.left, greaterThan(300));
     });
+
+    testWidgets('El menú de meses se abre sobre el shell: diciembre queda a la '
+        'vista y se puede elegir', (tester) async {
+      tester.view.physicalSize = phone;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = ProviderContainer(
+        overrides: [
+          trainingPlanRepositoryProvider.overrideWithValue(_PlanFake()),
+          clockProvider.overrideWithValue(() => DateTime(2026, 10, 15)),
+        ],
+      );
+      addTearDown(container.dispose);
+      final shellNavigator = GlobalKey<NavigatorState>();
+
+      // Como la app: la pantalla vive en el navigator del shell, y encima de
+      // él, en un Stack, el botón del asistente.
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(0.5)),
+              child: child!,
+            ),
+            home: Stack(
+              children: [
+                Navigator(
+                  key: shellNavigator,
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                    builder: (_) => const Scaffold(
+                      body: SingleChildScrollView(child: TrainingPlanEditor()),
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: SizedBox.square(dimension: 64),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('plan_mes')));
+      await tester.pumpAndSettle();
+
+      final december = find.text('Diciembre').last;
+      expect(
+        find.descendant(
+          of: find.byKey(shellNavigator),
+          matching: find.text('Diciembre'),
+        ),
+        findsNothing,
+      );
+      await tester.tap(december);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('plan_mes')),
+          matching: find.text('Diciembre'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }
