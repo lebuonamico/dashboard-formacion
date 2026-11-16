@@ -46,10 +46,14 @@ class KpiGrid extends StatelessWidget {
           runSpacing: 14,
           children: items
               .map(
+                // A minimum, not a fixed height: below 840 px the help icon's
+                // touch target makes the title row taller.
                 (item) => SizedBox(
                   width: cardWidth,
-                  height: cardHeight,
-                  child: _KpiCard(data: item),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: cardHeight),
+                    child: _KpiCard(data: item),
+                  ),
                 ),
               )
               .toList(),
