@@ -3,12 +3,20 @@ import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/assistant/presentation/providers/assistant_chat_notifier.dart';
 import 'package:app_finnegans/features/assistant/presentation/widgets/assistant_chat.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Future<ProviderContainer> _show(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1400, 1000);
+import '../../../support/pump_screen.dart';
+
+late GoRouter _router;
+
+Future<ProviderContainer> _show(
+  WidgetTester tester, {
+  Size size = const Size(1400, 1000),
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -18,12 +26,24 @@ Future<ProviderContainer> _show(WidgetTester tester) async {
   final router = GoRouter(
     initialLocation: '/dashboard',
     routes: [
-      GoRoute(
-        path: '/dashboard',
-        builder: (_, _) => const Scaffold(body: AssistantChat()),
+      // Like the app's shell: the chat outlives the screens under it.
+      ShellRoute(
+        builder: (_, _, child) => Scaffold(
+          body: Stack(
+            children: [
+              child,
+              const Positioned.fill(child: AssistantChat()),
+            ],
+          ),
+        ),
+        routes: [
+          for (final path in ['/dashboard', '/equipos'])
+            GoRoute(path: path, builder: (_, _) => const SizedBox.expand()),
+        ],
       ),
     ],
   );
+  _router = router;
   addTearDown(router.dispose);
   addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
 
@@ -157,4 +177,112 @@ void main() {
 
     expect(container.read(assistantChatProvider).open, isFalse);
   });
+
+  testWidgets('En el teléfono el chat ocupa toda la pantalla', (tester) async {
+    await _show(tester, size: compactSize);
+    await _open(tester);
+
+    expect(
+      tester.getRect(find.byKey(const Key('asistente_panel'))),
+      Offset.zero & compactSize,
+    );
+    // The actions share the title's row instead of going below the subtitle.
+    final minimize = find.byTooltip('Minimizar asistente');
+    expect(
+      tester.getRect(minimize).top,
+      lessThan(tester.getRect(find.text('Tu copiloto de capacitación')).bottom),
+    );
+    expect(tester.getSize(minimize).width, greaterThanOrEqualTo(48));
+    expect(tester.getSize(minimize).height, greaterThanOrEqualTo(48));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('En una tablet el chat sigue siendo un panel flotante', (
+    tester,
+  ) async {
+    await _show(tester, size: const Size(700, 1000));
+    await _open(tester);
+
+    expect(tester.getSize(find.byKey(const Key('asistente_panel'))).width, 480);
+  });
+
+  testWidgets(
+    'En el teléfono, cambiar de pantalla minimiza el chat y conserva el borrador',
+    (tester) async {
+      final container = await _show(tester, size: compactSize);
+      await _open(tester);
+      await tester.enterText(
+        find.byKey(const Key('asistente_input')),
+        'Borrador',
+      );
+
+      _router.go('/equipos');
+      await tester.pumpAndSettle();
+
+      expect(container.read(assistantChatProvider).open, isFalse);
+      await _open(tester);
+      expect(_draft(tester), 'Borrador');
+    },
+  );
+
+  testWidgets('En escritorio, cambiar de pantalla deja el chat abierto', (
+    tester,
+  ) async {
+    final container = await _show(tester);
+    await _open(tester);
+
+    _router.go('/equipos');
+    await tester.pumpAndSettle();
+
+    expect(container.read(assistantChatProvider).open, isTrue);
+  });
+
+  testWidgets(
+    'Con teclado táctil, Enter no envía',
+    (tester) async {
+      final container = await _show(tester, size: compactSize);
+      await _open(tester);
+      await tester.enterText(
+        find.byKey(const Key('asistente_input')),
+        '¿Qué es una hora válida?',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(container.read(assistantChatProvider).error, isNull);
+      expect(container.read(assistantChatProvider).messages, isEmpty);
+      expect(_draft(tester), '¿Qué es una hora válida?');
+      expect(find.textContaining('Enter para enviar'), findsNothing);
+      expect(_sendButton(tester).onPressed, isNotNull);
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
+
+  testWidgets(
+    'Con teclado físico, Enter envía',
+    (tester) async {
+      final container = await _show(tester);
+      await _open(tester);
+      expect(
+        find.text('Enter para enviar · Shift + Enter para otra línea'),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const Key('asistente_input')),
+        '¿Qué es una hora válida?',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      // Without a session the query fails, which shows it was sent.
+      expect(container.read(assistantChatProvider).error, isNotNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    skip: SupabaseConfig.enabled,
+  );
 }

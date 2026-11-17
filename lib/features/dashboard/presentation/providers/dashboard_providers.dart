@@ -173,20 +173,3 @@ final filteredDashboardAreasProvider = FutureProvider<List<DashboardArea>>((
       )
       .toList();
 });
-
-final globalComplianceProvider = FutureProvider<List<EmployeeCompliance>>((
-  ref,
-) async {
-  final employees = await ref.watch(employeesProvider.future);
-  final courses = await ref.watch(coursesProvider.future);
-  final timeEntries = await ref.watch(crmTimeEntriesProvider.future);
-  final certifications = await ref.watch(lmsCertificationsProvider.future);
-  final service = await ref.watch(complianceServiceProvider.future);
-
-  return service.calculateComplianceGlobal(
-    employees: employees,
-    courses: courses,
-    timeEntries: timeEntries,
-    lmsCertifications: certifications,
-  );
-});

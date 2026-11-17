@@ -1,5 +1,6 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/projection/presentation/projection_status_colors.dart';
 import 'package:app_finnegans/core/widgets/kpi_card.dart';
@@ -36,18 +37,27 @@ class EmployeeProjectionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                formatPercentage(projection.percentage),
-                style: context.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
+              // On a phone the variation goes under the percentage instead
+              // of pushing the status out of the card.
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      formatPercentage(projection.percentage),
+                      style: context.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    if (projection.variation case final variation?)
+                      VariationBadge(value: variation, unit: 'pts'),
+                  ],
                 ),
               ),
-              if (projection.variation case final variation?) ...[
-                const SizedBox(width: 8),
-                VariationBadge(value: variation, unit: 'pts'),
-              ],
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 key: const Key('proyeccion_empleado_estado'),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -67,8 +77,8 @@ class EmployeeProjectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${projection.projection.toStringAsFixed(0)} / '
-            '${projection.goal.toStringAsFixed(0)} h proyectadas a diciembre',
+            '${formatAchievedHours(projection.projection, target: projection.goal)} / '
+            '${formatHours(projection.goal)} hs proyectadas a diciembre',
             style: context.textTheme.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
             ),
@@ -129,8 +139,8 @@ class EmployeeProjectionCard extends StatelessWidget {
                       child: Text(
                         '${category.type.label} · '
                         '${closed ? 'faltaron' : 'faltan'} '
-                        '${category.missing.toStringAsFixed(1)} h'
-                        '${closed ? '' : ' (+${(category.missing / projection.remainingMonths).toStringAsFixed(1)} h/mes)'}',
+                        '${formatMissingHours(category.missing)} hs'
+                        '${closed ? '' : ' (+${formatMissingHours(category.missing / projection.remainingMonths)} hs/mes)'}',
                         key: Key('proyeccion_falta_${category.type.name}'),
                         style: context.textTheme.bodyMedium?.copyWith(
                           color: cs.onSurface,
@@ -151,9 +161,9 @@ class EmployeeProjectionCard extends StatelessWidget {
               for (final category in projection.categories)
                 Text(
                   '${category.type.label}: '
-                  '${category.accumulated.toStringAsFixed(1)} / '
-                  '${category.goal.toStringAsFixed(0)} h · proyecta '
-                  '${category.projected.toStringAsFixed(1)} h '
+                  '${formatAchievedHours(category.accumulated, target: category.goal)} / '
+                  '${formatHours(category.goal)} hs · proyecta '
+                  '${formatAchievedHours(category.projected, target: category.goal)} hs '
                   '${category.arrives ? '✓' : ''}',
                   style: context.textTheme.labelMedium?.copyWith(
                     color: category.arrives

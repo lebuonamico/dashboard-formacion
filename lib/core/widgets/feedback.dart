@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:flutter/material.dart';
 
 void showAppSnackBar(BuildContext context, String message) {
@@ -63,6 +64,7 @@ Future<bool> showConfirmationDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
+      insetPadding: dialogContext.dialogInsetPadding,
       title: Text(title),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),

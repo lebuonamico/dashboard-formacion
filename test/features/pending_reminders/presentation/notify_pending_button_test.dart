@@ -45,8 +45,10 @@ Future<void> _showButton(
   WidgetTester tester, {
   required PendingReminderPlan plan,
   required PendingRemindersRepository repository,
+  Size size = const Size(1400, 1000),
+  double textScale = 1,
 }) async {
-  tester.view.physicalSize = const Size(1400, 1000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -58,6 +60,12 @@ Future<void> _showButton(
       ],
       child: MaterialApp(
         theme: AppTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: const Scaffold(body: Center(child: NotifyPendingButton())),
       ),
     ),
@@ -147,5 +155,40 @@ void main() {
       findsOneWidget,
     );
     expect(repository.sent, isEmpty);
+  });
+
+  testWidgets('En el teléfono (360×640) el diálogo entra sin desbordes', (
+    tester,
+  ) async {
+    final repository = InMemoryPendingRemindersRepository();
+    // 0.5: the test font draws every glyph one em wide (see pumpScreen).
+    await _showButton(
+      tester,
+      plan: _plan,
+      repository: repository,
+      size: const Size(360, 640),
+      textScale: 0.5,
+    );
+
+    await tester.tap(find.text('Notificar pendientes por mail'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // The dialog's surface: the AlertDialog itself includes its margins.
+    final dialog = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    // 16 px margins instead of the default 40.
+    expect(dialog.left, 16);
+    expect(dialog.right, 360 - 16);
+    for (final label in ['Cancelar', 'Enviar 1 mail', '• Oratoria']) {
+      final rect = tester.getRect(find.text(label));
+      expect(dialog.contains(rect.center), isTrue, reason: label);
+    }
   });
 }

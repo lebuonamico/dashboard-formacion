@@ -12,6 +12,7 @@ import 'package:app_finnegans/features/certifications/presentation/certification
 import 'package:app_finnegans/features/time_entries/presentation/time_entries_screen.dart';
 import 'package:app_finnegans/features/courses/presentation/courses_screen.dart';
 import 'package:app_finnegans/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:app_finnegans/features/employees/presentation/employee_detail_screen.dart';
 import 'package:app_finnegans/features/employees/presentation/employees_screen.dart';
 import 'package:app_finnegans/features/certifications/presentation/providers/certifications_providers.dart';
 import 'package:app_finnegans/features/time_entries/presentation/providers/time_entries_providers.dart';
@@ -20,6 +21,8 @@ import 'package:app_finnegans/features/dashboard/presentation/providers/dashboar
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/features/teams/presentation/team_detail_screen.dart';
+import 'package:app_finnegans/features/teams/presentation/teams_screen.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -68,8 +71,12 @@ Future<ProviderContainer> _show(
   List<Course>? courses,
   List<CrmTimeEntry> timeEntries = const [],
   List<LmsCertification> certifications = const [],
+  Size size = const Size(2400, 2000),
+  // 0.5 with the test font is about Roboto at 1.0 in the browser; 0.65 is
+  // about the 1.3 of a phone with large text.
+  double textScale = 0.5,
 }) async {
-  tester.view.physicalSize = const Size(2400, 2000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -122,7 +129,7 @@ Future<ProviderContainer> _show(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
-          ).copyWith(textScaler: const TextScaler.linear(0.5)),
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
       ),
@@ -131,6 +138,19 @@ Future<ProviderContainer> _show(
   await tester.pumpAndSettle();
   expect(tester.takeException(), isNull);
   return container;
+}
+
+/// Scrolls the screen to its end, so the lazy parts get built (and their
+/// overflows reported) too.
+Future<void> _scrollThrough(WidgetTester tester) async {
+  final scrollable = find.byType(Scrollable).first;
+  for (var i = 0; i < 12; i++) {
+    final position = tester.state<ScrollableState>(scrollable).position;
+    if (position.pixels >= position.maxScrollExtent) break;
+    await tester.drag(scrollable, const Offset(0, -500));
+    await tester.pumpAndSettle();
+  }
+  expect(tester.takeException(), isNull);
 }
 
 void main() {
@@ -235,7 +255,7 @@ void main() {
       );
       expect(hoursCard, findsOneWidget);
       expect(
-        find.descendant(of: hoursCard, matching: find.text('0.0 h')),
+        find.descendant(of: hoursCard, matching: find.text('0 hs')),
         findsOneWidget,
       );
     });
@@ -270,7 +290,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('No hay áreas que coincidan con la búsqueda.'),
+          find.text('Ninguna área coincide con los filtros.'),
           findsOneWidget,
         );
         expect(find.textContaining('No hay datos cargados'), findsNothing);
@@ -291,7 +311,7 @@ void main() {
       expect(find.text('Estado de las áreas'), findsOneWidget);
       expect(find.text('Tecnología'), findsOneWidget);
       expect(find.text('Equipos: Plataforma'), findsOneWidget);
-      expect(find.text('Ver área'), findsOneWidget);
+      expect(find.text('Ver detalle'), findsOneWidget);
     });
 
     testWidgets('el filtro por estado deja afuera las áreas que no coinciden', (
@@ -310,9 +330,9 @@ void main() {
           .select('Estado', {'En objetivo'});
       await tester.pumpAndSettle();
 
-      expect(find.text('Ver área'), findsNothing);
+      expect(find.text('Ver detalle'), findsNothing);
       expect(
-        find.text('No hay áreas que coincidan con la búsqueda.'),
+        find.text('Ninguna área coincide con los filtros.'),
         findsOneWidget,
       );
     });
@@ -346,7 +366,7 @@ void main() {
       );
 
       expect(find.text('OBJETIVO DEL PERÍODO'), findsOneWidget);
-      expect(find.text('Avance del área'), findsOneWidget);
+      expect(find.text('Cumplimiento del área'), findsOneWidget);
       expect(find.text('Equipos del área'), findsOneWidget);
       // Una vez en la tarjeta del equipo y otra en la columna Equipo.
       expect(find.text('Plataforma'), findsNWidgets(2));
@@ -395,7 +415,7 @@ void main() {
     },
   );
 
-  group('Empleados', () {
+  group('Colaboradores', () {
     testWidgets('sin nómina importada lo indica', (tester) async {
       await _show(
         tester,
@@ -404,7 +424,7 @@ void main() {
         employees: const [],
       );
 
-      expect(find.text('No hay empleados cargados.'), findsOneWidget);
+      expect(find.text('No hay colaboradores cargados.'), findsOneWidget);
     });
 
     testWidgets('con nómina y un filtro sin coincidencias lo distingue', (
@@ -422,13 +442,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Ningún empleado coincide con los filtros.'),
+        find.text('Ningún colaborador coincide con los filtros.'),
         findsOneWidget,
       );
-      expect(find.text('No hay empleados cargados.'), findsNothing);
+      expect(find.text('No hay colaboradores cargados.'), findsNothing);
     });
 
-    testWidgets('con muchos empleados pagina el directorio', (tester) async {
+    testWidgets('con muchos colaboradores pagina el directorio', (
+      tester,
+    ) async {
       final employees = [
         for (var i = 0; i < 80; i++)
           Employee(
@@ -449,13 +471,44 @@ void main() {
         employees: employees,
       );
 
-      expect(find.textContaining('de 80 empleados'), findsOneWidget);
+      expect(find.textContaining('de 80 colaboradores'), findsOneWidget);
       expect(find.textContaining('Página 1 de'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Página siguiente'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Página 2 de'), findsOneWidget);
+    });
+
+    testWidgets('el progreso por categoría es el del período elegido', (
+      tester,
+    ) async {
+      final other = _course.copyWith(id: '2', name: 'Finanzas');
+      await _show(
+        tester,
+        route: '/empleados',
+        screen: (_) => const EmployeesScreen(),
+        courses: [_course, other],
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 10),
+          ),
+          // Another month: before, every month added up against one target.
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: other.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month - 1, 10),
+          ),
+        ],
+      );
+
+      expect(find.text('Período de análisis'), findsOneWidget);
+      expect(find.text('4/4 hs'), findsOneWidget);
+      expect(find.text('8/4 hs'), findsNothing);
     });
   });
 
@@ -518,7 +571,7 @@ void main() {
           .read(
             dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
           )
-          .select('Persona / Legajo', {'inexistente'});
+          .select('Colaborador / Legajo', {'inexistente'});
       await tester.pumpAndSettle();
 
       expect(
@@ -719,6 +772,548 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Fuera de la nómina'), findsOneWidget);
+    });
+  });
+
+  group('Perfil del colaborador', () {
+    final newcomer = Employee(
+      employeeId: '200',
+      firstName: 'Bruno',
+      lastName: 'Gómez',
+      seniority: Seniority.junior1,
+      area: 'Tecnología',
+      email: 'bruno@finnegans.com',
+      team: 'Plataforma',
+      hireDate: DateTime(_year, _month + 1, 1),
+    );
+
+    Future<void> showProfile(WidgetTester tester, String employeeId) => _show(
+      tester,
+      route: '/empleados/$employeeId',
+      screen: (_) => EmployeeDetailScreen(employeeId: employeeId),
+      employees: [_employee, newcomer],
+      timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+    );
+
+    testWidgets('antes del ingreso avisa que no hay datos en lugar de 0', (
+      tester,
+    ) async {
+      await showProfile(tester, newcomer.employeeId);
+
+      expect(
+        find.text('No hay datos cargados del colaborador para Junio 2026.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Ingresó el 01/07/2026: sus datos se cuentan desde ese mes.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Desglose del plan'), findsNothing);
+      expect(find.textContaining('hs válidas'), findsNothing);
+    });
+
+    testWidgets('sin datos para proyectar la sección sigue y lo avisa', (
+      tester,
+    ) async {
+      await showProfile(tester, newcomer.employeeId);
+
+      expect(find.text('Proyección a fin de año'), findsOneWidget);
+      expect(find.byKey(const Key('proyeccion_sin_datos')), findsOneWidget);
+      expect(
+        find.textContaining(
+          'No hay datos cargados del colaborador hasta Junio',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('con datos muestra el desglose y la proyección', (
+      tester,
+    ) async {
+      await showProfile(tester, _employee.employeeId);
+
+      expect(find.textContaining('No hay datos cargados'), findsNothing);
+      expect(find.textContaining('Desglose del plan'), findsOneWidget);
+      expect(find.text('Proyección a fin de año'), findsOneWidget);
+      expect(
+        find.byKey(const Key('proyeccion_empleado_estado')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('un período sin datos de nadie muestra el aviso del período', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/empleados/${_employee.employeeId}',
+        screen: (_) => EmployeeDetailScreen(employeeId: _employee.employeeId),
+        timeEntries: [_timeEntry(DateTime(_year, 3, 10))],
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('proyeccion_sin_datos')), findsOneWidget);
+    });
+  });
+
+  group('En el teléfono (390 px)', () {
+    const phone = Size(390, 844);
+
+    testWidgets('Dashboard sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Dashboard con registros: KPIs y resúmenes por contenido', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/dashboard',
+        screen: (_) => const DashboardScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('COLABORADORES'), findsOneWidget);
+      expect(find.text('Estado de cumplimiento'), findsOneWidget);
+      expect(find.text('Evolución de horas mensuales'), findsOneWidget);
+      expect(find.text('Tecnología'), findsOneWidget);
+      // Sin alturas fijas: las tarjetas van en filas que se ajustan.
+      expect(find.byType(CardRows), findsWidgets);
+      expect(find.byType(GridView), findsNothing);
+    });
+
+    testWidgets('Áreas sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Áreas con registros muestra KPIs y tarjetas', (tester) async {
+      await _show(
+        tester,
+        route: '/areas',
+        screen: (_) => const AreasScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('ÁREAS ACTIVAS'), findsOneWidget);
+      // The screen is a lazy list: the cards are built once in view.
+      await tester.scrollUntilVisible(
+        find.text('Ver detalle'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Tecnología'), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Equipos sin registros muestra el aviso', (tester) async {
+      await _show(
+        tester,
+        route: '/equipos',
+        screen: (_) => const TeamsScreen(),
+        size: phone,
+      );
+
+      expect(
+        find.text('No hay datos cargados para Junio 2026.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Cursos sin catálogo importado lo indica', (tester) async {
+      await _show(
+        tester,
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
+        courses: const [],
+        size: phone,
+      );
+      expect(find.text('No hay cursos cargados.'), findsOneWidget);
+    });
+
+    testWidgets('Cursos con filtros sin coincidencias lo distingue', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/cursos',
+        screen: (_) => const CoursesScreen(),
+        size: phone,
+      );
+      expect(find.byKey(const ValueKey('course_card_1')), findsOneWidget);
+
+      container
+          .read(dataFilterSelectionProvider(DataFilterScope.courses).notifier)
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('No se encontraron cursos con los filtros aplicados.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Carga de horas CRM sin reporte importado lo indica', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        size: phone,
+      );
+      expect(find.text('No hay horas CRM cargadas.'), findsOneWidget);
+    });
+
+    testWidgets('Carga de horas CRM con filtros sin coincidencias', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/cursadas',
+        screen: (_) => const TimeEntriesScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+      expect(
+        find.byKey(const ValueKey('time_entry_card_tx-6')),
+        findsOneWidget,
+      );
+
+      container
+          .read(
+            dataFilterSelectionProvider(DataFilterScope.timeEntries).notifier,
+          )
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna carga de horas coincide con los filtros.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Certificaciones sin finalizaciones importadas lo indica', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        size: phone,
+      );
+      expect(find.text('No hay certificaciones LMS cargadas.'), findsOneWidget);
+    });
+
+    testWidgets('Certificaciones con filtros sin coincidencias', (
+      tester,
+    ) async {
+      final container = await _show(
+        tester,
+        route: '/certificaciones',
+        screen: (_) => const CertificationsScreen(),
+        certifications: [
+          LmsCertification(
+            employeeId: _employee.employeeId,
+            courseName: _course.name,
+            isCompleted: true,
+            completedAt: DateTime(_year, _month, 20),
+          ),
+        ],
+        size: phone,
+      );
+      expect(
+        find.byKey(const ValueKey('certification_card_100_Negociación')),
+        findsOneWidget,
+      );
+
+      container
+          .read(
+            dataFilterSelectionProvider(
+              DataFilterScope.certifications,
+            ).notifier,
+          )
+          .select('Área', {'Inexistente'});
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ninguna certificación coincide con los filtros.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    group('Perfil', () {
+      final newcomer = Employee(
+        employeeId: '200',
+        firstName: 'Bruno',
+        lastName: 'Gómez',
+        seniority: Seniority.junior1,
+        area: 'Tecnología',
+        email: 'bruno@finnegans.com',
+        team: 'Plataforma',
+        hireDate: DateTime(_year, _month + 1, 1),
+      );
+
+      Future<void> showProfile(WidgetTester tester, String employeeId) => _show(
+        tester,
+        route: '/empleados/$employeeId',
+        screen: (_) => EmployeeDetailScreen(employeeId: employeeId),
+        employees: [_employee, newcomer],
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      testWidgets('con datos: horas debajo, categorías de a dos', (
+        tester,
+      ) async {
+        await showProfile(tester, _employee.employeeId);
+
+        final hours = find.byKey(const Key('perfil_horas_validas'));
+        expect(hours, findsOneWidget);
+        expect(
+          tester.getRect(hours).top,
+          greaterThan(tester.getRect(find.text('Líder')).bottom),
+        );
+        expect(find.textContaining('Desglose del plan'), findsOneWidget);
+        expect(find.byType(CardRows), findsOneWidget);
+        expect(
+          tester.getRect(find.text('Habilidades blandas')).top,
+          tester.getRect(find.text('Habilidades de negocio')).top,
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('proyeccion_empleado_estado')),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('antes del ingreso: aviso sin datos y proyección que avisa', (
+        tester,
+      ) async {
+        await showProfile(tester, newcomer.employeeId);
+
+        expect(find.byKey(const Key('perfil_horas_validas')), findsNothing);
+        expect(
+          find.text('No hay datos cargados del colaborador para Junio 2026.'),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('proyeccion_sin_datos')),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Colaboradores', () {
+      testWidgets('sin nómina importada lo indica', (tester) async {
+        await _show(
+          tester,
+          route: '/empleados',
+          screen: (_) => const EmployeesScreen(),
+          employees: const [],
+          size: phone,
+        );
+        expect(find.text('No hay colaboradores cargados.'), findsOneWidget);
+      });
+
+      testWidgets('con nómina muestra tarjetas y un filtro sin coincidencias '
+          'lo distingue', (tester) async {
+        final container = await _show(
+          tester,
+          route: '/empleados',
+          screen: (_) => const EmployeesScreen(),
+          size: phone,
+        );
+        expect(find.text('Ana Pérez'), findsOneWidget);
+        expect(find.byType(DataTable), findsNothing);
+
+        container
+            .read(
+              dataFilterSelectionProvider(DataFilterScope.employees).notifier,
+            )
+            .select('Área', {'Inexistente'});
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Ningún colaborador coincide con los filtros.'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Detalle de área', () {
+      testWidgets('sin registros muestra el aviso del período', (tester) async {
+        await _show(
+          tester,
+          route: '/area',
+          screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+          size: phone,
+        );
+        expect(
+          find.text('No hay datos cargados para Junio 2026.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('con registros: equipos e integrantes en tarjetas', (
+        tester,
+      ) async {
+        await _show(
+          tester,
+          route: '/area',
+          screen: (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+          timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+          size: phone,
+        );
+        expect(find.text('Cumplimiento del área'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('Ana Pérez'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.byType(DataTable), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Detalle de equipo', () {
+      testWidgets('sin registros muestra el aviso del período', (tester) async {
+        await _show(
+          tester,
+          route: '/equipo',
+          screen: (_) =>
+              const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+          size: phone,
+        );
+        expect(
+          find.text('No hay datos cargados para Junio 2026.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('con registros: integrantes en tarjetas', (tester) async {
+        await _show(
+          tester,
+          route: '/equipo',
+          screen: (_) =>
+              const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+          timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+          size: phone,
+        );
+        await tester.scrollUntilVisible(
+          find.text('Ana Pérez'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.byType(DataTable), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    testWidgets('Equipos con registros muestra KPIs y tarjetas', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        route: '/equipos',
+        screen: (_) => const TeamsScreen(),
+        timeEntries: [_timeEntry(DateTime(_year, _month, 10))],
+        size: phone,
+      );
+
+      expect(find.text('EQUIPOS ACTIVOS'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Ver detalle'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Plataforma'), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Texto grande en el teléfono (390 px, ≈1.3)', () {
+    const phone = Size(390, 844);
+    final timeEntries = [_timeEntry(DateTime(_year, _month, 10))];
+    final certifications = [
+      LmsCertification(
+        employeeId: _employee.employeeId,
+        courseName: _course.name,
+        isCompleted: true,
+        completedAt: DateTime(_year, _month, 20),
+      ),
+    ];
+    final screens = <String, (String, Widget Function(GoRouterState))>{
+      'Dashboard': ('/dashboard', (_) => const DashboardScreen()),
+      'Áreas': ('/areas', (_) => const AreasScreen()),
+      'Equipos': ('/equipos', (_) => const TeamsScreen()),
+      'Detalle de área': (
+        '/area',
+        (_) => const AreaDetailScreen(areaName: 'Tecnología'),
+      ),
+      'Detalle de equipo': (
+        '/equipo',
+        (_) => const TeamDetailScreen(area: 'Tecnología', team: 'Plataforma'),
+      ),
+      'Colaboradores': ('/empleados', (_) => const EmployeesScreen()),
+      'Perfil': (
+        '/empleados/100',
+        (_) => const EmployeeDetailScreen(employeeId: '100'),
+      ),
+      'Cursos': ('/cursos', (_) => const CoursesScreen()),
+      'Carga de horas CRM': ('/cursadas', (_) => const TimeEntriesScreen()),
+      'Certificaciones': (
+        '/certificaciones',
+        (_) => const CertificationsScreen(),
+      ),
+    };
+
+    screens.forEach((name, screen) {
+      testWidgets('$name entra sin desbordes', (tester) async {
+        await _show(
+          tester,
+          route: screen.$1,
+          screen: screen.$2,
+          timeEntries: timeEntries,
+          certifications: certifications,
+          size: phone,
+          textScale: 0.65,
+        );
+        await _scrollThrough(tester);
+      });
     });
   });
 }

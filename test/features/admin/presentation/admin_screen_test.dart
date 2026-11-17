@@ -16,6 +16,7 @@ import 'package:app_finnegans/features/org_structure/presentation/providers/org_
 import 'package:app_finnegans/features/employees/presentation/providers/employees_providers.dart';
 import 'package:app_finnegans/features/org_structure/presentation/providers/org_structure_providers.dart';
 import 'package:app_finnegans/features/admin/presentation/widgets/admin_actions_bar.dart';
+import 'package:app_finnegans/features/admin/presentation/widgets/admin_user_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -156,8 +157,10 @@ Future<ProviderContainer> _showPanel(
   _FakeUsers? repository,
   _FakeStructure? structure,
   List<Employee> employees = const [],
+  Size size = const Size(1800, 1800),
+  String? ownEmail,
 }) async {
-  tester.view.physicalSize = const Size(1800, 1800);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -167,6 +170,16 @@ Future<ProviderContainer> _showPanel(
       if (access != null) accessAdminProvider.overrideWithValue(access),
       if (repository != null)
         authorizedUsersRepositoryProvider.overrideWithValue(repository),
+      if (ownEmail != null)
+        authProvider.overrideWith(
+          () => AuthNotifier(
+            AuthState(
+              user: AuthUser(id: 'test-user', email: ownEmail),
+              isAuthorized: true,
+              role: 'admin',
+            ),
+          ),
+        ),
       if (structure != null) ...[
         sessionDataProvider.overrideWithValue((
           enabled: true,
@@ -826,5 +839,319 @@ void main() {
         expect(find.text(OrgStructureLabels.notInPayroll), findsNWidgets(2));
       },
     );
+  });
+
+  group('En el teléfono (390 px)', () {
+    const phone = Size(390, 844);
+
+    List<AuthorizedUser> people() => [
+      _user(email: 'ana@finnegans.com', role: 'academy'),
+      _user(email: 'beto@finnegans.com', blockedAt: _stamp),
+      _user(email: 'carla@finnegans.com', deletedAt: _stamp),
+      _user(email: 'yo@finnegans.com', role: 'admin'),
+    ];
+
+    Future<ProviderContainer> showCards(
+      WidgetTester tester,
+      _FakeUsers repository,
+    ) => _showPanel(
+      tester,
+      access: AccessAdmin.allowed,
+      repository: repository,
+      size: phone,
+      ownEmail: 'yo@finnegans.com',
+    );
+
+    Future<void> openMenu(WidgetTester tester, String email) async {
+      final menu = find.byKey(Key('admin_menu_$email'));
+      await tester.ensureVisible(menu);
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+    }
+
+    Finder inCard(String email, Finder matching) => find.descendant(
+      of: find.byKey(Key('admin_usuario_$email')),
+      matching: matching,
+    );
+
+    testWidgets('Cada usuario es una tarjeta con su menú de acciones', (
+      tester,
+    ) async {
+      await showCards(tester, _FakeUsers(people()));
+
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byType(AdminActionsBar), findsNothing);
+      expect(find.byType(AdminUserCard), findsNWidgets(4));
+      expect(
+        inCard('beto@finnegans.com', find.text('Bloqueado')),
+        findsOneWidget,
+      );
+      expect(
+        inCard('ana@finnegans.com', find.text('Academia')),
+        findsOneWidget,
+      );
+      // Only the blocked and the deleted have those dates.
+      expect(
+        inCard('beto@finnegans.com', find.text('Bloqueo')),
+        findsOneWidget,
+      );
+      expect(inCard('ana@finnegans.com', find.text('Bloqueo')), findsNothing);
+      expect(
+        inCard('carla@finnegans.com', find.text('Eliminación')),
+        findsOneWidget,
+      );
+
+      // Your own user has no menu and says why.
+      expect(
+        find.byKey(const Key('admin_menu_yo@finnegans.com')),
+        findsNothing,
+      );
+      expect(
+        inCard('yo@finnegans.com', find.textContaining('Es tu usuario')),
+        findsOneWidget,
+      );
+      final menu = tester.getSize(
+        find.byKey(const Key('admin_menu_ana@finnegans.com')),
+      );
+      expect(menu.height, greaterThanOrEqualTo(48));
+      expect(menu.width, greaterThanOrEqualTo(48));
+
+      final create = tester.getSize(find.byKey(const Key('admin_crear')));
+      expect(create.height, greaterThanOrEqualTo(48));
+      expect(create.width, greaterThan(300));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Bloquear desde el menú confirma y actualiza la tarjeta', (
+      tester,
+    ) async {
+      final repository = _FakeUsers(people());
+      final container = await showCards(tester, repository);
+
+      await openMenu(tester, 'ana@finnegans.com');
+      expect(find.byKey(const Key('admin_menu_desbloquear')), findsNothing);
+      expect(find.byKey(const Key('admin_menu_restaurar')), findsNothing);
+      await tester.tap(find.byKey(const Key('admin_menu_bloquear')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bloquear usuario'), findsOneWidget);
+      // The confirmation uses the phone's width (16 px margins).
+      expect(tester.getSize(find.byType(AlertDialog)).width, greaterThan(340));
+      await tester.tap(find.byKey(const Key('admin_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.saved.single.email, 'ana@finnegans.com');
+      expect(repository.saved.single.blockedAt, isNotNull);
+      expect(find.text('Se bloqueó a ana@finnegans.com.'), findsOneWidget);
+      expect(
+        inCard('ana@finnegans.com', find.text('Bloqueado')),
+        findsOneWidget,
+      );
+      // The menu selects the user, as a click on its row does.
+      expect(container.read(selectedAdminEmailProvider), 'ana@finnegans.com');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('A un bloqueado le ofrece desbloquear', (tester) async {
+      final repository = _FakeUsers(people());
+      await showCards(tester, repository);
+
+      await openMenu(tester, 'beto@finnegans.com');
+      expect(find.byKey(const Key('admin_menu_bloquear')), findsNothing);
+      await tester.tap(find.byKey(const Key('admin_menu_desbloquear')));
+      await tester.pumpAndSettle();
+      expect(find.text('Desbloquear usuario'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('admin_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.saved.single.blockedAt, isNull);
+      expect(inCard('beto@finnegans.com', find.text('Activo')), findsOneWidget);
+    });
+
+    testWidgets('A un eliminado no lo deja bloquear y dice por qué', (
+      tester,
+    ) async {
+      final repository = _FakeUsers(people());
+      await showCards(tester, repository);
+
+      await openMenu(tester, 'carla@finnegans.com');
+      final block = tester.widget<PopupMenuItem<AdminUserAction>>(
+        find.byKey(const Key('admin_menu_bloquear')),
+      );
+      expect(block.enabled, isFalse);
+      expect(
+        find.text('Está eliminado: restauralo antes de bloquearlo.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('admin_menu_eliminar')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('admin_menu_restaurar')));
+      await tester.pumpAndSettle();
+      expect(find.text('Restaurar usuario'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('admin_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.saved.single.deletedAt, isNull);
+    });
+
+    testWidgets('Cambiar rol abre su diálogo y lo guarda', (tester) async {
+      final repository = _FakeUsers(people());
+      await showCards(tester, repository);
+
+      await openMenu(tester, 'ana@finnegans.com');
+      await tester.tap(find.byKey(const Key('admin_menu_cambiar_rol')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // The dialog uses the phone's width.
+      expect(tester.getSize(find.byType(Dialog)).width, greaterThan(340));
+
+      await tester.tap(find.byKey(const Key('admin_rol_teamLead')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_rol_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.saved.single.role, 'teamLead');
+      expect(
+        inCard('ana@finnegans.com', find.text('Líder de equipo')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Mientras guarda muestra el progreso y frena los menús', (
+      tester,
+    ) async {
+      final repository = _FakeUsers(people());
+      final gate = repository.gate = Completer<void>();
+      await showCards(tester, repository);
+
+      await openMenu(tester, 'ana@finnegans.com');
+      await tester.tap(find.byKey(const Key('admin_menu_eliminar')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_confirmar')));
+      await tester.pump();
+
+      expect(
+        inCard(
+          'ana@finnegans.com',
+          find.byKey(const Key('loading_admin_menu')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<PopupMenuButton<AdminUserAction>>(
+              find.byKey(const Key('admin_menu_beto@finnegans.com')),
+            )
+            .enabled,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('admin_crear')))
+            .onPressed,
+        isNull,
+      );
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('loading_admin_menu')), findsNothing);
+      expect(find.text('Se eliminó a ana@finnegans.com.'), findsOneWidget);
+    });
+
+    testWidgets('Una acción en la segunda página no vuelve a la primera', (
+      tester,
+    ) async {
+      final repository = _FakeUsers([
+        for (var i = 1; i <= 10; i++) _user(email: 'persona$i@finnegans.com'),
+      ]);
+      await showCards(tester, repository);
+
+      final next = find.byTooltip('Página siguiente');
+      await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+      await tester.pumpAndSettle();
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      // The new page starts in view.
+      expect(
+        tester
+            .getTopLeft(
+              find.byKey(const Key('admin_usuario_persona9@finnegans.com')),
+            )
+            .dy,
+        greaterThanOrEqualTo(0),
+      );
+      expect(find.text('Página 2 de 2'), findsOneWidget);
+
+      await openMenu(tester, 'persona9@finnegans.com');
+      await tester.tap(find.byKey(const Key('admin_menu_bloquear')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.saved.single.email, 'persona9@finnegans.com');
+      expect(find.text('Página 2 de 2'), findsOneWidget);
+      expect(
+        inCard('persona9@finnegans.com', find.text('Bloqueado')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Nuevo usuario da de alta desde el botón a lo ancho', (
+      tester,
+    ) async {
+      final repository = _FakeUsers(people());
+      await showCards(tester, repository);
+
+      await tester.tap(find.byKey(const Key('admin_crear')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.enterText(
+        find.byKey(const Key('admin_alta_email')),
+        'nuevo@finnegans.com',
+      );
+      await tester.tap(find.byKey(const Key('admin_alta_confirmar')));
+      await tester.pumpAndSettle();
+
+      expect(repository.created.single.email, 'nuevo@finnegans.com');
+      expect(
+        find.byKey(const Key('admin_usuario_nuevo@finnegans.com')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('En Áreas y equipos los líderes van debajo del equipo', (
+      tester,
+    ) async {
+      final structure = _FakeStructure(_structurePanel());
+      await _showPanel(
+        tester,
+        access: AccessAdmin.allowed,
+        repository: _FakeUsers([_user(email: 'lider@finnegans.com')]),
+        structure: structure,
+        size: phone,
+      );
+      await tester.tap(find.text('Áreas y equipos'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final edit = find.byKey(const Key('estructura_lideres_equipo_10'));
+      final team = find.text('PLATAFORMA CORE');
+      expect(
+        tester.getTopLeft(edit).dy,
+        greaterThan(tester.getBottomLeft(team).dy),
+      );
+      expect(tester.getSize(edit).height, greaterThanOrEqualTo(48));
+      expect(
+        tester
+            .getSize(find.byKey(const Key('estructura_lideres_area_1')))
+            .height,
+        greaterThanOrEqualTo(48),
+      );
+
+      await tester.tap(edit);
+      await tester.pumpAndSettle();
+      expect(find.text('Líderes de PLATAFORMA CORE'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

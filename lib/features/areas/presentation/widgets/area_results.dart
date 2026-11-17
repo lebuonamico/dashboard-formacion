@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -11,7 +13,10 @@ const _maxCardWidth = 410.0;
 const _gridSpacing = 16.0;
 const _rowsPerPage = 2;
 
-class AreasResults extends StatefulWidget {
+/// Below 840 px, cards per page (see [AdaptiveRecordList]).
+const _cardsPerPage = 6;
+
+class AreasResults extends StatelessWidget {
   final List<AreaSummary> areas;
   final int totalAreas;
   final bool isAnnual;
@@ -24,14 +29,71 @@ class AreasResults extends StatefulWidget {
   });
 
   @override
-  State<AreasResults> createState() => _AreasResultsState();
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Áreas',
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: context.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 8),
+            CountBadge(count: areas.length),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                areas.length == totalAreas
+                    ? '${countLabel(totalAreas, 'área', 'áreas')} en el período'
+                    : '${areas.length} de $totalAreas áreas',
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 13),
+        if (areas.isEmpty)
+          const _EmptySearch()
+        else
+          AdaptiveRecordList(
+            items: areas,
+            pageSize: _cardsPerPage,
+            resultsLabel: 'áreas',
+            icon: Icons.apartment_outlined,
+            table: (areas) => _PagedAreasGrid(areas: areas, isAnnual: isAnnual),
+            card: (area) => AreaCard(area: area, isAnnual: isAnnual),
+          ),
+      ],
+    );
+  }
 }
 
-class _AreasResultsState extends State<AreasResults> {
+/// From 840 px: as many columns as fit, two rows per page, the pagination
+/// above.
+class _PagedAreasGrid extends StatefulWidget {
+  final List<AreaSummary> areas;
+  final bool isAnnual;
+
+  const _PagedAreasGrid({required this.areas, required this.isAnnual});
+
+  @override
+  State<_PagedAreasGrid> createState() => _PagedAreasGridState();
+}
+
+class _PagedAreasGridState extends State<_PagedAreasGrid> {
   int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant AreasResults oldWidget) {
+  void didUpdateWidget(covariant _PagedAreasGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_sameAreas(oldWidget.areas, widget.areas)) {
       _currentPage = 0;
@@ -70,52 +132,25 @@ class _AreasResultsState extends State<AreasResults> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Áreas',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                CountBadge(count: widget.areas.length),
-                const Spacer(),
-                Text(
-                  widget.areas.length == widget.totalAreas
-                      ? '${widget.totalAreas} áreas en el período'
-                      : '${widget.areas.length} de ${widget.totalAreas} áreas',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 13),
-            if (widget.areas.isEmpty)
-              const _EmptySearch()
-            else ...[
-              if (pageCount > 1) ...[
-                ResultsPagination(
-                  currentPage: safePage,
-                  pageCount: pageCount,
-                  from: from + 1,
-                  until: until,
-                  totalResults: widget.areas.length,
-                  resultsLabel: 'áreas',
-                  icon: Icons.apartment_outlined,
-                  onPrevious: safePage == 0
-                      ? null
-                      : () => setState(() => _currentPage = safePage - 1),
-                  onNext: safePage == pageCount - 1
-                      ? null
-                      : () => setState(() => _currentPage = safePage + 1),
-                ),
-                const SizedBox(height: 18),
-              ],
-              _AreasGrid(areas: visibleAreas, isAnnual: widget.isAnnual),
+            if (pageCount > 1) ...[
+              ResultsPagination(
+                currentPage: safePage,
+                pageCount: pageCount,
+                from: from + 1,
+                until: until,
+                totalResults: widget.areas.length,
+                resultsLabel: 'áreas',
+                icon: Icons.apartment_outlined,
+                onPrevious: safePage == 0
+                    ? null
+                    : () => setState(() => _currentPage = safePage - 1),
+                onNext: safePage == pageCount - 1
+                    ? null
+                    : () => setState(() => _currentPage = safePage + 1),
+              ),
+              const SizedBox(height: 18),
             ],
+            _AreasGrid(areas: visibleAreas, isAnnual: widget.isAnnual),
           ],
         );
       },
@@ -165,7 +200,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'No hay áreas que coincidan con la búsqueda.',
+            'Ninguna área coincide con los filtros.',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: context.colorScheme.onSurface,
@@ -173,7 +208,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Probá con otra búsqueda o estado.',
+            'Probá con otros filtros.',
             style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),

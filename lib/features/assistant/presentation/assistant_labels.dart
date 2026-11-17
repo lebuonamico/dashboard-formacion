@@ -9,7 +9,7 @@ extension AssistantModuleLabel on AssistantModule {
     AssistantModule.areas => 'Áreas',
     AssistantModule.teams => 'Equipos',
     AssistantModule.teamDetail => 'Detalle de equipo',
-    AssistantModule.people => 'Personas',
+    AssistantModule.people => 'Colaboradores',
     AssistantModule.courses => 'Cursos',
     AssistantModule.settings => 'Configuración',
     AssistantModule.others => 'Ayuda general',

@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/widgets/legend_donut_chart.dart';
 import 'package:flutter/material.dart';
@@ -38,24 +39,27 @@ class TeamCategoryDistribution extends StatelessWidget {
               alignment: Alignment.topLeft,
               child: Row(
                 children: [
-                  Text(
-                    'Distribución por categoría',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: context.colorScheme.onSurface,
+                  // With large text on a phone it shortens instead of
+                  // pushing the help icon out.
+                  Flexible(
+                    child: Text(
+                      'Distribución por categoría',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: context.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Tooltip(
+                  InfoHint(
                     message: isAnnual
                         ? 'Suma de las horas válidas por categoría de los meses con datos del año.'
-                        : 'Horas validadas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: context.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.8,
-                      ),
+                        : 'Horas válidas del período que aplican al objetivo de cada integrante, agrupadas por categoría.',
+                    size: 16,
+                    color: context.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.8,
                     ),
                   ),
                 ],
@@ -69,9 +73,9 @@ class TeamCategoryDistribution extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 166),
               child: Center(
                 child: LegendDonutChart(
-                  centerValue: total.toStringAsFixed(1),
+                  centerValue: '${total.round()}',
                   centerLabel: 'HORAS',
-                  valueSuffix: ' h',
+                  valueSuffix: ' hs',
                   slices: [
                     DonutSlice(
                       label: CourseCategory.businessSkills.shortLabel,
@@ -97,7 +101,7 @@ class TeamCategoryDistribution extends StatelessWidget {
                     DonutSlice(
                       label: CourseCategory.teaching.shortLabel,
                       help:
-                          'Horas cargadas como dictado de capacitaciones por integrantes del equipo.',
+                          'Horas declaradas como dictado de capacitaciones por integrantes del equipo.',
                       value: teachingHours,
                       color: context.colors.teaching.text,
                     ),

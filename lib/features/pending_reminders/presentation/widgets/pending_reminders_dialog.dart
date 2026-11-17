@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/pending_reminders/domain/pending_reminder.dart';
 import 'package:app_finnegans/features/pending_reminders/presentation/pending_reminder_labels.dart';
@@ -15,7 +16,11 @@ Future<bool> showPendingRemindersDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
+      insetPadding: dialogContext.dialogInsetPadding,
       title: const Text('Notificar cursos pendientes'),
+      // A fixed width, not a maximum: the dialog sizes itself by its
+      // intrinsic width, which a ListView cannot report. On narrow screens
+      // it shrinks to the room available.
       content: SizedBox(width: 520, child: _PlanSummary(plan)),
       actions: [
         TextButton(
@@ -48,8 +53,9 @@ class _PlanSummary extends StatelessWidget {
       children: [
         Text(
           'Se enviará un mail a ${peopleCount(plan.reminders.length)} '
-          'con ${courseCount(plan.courseCount)} pendientes en total. '
-          'Cada persona recibe solo sus cursos.',
+          'con ${courseCount(plan.courseCount)} '
+          '${plan.courseCount == 1 ? 'pendiente' : 'pendientes'} en total. '
+          'Cada colaborador recibe solo sus cursos.',
           style: context.textTheme.bodyMedium,
         ),
         const SizedBox(height: 12),

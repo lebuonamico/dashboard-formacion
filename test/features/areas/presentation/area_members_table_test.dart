@@ -11,6 +11,9 @@ import 'package:app_finnegans/features/employees/domain/seniority.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../support/pump_screen.dart';
 
 const _area = 'SERVICIOS';
 
@@ -79,6 +82,46 @@ Future<void> _show(WidgetTester tester, ProviderContainer container) async {
   await tester.pumpAndSettle();
 }
 
+/// The table at phone width, with a profile route to check where a card goes.
+Future<({GoRouter router, ProviderContainer container})> _showCompact(
+  WidgetTester tester,
+) => pumpScreen(
+  tester,
+  size: compactSize,
+  initialLocation: '/',
+  overrides: [
+    areaDetailProvider(_area).overrideWith(
+      (ref) async => AreaDetail(
+        area: const AreasService().summarize(_area, _members),
+        teams: const [],
+        members: _members,
+      ),
+    ),
+  ],
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (_, _) => const Scaffold(
+        body: SingleChildScrollView(child: AreaMembersTable(areaName: _area)),
+      ),
+    ),
+    GoRoute(
+      path: '/empleados/:legajo',
+      builder: (_, state) => Text(
+        'Perfil ${state.pathParameters['legajo']} '
+        'desde ${state.uri.queryParameters['origen']}',
+      ),
+    ),
+  ],
+);
+
+Future<void> _sortBy(WidgetTester tester, String column) async {
+  await tester.tap(find.byKey(const Key('member_order_button')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(column).last);
+  await tester.pumpAndSettle();
+}
+
 List<String> _visibleNames(WidgetTester tester) => tester
     .widgetList<Text>(find.textContaining('Persona '))
     .map((text) => text.data!)
@@ -143,5 +186,63 @@ void main() {
       'Persona Riesgosa',
       'Persona Critica',
     ]);
+  });
+
+  group('A 390 px', () {
+    testWidgets('Muestra tarjetas en lugar de la tabla', (tester) async {
+      await _showCompact(tester);
+
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byKey(const ValueKey('member_card_1')), findsOne);
+      expect(find.text('Integrantes (3)'), findsOne);
+      // The team is shown in the area's cards.
+      expect(find.text('IMPLEMENTACIONES'), findsNWidgets(3));
+      expect(find.text('Ordenar'), findsOne);
+    });
+
+    testWidgets(
+      'El menú ordena por Cumplimiento y elegido otra vez lo invierte',
+      (tester) async {
+        await _showCompact(tester);
+
+        await _sortBy(tester, 'Cumplimiento');
+        expect(_visibleNames(tester), [
+          'Persona Critica',
+          'Persona Riesgosa',
+          'Persona Cumplida',
+        ]);
+        expect(find.byIcon(Icons.arrow_upward), findsOne);
+
+        await _sortBy(tester, 'Cumplimiento');
+        expect(_visibleNames(tester), [
+          'Persona Cumplida',
+          'Persona Riesgosa',
+          'Persona Critica',
+        ]);
+        expect(find.byIcon(Icons.arrow_downward), findsOne);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('Filtrar por Críticos deja una tarjeta', (tester) async {
+      final (:router, :container) = await _showCompact(tester);
+
+      container.read(areaMemberStatusFilterProvider.notifier).select({
+        ComplianceLevel.critical,
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.text('Integrantes (1)'), findsOne);
+      expect(_visibleNames(tester), ['Persona Critica']);
+    });
+
+    testWidgets('Tocar una tarjeta abre el perfil desde Áreas', (tester) async {
+      await _showCompact(tester);
+
+      await tester.tap(find.byKey(const ValueKey('member_card_2')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Perfil 2 desde areas'), findsOne);
+    });
   });
 }

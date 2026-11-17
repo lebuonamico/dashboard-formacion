@@ -1,4 +1,5 @@
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 class KpiData {
@@ -45,10 +46,14 @@ class KpiGrid extends StatelessWidget {
           runSpacing: 14,
           children: items
               .map(
+                // A minimum, not a fixed height: below 840 px the help icon's
+                // touch target makes the title row taller.
                 (item) => SizedBox(
                   width: cardWidth,
-                  height: cardHeight,
-                  child: _KpiCard(data: item),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: cardHeight),
+                    child: _KpiCard(data: item),
+                  ),
                 ),
               )
               .toList(),
@@ -99,16 +104,9 @@ class _KpiCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (data.help != null) ...[
+                    if (data.help case final help?) ...[
                       const SizedBox(width: 4),
-                      Tooltip(
-                        message: data.help!,
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 15,
-                          color: context.colors.faintText,
-                        ),
-                      ),
+                      InfoHint(message: help),
                     ],
                   ],
                 ),

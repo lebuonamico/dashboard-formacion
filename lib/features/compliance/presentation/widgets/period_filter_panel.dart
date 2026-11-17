@@ -1,23 +1,32 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/teams/presentation/providers/teams_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
 import 'package:app_finnegans/core/period/presentation/period_segmented_control.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Period selector wired to the global providers: every screen that uses it
 /// shares the same period.
 class PeriodFilterPanel extends ConsumerWidget {
-  /// What the period's calculation includes, for the help text.
+  /// Who the period's calculation includes, as a sentence of the monthly
+  /// help text.
   final String included;
 
   /// Shown next to the title, like the print report button.
   final Widget? action;
 
+  /// Narrower than this (a phone), the scope is a segmented control and the
+  /// month and year share a row.
+  static const compactWidth = 600.0;
+
   const PeriodFilterPanel({
     super.key,
-    this.included = 'todos los equipos',
+    this.included =
+        'Se incluyen todos los equipos con colaboradores elegibles al '
+        'cierre, aunque tengan 0 horas.',
     this.action,
   });
 
@@ -55,8 +64,18 @@ class PeriodFilterPanel extends ConsumerWidget {
           );
           // The annual scope covers the whole year: the month only applies to monthly.
           final isMonthly = selectedScope == PeriodScope.monthly;
+          // On phones the fields go without their icon, so the value fits.
+          final narrow = constraints.maxWidth < compactWidth;
+          // A tablet: everything below the title in one row. A narrow desktop
+          // window keeps the stacked layout.
+          final singleRow =
+              !narrow &&
+              constraints.maxWidth < 820 &&
+              context.windowSize != WindowSize.expanded;
+          final showIcon = !narrow && !singleRow;
           final monthField = _MonthField(
             selectedMonth: month,
+            showIcon: showIcon,
             onChanged: (value) {
               if (value == null) return;
               ref.read(periodFilterProvider.notifier).setMonth(value);
@@ -65,11 +84,65 @@ class PeriodFilterPanel extends ConsumerWidget {
           final yearField = _YearField(
             selectedYear: year,
             yearOptions: yearOptions,
+            showIcon: showIcon,
             onChanged: (value) {
               if (value == null) return;
               ref.read(periodFilterProvider.notifier).setYear(value);
             },
           );
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+                const SizedBox(height: 12),
+                SegmentedButton<PeriodScope>(
+                  key: const Key('period_scope_segments'),
+                  expandedInsets: EdgeInsets.zero,
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final scope in PeriodScope.values)
+                      ButtonSegment(value: scope, label: Text(scope.label)),
+                  ],
+                  selected: {selectedScope},
+                  onSelectionChanged: (value) => ref
+                      .read(periodFilterProvider.notifier)
+                      .setScope(value.first),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (isMonthly) ...[
+                      Expanded(flex: 3, child: monthField),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(flex: 2, child: yearField),
+                  ],
+                ),
+              ],
+            );
+          }
+          if (singleRow) {
+            return Column(
+              key: const Key('period_single_row'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    scopeControl,
+                    if (isMonthly) ...[
+                      const SizedBox(width: 12),
+                      Expanded(flex: 3, child: monthField),
+                    ],
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: yearField),
+                  ],
+                ),
+              ],
+            );
+          }
           if (constraints.maxWidth < 820) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,23 +191,24 @@ class _PeriodTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
-          'Período de análisis',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: context.colorScheme.onSurface,
+        Flexible(
+          child: Text(
+            'Período de análisis',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: context.colorScheme.onSurface,
+            ),
           ),
         ),
         const SizedBox(width: 6),
-        Tooltip(
+        InfoHint(
           message: isAnnual
               ? 'El anual suma únicamente los resultados mensuales de los meses con datos CRM o LMS. Los meses sin datos no suman horas ni objetivos.'
-              : 'El período se evalúa si tiene registros CRM o LMS. Se incluyen $included con colaboradores elegibles al cierre, aunque tengan 0 horas. Si no hay registros, se muestra Sin datos.',
-          child: Icon(
-            Icons.info_outline,
-            size: 16,
-            color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-          ),
+              : 'El período se evalúa si tiene registros CRM o LMS. $included Si no hay registros, se muestra Sin datos.',
+          size: 16,
+          color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
         ),
         if (action case final action?) ...[const SizedBox(width: 12), action],
       ],
@@ -144,9 +218,14 @@ class _PeriodTitle extends StatelessWidget {
 
 class _MonthField extends StatelessWidget {
   final int selectedMonth;
+  final bool showIcon;
   final ValueChanged<int?> onChanged;
 
-  const _MonthField({required this.selectedMonth, required this.onChanged});
+  const _MonthField({
+    required this.selectedMonth,
+    required this.showIcon,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +233,7 @@ class _MonthField extends StatelessWidget {
       value: selectedMonth,
       hint: 'Mes',
       icon: Icons.calendar_month_outlined,
+      showIcon: showIcon,
       items: List.generate(12, (index) => index + 1)
           .map(
             (month) => DropdownMenuItem<int>(
@@ -170,11 +250,13 @@ class _MonthField extends StatelessWidget {
 class _YearField extends StatelessWidget {
   final int selectedYear;
   final List<int> yearOptions;
+  final bool showIcon;
   final ValueChanged<int?> onChanged;
 
   const _YearField({
     required this.selectedYear,
     required this.yearOptions,
+    required this.showIcon,
     required this.onChanged,
   });
 
@@ -184,6 +266,7 @@ class _YearField extends StatelessWidget {
       value: selectedYear,
       hint: 'Año',
       icon: Icons.event_outlined,
+      showIcon: showIcon,
       items: yearOptions
           .map(
             (year) => DropdownMenuItem<int>(

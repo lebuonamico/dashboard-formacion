@@ -443,7 +443,8 @@ class AssistantContextBuilder {
       );
       return const {};
     }
-    final profile = periods.employeeCompliance(
+    // The same calculation as the profile screen, so both say the same.
+    final profile = periods.employeeProfileCompliance(
       employee: employee,
       courses: data.courses,
       timeEntries: data.timeEntries,
@@ -456,7 +457,7 @@ class AssistantContextBuilder {
     );
     if (period.annual) {
       notes.add(
-        'El perfil individual usa el objetivo mensual actual ×12 y sus propios filtros, igual que su pantalla; no equivale al acumulado histórico anual de Equipos.',
+        'El perfil individual anual suma solo sus meses con datos desde el ingreso, cada uno con el plan vigente en ese mes, igual que su pantalla; no equivale al acumulado histórico anual de Equipos.',
       );
     }
     if (query.theme != AssistantTopic.courses) {

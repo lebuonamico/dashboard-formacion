@@ -1,8 +1,10 @@
-const personFilterDimension = 'Persona / Legajo';
+const personFilterDimension = 'Colaborador / Legajo';
 const courseFilterDimension = 'Curso / ID';
 
 String personFilterLabel(String name, String employeeId) {
-  final shownName = name.trim().isEmpty ? 'Persona sin nombre' : name.trim();
+  final shownName = name.trim().isEmpty
+      ? 'Colaborador sin nombre'
+      : name.trim();
   final shownId = employeeId.trim().isEmpty
       ? 'Sin legajo'
       : 'Legajo ${employeeId.trim()}';

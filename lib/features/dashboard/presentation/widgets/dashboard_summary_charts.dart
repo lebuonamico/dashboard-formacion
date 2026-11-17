@@ -1,4 +1,11 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
+import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/core/widgets/donut_chart.dart';
@@ -23,7 +30,10 @@ class DashboardSummaryCharts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return distributionAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (error, _) => ErrorDataState(
         title: 'No pudimos cargar esta sección',
         error: error,
@@ -43,6 +53,14 @@ class DashboardSummaryCharts extends StatelessWidget {
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 850 ? 2 : 1;
             final cardHeight = columns == 2 ? 280.0 : 300.0;
+            final cards = [
+              _ComplianceChartCard(summary: distribution.compliance),
+              _CategoryChartCard(summary: distribution.categories),
+            ];
+            // Below 840 px each card is as tall as its content.
+            if (context.windowSize != WindowSize.expanded) {
+              return CardRows(columns: columns, children: cards);
+            }
 
             return GridView(
               shrinkWrap: true,
@@ -53,10 +71,7 @@ class DashboardSummaryCharts extends StatelessWidget {
                 mainAxisSpacing: 16,
                 mainAxisExtent: cardHeight,
               ),
-              children: [
-                _ComplianceChartCard(summary: distribution.compliance),
-                _CategoryChartCard(summary: distribution.categories),
-              ],
+              children: cards,
             );
           },
         );
@@ -80,19 +95,19 @@ class _ComplianceChartCard extends StatelessWidget {
         context.colors.danger;
     final legend = [
       _ChartLegendItem(
-        label: 'Cumple (>=100%)',
+        label: '${ComplianceLevel.onTarget.label} (≥100%)',
         count: summary.onTarget,
         color: green,
         backgroundColor: greenBackground,
       ),
       _ChartLegendItem(
-        label: 'Atención (70-84%)',
+        label: '${ComplianceLevel.atRisk.label} (70-99%)',
         count: summary.atRisk,
         color: amber,
         backgroundColor: amberBackground,
       ),
       _ChartLegendItem(
-        label: 'No cumple (<70%)',
+        label: '${ComplianceLevel.critical.label} (<70%)',
         count: summary.critical,
         color: red,
         backgroundColor: redBackground,
@@ -101,30 +116,27 @@ class _ComplianceChartCard extends StatelessWidget {
 
     return _SummaryCard(
       title: 'Estado de cumplimiento',
-      subtitle: 'Distribución semáforo de las ${summary.total} personas',
-      trailing: 'Meta según seniority',
-      footer: '${summary.onTarget} personas alcanzaron el 100% de la meta',
-      action: 'Ver nómina',
+      subtitle:
+          'Distribución del semáforo de '
+          '${countLabel(summary.total, 'colaborador', 'colaboradores')}',
+      trailing: 'Objetivo según seniority',
+      footer:
+          '${countLabel(summary.onTarget, 'colaborador', 'colaboradores')} '
+          '${summary.onTarget == 1 ? 'alcanzó' : 'alcanzaron'} el 100% del objetivo',
+      action: 'Ver colaboradores',
       onAction: () => context.go('/empleados'),
-      child: Row(
-        children: [
-          DonutChart(
-            segments: [
-              DonutChartSegment(
-                value: summary.onTarget.toDouble(),
-                color: green,
-              ),
-              DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
-              DonutChartSegment(value: summary.critical.toDouble(), color: red),
-            ],
-            centerText: '${(summary.onTargetShare * 100).toStringAsFixed(0)}%',
-            centerSubtitle: 'EN META',
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: _LegendList(items: legend, total: summary.total.toDouble()),
-          ),
-        ],
+      child: _ChartWithLegend(
+        chart: (size) => DonutChart(
+          size: size,
+          segments: [
+            DonutChartSegment(value: summary.onTarget.toDouble(), color: green),
+            DonutChartSegment(value: summary.atRisk.toDouble(), color: amber),
+            DonutChartSegment(value: summary.critical.toDouble(), color: red),
+          ],
+          centerText: formatPercentage(summary.onTargetShare * 100),
+          centerSubtitle: 'EN OBJETIVO',
+        ),
+        legend: _LegendList(items: legend, total: summary.total.toDouble()),
       ),
     );
   }
@@ -152,41 +164,66 @@ class _CategoryChartCard extends StatelessWidget {
     return _SummaryCard(
       title: 'Distribución por categorías',
       subtitle:
-          '${summary.totalHours.toStringAsFixed(0)} de '
-          '${summary.totalTarget.toStringAsFixed(0)} h válidas',
-      trailing: '4 Pilares',
-      footer: 'Capacitaciones distribuidas entre los 4 pilares',
+          '${formatAchievedHours(summary.totalHours, target: summary.totalTarget)} de '
+          '${formatHours(summary.totalTarget)} hs válidas',
+      trailing: '4 categorías',
+      footer: 'Horas válidas repartidas entre las 4 categorías',
       action: 'Ver cursos',
       onAction: () => context.go('/cursos'),
       child: summary.totalHours == 0
           ? const _NoCategoryData()
-          : Row(
-              children: [
-                DonutChart(
-                  segments: [
-                    for (final type in CourseCategory.values)
-                      DonutChartSegment(
-                        value: summary.hours[type] ?? 0,
-                        color: context.colors.category(type).text,
-                      ),
-                  ],
-                  centerText:
-                      '${summary.averageHours.toStringAsFixed(1)} / '
-                      '${summary.averageTarget.toStringAsFixed(0)} h',
-                  // Smaller than the default so "x / y h" fits.
-                  centerTextStyle: context.textTheme.bodyLarge,
-                  centerSubtitle: 'POR PERSONA',
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: _LegendList(
-                    items: legend,
-                    total: summary.totalHours,
-                    showPercentages: true,
-                  ),
-                ),
-              ],
+          : _ChartWithLegend(
+              chart: (size) => DonutChart(
+                size: size,
+                segments: [
+                  for (final type in CourseCategory.values)
+                    DonutChartSegment(
+                      value: summary.hours[type] ?? 0,
+                      color: context.colors.category(type).text,
+                    ),
+                ],
+                centerText:
+                    '${formatAchievedHours(summary.averageHours, target: summary.averageTarget)} / '
+                    '${formatHours(summary.averageTarget)} hs',
+                // Smaller than the default so "x / y hs" fits.
+                centerTextStyle: context.textTheme.bodyLarge,
+                centerSubtitle: 'POR COLABORADOR',
+              ),
+              legend: _LegendList(
+                items: legend,
+                total: summary.totalHours,
+                showPercentages: true,
+              ),
             ),
+    );
+  }
+}
+
+/// The donut with its legend beside it; on phones, the legend below and the
+/// donut larger, so its center text fits inside the ring.
+class _ChartWithLegend extends StatelessWidget {
+  final Widget Function(double size) chart;
+  final Widget legend;
+
+  const _ChartWithLegend({required this.chart, required this.legend});
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.windowSize == WindowSize.compact) {
+      return Column(
+        children: [
+          Center(child: chart(160)),
+          const SizedBox(height: 16),
+          legend,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        chart(132),
+        const SizedBox(width: 18),
+        Expanded(child: legend),
+      ],
     );
   }
 }
@@ -249,6 +286,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below 840 px the card grows with its content: the texts may wrap.
+    final lines = context.windowSize == WindowSize.expanded ? 1 : 2;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: context.panel(shadow: true),
@@ -271,7 +310,7 @@ class _SummaryCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      maxLines: 1,
+                      maxLines: lines,
                       overflow: TextOverflow.ellipsis,
                       style: context.textTheme.labelMedium?.copyWith(
                         color: context.colorScheme.onSurfaceVariant,
@@ -304,7 +343,7 @@ class _SummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   footer,
-                  maxLines: 1,
+                  maxLines: lines,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.labelSmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant,
@@ -398,8 +437,8 @@ class _LegendList extends StatelessWidget {
                 ),
                 Text(
                   showPercentages
-                      ? '${item.value!.toStringAsFixed(1)} h (${((item.value! / total) * 100).toStringAsFixed(0)}%)'
-                      : '${item.count} (${((item.count! / total) * 100).toStringAsFixed(0)}%)',
+                      ? '${formatHours(item.value!)} hs (${formatPercentage(item.value! / total * 100)})'
+                      : '${item.count} (${formatPercentage(item.count! / total * 100)})',
                   style: context.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.colors.intermediateText,

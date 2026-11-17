@@ -241,6 +241,7 @@ Future<ProviderContainer> _showSettings(
   _Hours? hours,
   _Certifications? certifications,
   _Structure? structure,
+  Size size = const Size(1800, 1800),
 }) async {
   // Flutter now diagnoses existing decorated cards without a Material surface.
   // Recognize only that known diagnostic; unexpected errors still fail tests.
@@ -253,7 +254,7 @@ Future<ProviderContainer> _showSettings(
     }
   };
   addTearDown(() => FlutterError.onError = reportError);
-  tester.view.physicalSize = const Size(1800, 1800);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -640,10 +641,7 @@ void main() {
       refresh.complete(List.of(courses.saved));
       await tester.pumpAndSettle();
       _verifyLoading(tester, 'cursos', false);
-      expect(
-        find.text('Se cargaron 1 cursos desde cursos.csv.'),
-        findsOneWidget,
-      );
+      expect(find.text('Se cargó 1 curso desde cursos.csv.'), findsOneWidget);
       expect(courses.saved.single.id, '107');
       expect(tester.takeException(), isNull);
     });
@@ -1115,5 +1113,53 @@ void main() {
         await tester.pumpAndSettle();
       });
     }
+  });
+
+  group('En el teléfono (390 px)', () {
+    const phone = Size(390, 844);
+
+    testWidgets('El botón de cada importación va debajo y a lo ancho', (
+      tester,
+    ) async {
+      await _showSettings(
+        tester,
+        courses: _Courses(),
+        auditLog: _Audit(),
+        size: phone,
+      );
+
+      final title = find.text('Importar nómina desde Excel / CSV');
+      final button = find.byKey(const Key('importar_nomina'));
+      expect(
+        tester.getTopLeft(button).dy,
+        greaterThan(tester.getBottomLeft(title).dy),
+      );
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(button).width, greaterThan(290));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Una importación completa avisa el resultado', (tester) async {
+      FilePicker.platform = _FileSelector(
+        () async => _csv('cursos.csv', _catalog),
+      );
+      final courses = _Courses();
+      await _showSettings(
+        tester,
+        courses: courses,
+        auditLog: _Audit(),
+        size: phone,
+      );
+
+      await tester.ensureVisible(find.byKey(const Key('importar_cursos')));
+      await tester.pumpAndSettle();
+      await _importConfirming(tester, 'cursos');
+      await tester.pumpAndSettle();
+
+      expect(courses.upserts, 1);
+      expect(find.text('Se cargó 1 curso desde cursos.csv.'), findsOneWidget);
+      _verifyLoading(tester, 'cursos', false);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

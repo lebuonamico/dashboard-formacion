@@ -1,14 +1,18 @@
 import 'package:app_finnegans/core/data_filters/presentation/data_filter_selection_provider.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_bar.dart';
 import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/period/presentation/optional_period_filter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
+import 'package:app_finnegans/core/widgets/list_screen_body.dart';
 import 'package:app_finnegans/core/widgets/paginated_table.dart';
-import 'package:app_finnegans/core/widgets/screen_padding.dart';
+import 'package:app_finnegans/core/widgets/record_card.dart';
 import 'package:app_finnegans/features/courses/domain/course_stats.dart';
 import 'package:app_finnegans/features/courses/presentation/providers/courses_providers.dart';
 import 'package:app_finnegans/features/courses/presentation/widgets/course_category_chip.dart';
@@ -27,42 +31,139 @@ class CoursesScreen extends ConsumerWidget {
         children: [
           const AppTopBar(title: 'Catálogo de cursos y formaciones'),
           Expanded(
-            child: Padding(
-              padding: screenPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _CoursesFilterBar(),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: coursesAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => ErrorDataState(
-                        title: 'No pudimos cargar los cursos',
-                        error: err,
-                        onRetry: () => ref.invalidate(courseStatsProvider),
-                      ),
-                      data: (courses) => FadeIn(
-                        child: courses.isEmpty
-                            ? const _NoCourses()
-                            : PaginatedTable(
-                                items: courses,
-                                rowHeight: _CoursesTable.rowHeight,
-                                headerHeight: _CoursesTable.headerHeight,
-                                resultsLabel: 'cursos',
-                                icon: Icons.school_outlined,
-                                tableBuilder: _CoursesTable.new,
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
+            child: ListScreenBody(
+              header: const [_CoursesFilterBar(), SizedBox(height: 20)],
+              results: coursesAsync.when(
+                skipLoadingOnReload: true,
+                loading: () => const ListLoading(),
+                error: (err, _) => ErrorDataState(
+                  title: 'No pudimos cargar los cursos',
+                  error: err,
+                  onRetry: () => ref.invalidate(courseStatsProvider),
+                ),
+                data: (courses) => FadeIn(
+                  child: courses.isEmpty
+                      ? const _NoCourses()
+                      : _CoursesList(courses),
+                ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What each metric counts: the table's header tooltips and, below 840 px,
+/// the help above the cards.
+const _peopleHelp =
+    'Colaboradores distintos que declararon horas en el CRM '
+    '(en los cursos de dictado, quienes lo dictaron)';
+const _crmHoursHelp = 'Horas declaradas en el CRM para el curso';
+const _averageHelp =
+    'Horas CRM / colaboradores. Comparalo con la carga horaria';
+const _completedHelp = 'Colaboradores distintos con la finalización en el LMS';
+
+class _CoursesList extends StatelessWidget {
+  final List<CourseStats> courses;
+
+  const _CoursesList(this.courses);
+
+  @override
+  Widget build(BuildContext context) {
+    final list = AdaptiveRecordList(
+      items: courses,
+      resultsLabel: 'cursos',
+      icon: Icons.school_outlined,
+      table: (items) => PaginatedTable(
+        items: items,
+        rowHeight: _CoursesTable.rowHeight,
+        headerHeight: _CoursesTable.headerHeight,
+        resultsLabel: 'cursos',
+        icon: Icons.school_outlined,
+        tableBuilder: _CoursesTable.new,
+      ),
+      card: (stats) => _CourseCard(stats),
+    );
+    if (context.windowSize == WindowSize.expanded) return list;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [const _MetricsHelp(), const SizedBox(height: 12), list],
+    );
+  }
+}
+
+/// Below 840 px, the table's header tooltips in a single tap-to-read hint.
+class _MetricsHelp extends StatelessWidget {
+  const _MetricsHelp();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    key: const Key('course_metrics_help'),
+    children: [
+      Flexible(
+        child: Text(
+          '¿Qué mide cada número?',
+          style: context.textTheme.labelMedium?.copyWith(
+            color: context.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      const SizedBox(width: 6),
+      const InfoHint(
+        message:
+            'Colaboradores: $_peopleHelp.\n'
+            'Horas CRM: $_crmHoursHelp.\n'
+            'Promedio por colaborador: $_averageHelp.\n'
+            'Finalizaron (LMS): $_completedHelp.',
+      ),
+    ],
+  );
+}
+
+/// Below 840 px: what a row of the table shows.
+class _CourseCard extends StatelessWidget {
+  final CourseStats stats;
+
+  const _CourseCard(this.stats);
+
+  @override
+  Widget build(BuildContext context) {
+    final category = stats.lmsCategory;
+    final average = stats.averageHoursPerPerson;
+    return RecordCard(
+      key: ValueKey('course_card_${stats.course.id}'),
+      title: stats.course.name,
+      subtitle: 'ID ${stats.course.id}',
+      trailing: category == null ? null : CourseCategoryChip(type: category),
+      metrics: [
+        if (category == null) const RecordMetric('Tipo', '—', muted: true),
+        RecordMetric(
+          'Carga horaria',
+          '${formatHours(stats.course.workloadHours)} hs',
+        ),
+        RecordMetric(
+          'Colaboradores',
+          '${stats.people}',
+          muted: stats.people == 0,
+        ),
+        RecordMetric(
+          'Horas CRM',
+          '${formatHours(stats.crmHours)} hs',
+          muted: stats.people == 0,
+        ),
+        RecordMetric(
+          'Promedio por colaborador',
+          average == null ? '—' : '${formatHoursPrecise(average)} hs',
+          muted: average == null,
+        ),
+        RecordMetric(
+          'Finalizaron (LMS)',
+          '${stats.completed}',
+          muted: stats.completed == 0,
+        ),
+      ],
     );
   }
 }
@@ -74,18 +175,17 @@ class _NoCourses extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasCourses = ref.watch(coursesProvider).value?.isNotEmpty ?? false;
-    return SingleChildScrollView(
+    return ListEmptyState(
       child: hasCourses
           ? const EmptyDataState(
               icon: Icons.search_off_outlined,
               title: 'No se encontraron cursos con los filtros aplicados.',
-              message: 'Probá con otra búsqueda o tipo de curso.',
+              message: 'Probá con otros filtros.',
             )
           : const EmptyDataState(
               icon: Icons.menu_book_outlined,
               title: 'No hay cursos cargados.',
-              message:
-                  'Importá el catálogo de cursos o sincronizalo desde Moodle.',
+              message: 'Importá el catálogo de cursos.',
             ),
     );
   }
@@ -112,7 +212,7 @@ class _CoursesFilterBar extends ConsumerWidget {
           hint: 'Mes (métricas)',
         ),
       ],
-      hasActiveExtraFilters: period.year != null || period.month != null,
+      activeExtraFilters: [period.year, period.month].nonNulls.length,
       onClearExtraFilters: ref.read(courseStatsPeriodProvider.notifier).clear,
     );
   }
@@ -141,25 +241,23 @@ class _CoursesTable extends StatelessWidget {
         DataColumn(label: Text('Carga horaria')),
         DataColumn(
           numeric: true,
-          label: Text('Personas'),
-          tooltip:
-              'Colaboradores distintos que cargaron horas en el CRM '
-              '(en los cursos de dictado, quienes lo dictaron)',
+          label: Text('Colaboradores'),
+          tooltip: _peopleHelp,
         ),
         DataColumn(
           numeric: true,
           label: Text('Horas CRM'),
-          tooltip: 'Horas cargadas en el CRM para el curso',
+          tooltip: _crmHoursHelp,
         ),
         DataColumn(
           numeric: true,
-          label: Text('Promedio por persona'),
-          tooltip: 'Horas CRM / personas. Comparalo con la carga horaria',
+          label: Text('Promedio por colaborador'),
+          tooltip: _averageHelp,
         ),
         DataColumn(
           numeric: true,
           label: Text('Finalizaron (LMS)'),
-          tooltip: 'Colaboradores distintos con la finalización en el LMS',
+          tooltip: _completedHelp,
         ),
       ],
       rows: [
@@ -186,12 +284,12 @@ class _CoursesTable extends StatelessWidget {
               ),
               DataCell(
                 stats.lmsCategory == null
-                    ? const Text('-')
+                    ? Text('—', style: TextStyle(color: cs.onSurfaceVariant))
                     : CourseCategoryChip(type: stats.lmsCategory!),
               ),
               DataCell(
                 Text(
-                  '${stats.course.workloadHours.toStringAsFixed(0)} hs',
+                  '${formatHours(stats.course.workloadHours)} hs',
                   style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
@@ -209,7 +307,7 @@ class _CoursesTable extends StatelessWidget {
                 _MetricCell(
                   stats.averageHoursPerPerson == null
                       ? '—'
-                      : '${formatHours(stats.averageHoursPerPerson!)} hs',
+                      : '${formatHoursPrecise(stats.averageHoursPerPerson!)} hs',
                   stats.averageHoursPerPerson == null,
                 ),
               ),

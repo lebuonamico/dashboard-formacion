@@ -1,3 +1,6 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
@@ -56,7 +59,10 @@ class DashboardAreasSection extends ConsumerWidget {
         ref
             .watch(dashboardAreasProvider)
             .when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
               error: (error, _) => ErrorDataState(
                 title: 'No pudimos cargar las áreas',
                 error: error,
@@ -80,7 +86,10 @@ class _FilteredAreasGrid extends ConsumerWidget {
     return ref
         .watch(filteredDashboardAreasProvider)
         .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
           error: (error, _) => ErrorDataState(
             title: 'No pudimos cargar las áreas',
             error: error,
@@ -96,6 +105,19 @@ class _FilteredAreasGrid extends ConsumerWidget {
                         : constraints.maxWidth >= 600
                         ? 2
                         : 1;
+                    // Below 840 px each row is as tall as its cards.
+                    if (context.windowSize != WindowSize.expanded) {
+                      return CardRows(
+                        columns: columns,
+                        children: [
+                          for (final item in areas)
+                            DashboardAreaCard(
+                              area: item.area,
+                              teamCount: item.teamCount,
+                            ),
+                        ],
+                      );
+                    }
 
                     return GridView.builder(
                       shrinkWrap: true,
@@ -139,13 +161,13 @@ class DashboardAreaCard extends StatelessWidget {
       ),
       header: SummaryCardHeader(
         title: area.name,
-        subtitle: '${area.memberCount} colaboradores',
+        subtitle: countLabel(area.memberCount, 'colaborador', 'colaboradores'),
         badge: StatusBadge(label: area.level.label, colors: colors),
       ),
       details: [
         SummaryInfoRow(
-          icon: Icons.people_outline,
-          text: '${area.memberCount} colaboradores · $teamCount equipos',
+          icon: Icons.groups_outlined,
+          text: countLabel(teamCount, 'equipo', 'equipos'),
         ),
       ],
       progress: SummaryProgress(
@@ -156,6 +178,7 @@ class DashboardAreaCard extends StatelessWidget {
       footer: SummaryCardFooter(
         completedHours: area.completedHours,
         targetHours: area.targetHours,
+        deviation: area.hoursDeviation,
         actionLabel: 'Ver detalle',
       ),
     );

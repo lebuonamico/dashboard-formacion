@@ -1,3 +1,5 @@
+import 'package:app_finnegans/core/formatting/text_formatter.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:collection/collection.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -12,7 +14,10 @@ const _gridSpacing = 16.0;
 const _rowsPerPage = 2;
 const _cardHeight = 252.0;
 
-class TeamResults extends StatefulWidget {
+/// Below 840 px, cards per page (see [AdaptiveRecordList]).
+const _cardsPerPage = 6;
+
+class TeamResults extends StatelessWidget {
   final List<TeamOverview> teams;
   final int teamCount;
   final bool isAnnual;
@@ -25,14 +30,71 @@ class TeamResults extends StatefulWidget {
   });
 
   @override
-  State<TeamResults> createState() => _TeamResultsState();
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Equipos',
+              style: context.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: context.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 8),
+            CountBadge(count: teams.length),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                teams.length == teamCount
+                    ? '${countLabel(teamCount, 'equipo', 'equipos')} en el período'
+                    : '${teams.length} de $teamCount equipos',
+                textAlign: TextAlign.end,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 13),
+        if (teams.isEmpty)
+          const _EmptySearch()
+        else
+          AdaptiveRecordList(
+            items: teams,
+            pageSize: _cardsPerPage,
+            resultsLabel: 'equipos',
+            icon: Icons.view_module_outlined,
+            table: (teams) => _PagedTeamsGrid(teams: teams, isAnnual: isAnnual),
+            card: (team) => TeamCard(team: team, isAnnual: isAnnual),
+          ),
+      ],
+    );
+  }
 }
 
-class _TeamResultsState extends State<TeamResults> {
+/// From 840 px: as many columns as fit, two rows per page, the pagination
+/// above.
+class _PagedTeamsGrid extends StatefulWidget {
+  final List<TeamOverview> teams;
+  final bool isAnnual;
+
+  const _PagedTeamsGrid({required this.teams, required this.isAnnual});
+
+  @override
+  State<_PagedTeamsGrid> createState() => _PagedTeamsGridState();
+}
+
+class _PagedTeamsGridState extends State<_PagedTeamsGrid> {
   int _currentPage = 0;
 
   @override
-  void didUpdateWidget(covariant TeamResults oldWidget) {
+  void didUpdateWidget(covariant _PagedTeamsGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (!_haveSameTeams(oldWidget.teams, widget.teams)) {
@@ -74,53 +136,26 @@ class _TeamResultsState extends State<TeamResults> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Equipos',
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                CountBadge(count: widget.teams.length),
-                const Spacer(),
-                Text(
-                  widget.teams.length == widget.teamCount
-                      ? '${widget.teamCount} equipos en el período'
-                      : '${widget.teams.length} de ${widget.teamCount} equipos',
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 13),
-            if (widget.teams.isEmpty)
-              const _EmptySearch()
-            else ...[
-              if (pageCount > 1) ...[
-                ResultsPagination(
-                  currentPage: safePage,
-                  pageCount: pageCount,
-                  from: startIndex + 1,
-                  until: endIndex,
-                  totalResults: widget.teams.length,
-                  resultsLabel: 'equipos',
-                  icon: Icons.view_module_outlined,
-                  onPrevious: safePage == 0
-                      ? null
-                      : () => setState(() => _currentPage = safePage - 1),
-                  onNext: safePage == pageCount - 1
-                      ? null
-                      : () => setState(() => _currentPage = safePage + 1),
-                ),
-                const SizedBox(height: 18),
-              ],
-
-              _TeamsGrid(teams: visibleTeams, isAnnual: widget.isAnnual),
+            if (pageCount > 1) ...[
+              ResultsPagination(
+                currentPage: safePage,
+                pageCount: pageCount,
+                from: startIndex + 1,
+                until: endIndex,
+                totalResults: widget.teams.length,
+                resultsLabel: 'equipos',
+                icon: Icons.view_module_outlined,
+                onPrevious: safePage == 0
+                    ? null
+                    : () => setState(() => _currentPage = safePage - 1),
+                onNext: safePage == pageCount - 1
+                    ? null
+                    : () => setState(() => _currentPage = safePage + 1),
+              ),
+              const SizedBox(height: 18),
             ],
+
+            _TeamsGrid(teams: visibleTeams, isAnnual: widget.isAnnual),
           ],
         );
       },
@@ -171,7 +206,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'No encontramos equipos con esos filtros.',
+            'Ningún equipo coincide con los filtros.',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: context.colorScheme.onSurface,
@@ -179,7 +214,7 @@ class _EmptySearch extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Probá con otra búsqueda, área o estado.',
+            'Probá con otros filtros.',
             style: context.textTheme.bodySmall?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
