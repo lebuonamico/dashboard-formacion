@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/feedback.dart';
 import 'package:app_finnegans/features/imports/domain/import_file.dart';
@@ -21,26 +22,76 @@ class ImportSection extends ConsumerWidget {
         (state) => state.value?.inProgress.contains(type) ?? false,
       ),
     );
+    final windowSize = context.windowSize;
+    final button = OutlinedButton.icon(
+      key: Key('importar_${type.keySuffix}'),
+      onPressed: inProgress ? null : () => _import(context, ref),
+      // Desktop keeps the button's default height.
+      style: windowSize == WindowSize.expanded
+          ? null
+          : OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
+      icon: inProgress
+          ? SizedBox.square(
+              key: Key('loading_${type.keySuffix}'),
+              dimension: 18,
+              child: const CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.upload_file, size: 18),
+      label: Text(type.buttonLabel),
+    );
+    final icon = _SectionIcon(
+      icon: type.icon,
+      colors: type.iconColors(context),
+    );
+    final title = Text(
+      type.title,
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    );
+    final subtitle = Text(type.subtitle);
+
+    // On a phone the button beside the text leaves it a few words per line.
+    if (windowSize == WindowSize.compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              icon,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DefaultTextStyle.merge(
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        color: context.colorScheme.onSurface,
+                      ),
+                      child: title,
+                    ),
+                    const SizedBox(height: 2),
+                    DefaultTextStyle.merge(
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                      child: subtitle,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          button,
+        ],
+      );
+    }
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: _SectionIcon(icon: type.icon, colors: type.iconColors(context)),
-      title: Text(
-        type.title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(type.subtitle),
-      trailing: OutlinedButton.icon(
-        key: Key('importar_${type.keySuffix}'),
-        onPressed: inProgress ? null : () => _import(context, ref),
-        icon: inProgress
-            ? SizedBox.square(
-                key: Key('loading_${type.keySuffix}'),
-                dimension: 18,
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.upload_file, size: 18),
-        label: Text(type.buttonLabel),
-      ),
+      leading: icon,
+      title: title,
+      subtitle: subtitle,
+      trailing: button,
     );
   }
 

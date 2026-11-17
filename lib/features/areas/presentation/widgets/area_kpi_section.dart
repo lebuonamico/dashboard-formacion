@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
 import 'package:app_finnegans/core/period/presentation/period_formatter.dart';
@@ -12,7 +13,6 @@ class AreasKpiSection extends StatelessWidget {
   final int totalEmployees;
   final double completedHours;
   final double targetHours;
-  final double hoursDeviation;
   final double complianceGlobal;
   final bool isAnnual;
   final int year;
@@ -29,7 +29,6 @@ class AreasKpiSection extends StatelessWidget {
     required this.totalEmployees,
     required this.completedHours,
     required this.targetHours,
-    required this.hoursDeviation,
     required this.complianceGlobal,
     required this.year,
     required this.month,
@@ -60,7 +59,7 @@ class AreasKpiSection extends StatelessWidget {
           value: '$totalEmployees',
           suffix: 'en todas las áreas',
           progress: 1,
-          progressLabel: 'Nómina elegible',
+          progressLabel: 'Colaboradores elegibles',
           footer: '',
           icon: Icons.people_outline,
           color: context.colors.cyanAccent,
@@ -103,13 +102,13 @@ Widget creditedHoursKpiCard(
   final missing = target - hours;
   return DashboardKpiCard(
     title: 'HORAS VÁLIDAS · $period',
-    value: '${hours.toStringAsFixed(1)} h',
-    suffix: 'para el objetivo',
+    value: '${formatAchievedHours(hours, target: target)} hs',
+    suffix: isAnnual ? 'en el año' : 'en el mes',
     progress: target == 0 ? 0 : (hours / target).clamp(0.0, 1.0),
-    progressLabel: 'Meta: ${target.toStringAsFixed(0)} h',
+    progressLabel: 'Objetivo: ${formatHours(target)} hs',
     footer: missing > 0
-        ? '${missing.toStringAsFixed(1)} h para la meta'
-        : 'Meta alcanzada',
+        ? '${formatMissingHours(missing)} hs para el objetivo'
+        : 'Objetivo alcanzado',
     icon: Icons.schedule_outlined,
     color: context.colorScheme.primary,
     help: isAnnual ? annualCreditedHoursHelp : monthCreditedHoursHelp,

@@ -58,7 +58,7 @@ void main() {
     expect(find.text('Líder: Ana'), findsOne);
     expect(find.text('1 de 2 en objetivo'), findsOne);
     expect(find.text('75%'), findsOne);
-    expect(find.text('12.0 de 16.0 hs'), findsOne);
+    expect(find.text('12 de 16 hs'), findsOne);
     expect(find.text('Ver detalle'), findsOne);
     expect(tester.takeException(), isNull);
   });
@@ -76,13 +76,13 @@ void main() {
     await _show(tester, _card(deviation: -4));
     final colors = AppTheme.light().extension<AppColors>()!;
     expect(
-      tester.widget<Text>(find.text('-4.0 hs')).style?.color,
+      tester.widget<Text>(find.text('-4 hs')).style?.color,
       colors.danger.text,
     );
 
     await _show(tester, _card(deviation: 2));
     expect(
-      tester.widget<Text>(find.text('+2.0 hs')).style?.color,
+      tester.widget<Text>(find.text('+2 hs')).style?.color,
       colors.success.text,
     );
   });

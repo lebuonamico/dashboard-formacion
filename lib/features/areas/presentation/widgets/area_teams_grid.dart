@@ -1,4 +1,6 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
 import 'package:app_finnegans/core/widgets/summary_card/count_badge.dart';
 import 'package:app_finnegans/features/teams/domain/team_overview.dart';
 import 'package:app_finnegans/features/teams/presentation/widgets/team_card.dart';
@@ -45,6 +47,16 @@ class AreaTeamsGrid extends StatelessWidget {
               style: TextStyle(color: context.colorScheme.onSurfaceVariant),
             ),
           )
+        else if (context.windowSize != WindowSize.expanded)
+          // Each card as tall as its content: a fixed height leaves room to
+          // spare in one column.
+          CardRows(
+            columns: context.windowSize == WindowSize.medium ? 2 : 1,
+            children: [
+              for (final team in teams)
+                _AreaTeamCard(team: team, isAnnual: isAnnual, origin: origin),
+            ],
+          )
         else
           GridView.builder(
             shrinkWrap: true,
@@ -56,18 +68,34 @@ class AreaTeamsGrid extends StatelessWidget {
               mainAxisExtent: 252,
             ),
             itemCount: teams.length,
-            itemBuilder: (context, index) {
-              final team = teams[index];
-              return TeamCard(
-                team: team,
-                isAnnual: isAnnual,
-                origin: origin,
-                subtitle:
-                    '${team.memberCount} ${team.memberCount == 1 ? 'integrante' : 'integrantes'}',
-              );
-            },
+            itemBuilder: (context, index) => _AreaTeamCard(
+              team: teams[index],
+              isAnnual: isAnnual,
+              origin: origin,
+            ),
           ),
       ],
     );
   }
+}
+
+class _AreaTeamCard extends StatelessWidget {
+  final TeamOverview team;
+  final bool isAnnual;
+  final String origin;
+
+  const _AreaTeamCard({
+    required this.team,
+    required this.isAnnual,
+    required this.origin,
+  });
+
+  @override
+  Widget build(BuildContext context) => TeamCard(
+    team: team,
+    isAnnual: isAnnual,
+    origin: origin,
+    subtitle:
+        '${team.memberCount} ${team.memberCount == 1 ? 'integrante' : 'integrantes'}',
+  );
 }

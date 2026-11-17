@@ -1,5 +1,8 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
+import 'package:app_finnegans/core/widgets/adaptive_record_list.dart';
 import 'package:app_finnegans/core/widgets/page_window.dart';
 import 'package:app_finnegans/core/data_filters/presentation/filter_dropdown.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/empty_data_state.dart';
@@ -8,11 +11,14 @@ import 'package:app_finnegans/core/widgets/result_pagination.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/compliance/domain/compliance_level.dart';
 import 'package:app_finnegans/features/compliance/domain/employee_compliance.dart';
+import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/features/compliance/domain/member_order.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_labels.dart';
 import 'package:app_finnegans/features/compliance/presentation/providers/member_order_provider.dart';
 import 'package:app_finnegans/features/compliance/presentation/widgets/category_hours_progress.dart';
+import 'package:app_finnegans/features/compliance/presentation/widgets/member_order_menu.dart';
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
+import 'package:app_finnegans/features/employees/presentation/widgets/member_card.dart';
 import 'package:app_finnegans/features/employees/presentation/widgets/seniority_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,12 +31,13 @@ const _columns = <(String, MemberSort?)>[
   ('Colaborador', MemberSort.employee),
   ('Equipo', MemberSort.team),
   ('Seniority', MemberSort.seniority),
-  ('Horas realizadas / objetivo', MemberSort.hours),
+  ('Horas válidas / objetivo', MemberSort.hours),
   ('Cumplimiento', MemberSort.compliance),
   ('Por categoría', null),
 ];
 
 /// Members of the area, paginated, with a selector to filter by progress.
+/// From 840 px a table; below, cards with the order in a menu.
 class AreaMembersTable extends ConsumerStatefulWidget {
   final String areaName;
 
@@ -72,7 +79,7 @@ class _AreaMembersTableState extends ConsumerState<AreaMembersTable> {
   }
 }
 
-class _MembersPage extends ConsumerWidget {
+class _MembersPage extends StatelessWidget {
   final AreaMembersView view;
   final int currentPage;
   final ValueChanged<int> onPage;
@@ -84,9 +91,117 @@ class _MembersPage extends ConsumerWidget {
   });
 
   @override
+  Widget build(BuildContext context) {
+    final members = view.members;
+    final title = _Title(count: members.length);
+    final statusFilter = _StatusFilter(view: view);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (context.windowSize == WindowSize.expanded)
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 10,
+            spacing: 16,
+            children: [
+              title,
+              SizedBox(width: 250, child: statusFilter),
+            ],
+          )
+        else ...[
+          title,
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: statusFilter),
+              const SizedBox(width: 8),
+              MemberOrderMenu(
+                table: MemberTable.area,
+                columns: [for (final (_, column) in _columns) ?column],
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 12),
+        if (members.isEmpty)
+          const EmptyDataState(
+            compact: true,
+            icon: Icons.filter_alt_off_outlined,
+            title: 'Ningún integrante coincide con el filtro.',
+          )
+        else
+          AdaptiveRecordList(
+            items: members,
+            pageSize: _membersPerPage,
+            resultsLabel: 'integrantes',
+            icon: Icons.people_outline,
+            table: (members) => _MembersTable(
+              members: members,
+              currentPage: currentPage,
+              onPage: onPage,
+            ),
+            card: (member) =>
+                MemberCard(member: member, origin: 'areas', showTeam: true),
+          ),
+      ],
+    );
+  }
+}
+
+class _Title extends StatelessWidget {
+  final int count;
+
+  const _Title({required this.count});
+
+  @override
+  Widget build(BuildContext context) => Text(
+    'Integrantes ($count)',
+    style: context.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+      color: context.colorScheme.onSurface,
+    ),
+  );
+}
+
+class _StatusFilter extends ConsumerWidget {
+  final AreaMembersView view;
+
+  const _StatusFilter({required this.view});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      FilterDropdown<ComplianceLevel>.multiple(
+        selectedValues: ref.watch(areaMemberStatusFilterProvider),
+        incompatibleValues: view.incompatibleLevels,
+        hint: 'Estado',
+        icon: Icons.traffic_outlined,
+        items: [
+          for (final level in ComplianceLevel.values)
+            if (view.levelOptions.contains(level))
+              DropdownMenuItem(value: level, child: Text(level.pluralLabel)),
+        ],
+        onSelectionChanged: (levels) =>
+            ref.read(areaMemberStatusFilterProvider.notifier).select(levels),
+      );
+}
+
+/// From 840 px: the pagination above and headers that sort.
+class _MembersTable extends ConsumerWidget {
+  final List<EmployeeCompliance> members;
+  final int currentPage;
+  final ValueChanged<int> onPage;
+
+  const _MembersTable({
+    required this.members,
+    required this.currentPage,
+    required this.onPage,
+  });
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(memberOrderProvider(MemberTable.area));
-    final members = view.members;
     final totalMembers = members.length;
     final (page: safePage, pageCount: totalPages, :start, :end) = pageWindow(
       page: currentPage,
@@ -100,111 +215,67 @@ class _MembersPage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          runSpacing: 10,
-          spacing: 16,
-          children: [
-            Text(
-              'Integrantes ($totalMembers)',
-              style: context.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: context.colorScheme.onSurface,
-              ),
-            ),
-            SizedBox(
-              width: 250,
-              child: FilterDropdown<ComplianceLevel>.multiple(
-                selectedValues: ref.watch(areaMemberStatusFilterProvider),
-                incompatibleValues: view.incompatibleLevels,
-                hint: 'Estado',
-                icon: Icons.traffic_outlined,
-                items: [
-                  for (final level in ComplianceLevel.values)
-                    if (view.levelOptions.contains(level))
-                      DropdownMenuItem(
-                        value: level,
-                        child: Text(level.pluralLabel),
-                      ),
-                ],
-                onSelectionChanged: (levels) => ref
-                    .read(areaMemberStatusFilterProvider.notifier)
-                    .select(levels),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (members.isEmpty)
-          const EmptyDataState(
-            compact: true,
-            icon: Icons.filter_alt_off_outlined,
-            title: 'Ningún integrante coincide con el filtro.',
-          )
-        else ...[
-          if (totalPages > 1) ...[
-            ResultsPagination(
-              currentPage: safePage,
-              pageCount: totalPages,
-              from: start + 1,
-              until: end,
-              totalResults: totalMembers,
-              resultsLabel: 'integrantes',
-              icon: Icons.people_outline,
-              onPrevious: safePage > 0 ? () => onPage(safePage - 1) : null,
-              onNext: safePage < totalPages - 1
-                  ? () => onPage(safePage + 1)
-                  : null,
-            ),
-            const SizedBox(height: 12),
-          ],
-          Container(
-            width: double.infinity,
-            decoration: context.panel(),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth < _minimumTableWidth
-                          ? _minimumTableWidth
-                          : constraints.maxWidth,
-                    ),
-                    child: DataTable(
-                      showCheckboxColumn: false,
-                      headingRowColor: WidgetStatePropertyAll(
-                        context.colorScheme.surfaceContainerLow,
-                      ),
-                      sortColumnIndex: orderIndex < 0 ? null : orderIndex,
-                      sortAscending: order.ascending,
-                      columns: [
-                        for (final (title, column) in _columns)
-                          DataColumn(
-                            label: Text(title),
-                            onSort: column == null
-                                ? null
-                                : (_, _) => ref
-                                      .read(
-                                        memberOrderProvider(
-                                          MemberTable.area,
-                                        ).notifier,
-                                      )
-                                      .sortBy(column),
-                          ),
-                      ],
-                      rows: members
-                          .sublist(start, end)
-                          .map((member) => _buildRow(context, member))
-                          .toList(),
-                    ),
-                  ),
-                );
-              },
-            ),
+        if (totalPages > 1) ...[
+          ResultsPagination(
+            currentPage: safePage,
+            pageCount: totalPages,
+            from: start + 1,
+            until: end,
+            totalResults: totalMembers,
+            resultsLabel: 'integrantes',
+            icon: Icons.people_outline,
+            onPrevious: safePage > 0 ? () => onPage(safePage - 1) : null,
+            onNext: safePage < totalPages - 1
+                ? () => onPage(safePage + 1)
+                : null,
           ),
+          const SizedBox(height: 12),
         ],
+        Container(
+          width: double.infinity,
+          decoration: context.panel(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: constraints.maxWidth < _minimumTableWidth
+                        ? _minimumTableWidth
+                        : constraints.maxWidth,
+                  ),
+                  child: DataTable(
+                    showCheckboxColumn: false,
+                    headingRowColor: WidgetStatePropertyAll(
+                      context.colorScheme.surfaceContainerLow,
+                    ),
+                    sortColumnIndex: orderIndex < 0 ? null : orderIndex,
+                    sortAscending: order.ascending,
+                    columns: [
+                      for (final (title, column) in _columns)
+                        DataColumn(
+                          label: Text(title),
+                          onSort: column == null
+                              ? null
+                              : (_, _) => ref
+                                    .read(
+                                      memberOrderProvider(
+                                        MemberTable.area,
+                                      ).notifier,
+                                    )
+                                    .sortBy(column),
+                        ),
+                    ],
+                    rows: members
+                        .sublist(start, end)
+                        .map((member) => _buildRow(context, member))
+                        .toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -215,7 +286,7 @@ class _MembersPage extends ConsumerWidget {
 
     return DataRow(
       onSelectChanged: (_) => context.push(
-        '/empleados/${Uri.encodeComponent(employee.employeeId)}',
+        '/empleados/${Uri.encodeComponent(employee.employeeId)}?origen=areas',
       ),
       cells: [
         DataCell(Text(employee.employeeId)),
@@ -236,7 +307,7 @@ class _MembersPage extends ConsumerWidget {
         DataCell(SeniorityChip(seniority: employee.seniority)),
         DataCell(
           Text(
-            '${member.totalCreditedHours.toStringAsFixed(1)} / ${member.totalRequiredHours.toStringAsFixed(1)} h',
+            '${formatAchievedHours(member.totalCreditedHours, target: member.totalRequiredHours)} / ${formatHours(member.totalRequiredHours)} hs',
           ),
         ),
         DataCell(
@@ -244,9 +315,10 @@ class _MembersPage extends ConsumerWidget {
             formatPercentage(member.totalPercentage),
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: member.meetsTarget
-                  ? context.colors.success.text
-                  : context.colors.warning.text,
+              color: const ComplianceLevelService()
+                  .fromPercentage(member.totalPercentage)
+                  .colors(context)
+                  .text,
             ),
           ),
         ),

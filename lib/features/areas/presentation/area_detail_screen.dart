@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/widgets/error_data_state.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/compliance/presentation/compliance_level_colors.dart';
 import 'package:app_finnegans/core/widgets/fade_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_finnegans/core/navigation/app_destination.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/projection/presentation/providers/projection_providers.dart';
@@ -34,7 +36,9 @@ class AreaDetailScreen extends ConsumerWidget {
     ref.watch(areaMemberStatusFilterProvider);
     final period = ref.watch(periodFilterProvider);
     final periodControls = PeriodFilterPanel(
-      included: 'todas las áreas',
+      included:
+          'Se incluyen los integrantes del área elegibles al cierre, aunque '
+          'tengan 0 horas.',
       action: PrintReportButton(report: areaReportProvider(areaName)),
     );
     final requestedOrigin = GoRouterState.of(
@@ -49,11 +53,15 @@ class AreaDetailScreen extends ConsumerWidget {
       backgroundColor: context.colorScheme.surfaceContainerLow,
       body: Column(
         children: [
-          const AppTopBar(title: 'Detalle de área', backTo: '/areas'),
+          AppTopBar(
+            title: 'Detalle de área',
+            backTo: originBackPath(origin, '/areas'),
+          ),
           Expanded(
             child: ref
                 .watch(hasTeamPeriodDataProvider)
                 .when(
+                  skipLoadingOnReload: true,
                   loading: () => const _Loading(),
                   error: (error, _) => ErrorDataState(
                     title: 'No pudimos cargar el área',
@@ -105,7 +113,7 @@ class _PeriodList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: screenPadding,
+      padding: screenPaddingOf(context),
       children: [periodControls, const SizedBox(height: 22), child],
     );
   }
@@ -129,6 +137,7 @@ class _AreaDetailBody extends ConsumerWidget {
     return ref
         .watch(areaDetailProvider(areaName))
         .when(
+          skipLoadingOnReload: true,
           loading: () => const _Loading(),
           error: (error, _) => ErrorDataState(
             title: 'No pudimos cargar el área',
@@ -144,7 +153,7 @@ class _AreaDetailBody extends ConsumerWidget {
                       title:
                           'El área $areaName no tiene colaboradores elegibles en ${periodLabel(period.scope, period.month, period.year)}.',
                       message:
-                          'Probá otro período o verificá la nómina del área.',
+                          'Probá otro período o verificá los colaboradores del área.',
                     )
                   : _AreaContent(
                       areaName: areaName,
@@ -194,7 +203,9 @@ class _AreaContent extends ConsumerWidget {
             DashboardKpiCard(
               title: 'INTEGRANTES',
               value: '${area.memberCount}',
-              suffix: 'nómina del área',
+              suffix: area.memberCount == 1
+                  ? 'colaborador del área'
+                  : 'colaboradores del área',
               progress: area.memberCount == 0
                   ? 0
                   : area.membersOnTarget / area.memberCount,
@@ -215,7 +226,7 @@ class _AreaContent extends ConsumerWidget {
             ),
             DashboardKpiCard(
               title: 'OBJETIVO DEL PERÍODO',
-              value: _hours(area.targetHours),
+              value: '${formatHours(area.targetHours)} hs',
               suffix: 'según seniority',
               progress: 1,
               progressLabel: isAnnual
@@ -260,6 +271,4 @@ class _AreaContent extends ConsumerWidget {
       ],
     );
   }
-
-  String _hours(double value) => '${value.toStringAsFixed(1)} h';
 }

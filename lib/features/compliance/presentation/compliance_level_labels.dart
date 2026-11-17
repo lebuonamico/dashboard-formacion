@@ -8,7 +8,7 @@ extension ComplianceLevelLabel on ComplianceLevel {
   };
 
   String get pluralLabel => switch (this) {
-    ComplianceLevel.onTarget => 'Cumplidos',
+    ComplianceLevel.onTarget => 'En objetivo',
     ComplianceLevel.atRisk => 'En riesgo',
     ComplianceLevel.critical => 'Críticos',
   };

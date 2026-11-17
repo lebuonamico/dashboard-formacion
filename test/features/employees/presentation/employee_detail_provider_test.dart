@@ -29,6 +29,7 @@ void main() {
     expect(detail, isNotNull);
     expect(detail!.employee.employeeId, 'EMP-005');
     expect(detail.hasPeriodData, isTrue);
+    expect(detail.hasEmployeeData, isTrue);
     expect(detail.crmHours, 10);
     expect(detail.creditedLmsHours, 4);
     expect(

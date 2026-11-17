@@ -41,8 +41,46 @@ class AppNavigationDrawer extends ConsumerWidget {
   }
 }
 
+/// Below 840 px: the same menu as a modal drawer, opened from the top bar. It
+/// closes when a destination is chosen and when the location changes while it
+/// is open (the browser's back button).
+class ModalNavigationDrawer extends StatefulWidget {
+  const ModalNavigationDrawer({super.key});
+
+  @override
+  State<ModalNavigationDrawer> createState() => _ModalNavigationDrawerState();
+}
+
+class _ModalNavigationDrawerState extends State<ModalNavigationDrawer> {
+  /// Where the menu was opened. The drawer is only built while it is open.
+  Uri? _openedAt;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final location = GoRouterState.of(context).uri;
+    _openedAt ??= location;
+    if (location == _openedAt) return;
+    // Closing animates the drawer, which cannot start during a build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Scaffold.maybeOf(context)?.closeDrawer();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Drawer(
+    backgroundColor: context.colors.sidebarBackground,
+    child: const SafeArea(child: _ExpandedMenu(modal: true)),
+  );
+}
+
 class _ExpandedMenu extends ConsumerWidget {
-  const _ExpandedMenu();
+  /// Inside the modal drawer: the header's menu button closes it instead of
+  /// folding it, the brand goes to the right, and choosing a destination
+  /// closes it too.
+  final bool modal;
+
+  const _ExpandedMenu({this.modal = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,14 +96,16 @@ class _ExpandedMenu extends ConsumerWidget {
 
     return Column(
       children: [
-        const _DrawerHeader(),
+        _DrawerHeader(modal: modal),
         Expanded(
           child: NavigationDrawer(
             backgroundColor: Colors.transparent,
             elevation: 0,
             selectedIndex: selectedIndex,
-            onDestinationSelected: (index) =>
-                context.go(destinations[index].path),
+            onDestinationSelected: (index) {
+              if (modal) Scaffold.of(context).closeDrawer();
+              context.go(destinations[index].path);
+            },
             children: [
               const SizedBox(height: 12),
               for (final destination in destinations)
@@ -85,59 +125,81 @@ class _ExpandedMenu extends ConsumerWidget {
 }
 
 class _DrawerHeader extends ConsumerWidget {
-  const _DrawerHeader();
+  final bool modal;
+
+  const _DrawerHeader({required this.modal});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.colorScheme;
+    final logo = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        'assets/images/logo_finnegans.png',
+        width: 36,
+        height: 36,
+      ),
+    );
+    final align = modal ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final brand = Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: align,
+        children: [
+          Text(
+            'Finnegans',
+            style: context.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: cs.primary,
+            ),
+          ),
+          Text(
+            'Portal de formación interna',
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
     return Container(
       height: drawerHeaderHeight,
-      padding: const EdgeInsets.only(left: 20, right: 8),
+      // Modal: the menu button sits where the top bar's is (8 px from the
+      // edge), so the same button opens and closes the menu.
+      padding: modal
+          ? const EdgeInsets.only(left: 8, right: 20)
+          : const EdgeInsets.only(left: 20, right: 8),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: context.colors.sidebarBorder)),
       ),
       child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              'assets/images/logo_finnegans.png',
-              width: 36,
-              height: 36,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Finnegans',
-                  style: context.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: cs.primary,
-                  ),
+        children: modal
+            ? [
+                IconButton(
+                  key: const Key('modal_menu_close'),
+                  tooltip: 'Cerrar menú',
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).closeDrawer(),
                 ),
-                Text(
-                  'Portal de formación interna',
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  ),
+                const SizedBox(width: 12),
+                brand,
+                const SizedBox(width: 12),
+                logo,
+              ]
+            : [
+                logo,
+                const SizedBox(width: 12),
+                brand,
+                IconButton(
+                  key: const Key('side_menu_toggle'),
+                  tooltip: 'Ocultar menú',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () =>
+                      ref.read(sideMenuExpandedProvider.notifier).toggle(),
                 ),
               ],
-            ),
-          ),
-          IconButton(
-            key: const Key('side_menu_toggle'),
-            tooltip: 'Ocultar menú',
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () =>
-                ref.read(sideMenuExpandedProvider.notifier).toggle(),
-          ),
-        ],
       ),
     );
   }
@@ -163,11 +225,19 @@ class _CollapsedMenu extends ConsumerWidget {
   );
 }
 
-class _LogoutTile extends ConsumerWidget {
+class _LogoutTile extends ConsumerStatefulWidget {
   const _LogoutTile();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LogoutTile> createState() => _LogoutTileState();
+}
+
+class _LogoutTileState extends ConsumerState<_LogoutTile> {
+  /// A second click while signing out would sign out twice.
+  bool _signingOut = false;
+
+  @override
+  Widget build(BuildContext context) {
     final error = context.colorScheme.error;
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -176,20 +246,24 @@ class _LogoutTile extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         leading: Icon(Icons.logout_rounded, color: error),
         title: Text('Cerrar sesión', style: TextStyle(color: error)),
-        onTap: () => _signOut(context, ref),
+        enabled: !_signingOut,
+        onTap: _signOut,
       ),
     );
   }
 
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+  Future<void> _signOut() async {
     final enabled = ref.read(authProvider).enabled;
+    setState(() => _signingOut = true);
     try {
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) context.go(enabled ? '/login' : '/');
+      if (mounted) context.go(enabled ? '/login' : '/');
     } catch (_) {
-      if (context.mounted) {
+      if (mounted) {
         showAppSnackBar(context, 'No se pudo completar el cierre de sesión.');
       }
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
     }
   }
 }

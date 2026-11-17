@@ -1,5 +1,7 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/donut_chart.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 class DonutSlice {
@@ -36,37 +38,43 @@ class LegendDonutChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = slices.fold<double>(0, (sum, slice) => sum + slice.value);
+    final donut = DonutChart(
+      segments: slices
+          .map(
+            (slice) =>
+                DonutChartSegment(value: slice.value, color: slice.color),
+          )
+          .toList(),
+      centerText: centerValue,
+      centerSubtitle: centerLabel,
+      centerTextStyle: context.textTheme.headlineSmall,
+      centerSubtitleStyle: context.textTheme.labelMedium,
+    );
+    final legend = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final slice in slices) ...[
+          _DonutLegendItem(
+            slice: slice,
+            total: total,
+            valueSuffix: valueSuffix,
+          ),
+          if (slice != slices.last) const SizedBox(height: 9),
+        ],
+      ],
+    );
 
+    // On phones the legend goes below: beside the donut a label would have
+    // almost no room. It decides by the window and not with a LayoutBuilder
+    // because `SideBySideCharts` measures it with `IntrinsicHeight`.
+    if (context.windowSize == WindowSize.compact) {
+      return Column(children: [donut, const SizedBox(height: 16), legend]);
+    }
     return Row(
       children: [
-        DonutChart(
-          segments: slices
-              .map(
-                (slice) =>
-                    DonutChartSegment(value: slice.value, color: slice.color),
-              )
-              .toList(),
-          centerText: centerValue,
-          centerSubtitle: centerLabel,
-          centerTextStyle: context.textTheme.headlineSmall,
-          centerSubtitleStyle: context.textTheme.labelMedium,
-        ),
+        donut,
         const SizedBox(width: 18),
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final slice in slices) ...[
-                _DonutLegendItem(
-                  slice: slice,
-                  total: total,
-                  valueSuffix: valueSuffix,
-                ),
-                if (slice != slices.last) const SizedBox(height: 9),
-              ],
-            ],
-          ),
-        ),
+        Expanded(child: legend),
       ],
     );
   }
@@ -116,15 +124,9 @@ class _DonutLegendItem extends StatelessWidget {
               ),
             ),
           ),
-          Tooltip(
+          InfoHint(
             message: slice.help,
-            child: Icon(
-              Icons.info_outline,
-              size: 15,
-              color: context.colorScheme.onSurfaceVariant.withValues(
-                alpha: 0.75,
-              ),
-            ),
+            color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
           ),
           const SizedBox(width: 8),
           Text(
@@ -139,8 +141,5 @@ class _DonutLegendItem extends StatelessWidget {
     );
   }
 
-  String _formatValue(double value) {
-    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
-    return value.toStringAsFixed(1);
-  }
+  String _formatValue(double value) => '${value.round()}';
 }

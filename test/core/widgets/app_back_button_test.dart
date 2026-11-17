@@ -65,4 +65,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(_background(tester), Colors.transparent);
   });
+
+  group('Área táctil', () {
+    Future<List<int>> show(WidgetTester tester, Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final taps = <int>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: AppBackButton(onPressed: () => taps.add(1)),
+            ),
+          ),
+        ),
+      );
+      return taps;
+    }
+
+    testWidgets('En el teléfono mide 48 y el toque cerca del borde cuenta', (
+      tester,
+    ) async {
+      final taps = await show(tester, const Size(390, 844));
+      final rect = tester.getRect(find.byType(AppBackButton));
+      expect(rect.size, const Size(48, 48));
+      // El cuadrado visible sigue de 40.
+      expect(
+        tester.getSize(
+          find.descendant(
+            of: find.byType(AppBackButton),
+            matching: find.byType(AnimatedContainer),
+          ),
+        ),
+        const Size(40, 40),
+      );
+
+      await tester.tapAt(rect.topLeft + const Offset(2, 2));
+      await tester.pumpAndSettle();
+      expect(taps, hasLength(1));
+    });
+
+    testWidgets('En escritorio sigue de 40', (tester) async {
+      await show(tester, const Size(1400, 900));
+      expect(tester.getSize(find.byType(AppBackButton)), const Size(40, 40));
+    });
+  });
 }

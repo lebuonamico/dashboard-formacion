@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:app_finnegans/core/widgets/app_top_bar.dart';
 import 'package:app_finnegans/core/widgets/screen_padding.dart';
@@ -18,7 +19,7 @@ class SettingsScreen extends StatelessWidget {
           const AppTopBar(title: 'Configuración del sistema'),
           Expanded(
             child: ListView(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               children: [
                 for (final type in ImportFileType.values) ...[
                   _ConfigCard(
@@ -58,7 +59,9 @@ class _ConfigCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(
+        context.windowSize == WindowSize.compact ? 16 : 20,
+      ),
       decoration: context.panel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

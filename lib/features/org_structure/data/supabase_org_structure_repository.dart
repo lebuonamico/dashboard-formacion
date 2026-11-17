@@ -206,7 +206,7 @@ class SupabaseOrgStructureRepository implements OrgStructureRepository {
 
   String _errorMessage(PostgrestException error) {
     return switch (error.code) {
-      '23505' => 'Esa persona ya figura como líder.',
+      '23505' => 'Ese usuario ya figura como líder.',
       '42501' => 'No tenés permiso para cambiar áreas, equipos o líderes.',
       '42P01' =>
         'Faltan las tablas de áreas y equipos en la base. Corré '

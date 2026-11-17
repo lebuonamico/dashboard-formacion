@@ -1,8 +1,15 @@
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/card_rows.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:flutter/material.dart';
 
 /// Row of KPI cards, the same on the home, areas and teams screens and
 /// their details: 5 columns on wide screens, then 3 + 2, 2 or 1.
+///
+/// From 840 px every card has the same fixed height. Below, each row is as
+/// tall as its content, so the texts the cards let wrap there fit.
 class KpiCardRow extends StatelessWidget {
   final List<Widget> cards;
 
@@ -10,6 +17,7 @@ class KpiCardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final expanded = context.windowSize == WindowSize.expanded;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -21,6 +29,7 @@ class KpiCardRow extends StatelessWidget {
             : width >= 680
             ? 2
             : 1;
+        if (!expanded) return CardRows(columns: columns, children: cards);
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -47,12 +56,21 @@ class VariationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final improved = value >= 0;
+    // The sign follows the shown tenth, so -0.04 never reads "▼ -0,0".
+    final tenths = (value * 10).round();
+    final shown = formatDecimal(tenths.abs() / 10);
     return DashboardKpiBadge(
       text:
-          '${improved ? '▲ +' : '▼ '}${value.toStringAsFixed(1)} $unit '
-          'vs mes anterior',
-      colors: improved ? context.colors.success : context.colors.danger,
+          '${switch (tenths.sign) {
+            1 => '▲ +',
+            -1 => '▼ -',
+            _ => '= ',
+          }}$shown $unit vs mes anterior',
+      colors: switch (tenths.sign) {
+        1 => context.colors.success,
+        -1 => context.colors.danger,
+        _ => context.colors.neutral,
+      },
     );
   }
 }
@@ -129,6 +147,36 @@ class DashboardKpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Below 840 px the card grows with its content (see [KpiCardRow]): the
+    // badge may go to the next line and the footer goes below the progress
+    // label, instead of cutting them.
+    final wraps = context.windowSize != WindowSize.expanded;
+    final valueText = Text(
+      value,
+      style: context.textTheme.displaySmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: context.colorScheme.onSurface,
+      ),
+    );
+    final progressText = Text(
+      progressLabel,
+      maxLines: wraps ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      style: context.textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    );
+    final footerText = Text(
+      footer,
+      maxLines: wraps ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: wraps ? TextAlign.start : TextAlign.end,
+      style: context.textTheme.labelSmall?.copyWith(
+        color: context.colorScheme.onSurfaceVariant,
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: context.panel(shadow: true),
@@ -150,17 +198,7 @@ class DashboardKpiCard extends StatelessWidget {
                 ),
               ),
               if (help case final help?) ...[
-                Tooltip(
-                  message: help,
-                  triggerMode: TooltipTriggerMode.tap,
-                  showDuration: const Duration(seconds: 8),
-                  constraints: const BoxConstraints(maxWidth: 320),
-                  child: Icon(
-                    Icons.info_outline,
-                    size: 15,
-                    color: context.colors.faintText,
-                  ),
-                ),
+                InfoHint(message: help),
                 const SizedBox(width: 6),
               ],
               Icon(icon, size: 18, color: color),
@@ -179,28 +217,30 @@ class DashboardKpiCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: context.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: 5),
-              if (suffixBelow)
-                const Spacer()
-              else
-                Flexible(child: _Suffix(suffix)),
-              if (badge != null) ...[
-                const SizedBox(width: 6),
-                Flexible(child: badge!),
+          if (wraps)
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [valueText, if (!suffixBelow) _Suffix(suffix), ?badge],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                valueText,
+                const SizedBox(width: 5),
+                if (suffixBelow)
+                  const Spacer()
+                else
+                  Flexible(child: _Suffix(suffix)),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  Flexible(child: badge!),
+                ],
               ],
-            ],
-          ),
+            ),
           if (suffixBelow) ...[const SizedBox(height: 2), _Suffix(suffix)],
           const SizedBox(height: 8),
           ClipRRect(
@@ -213,32 +253,24 @@ class DashboardKpiCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  progressLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-              Flexible(
-                child: Text(
-                  footer,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          if (wraps)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                progressText,
+                if (footer.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  footerText,
+                ],
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(child: progressText),
+                Flexible(child: footerText),
+              ],
+            ),
         ],
       ),
     );
@@ -270,14 +302,14 @@ const eligiblePayrollHelp =
 const monthCreditedHoursHelp =
     'Horas que cuentan para el objetivo del mes: cursos de Negocio y Blandas '
     'finalizados en el LMS, con la carga horaria del catálogo, y horas de '
-    'Libres y Dictado cargadas en el CRM. Cada persona suma como máximo su '
-    'objetivo en cada categoría.';
+    'Libres y Dictado declaradas en el CRM. Cada colaborador suma como máximo '
+    'su objetivo en cada categoría.';
 
 const annualCreditedHoursHelp =
     'Suma de las horas válidas de los meses con datos del año: cursos de '
     'Negocio y Blandas finalizados en el LMS y horas de Libres y Dictado del '
-    'CRM. Un mes fuerte compensa uno flojo; cada persona suma como máximo su '
-    'objetivo anual en cada categoría.';
+    'CRM. Un mes fuerte compensa uno flojo; cada colaborador suma como máximo '
+    'su objetivo anual en cada categoría.';
 
 /// Members of an area or team and how many met the target.
 String membersHelp(String section) =>

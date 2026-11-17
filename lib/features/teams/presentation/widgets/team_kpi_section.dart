@@ -56,7 +56,7 @@ class TeamsKpiSection extends StatelessWidget {
           value: '$employeeCount',
           suffix: 'en todos los equipos',
           progress: 1,
-          progressLabel: 'Nómina elegible',
+          progressLabel: 'Colaboradores elegibles',
           footer: '',
           icon: Icons.people_outline,
           color: context.colors.cyanAccent,

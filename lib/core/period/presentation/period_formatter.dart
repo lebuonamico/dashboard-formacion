@@ -22,6 +22,9 @@ String monthName(int month) {
   return _months[month - 1];
 }
 
+/// The month in three letters ("Ene", "Sep"), for narrow charts.
+String monthShortName(int month) => monthName(month).substring(0, 3);
+
 String periodLabel(PeriodScope scope, int month, int year) =>
     scope == PeriodScope.annual ? '$year' : '${monthName(month)} $year';
 

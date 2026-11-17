@@ -28,10 +28,10 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          const AppTopBar(title: 'Plan Q3 - formación interna'),
+          const AppTopBar(title: 'Plan de formación interna'),
           Expanded(
             child: SingleChildScrollView(
-              padding: screenPadding,
+              padding: screenPaddingOf(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -42,8 +42,10 @@ class DashboardScreen extends ConsumerWidget {
                   ref
                       .watch(hasTeamPeriodDataProvider)
                       .when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 72),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
                         error: (error, _) => ErrorDataState(
                           title: 'No pudimos cargar el tablero',
                           error: error,

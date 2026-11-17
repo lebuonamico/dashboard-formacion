@@ -190,9 +190,7 @@ void main() {
             ],
           }),
         ),
-        _rejects(
-          'Falta la columna Fecha de finalización en el Excel de Moodle.',
-        ),
+        _rejects('Falta la columna Fecha de finalización en el Excel del LMS.'),
       );
     });
 

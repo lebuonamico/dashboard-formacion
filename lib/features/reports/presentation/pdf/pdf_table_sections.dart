@@ -7,6 +7,7 @@ import 'package:app_finnegans/features/reports/domain/training_report.dart';
 import 'package:app_finnegans/features/courses/domain/course_category.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_components.dart';
 import 'package:app_finnegans/features/reports/presentation/pdf/pdf_report_style.dart';
+import 'package:app_finnegans/core/formatting/hours_formatter.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:app_finnegans/features/employees/presentation/employee_labels.dart';
@@ -39,7 +40,7 @@ List<pw.Widget> breakdownPdf(TrainingReport report, PdfReportStyle style) {
             pw.Text(f.name, style: style.mediumText(8)),
             pw.Text('${f.memberCount}', style: cellStyle),
             pw.Text(
-              '${pdfHours(f.hours)} / ${pdfWholeHours(f.target)}',
+              '${pdfAchievedHours(f.hours, target: f.target)} / ${pdfHours(f.target)}',
               style: cellStyle,
             ),
             pw.Text(
@@ -141,8 +142,8 @@ List<pw.Widget> pdfMembers(TrainingReport report, PdfReportStyle style) {
             for (final type in CourseCategory.values)
               pw.Text(_category(m, type), style: cellStyle),
             pw.Text(
-              '${m.totalCreditedHours.toStringAsFixed(1)} / '
-              '${m.totalRequiredHours.toStringAsFixed(0)}',
+              '${formatAchievedHours(m.totalCreditedHours, target: m.totalRequiredHours)} / '
+              '${formatHours(m.totalRequiredHours)}',
               style: cellStyle,
             ),
             pw.Text(
@@ -176,8 +177,8 @@ String _location(Employee employee, MemberLocation location) =>
 String _category(EmployeeCompliance m, CourseCategory type) {
   final required = m.requiredHours[type] ?? 0;
   if (required <= 0) return '-';
-  return '${m.applicableHours[type]!.toStringAsFixed(1)}/'
-      '${required.toStringAsFixed(0)}';
+  return '${formatAchievedHours(m.applicableHours[type]!, target: required)}/'
+      '${formatHours(required)}';
 }
 
 class PdfNotes extends pw.StatelessWidget {
@@ -189,11 +190,11 @@ class PdfNotes extends pw.StatelessWidget {
       borderRadius: pw.BorderRadius.circular(4),
     ),
     child: pw.Text(
-      'Cómo leer este reporte. Horas válidas: las que suman a la meta. '
-      'Negocio y Blandas se acreditan con los cursos finalizados en Moodle; '
-      'Libres y Dictado, con lo declarado en CRM. Cada persona suma como máximo '
-      'su objetivo en cada categoría, según su seniority. El semáforo usa los '
-      'cortes 100% (cumple) y 70% (atención).',
+      'Cómo leer este reporte. Horas válidas: las que suman al objetivo. '
+      'Negocio y Blandas se acreditan con los cursos finalizados en el LMS; '
+      'Libres y Dictado, con lo declarado en CRM. Cada colaborador suma como '
+      'máximo su objetivo en cada categoría, según su seniority. El semáforo '
+      'usa los cortes 100% (en objetivo) y 70% (en riesgo).',
       style: const pw.TextStyle(
         fontSize: 7,
         color: PdfReportColors.softInk,

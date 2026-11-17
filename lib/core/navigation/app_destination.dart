@@ -46,7 +46,7 @@ const appDestinations = [
   AppDestination(
     section: 'empleados',
     path: '/empleados',
-    label: 'Empleados',
+    label: 'Colaboradores',
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
   ),
@@ -114,4 +114,13 @@ int? selectedDestinationIndex(Uri uri, List<AppDestination> destinations) {
     (destination) => uri.path.startsWith(destination.path),
   );
   return byPath == -1 ? null : byPath;
+}
+
+/// Where a detail screen goes back to when there is no history to pop (a
+/// reload or a shared link): the section in `origen`, or [fallback].
+String originBackPath(String? origin, String fallback) {
+  final index = appDestinations.indexWhere(
+    (destination) => destination.section == origin,
+  );
+  return index == -1 ? fallback : appDestinations[index].path;
 }

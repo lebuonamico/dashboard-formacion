@@ -1,4 +1,6 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
+import 'package:app_finnegans/core/widgets/info_hint.dart';
 import 'package:app_finnegans/core/formatting/percentage_formatter.dart';
 import 'package:app_finnegans/features/areas/presentation/providers/areas_providers.dart';
 import 'package:app_finnegans/features/areas/presentation/widgets/area_category_distribution.dart';
@@ -151,10 +153,6 @@ class _AreaProgressPanel extends StatelessWidget {
     final average = area.memberCount == 0
         ? 0.0
         : area.completedHours / area.memberCount;
-    final onTarget = _MetricRow(
-      label: 'Integrantes en objetivo',
-      value: '${area.membersOnTarget} de ${area.memberCount}',
-    );
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -163,7 +161,7 @@ class _AreaProgressPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Avance del área',
+            'Cumplimiento del área',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: context.colorScheme.onSurface,
@@ -181,7 +179,7 @@ class _AreaProgressPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${area.completedHours.toStringAsFixed(1)} de ${area.targetHours.toStringAsFixed(1)} h',
+                '${formatAchievedHours(area.completedHours, target: area.targetHours)} de ${formatHours(area.targetHours)} hs',
                 style: context.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.colorScheme.onSurfaceVariant,
@@ -200,23 +198,22 @@ class _AreaProgressPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          if (isAnnual)
-            Tooltip(
-              message:
-                  'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.',
-              child: onTarget,
-            )
-          else
-            onTarget,
+          _MetricRow(
+            label: 'Integrantes en objetivo',
+            value: '${area.membersOnTarget} de ${area.memberCount}',
+            help: isAnnual
+                ? 'Colaboradores que tuvieron objetivo en esta área durante al menos uno de los meses con datos del año.'
+                : null,
+          ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Promedio por integrante',
-            value: '${average.toStringAsFixed(1)} h',
+            value: '${formatHours(average)} hs',
           ),
           const Divider(height: 22),
           _MetricRow(
             label: 'Desvío de horas',
-            value: formatHoursDeviation(area.hoursDeviation, unit: 'h'),
+            value: formatHoursDeviation(area.hoursDeviation),
           ),
         ],
       ),
@@ -228,19 +225,33 @@ class _MetricRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MetricRow({required this.label, required this.value});
+  /// From 840 px it shows on hover over the row; below, with an icon to tap.
+  final String? help;
+
+  const _MetricRow({required this.label, required this.value, this.help});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final help = this.help;
+    final tapHelp = help != null && context.windowSize != WindowSize.expanded;
+    final labelText = Text(
+      label,
+      style: context.textTheme.bodySmall?.copyWith(
+        color: context.colorScheme.onSurfaceVariant,
+      ),
+    );
+    final row = Row(
       children: [
         Expanded(
-          child: Text(
-            label,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.onSurfaceVariant,
-            ),
-          ),
+          child: tapHelp
+              ? Row(
+                  children: [
+                    Flexible(child: labelText),
+                    const SizedBox(width: 6),
+                    InfoHint(message: help),
+                  ],
+                )
+              : labelText,
         ),
         Text(
           value,
@@ -251,5 +262,6 @@ class _MetricRow extends StatelessWidget {
         ),
       ],
     );
+    return help == null || tapHelp ? row : Tooltip(message: help, child: row);
   }
 }

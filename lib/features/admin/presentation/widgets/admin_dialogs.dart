@@ -1,3 +1,4 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/features/auth/domain/user_role.dart';
@@ -11,6 +12,8 @@ Future<({String email, UserRole role})?> showUserCreationDialog(
 ) {
   return showDialog<({String email, UserRole role})>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => const _UserCreationDialog(),
   );
 }
@@ -22,6 +25,8 @@ Future<UserRole?> showRoleChangeDialog(
 }) {
   return showDialog<UserRole>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => _RoleChangeDialog(email: email, currentRole: currentRole),
   );
 }
@@ -39,6 +44,8 @@ Future<Set<String>?> showLeadersDialog(
 }) {
   return showDialog<Set<String>>(
     context: context,
+    // A stray click outside would lose what was typed or selected.
+    barrierDismissible: false,
     builder: (_) => _LeadersDialog(
       title: title,
       subtitle: subtitle,
@@ -383,6 +390,7 @@ class _DialogFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: context.dialogInsetPadding,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),

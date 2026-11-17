@@ -1,6 +1,8 @@
+import 'package:app_finnegans/core/layout/window_size.dart';
 import 'package:app_finnegans/core/theme/app_theme.dart';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:app_finnegans/core/text/text_normalizer.dart';
@@ -11,11 +13,18 @@ InputDecoration filterInputDecoration(String hint, IconData icon) =>
 
 /// Shared selector. The search is local and never changes the selection.
 /// The default constructor keeps a single selection, as periods need.
+///
+/// From 840 px it opens as a menu under the field; below, as a bottom sheet
+/// with rows a finger can hit and a search that does not raise the keyboard
+/// by itself.
 class FilterDropdown<T> extends StatefulWidget {
   final T? value;
   final List<DropdownMenuItem<T>> items;
   final String hint;
   final IconData icon;
+
+  /// Without the icon the value has more room, for narrow fields.
+  final bool showIcon;
   final double width;
   final ValueChanged<T?>? onChanged;
   final String? tooltip;
@@ -33,6 +42,7 @@ class FilterDropdown<T> extends StatefulWidget {
     required this.hint,
     required this.icon,
     required this.onChanged,
+    this.showIcon = true,
     this.width = 260,
     this.tooltip,
     this.incompatibleValues = const {},
@@ -49,6 +59,7 @@ class FilterDropdown<T> extends StatefulWidget {
     required this.hint,
     required this.icon,
     required this.onSelectionChanged,
+    this.showIcon = true,
     this.width = 260,
     this.tooltip,
     this.incompatibleValues = const {},
@@ -62,6 +73,43 @@ class FilterDropdown<T> extends StatefulWidget {
   State<FilterDropdown<T>> createState() => _FilterDropdownState<T>();
 }
 
+/// Rules shared by the menu and the bottom sheet.
+extension _DropdownRules<T> on FilterDropdown<T> {
+  bool get isEnabled =>
+      multiSelect ? onSelectionChanged != null : onChanged != null;
+
+  bool get canClear => multiSelect || items.any((item) => item.value == null);
+
+  Set<T> get selection =>
+      multiSelect ? selectedValues : {if (value != null) value as T};
+
+  void toggle(T value) {
+    final next = {...selection};
+    if (!next.remove(value)) next.add(value);
+    onSelectionChanged?.call(Set.unmodifiable(next));
+  }
+
+  /// Selected options first, both groups in their original order, filtered by
+  /// [query] (already normalized). With [selectedFirst] false, the original
+  /// order only.
+  List<DropdownMenuItem<T>> ordered(String query, {bool selectedFirst = true}) {
+    final selected = selection;
+    final matches = items
+        .where((item) => item.value != null)
+        .where((item) => normalizeKey(_itemLabel(item)).contains(query))
+        .toList();
+    if (!selectedFirst) return matches;
+    return [
+      ...matches.where((item) => selected.contains(item.value)),
+      ...matches.where((item) => !selected.contains(item.value)),
+    ];
+  }
+}
+
+String _itemLabel<T>(DropdownMenuItem<T> item) => item.child is Text
+    ? (item.child as Text).data ?? ''
+    : item.value.toString();
+
 class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
   double get _rowHeight {
     final baseHeight = widget.itemSubtitleBuilder == null ? 60.0 : 80.0;
@@ -73,24 +121,15 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
 
-  bool get _enabled => widget.multiSelect
-      ? widget.onSelectionChanged != null
-      : widget.onChanged != null;
-  bool get _canClear =>
-      widget.multiSelect || widget.items.any((item) => item.value == null);
-  Set<T> get _selected => widget.multiSelect
-      ? widget.selectedValues
-      : {if (widget.value != null) widget.value as T};
+  /// The bottom sheet is another route: it follows the latest configuration
+  /// through this notifier (the selection, the incompatible values).
+  late final ValueNotifier<FilterDropdown<T>> _latest;
 
-  String _label(DropdownMenuItem<T> item) => item.child is Text
-      ? (item.child as Text).data ?? ''
-      : item.value.toString();
+  bool get _enabled => widget.isEnabled;
+  bool get _canClear => widget.canClear;
+  Set<T> get _selected => widget.selection;
 
-  void _toggle(T value) {
-    final next = {..._selected};
-    if (!next.remove(value)) next.add(value);
-    widget.onSelectionChanged?.call(Set.unmodifiable(next));
-  }
+  String _label(DropdownMenuItem<T> item) => _itemLabel(item);
 
   void _clear() {
     if (widget.multiSelect) {
@@ -102,7 +141,23 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _latest = ValueNotifier(widget);
+  }
+
+  @override
+  void didUpdateWidget(FilterDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The sheet cannot be marked dirty while this subtree builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _latest.value = widget;
+    });
+  }
+
+  @override
   void dispose() {
+    _latest.dispose();
     _search.dispose();
     _scroll.dispose();
     super.dispose();
@@ -110,27 +165,32 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
 
   void _select(DropdownMenuItem<T> item) {
     if (widget.multiSelect) {
-      _toggle(item.value as T);
+      widget.toggle(item.value as T);
     } else {
       widget.onChanged?.call(item.value);
       _menu.close();
     }
   }
 
+  void _openSheet() => showModalBottomSheet<void>(
+    context: context,
+    // Above the shell, so it also covers the assistant button.
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+    ),
+    builder: (_) => _OptionsSheet<T>(dropdown: _latest),
+  );
+
   @override
   Widget build(BuildContext context) {
     final selected = _selected;
     final incompatible = widget.incompatibleValues.intersection(selected);
-    final query = normalizeKey(_search.text);
     final options = widget.items.where((item) => item.value != null).toList();
-    final matches = options
-        .where((item) => normalizeKey(_label(item)).contains(query))
-        .toList();
-    // Two groups that keep the original order, also while searching.
-    final ordered = [
-      ...matches.where((item) => selected.contains(item.value)),
-      ...matches.where((item) => !selected.contains(item.value)),
-    ];
+    final ordered = widget.ordered(normalizeKey(_search.text));
     final labels = [
       for (final item in options)
         if (selected.contains(item.value)) _label(item),
@@ -176,9 +236,16 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                       if (_scroll.hasClients) _scroll.jumpTo(0);
                       setState(() {});
                     },
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar opciones...',
-                      prefixIcon: Icon(Icons.search),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar opciones…',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Borrar búsqueda',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => setState(_search.clear),
+                            ),
                     ),
                   ),
                 ),
@@ -187,6 +254,7 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
                 height: listHeight,
                 child: _OptionsList<T>(
                   options: ordered,
+                  searching: _search.text.trim().isNotEmpty,
                   height: listHeight,
                   rowHeight: _rowHeight,
                   controller: _scroll,
@@ -216,25 +284,31 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
       builder: (context, controller, child) => InkWell(
         onTap: !_enabled
             ? null
+            : context.windowSize != WindowSize.expanded
+            ? _openSheet
             : () {
                 controller.isOpen ? controller.close() : controller.open();
               },
         child: InputDecorator(
           isEmpty: false,
-          decoration: filterInputDecoration(widget.hint, widget.icon).copyWith(
-            labelText: widget.hint,
-            enabled: _enabled,
-            suffixIcon: incompatible.isEmpty
-                ? const Icon(Icons.arrow_drop_down)
-                : Tooltip(
-                    message:
-                        '${incompatible.length} sin coincidencias con los demás filtros o el período actual.',
-                    child: Icon(
-                      Icons.warning_amber_rounded,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+          decoration:
+              (widget.showIcon
+                      ? filterInputDecoration(widget.hint, widget.icon)
+                      : InputDecoration(hintText: widget.hint))
+                  .copyWith(
+                    labelText: widget.hint,
+                    enabled: _enabled,
+                    suffixIcon: incompatible.isEmpty
+                        ? const Icon(Icons.arrow_drop_down)
+                        : Tooltip(
+                            message:
+                                '${incompatible.length} sin coincidencias con los demás filtros o el período actual.',
+                            child: Icon(
+                              Icons.warning_amber_rounded,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                   ),
-          ),
           child: _SelectionSummary(
             fullSummary: fullSummary,
             selectedCount: selected.length,
@@ -250,6 +324,9 @@ class _FilterDropdownState<T> extends State<FilterDropdown<T>> {
 
 class _OptionsList<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> options;
+
+  /// With a search typed, an empty list means nothing matches it.
+  final bool searching;
   final double height;
   final double rowHeight;
   final ScrollController controller;
@@ -260,6 +337,7 @@ class _OptionsList<T> extends StatelessWidget {
 
   const _OptionsList({
     required this.options,
+    required this.searching,
     required this.height,
     required this.rowHeight,
     required this.controller,
@@ -272,7 +350,13 @@ class _OptionsList<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (options.isEmpty) {
-      return const Center(child: Text('Sin opciones disponibles'));
+      return Center(
+        child: Text(
+          searching
+              ? 'Sin coincidencias con la búsqueda'
+              : 'Sin opciones disponibles',
+        ),
+      );
     }
     final needsScroll = options.length * rowHeight > height;
     return Listener(
@@ -427,6 +511,209 @@ class _OptionLabel extends StatelessWidget {
                 style: const TextStyle(height: 1.4),
               ),
       ),
+    );
+  }
+}
+
+/// The options as a bottom sheet, below 840 px. A single selection closes it
+/// on choosing; a multiple one stays open until "Listo".
+class _OptionsSheet<T> extends StatefulWidget {
+  final ValueListenable<FilterDropdown<T>> dropdown;
+
+  const _OptionsSheet({required this.dropdown});
+
+  @override
+  State<_OptionsSheet<T>> createState() => _OptionsSheetState<T>();
+}
+
+class _OptionsSheetState<T> extends State<_OptionsSheet<T>> {
+  /// Short lists (months, years) are read at a glance: no search.
+  static const _searchFrom = 13;
+
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<FilterDropdown<T>>(
+        valueListenable: widget.dropdown,
+        builder: (context, dropdown, _) {
+          // A single choice (a month, a year) reads better in its natural
+          // order, with the check on the chosen one.
+          final options = dropdown.ordered(
+            normalizeKey(_search.text),
+            selectedFirst: dropdown.multiSelect,
+          );
+          final selected = dropdown.selection;
+          final searchable =
+              dropdown.items.where((item) => item.value != null).length >=
+              _searchFrom;
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    dropdown.hint,
+                    style: context.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (searchable)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      controller: _search,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar opciones…',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _search.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Borrar búsqueda',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () => setState(_search.clear),
+                              ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: options.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            _search.text.trim().isNotEmpty
+                                ? 'Sin coincidencias con la búsqueda'
+                                : 'Sin opciones disponibles',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) => _SheetOption<T>(
+                            item: options[index],
+                            dropdown: dropdown,
+                            selected: selected.contains(options[index].value),
+                          ),
+                        ),
+                ),
+                if (dropdown.multiSelect || dropdown.canClear) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                    child: Row(
+                      children: [
+                        if (dropdown.canClear)
+                          TextButton.icon(
+                            onPressed: dropdown.multiSelect && selected.isEmpty
+                                ? null
+                                : () {
+                                    if (dropdown.multiSelect) {
+                                      dropdown.onSelectionChanged?.call({});
+                                    } else {
+                                      dropdown.onChanged?.call(null);
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                            icon: const Icon(
+                              Icons.filter_alt_off_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              dropdown.multiSelect
+                                  ? 'Limpiar selecciones (${selected.length})'
+                                  : 'Todos',
+                            ),
+                          ),
+                        const Spacer(),
+                        if (dropdown.multiSelect)
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Listo'),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      );
+}
+
+class _SheetOption<T> extends StatelessWidget {
+  final DropdownMenuItem<T> item;
+  final FilterDropdown<T> dropdown;
+  final bool selected;
+
+  const _SheetOption({
+    required this.item,
+    required this.dropdown,
+    required this.selected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = item.value as T;
+    final label = _itemLabel(item);
+    final incompatible = dropdown.incompatibleValues.contains(value);
+    final entity = dropdown.itemSubtitleBuilder?.call(value);
+    final error = context.colorScheme.error;
+    final title = Text(
+      dropdown.itemTitleBuilder?.call(value) ?? label,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+    final subtitle = entity == null && !incompatible
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (entity != null) Text(entity),
+              if (incompatible)
+                Text('Sin coincidencias', style: TextStyle(color: error)),
+            ],
+          );
+
+    if (dropdown.multiSelect) {
+      return CheckboxListTile(
+        value: selected,
+        controlAffinity: ListTileControlAffinity.leading,
+        isError: incompatible,
+        title: title,
+        subtitle: subtitle,
+        secondary: incompatible
+            ? Icon(Icons.warning_amber_rounded, color: error)
+            : null,
+        onChanged: item.enabled ? (_) => dropdown.toggle(value) : null,
+      );
+    }
+    return ListTile(
+      selected: selected,
+      leading: Icon(selected ? Icons.check : null),
+      title: title,
+      subtitle: subtitle,
+      enabled: item.enabled,
+      onTap: () {
+        dropdown.onChanged?.call(value);
+        Navigator.pop(context);
+      },
     );
   }
 }

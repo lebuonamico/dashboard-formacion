@@ -88,15 +88,23 @@ class EmployeeDetailService {
 
     return EmployeeDetail(
       employee: employee,
-      compliance: periods.employeeCompliance(
+      compliance: periods.employeeProfileCompliance(
         employee: employee,
         courses: courses,
-        timeEntries: employeeTimeEntries,
-        certifications: employeeCertifications,
+        timeEntries: timeEntries,
+        certifications: certifications,
         period: period,
         complianceService: complianceService,
       ),
       hasPeriodData: hasPeriodData,
+      hasEmployeeData:
+          hasPeriodData &&
+          periods.hasEmployeeDataInPeriod(
+            employee: employee,
+            timeEntries: timeEntries,
+            certifications: certifications,
+            period: period,
+          ),
       timeEntryGroups: _timeEntryGroups(periodRecords, completedCourses),
       certifications: certificationDetails,
       taughtCourses: _taughtCourses(periodRecords),
